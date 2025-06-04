@@ -1,0 +1,415 @@
+Develop a Customer Data Platform (CDP) for a classified marketplace. The platform complements Amplitude by managing user segmentation, cohorts, marketing activation, promotions, and integrations. 
+
+The system includes:
+
+- Admin dashboard
+- Growth & marketing tools
+- Integration health monitor
+- Supabase Postgres as full backend
+- Redis Pub/Sub for activation engine
+- Supabase Auth for user management
+- External integrations with Airflow, Amplitude, and Braze
+- Full role-based permissions
+- Supabase Auth
+
+---
+
+## 📦 Repo Folder Structure
+
+Following modular and production-grade architecture:
+
+`project-root/
+├── README.md
+├── package.json
+├── .env
+├── docker-compose.yml
+├── apps/
+│   ├── frontend/
+│   │   ├── public/
+│   │   ├── src/
+│   │   │   ├── components/    # React reusable components (UI)
+│   │   │   ├── pages/         # Pages routing
+│   │   │   ├── api/           # API hook layer (Axios/React Query)
+│   │   │   ├── services/      # Frontend business logic
+│   │   │   ├── stores/        # State management (Zustand/Redux)
+│   │   │   └── utils/         # Helpers
+│   │   └── package.json
+│   └── backend/
+│       ├── supabase/
+│       │   ├── functions/     # Supabase Edge Functions (API logic)
+│       │   ├── migrations/    # SQL schema migrations
+│       │   ├── schemas/       # DB schema master files
+│       │   ├── policies/      # Row-level security policies
+│       │   └── seeds/         # Seed data for dev env
+│       ├── redis-worker/      # Redis Pub/Sub microservice
+│       │   ├── src/
+│       │   └── package.json
+│       └── api-gateway/       # Optional centralized API gateway (Phase 2)
+│           ├── src/
+│           └── package.json
+├── infra/
+│   ├── terraform/             # Infra-as-Code (Redis, Supabase, Vercel)
+│   └── airflow/               # Airflow DAGs repo (external data pipelines)
+├── tests/
+│   ├── frontend/              # Cypress / Playwright UI tests
+│   ├── backend/               # Unit tests for backend
+│   └── e2e/                   # Full system tests
+├── .github/                   # CI/CD automation
+└── docs/
+    ├── architecture.md
+    ├── api-spec.md
+    ├── db-schema.md
+    ├── runbook.md
+    └── onboarding.md`
+
+---
+
+## 📚 Folder Purpose Summary
+
+| **Folder** | **Description** |
+| --- | --- |
+| `frontend/` | Complete React UI |
+| `backend/supabase/` | Database schemas, edge functions |
+| `backend/redis-worker/` | Pub/Sub worker |
+| `infra/` | Infrastructure management |
+| `tests/` | Automated tests |
+| `docs/` | Full documentation |
+| `.github/` | CI/CD pipelines |
+
+Export to Sheets
+
+---
+
+## ⚙️ Architecture Components
+
+| **Layer** | **Stack** |
+| --- | --- |
+| Frontend | React.js + Tailwind + Zustand |
+| Auth | Supabase Auth |
+| Backend | Python FastAPI  |
+| Database | Supabase Postgres |
+| Messaging | Redis Pub/Sub |
+| ETL Pipelines | Airflow (External, monitored only) |
+| Integrations | Amplitude, Braze, Airflow REST API |
+| Deployment | Vercel, Supabase, Redis Cloud |
+
+Export to Sheets
+
+---
+
+## 🧩 Functional Modules
+
+| **Module** | **Description** |
+| --- | --- |
+| Dashboard | KPIs: DAU, WAU, MAU, churn, reactivations |
+| User Explorer | Paginated searchable user list |
+| User Profiles | A comprehensive profile for each user |
+| Cohort Builder | AND/OR condition builder on profile fields |
+| Promo Engine | Cohort-based campaigns pushed to Redis |
+| Admin Panel | User management, roles, permissions |
+| Integrations Monitor | Airflow DAG status monitor & manual triggers |
+
+Export to Sheets
+
+---
+
+## 📖 UI Pages Breakdown
+
+### 1️⃣ Dashboard
+
+Comprehensive overview of key metrics.
+
+- **Core User Activity & Lifecycle Metrics:**
+    - Charts: DAU, WAU, MAU, Churned Users (line charts over time).
+    - Key Numbers (KPIs): New Users, Churned Users (count), About to Churn Users (count).
+    - Calendar & Quick Time Filters: Today, Yesterday, Last 7/30/90 Days, This/Last Month, Custom Date Range.
+- **Engagement & Value Metrics:**
+    - Stickiness Ratio (DAU/MAU or WAU/MAU) (Percentage/Gauge).
+    - Average Session Duration (Line chart/Average number).
+    - Key Event Completion Rate (Funnel chart/Percentage).
+    - Customer Lifetime Value (CLTV) (Average LTV, segmented).
+    - Active User Growth Rate (Percentage, line chart).
+- **Segmentation Insights (Glimpse):**
+    - Top User Segments by Activity/Value (Bar chart/List).
+    - Distribution of Users by Key Attribute (Pie/Bar chart).
+- **Data Health & CDP Specifics (Optional):**
+    - Total Unified Profiles (Number).
+    - Data Ingestion Rate / Event Volume (Line chart).
+    - Identity Resolution Match Rate (Percentage).
+- **Layout & Usability:** Prioritize critical metrics, visual hierarchy, comparisons, drill-down capabilities, tooltips.
+
+### 2️⃣ User Explorer
+
+- Table view of users.
+- Search & filtering capabilities.
+- Clickable users in the table, directing to detailed user profiles.
+- **User Profile Data (Model for Classified CDP):**
+    - 
+    
+    create table public.users (
+    user_id integer not null,
+    user_type text null,
+    phone bigint null,
+    current_credits_in_wallet double precision null,
+    is_block integer null,
+    user_account_creation_date timestamp without time zone null,
+    first_paid_listing_date timestamp without time zone null,
+    last_paid_listing_date timestamp without time zone null,
+    first_transaction_date timestamp without time zone null,
+    last_transaction_date timestamp without time zone null,
+    days_since_last_paid_listing integer null,
+    days_since_last_paid_transaction integer null,
+    days_since_last_transaction integer null,
+    active_months_last_6 double precision null,
+    active_weeks_last_12 double precision null,
+    paid_listings_count integer null,
+    free_listings_count integer null,
+    total_listings_count integer null,
+    office_listings_count integer null,
+    total_credits_spent integer null,
+    total_premium_credits_spent integer null,
+    total_free_credits_spent integer null,
+    extra_addons_count integer null,
+    extra_addons_total_credits double precision null,
+    extra_addons_premium_credits double precision null,
+    extra_addons_free_credits double precision null,
+    verticals_listed_in text null,
+    levels_1_listed_in text null,
+    plans_or_bundles_used text null,
+    favorite_vertical text null,
+    favorite_level_1 text null,
+    number_of_verticals_listed_in integer null,
+    number_of_level1_categories_listed_in integer null,
+    is_multivertical_user integer null,
+    favorite_plan_or_bundle text null,
+    favorite_extra_addon text null,
+    top_extra_addons text null,
+    basic_listings_count integer null,
+    basic_credits_spent integer null,
+    pro_listings_count integer null,
+    pro_credits_spent integer null,
+    extra_listings_count integer null,
+    extra_credits_spent integer null,
+    plus_listings_count integer null,
+    plus_credits_spent integer null,
+    super_listings_count integer null,
+    super_credits_spent integer null,
+    standard_listings_count integer null,
+    standard_credits_spent integer null,
+    premium_listings_count integer null,
+    premium_credits_spent integer null,
+    optimum_listings_count integer null,
+    optimum_credits_spent integer null,
+    car_offices_listings_count integer null,
+    car_offices_credits_spent integer null,
+    property_offices_listings_count integer null,
+    property_offices_credits_spent integer null,
+    electronics_shops_listings_count integer null,
+    electronics_shops_credits_spent integer null,
+    addon_pinning_listings_count integer null,
+    addon_pinning_credits_spent integer null,
+    addon_extended_listings_count integer null,
+    addon_extended_credits_spent integer null,
+    addon_promoted_listings_count integer null,
+    addon_promoted_credits_spent integer null,
+    addon_pinning_shuffle_listings_count integer null,
+    addon_pinning_shuffle_credits_spent integer null,
+    addon_premium_listings_count integer null,
+    addon_premium_credits_spent integer null,
+    addon_power_pin_listings_count integer null,
+    addon_power_pin_credits_spent integer null,
+    addon_refresh_listings_count integer null,
+    addon_refresh_credits_spent integer null,
+    addon_vip_listings_count integer null,
+    addon_vip_credits_spent integer null,
+    offer_50_days_used integer null,
+    offer_baraka_days_used integer null,
+    offer_total_days_used integer null,
+    offer_50_percentage double precision null,
+    offer_baraka_percentage double precision null,
+    offer_total_percentage double precision null,
+    constraint users_pkey primary key (user_id)
+    ) TABLESPACE pg_default;
+    
+
+### 3️⃣ Cohorts
+
+- Cohort list view.
+- Cohort condition builder (using profile fields + Amplitude imports).
+- "Sync cohort" button to synchronize with Amplitude or Braze.
+
+### 4️⃣ Promotions
+
+- Create campaign interface.
+- Select cohort, promotion type, limits, TTL (Time To Live).
+- Track redemptions for campaigns.
+
+### 5️⃣ Admin
+
+- Manage platform users.
+- Invite new users, edit existing roles, disable users, reset passwords.
+
+### 6️⃣ Integrations Monitor
+
+- Card view for each Airflow DAG.
+- Display last sync time and current status.
+- Manual "refresh now" button to trigger a DAG run.
+
+---
+
+## 🗄 Database Schema
+
+✅ Database is already up and running and the tables are created.
+DATABASE uri: `postgresql://postgres:[YOUR-PASSWORD]@db.wdhmmgirjgnzfrvgbwpa.supabase.co:5432/postgres`
+Database secret: `jksdfjsdkfj%^$%^%`
+Supabase API keys:
+
+- anon: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndkaG1tZ2lyamduemZydmdid3BhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg3NzM1NjcsImV4cCI6MjA2NDM0OTU2N30.C_FSPMjJeVgztJT-iBQn2M-R52o-WesbGgfTu3_rPjg`
+- secret: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndkaG1tZ2lyamduemZydmdid3BhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0ODc3MzU2NywiZXhwIjoyMDY0MzQ5NTY3fQ.tutrGxtOG4WxhpxkMkk7TGl-te8TuK5ZJHnLN5zyNSM`
+
+---
+
+## 🔐 Security & Auth
+
+- Supabase Auth + JWT for authentication.
+- Role-based permissions: Super Admin, Admin, Growth Manager, Data Engineer, Read Only.
+- Row-Level Security (RLS) enforced at the database level.
+
+---
+
+## 🌐 API Endpoints
+
+### Dashboard
+
+- `GET /dashboard/metrics`
+    - Description: Retrieves aggregated metrics for the dashboard.
+    - Query Params: `period` (e.g., `daily`, `weekly`, `monthly`, `custom`), `metrics` (comma-separated list like `dau,wau,mau,churnedUsers,newUsers`), `startDate`, `endDate` (for custom period).
+- `GET /dashboard/user-segments`
+    - Description: Retrieves top user segments by activity or value.
+- `GET /dashboard/data-health`
+    - Description: Retrieves CDP specific data health metrics (total profiles, ingestion rate).
+
+### Users (Marketplace End-Users)
+
+- `GET /users`
+    - Description: Retrieves a paginated list of users with search and filter capabilities.
+    - Query Params: `page`, `limit`, `search`, `sortBy`, `filterBy[field]`.
+- `GET /users/{id}`
+    - Description: Retrieves a specific user's comprehensive profile.
+- `PATCH /users/{id}`
+    - Description: Updates specific attributes of a user's profile (e.g., `account_status`, `lifecycle_stage` by an admin).
+
+### Cohorts
+
+- `GET /cohorts`
+    - Description: Retrieves a list of all cohorts.
+- `POST /cohorts`
+    - Description: Creates a new cohort based on defined conditions.
+- `GET /cohorts/{id}`
+    - Description: Retrieves details of a specific cohort.
+- `PATCH /cohorts/{id}`
+    - Description: Updates an existing cohort (conditions, name, etc.).
+- `DELETE /cohorts/{id}`
+    - Description: Deletes a cohort.
+- `POST /cohorts/{id}/sync`
+    - Description: Triggers a sync of the cohort to an external service.
+    - Request Body: `{"target": "amplitude"}` or `{"target": "braze"}`.
+
+### Promotions
+
+- `GET /promotions`
+    - Description: Retrieves a list of all promotional campaigns.
+- `POST /promotions`
+    - Description: Creates a new promotional campaign.
+- `GET /promotions/{id}`
+    - Description: Retrieves details of a specific promotional campaign.
+- `PATCH /promotions/{id}`
+    - Description: Updates an existing promotional campaign.
+- `DELETE /promotions/{id}`
+    - Description: Deletes a promotional campaign.
+- `POST /promotions/{id}/activate`
+    - Description: Activates a promotional campaign.
+- `POST /promotions/{id}/deactivate`
+    - Description: Deactivates a promotional campaign.
+- `GET /promotions/{id}/redemptions`
+    - Description: Retrieves redemption data for a specific promotion.
+- `POST /promotions/{promo_code}/redeem` (This endpoint is likely for end-users, not admins, but listed for completeness of promo lifecycle)
+    - Description: Allows a user to redeem a promotion using a promo code.
+
+### Platform Users (Admin Panel Users)
+
+- `GET /platform-users`
+    - Description: Retrieves a list of all platform (admin) users.
+- `POST /platform-users`
+    - Description: Invites/Creates a new platform user.
+- `GET /platform-users/{id}`
+    - Description: Retrieves details of a specific platform user.
+- `PATCH /platform-users/{id}`
+    - Description: Updates a platform user's details (e.g., roles, status).
+- `DELETE /platform-users/{id}`
+    - Description: Disables or deletes a platform user.
+- `POST /platform-users/{id}/reset-password`
+    - Description: Initiates a password reset for a platform user (admin action).
+
+### Roles & Permissions
+
+- `GET /roles`
+    - Description: Retrieves a list of available platform user roles.
+- `GET /platform-users/{id}/permissions`
+    - Description: Retrieves effective permissions for a specific platform user.
+
+### Audit Logs
+
+- `GET /audit-logs`
+    - Description: Retrieves audit logs for platform actions.
+    - Query Params: `userId` (platform user ID), `actionType`, `startDate`, `endDate`, `page`, `limit`.
+
+### Integrations
+
+- `GET /integrations/airflow/dags`
+    - Description: Retrieves the status of Airflow DAGs.
+- `POST /integrations/airflow/dags/{dag_id}/trigger`
+    - Description: Manually triggers an Airflow DAG run.
+
+---
+
+## 🔁 External Integration API
+
+| **Integration** | **Method** | **Description** |
+| --- | --- | --- |
+| Amplitude | Cohort import/export | Sync cohorts to/from Amplitude. |
+| Braze | Cohort sync, user profile enrichment | Sync cohorts and enrich user profiles in Braze. |
+| Airflow | DAG status monitor & triggers | Monitor status and trigger Airflow DAGs via its REST API. |
+
+Export to Sheets
+
+---
+
+## 🔐 Security Notes
+
+- ✅ No hardcoded credentials.
+- ✅ All secrets via environment variables.
+- ✅ Never expose Supabase service role key to the client.
+- ✅ Fully protected RLS on Supabase Postgres.
+- ✅ All access permissions role-driven.
+
+---
+
+## 🔎 Testing Layer
+
+- ✅ E2E UI tests via Playwright/Cypress.
+- ✅ Backend unit tests for Edge Functions & Redis worker.
+- ✅ Data validation tests after ETL sync.
+- ✅ Zero hardcoded test data — always use database state.
+
+---
+
+## ⚠ Common Architecture Gotchas Addressed
+
+- ✅ Clear separation of concerns.
+- ✅ Stateless workers.
+- ✅ No tight coupling between modules.
+- ✅ All configs externalized.
+- ✅ No business logic embedded in frontend.
+- ✅ Fully future-proof & extensible.
+- NEVER use memstorage or mocking data…
