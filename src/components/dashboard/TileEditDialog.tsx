@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
+import { Users, TrendingUp, TrendingDown } from 'lucide-react';
 import type { DashboardTile } from './DashboardBuilder';
 
 interface TileEditDialogProps {
@@ -30,6 +30,12 @@ const DATA_TABLES = [
   { value: 'transactions', label: 'Transactions' },
   { value: 'events', label: 'Events' },
   { value: 'cohorts', label: 'Cohorts' }
+];
+
+const ICON_OPTIONS = [
+  { value: 'users', label: 'Users', component: Users },
+  { value: 'trending-up', label: 'Trending Up', component: TrendingUp },
+  { value: 'trending-down', label: 'Trending Down', component: TrendingDown }
 ];
 
 export function TileEditDialog({ tile, isOpen, onClose, onSave }: TileEditDialogProps) {
@@ -95,6 +101,36 @@ export function TileEditDialog({ tile, isOpen, onClose, onSave }: TileEditDialog
               })}
             />
           </div>
+
+          {editedTile.type === 'metric' && (
+            <div className="space-y-2">
+              <Label>Icon</Label>
+              <Select
+                value={editedTile.icon || 'users'}
+                onValueChange={(value) => setEditedTile({
+                  ...editedTile,
+                  icon: value
+                })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-white border shadow-lg z-50">
+                  {ICON_OPTIONS.map((icon) => {
+                    const IconComponent = icon.component;
+                    return (
+                      <SelectItem key={icon.value} value={icon.value}>
+                        <div className="flex items-center gap-2">
+                          <IconComponent className="h-4 w-4" />
+                          {icon.label}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

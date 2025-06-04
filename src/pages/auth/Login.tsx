@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,11 +54,6 @@ export default function Login() {
               Sign In
             </Button>
           </form>
-          <div className="mt-4 text-center">
-            <Link to="/register" className="text-sm text-blue-600 hover:underline">
-              Don't have an account? Sign up
-            </Link>
-          </div>
         </CardContent>
       </Card>
     </div>

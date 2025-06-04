@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Plus, Save } from 'lucide-react';
+import { Plus, Save, Users, TrendingUp, TrendingDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -16,6 +17,7 @@ export interface DashboardTile {
   y: number;
   width: number;
   height: number;
+  icon?: string;
   dataSource: {
     table: string;
     query: string;
@@ -51,6 +53,12 @@ const DATA_TABLES = [
   { value: 'cohorts', label: 'Cohorts' }
 ];
 
+const ICON_OPTIONS = [
+  { value: 'users', label: 'Users', component: Users },
+  { value: 'trending-up', label: 'Trending Up', component: TrendingUp },
+  { value: 'trending-down', label: 'Trending Down', component: TrendingDown }
+];
+
 export function DashboardBuilder({ tiles, onTilesChange, isEditMode }: DashboardBuilderProps) {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [newTile, setNewTile] = useState<Partial<DashboardTile>>({
@@ -58,6 +66,7 @@ export function DashboardBuilder({ tiles, onTilesChange, isEditMode }: Dashboard
     title: '',
     width: 4,
     height: 2,
+    icon: 'users',
     dataSource: {
       table: 'users',
       query: 'SELECT COUNT(*) as value FROM users',
@@ -78,6 +87,7 @@ export function DashboardBuilder({ tiles, onTilesChange, isEditMode }: Dashboard
       y: 0,
       width: newTile.width || 4,
       height: newTile.height || 2,
+      icon: newTile.icon,
       dataSource: newTile.dataSource!,
       refreshConfig: newTile.refreshConfig || {
         autoRefresh: false,
@@ -92,6 +102,7 @@ export function DashboardBuilder({ tiles, onTilesChange, isEditMode }: Dashboard
       title: '',
       width: 4,
       height: 2,
+      icon: 'users',
       dataSource: {
         table: 'users',
         query: 'SELECT COUNT(*) as value FROM users',
@@ -144,6 +155,33 @@ export function DashboardBuilder({ tiles, onTilesChange, isEditMode }: Dashboard
               onChange={(e) => setNewTile({...newTile, title: e.target.value})}
             />
           </div>
+
+          {newTile.type === 'metric' && (
+            <div className="space-y-2">
+              <Label>Icon</Label>
+              <Select
+                value={newTile.icon}
+                onValueChange={(value) => setNewTile({...newTile, icon: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-white border shadow-lg z-50">
+                  {ICON_OPTIONS.map((icon) => {
+                    const IconComponent = icon.component;
+                    return (
+                      <SelectItem key={icon.value} value={icon.value}>
+                        <div className="flex items-center gap-2">
+                          <IconComponent className="h-4 w-4" />
+                          {icon.label}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
