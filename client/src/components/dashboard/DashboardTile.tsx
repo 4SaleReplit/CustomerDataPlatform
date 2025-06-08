@@ -37,60 +37,70 @@ const getIconComponent = (iconName: string) => {
   }
 };
 
-// Mock data generators based on tile type
-const generateMockData = (tile: DashboardTile) => {
-  switch (tile.type) {
-    case 'metric':
-      return { value: Math.floor(Math.random() * 10000), change: Math.floor(Math.random() * 20) - 10 };
-    case 'chart':
-      return Array.from({ length: 7 }, (_, i) => ({
-        date: `Day ${i + 1}`,
-        value: Math.floor(Math.random() * 1000) + 500
-      }));
-    case 'table':
-      return Array.from({ length: 8 }, (_, i) => ({
-        id: i + 1,
-        name: `Item ${i + 1}`,
-        value: Math.floor(Math.random() * 100),
-        status: Math.random() > 0.5 ? 'Active' : 'Inactive'
-      }));
-    case 'funnel':
-      return [
-        { step: 'Registration', users: 1000, rate: 100 },
-        { step: 'Verification', users: 850, rate: 85 },
-        { step: 'First Action', users: 680, rate: 68 },
-        { step: 'Purchase', users: 450, rate: 45 }
-      ];
-    default:
-      return null;
-  }
-};
-
 export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onDuplicate, onRefresh }: DashboardTileProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const queryClient = useQueryClient();
-  
-  // Query for Snowflake data when tile type is 'table'
-  const { data: snowflakeData, isLoading: isSnowflakeLoading, error: snowflakeError, refetch: refetchSnowflake } = useQuery({
-    queryKey: ['snowflake-query', tile.id, tile.dataSource.query],
-    queryFn: () => apiRequest('/api/snowflake/query', {
-      method: 'POST',
-      body: JSON.stringify({ query: tile.dataSource.query })
-    }),
+
+  // Fetch authentic Snowflake data for table tiles
+  const { data: snowflakeData, isLoading: snowflakeLoading, refetch: refetchSnowflake } = useQuery({
+    queryKey: ['/api/snowflake/query', tile.id],
+    queryFn: async () => {
+      const response = await apiRequest('/api/snowflake/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: tile.dataSource.query })
+      });
+      return response;
+    },
     enabled: tile.type === 'table' && !!tile.dataSource.query,
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 30, // 30 minutes
   });
   
-  const mockData = generateMockData(tile);
+  // Fetch authentic Snowflake data for metric tiles
+  const { data: metricData, isLoading: metricLoading, refetch: refetchMetric } = useQuery({
+    queryKey: ['/api/snowflake/query', tile.id, 'metric'],
+    queryFn: async () => {
+      if (tile.type !== 'metric') return null;
+      const response = await apiRequest('/api/snowflake/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: tile.dataSource.query })
+      });
+      return response;
+    },
+    enabled: tile.type === 'metric' && !!tile.dataSource.query,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 30, // 30 minutes
+  });
+
+  // Fetch authentic Snowflake data for chart tiles
+  const { data: chartData, isLoading: chartLoading, refetch: refetchChart } = useQuery({
+    queryKey: ['/api/snowflake/query', tile.id, 'chart'],
+    queryFn: async () => {
+      if (tile.type !== 'chart') return null;
+      const response = await apiRequest('/api/snowflake/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: tile.dataSource.query })
+      });
+      return response;
+    },
+    enabled: tile.type === 'chart' && !!tile.dataSource.query,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 30, // 30 minutes
+  });
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     
-    // Refresh Snowflake data for table tiles
+    // Refresh Snowflake data based on tile type
     if (tile.type === 'table') {
       await refetchSnowflake();
+    } else if (tile.type === 'metric') {
+      await refetchMetric();
+    } else if (tile.type === 'chart') {
+      await refetchChart();
     }
     
     // Call parent refresh handler
@@ -110,9 +120,25 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
   const renderTileContent = () => {
     switch (tile.type) {
       case 'metric':
-        const metricData = mockData as { value: number; change: number };
+        // Use authentic Snowflake data only
+        if (metricLoading) {
+          return (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-gray-500">Loading...</div>
+            </div>
+          );
+        }
+        
+        if (!metricData?.success || !metricData?.rows?.length) {
+          return (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-red-500">No data available</div>
+            </div>
+          );
+        }
+
+        const value = metricData.rows[0][0] || 0;
         const IconComponent = getIconComponent(tile.icon || 'users');
-        const isPositive = metricData.change >= 0;
         
         return (
           <div className="h-full flex flex-col p-6 bg-white relative">
@@ -132,29 +158,46 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
             <div className="flex-1 flex flex-col items-center justify-center text-center -mt-4">
               {/* Main metric value */}
               <div className="text-4xl font-bold text-gray-900 mb-3">
-                {metricData.value.toLocaleString()}
+                {Number(value).toLocaleString()}
               </div>
               
-              {/* Change indicator */}
+              {/* Data source indicator */}
               <div className="flex items-center justify-center">
-                <span className={`text-sm font-medium flex items-center ${
-                  isPositive ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  <span className="mr-1">{isPositive ? '↗' : '↘'}</span>
-                  {Math.abs(metricData.change)}%
+                <span className="text-sm text-green-600 font-medium">
+                  Live Snowflake Data
                 </span>
-                <span className="text-sm text-gray-500 ml-2">vs last period</span>
               </div>
             </div>
           </div>
         );
 
       case 'chart':
-        const chartData = mockData as Array<{ date: string; value: number }>;
+        if (chartLoading) {
+          return (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-gray-500">Loading chart data...</div>
+            </div>
+          );
+        }
+        
+        if (!chartData?.success || !chartData?.rows?.length) {
+          return (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-red-500">No chart data available</div>
+            </div>
+          );
+        }
+
+        // Transform Snowflake data to chart format
+        const transformedChartData = chartData.rows.map((row: any, index: number) => ({
+          date: row[0] || `Day ${index + 1}`,
+          value: Number(row[1]) || 0
+        }));
+
         return (
           <div className="h-full p-4">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
+              <LineChart data={transformedChartData} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis 
                   dataKey="date" 
@@ -168,21 +211,20 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
                   tick={{ fontSize: 12, fill: '#6b7280' }}
                 />
                 <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'white',
+                  contentStyle={{ 
+                    backgroundColor: 'white', 
                     border: '1px solid #e5e7eb',
                     borderRadius: '8px',
-                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                    fontSize: '14px'
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                   }}
                 />
                 <Line 
                   type="monotone" 
                   dataKey="value" 
-                  stroke={CHART_COLORS[0]} 
-                  strokeWidth={3}
-                  dot={{ fill: CHART_COLORS[0], strokeWidth: 0, r: 5 }}
-                  activeDot={{ r: 7, stroke: CHART_COLORS[0], strokeWidth: 2, fill: 'white' }}
+                  stroke="#3B82F6" 
+                  strokeWidth={2}
+                  dot={{ r: 4, fill: "#3B82F6" }}
+                  activeDot={{ r: 6, fill: "#3B82F6" }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -190,286 +232,115 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
         );
 
       case 'table':
-        if (isSnowflakeLoading) {
+        if (snowflakeLoading) {
           return (
             <div className="h-full flex items-center justify-center">
-              <div className="flex flex-col items-center gap-3">
-                <RefreshCw className="h-6 w-6 animate-spin text-blue-600" />
-                <p className="text-sm text-gray-600">Executing query...</p>
-              </div>
+              <div className="text-gray-500">Loading table data...</div>
             </div>
           );
         }
 
-        if (snowflakeError) {
+        if (!snowflakeData?.success || !snowflakeData?.rows?.length) {
           return (
             <div className="h-full flex items-center justify-center">
-              <div className="flex flex-col items-center gap-3 text-center">
-                <AlertCircle className="h-8 w-8 text-red-500" />
-                <div>
-                  <p className="text-sm font-medium text-red-600">Query Failed</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {snowflakeError instanceof Error ? snowflakeError.message : 'Unknown error'}
-                  </p>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                >
-                  <RefreshCw className={`h-4 w-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  Retry
-                </Button>
-              </div>
+              <div className="text-red-500">No table data available</div>
             </div>
           );
         }
 
-        if (snowflakeData && snowflakeData.columns && snowflakeData.rows) {
-          return (
-            <div className="h-full flex flex-col">
-              {/* Header with title and refresh button */}
-              <div className="flex items-center justify-between p-3 border-b bg-gray-50">
-                <h3 className="text-sm font-medium text-gray-900">{tile.title}</h3>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                    className="h-8 w-8 p-0"
-                  >
-                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={handleRefresh} disabled={isRefreshing}>
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Refresh Data
-                      </DropdownMenuItem>
-                      {isEditMode && onEdit && (
-                        <DropdownMenuItem onClick={() => onEdit(tile)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit Tile
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-
-              {/* Horizontally scrollable table */}
-              <div className="flex-1 overflow-auto border border-gray-200">
-                <div className="min-w-max">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-gray-50 z-10">
-                      <TableRow>
-                        {snowflakeData.columns.map((column: any, index: number) => (
-                          <TableHead 
-                            key={index} 
-                            className="text-left py-3 px-4 text-xs font-semibold text-gray-700 uppercase tracking-wide border-r border-gray-200 whitespace-nowrap bg-gray-50"
-                            style={{ minWidth: '150px', width: '150px' }}
-                          >
-                            {column.name}
-                          </TableHead>
+        return (
+          <div className="h-full flex flex-col">
+            <div className="p-4 border-b bg-gray-50">
+              <h3 className="font-medium text-gray-900">{tile.title}</h3>
+              <p className="text-sm text-green-600 mt-1">
+                Live Snowflake Data ({snowflakeData.rows.length} rows)
+              </p>
+            </div>
+            <ScrollArea className="flex-1">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {snowflakeData.columns?.map((column: any, index: number) => (
+                        <TableHead key={index} className="whitespace-nowrap">
+                          {column.name}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {snowflakeData.rows.map((row: any[], rowIndex: number) => (
+                      <TableRow key={rowIndex}>
+                        {row.map((cell: any, cellIndex: number) => (
+                          <TableCell key={cellIndex} className="whitespace-nowrap">
+                            {cell?.toString() || '-'}
+                          </TableCell>
                         ))}
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {snowflakeData.rows.map((row: any, rowIndex: number) => (
-                        <TableRow key={rowIndex} className="hover:bg-gray-50 transition-colors">
-                          {row.map((cell: any, cellIndex: number) => (
-                            <TableCell 
-                              key={cellIndex} 
-                              className="py-2 px-4 text-sm text-gray-900 border-r border-gray-100 whitespace-nowrap"
-                              style={{ minWidth: '150px', width: '150px' }}
-                            >
-                              {cell === null || cell === undefined ? (
-                                <span className="text-gray-400 italic">null</span>
-                              ) : typeof cell === 'boolean' ? (
-                                <Badge variant={cell ? 'default' : 'secondary'} className="text-xs">
-                                  {cell.toString()}
-                                </Badge>
-                              ) : typeof cell === 'number' ? (
-                                <span className="font-mono text-right block">{cell.toLocaleString()}</span>
-                              ) : (
-                                <span className="block truncate" title={String(cell)}>
-                                  {String(cell)}
-                                </span>
-                              )}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-
-              {/* Footer with stats */}
-              <div className="p-3 border-t bg-gray-50">
-                <div className="flex justify-between items-center text-xs text-gray-600">
-                  <span>{snowflakeData.rows.length} rows × {snowflakeData.columns.length} columns</span>
-                  <span>Last updated: {new Date().toLocaleTimeString()}</span>
-                </div>
-              </div>
-            </div>
-          );
-        }
-
-        return (
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center">
-              <p className="text-sm text-gray-500 mb-2">No query configured</p>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => onEdit?.(tile)}
-              >
-                Configure Query
-              </Button>
-            </div>
-          </div>
-        );
-
-      case 'funnel':
-        const funnelData = mockData as Array<{ step: string; users: number; rate: number }>;
-        return (
-          <div className="h-full p-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={funnelData} layout="horizontal" margin={{ top: 10, right: 30, left: 80, bottom: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis 
-                  type="number" 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: '#6b7280' }}
-                />
-                <YAxis 
-                  dataKey="step" 
-                  type="category" 
-                  width={80}
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: '#6b7280' }}
-                />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                    fontSize: '14px'
-                  }}
-                />
-                <Bar 
-                  dataKey="rate" 
-                  fill={CHART_COLORS[1]}
-                  radius={[0, 4, 4, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            </ScrollArea>
           </div>
         );
 
       default:
-        return <div className="text-center text-gray-500 p-8 text-lg">Unknown tile type</div>;
+        return (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-gray-500">Unsupported tile type</div>
+          </div>
+        );
     }
   };
 
   return (
-    <Card 
-      className={`relative h-full flex flex-col group transition-all duration-200 overflow-hidden ${
-        isEditMode 
-          ? 'border-2 border-dashed border-blue-400 shadow-lg bg-blue-50/30' 
-          : 'border border-gray-200 shadow-sm hover:shadow-md bg-white'
+    <div 
+      className={`h-full bg-white rounded-lg border border-gray-200 shadow-sm relative group transition-all duration-200 ${
+        isHovered ? 'shadow-md border-gray-300' : ''
       }`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Action Buttons */}
-      <div className="absolute top-3 right-3 flex gap-1 z-10">
-        {isEditMode ? (
-          <>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 bg-white/95 hover:bg-white shadow-sm border border-gray-200">
-              <GripVertical className="h-4 w-4 text-gray-600" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0 bg-white/95 hover:bg-white shadow-sm border border-gray-200"
-              onClick={() => onEdit?.(tile)}
-            >
-              <Settings className="h-4 w-4 text-gray-600" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0 bg-white/95 hover:bg-red-50 text-red-600 hover:text-red-700 shadow-sm border border-red-200"
-              onClick={() => onRemove?.(tile.id)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </>
-        ) : (
-          <div className={`transition-opacity duration-200 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 bg-white/95 hover:bg-white shadow-md border border-gray-200">
-                  <MoreVertical className="h-4 w-4 text-gray-600" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-white border shadow-lg z-50">
-                <DropdownMenuItem 
-                  onClick={() => onEdit?.(tile)}
-                  className="cursor-pointer text-gray-700 hover:bg-gray-50"
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Tile
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={handleDuplicate}
-                  className="cursor-pointer text-gray-700 hover:bg-gray-50"
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  Duplicate Tile
-                </DropdownMenuItem>
-                {tile.refreshConfig.autoRefresh && (
-                  <DropdownMenuItem 
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                    className="cursor-pointer text-gray-700 hover:bg-gray-50"
-                  >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                    Refresh Data
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={() => onRemove?.(tile.id)}
-                  className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Remove Tile
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )}
-      </div>
-      
-      {/* Content area - no header for metric tiles */}
-      <CardContent className="flex-1 overflow-hidden p-0 bg-white">
-        <div className="h-full min-h-[200px]">
-          {renderTileContent()}
+      {/* Edit Mode Controls */}
+      {isEditMode && (
+        <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 bg-white/90 backdrop-blur">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onEdit?.(tile)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleDuplicate}>
+                <Copy className="h-4 w-4 mr-2" />
+                Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleRefresh} disabled={isRefreshing}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => onRemove?.(tile.id)}
+                className="text-red-600 focus:text-red-600"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-      </CardContent>
-    </Card>
+      )}
+
+      {/* Tile Content */}
+      <div className="h-full">
+        {renderTileContent()}
+      </div>
+    </div>
   );
 }
