@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useParams } from 'wouter';
-import { ArrowLeft, Edit, Users, Calendar, Save, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Edit, Users, Calendar, Save, RefreshCw, Loader2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +24,10 @@ export default function CohortDetail() {
     autoRefresh: true,
     refreshFrequencyHours: 24
   });
+  const [isSyncingAmplitude, setIsSyncingAmplitude] = useState(false);
+  const [isSyncingBraze, setIsSyncingBraze] = useState(false);
+  const [amplitudeSuccess, setAmplitudeSuccess] = useState(false);
+  const [brazeSuccess, setBrazeSuccess] = useState(false);
 
   // Fetch cohort data from API
   const { data: cohort, isLoading, error } = useQuery({
@@ -47,6 +51,9 @@ export default function CohortDetail() {
   // Sync to Amplitude
   const syncToAmplitude = async () => {
     try {
+      setIsSyncingAmplitude(true);
+      setAmplitudeSuccess(false);
+      
       const response = await apiRequest(`/api/cohorts/${id}/sync-amplitude`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -54,38 +61,55 @@ export default function CohortDetail() {
       });
       
       queryClient.invalidateQueries({ queryKey: ['/api/cohorts', id] });
+      setAmplitudeSuccess(true);
+      
       toast({
         title: "Sync successful",
         description: `Cohort synced to Amplitude with ${response.syncedUserCount} users.`
       });
+      
+      // Show success for 3 seconds, then reset
+      setTimeout(() => setAmplitudeSuccess(false), 3000);
     } catch (error) {
       toast({
         title: "Sync failed",
         description: "Failed to sync cohort to Amplitude. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsSyncingAmplitude(false);
     }
   };
 
   // Sync to Braze
   const syncToBraze = async () => {
     try {
+      setIsSyncingBraze(true);
+      setBrazeSuccess(false);
+      
       const response = await apiRequest(`/api/cohorts/${id}/sync-braze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
       
       queryClient.invalidateQueries({ queryKey: ['/api/cohorts', id] });
+      setBrazeSuccess(true);
+      
       toast({
         title: "Sync successful",
         description: `Cohort synced to Braze with ${response.syncedUserCount} users.`
       });
+      
+      // Show success for 3 seconds, then reset
+      setTimeout(() => setBrazeSuccess(false), 3000);
     } catch (error) {
       toast({
         title: "Sync failed",
         description: "Failed to sync cohort to Braze. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsSyncingBraze(false);
     }
   };
 
