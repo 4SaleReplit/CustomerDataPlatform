@@ -265,51 +265,51 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
               </div>
 
               {/* Horizontally scrollable table */}
-              <div className="flex-1 overflow-hidden">
-                <ScrollArea className="h-full w-full">
-                  <div className="overflow-x-auto">
-                    <Table className="min-w-full">
-                      <TableHeader className="sticky top-0 bg-white z-10 border-b">
-                        <TableRow>
-                          {snowflakeData.columns.map((column: any, index: number) => (
-                            <TableHead 
-                              key={index} 
-                              className="text-left py-3 px-4 text-xs font-semibold text-gray-700 uppercase tracking-wide bg-gray-50 border-r border-gray-200 whitespace-nowrap min-w-[120px]"
+              <div className="flex-1 overflow-auto border border-gray-200">
+                <div className="min-w-max">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-gray-50 z-10">
+                      <TableRow>
+                        {snowflakeData.columns.map((column: any, index: number) => (
+                          <TableHead 
+                            key={index} 
+                            className="text-left py-3 px-4 text-xs font-semibold text-gray-700 uppercase tracking-wide border-r border-gray-200 whitespace-nowrap bg-gray-50"
+                            style={{ minWidth: '150px', width: '150px' }}
+                          >
+                            {column.name}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {snowflakeData.rows.map((row: any, rowIndex: number) => (
+                        <TableRow key={rowIndex} className="hover:bg-gray-50 transition-colors">
+                          {row.map((cell: any, cellIndex: number) => (
+                            <TableCell 
+                              key={cellIndex} 
+                              className="py-2 px-4 text-sm text-gray-900 border-r border-gray-100 whitespace-nowrap"
+                              style={{ minWidth: '150px', width: '150px' }}
                             >
-                              {column.name}
-                            </TableHead>
+                              {cell === null || cell === undefined ? (
+                                <span className="text-gray-400 italic">null</span>
+                              ) : typeof cell === 'boolean' ? (
+                                <Badge variant={cell ? 'default' : 'secondary'} className="text-xs">
+                                  {cell.toString()}
+                                </Badge>
+                              ) : typeof cell === 'number' ? (
+                                <span className="font-mono text-right block">{cell.toLocaleString()}</span>
+                              ) : (
+                                <span className="block truncate" title={String(cell)}>
+                                  {String(cell)}
+                                </span>
+                              )}
+                            </TableCell>
                           ))}
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {snowflakeData.rows.map((row: any, rowIndex: number) => (
-                          <TableRow key={rowIndex} className="hover:bg-gray-50 transition-colors border-b">
-                            {row.map((cell: any, cellIndex: number) => (
-                              <TableCell 
-                                key={cellIndex} 
-                                className="py-2 px-4 text-sm text-gray-900 border-r border-gray-100 whitespace-nowrap min-w-[120px]"
-                              >
-                                {cell === null || cell === undefined ? (
-                                  <span className="text-gray-400 italic">null</span>
-                                ) : typeof cell === 'boolean' ? (
-                                  <Badge variant={cell ? 'default' : 'secondary'}>
-                                    {cell.toString()}
-                                  </Badge>
-                                ) : typeof cell === 'number' ? (
-                                  <span className="font-mono">{cell.toLocaleString()}</span>
-                                ) : (
-                                  <span className="truncate max-w-[200px]" title={String(cell)}>
-                                    {String(cell)}
-                                  </span>
-                                )}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </ScrollArea>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
 
               {/* Footer with stats */}
