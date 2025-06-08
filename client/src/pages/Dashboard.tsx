@@ -127,11 +127,11 @@ export default function Dashboard() {
   const lastSavedRef = useRef<string>('');
   const { toast } = useToast();
 
-  // Query to fetch tiles from database - refresh once to load new tiles
-  const { data: dashboardTiles = [], isLoading } = useQuery<any[]>({
+  // Query to fetch tiles from database - force fresh data
+  const { data: dashboardTiles = [], isLoading, refetch } = useQuery<any[]>({
     queryKey: ['/api/dashboard/tiles'],
-    staleTime: 30 * 1000, // Fresh for 30 seconds to load new tiles
-    gcTime: 60 * 60 * 1000, // Keep in cache for 1 hour
+    staleTime: 0, // Always fetch fresh data
+    gcTime: 0, // Don't cache
     refetchOnWindowFocus: false,
     refetchOnMount: true,
     refetchOnReconnect: false,
@@ -177,14 +177,19 @@ export default function Dashboard() {
     }
   });
 
-  // Initialize tiles ONCE when data loads
+  // Clear cache and force refresh on mount
   useEffect(() => {
-    if (!isInitialized && !isLoading) {
-      let tilesToUse = initialTiles;
+    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/tiles'] });
+  }, []);
+
+  // Initialize tiles when data loads from database
+  useEffect(() => {
+    if (!isLoading && dashboardTiles) {
+      console.log('Loading dashboard tiles:', dashboardTiles.length, dashboardTiles);
       
       if (Array.isArray(dashboardTiles) && dashboardTiles.length > 0) {
         // Convert database tiles to frontend format
-        tilesToUse = dashboardTiles.map((dbTile: any) => ({
+        const convertedTiles = dashboardTiles.map((dbTile: any) => ({
           id: dbTile.tileId,
           type: dbTile.type,
           title: dbTile.title,
@@ -196,17 +201,26 @@ export default function Dashboard() {
           dataSource: dbTile.dataSource,
           refreshConfig: dbTile.refreshConfig
         }));
+        
+        console.log('Setting converted tiles:', convertedTiles);
+        setTiles(convertedTiles);
+        
+        // Store initial state for comparison
+        lastSavedRef.current = JSON.stringify(convertedTiles.map(t => ({ 
+          id: t.id, x: t.x, y: t.y, width: t.width, height: t.height 
+        })));
+      } else {
+        // No tiles in database, use initial tiles
+        console.log('No tiles found, using initial tiles');
+        setTiles(initialTiles);
+        lastSavedRef.current = JSON.stringify(initialTiles.map(t => ({ 
+          id: t.id, x: t.x, y: t.y, width: t.width, height: t.height 
+        })));
       }
       
-      setTiles(tilesToUse);
       setIsInitialized(true);
-      
-      // Store initial state for comparison
-      lastSavedRef.current = JSON.stringify(tilesToUse.map(t => ({ 
-        id: t.id, x: t.x, y: t.y, width: t.width, height: t.height 
-      })));
     }
-  }, [dashboardTiles, isLoading, isInitialized]);
+  }, [dashboardTiles, isLoading]);
 
   // Debounced save function that only saves when tiles actually change
   const debouncedSave = useCallback((tilesToSave: DashboardTile[]) => {
@@ -362,6 +376,15 @@ export default function Dashboard() {
             <Badge variant="outline" className="hidden sm:flex">
               {tiles.length} tiles
             </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isLoading}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              {isLoading ? 'Loading...' : 'Refresh'}
+            </Button>
             <Button
               variant="outline"
               size="sm"
