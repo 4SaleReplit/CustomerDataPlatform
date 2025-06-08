@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link } from 'wouter';
 import { ArrowLeft, Edit, Save, X, AlertTriangle, TrendingUp, TrendingDown, Users, Calendar, DollarSign, Activity, Target, Star, Mail, Phone, MapPin, Clock, Hash, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
