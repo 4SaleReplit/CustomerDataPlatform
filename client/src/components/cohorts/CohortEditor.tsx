@@ -822,6 +822,79 @@ export default function CohortEditor({
               )}
             </CardContent>
           </Card>
+
+          {/* SQL Query Preview */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                SQL Query Preview
+                <div className="flex gap-2">
+                  <Button
+                    onClick={copySqlToClipboard}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-3"
+                  >
+                    <Copy className="h-4 w-4 mr-1" />
+                    Copy
+                  </Button>
+                  <Button
+                    onClick={executeSqlQuery}
+                    disabled={isExecuting || conditions.length === 0}
+                    variant="default"
+                    size="sm"
+                    className="h-8 px-3"
+                  >
+                    {isExecuting ? (
+                      <>Executing...</>
+                    ) : (
+                      <>
+                        <Play className="h-4 w-4 mr-1" />
+                        Execute Query
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded border">
+                <pre className="text-sm font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap overflow-x-auto">
+                  {sqlQuery || 'SELECT USER_ID FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4'}
+                </pre>
+              </div>
+              
+              {queryResult && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded">
+                    <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                      Total Users Found: {queryResult.count.toLocaleString()}
+                    </span>
+                  </div>
+                  
+                  {queryResult.userIds.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm text-gray-700 dark:text-gray-300">
+                        Sample User IDs (first 100 results):
+                      </Label>
+                      <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded border max-h-40 overflow-y-auto">
+                        <div className="text-sm font-mono text-gray-700 dark:text-gray-300 leading-relaxed">
+                          {queryResult.userIds.slice(0, 30).join(', ')}
+                          {queryResult.userIds.length > 30 && ' ...'}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {conditions.length === 0 && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                  Add conditions above to build and preview your SQL query
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         <div className="space-y-6">
@@ -866,76 +939,7 @@ export default function CohortEditor({
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                SQL Query Preview
-                <div className="flex gap-2">
-                  <Button
-                    onClick={copySqlToClipboard}
-                    variant="outline"
-                    size="sm"
-                    className="h-6 px-2"
-                  >
-                    <Copy className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    onClick={executeSqlQuery}
-                    disabled={isExecuting || conditions.length === 0}
-                    variant="default"
-                    size="sm"
-                    className="h-6 px-2"
-                  >
-                    {isExecuting ? (
-                      <>...</>
-                    ) : (
-                      <>
-                        <Play className="h-3 w-3 mr-1" />
-                        Run
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded border">
-                <pre className="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap overflow-x-auto">
-                  {sqlQuery || 'SELECT USER_ID FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4'}
-                </pre>
-              </div>
-              
-              {queryResult && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded">
-                    <span className="text-sm font-medium text-green-800 dark:text-green-200">
-                      Total Users: {queryResult.count.toLocaleString()}
-                    </span>
-                  </div>
-                  
-                  {queryResult.userIds.length > 0 && (
-                    <div className="space-y-1">
-                      <Label className="text-xs text-gray-600 dark:text-gray-400">
-                        Sample User IDs (first 100):
-                      </Label>
-                      <div className="bg-gray-50 dark:bg-gray-900 p-2 rounded border max-h-32 overflow-y-auto">
-                        <div className="text-xs font-mono text-gray-700 dark:text-gray-300">
-                          {queryResult.userIds.slice(0, 20).join(', ')}
-                          {queryResult.userIds.length > 20 && '...'}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {conditions.length === 0 && (
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Add conditions above to build your SQL query
-                </p>
-              )}
-            </CardContent>
-          </Card>
+
 
           <Card>
             <CardHeader>
