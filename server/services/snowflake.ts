@@ -28,7 +28,7 @@ export class SnowflakeService {
   }
 
   async executeQuery(query: string): Promise<QueryResult> {
-    const statementsUrl = `https://${this.config.account}/api/v2/statements`;
+    const statementsUrl = `https://${this.config.account}.snowflakecomputing.com/api/v2/statements`;
     
     const headers = {
       "Authorization": `Bearer ${this.config.accessToken}`,
@@ -138,10 +138,14 @@ export class SnowflakeService {
   }
 }
 
+// Load environment variables at module level
+import { config } from "dotenv";
+config();
+
 export const snowflakeService = new SnowflakeService({
-  account: process.env.SNOWFLAKE_ACCOUNT || "",
-  accessToken: process.env.SNOWFLAKE_ACCESS_TOKEN || "",
-  warehouse: process.env.SNOWFLAKE_WAREHOUSE || "",
-  database: process.env.SNOWFLAKE_DATABASE || "",
-  schema: process.env.SNOWFLAKE_SCHEMA || ""
+  account: process.env.SNOWFLAKE_ACCOUNT || "q84sale",
+  accessToken: process.env.SNOWFLAKE_ACCESS_TOKEN || "eyJraWQiOiIzNjUyNTkwNTY5ODU1MzkwIiwiYWxnIjoiRVMyNTYifQ.eyJwIjoiNTU3MzQxMDk1MDk6NTU3MzQxMDg0MjEiLCJpc3MiOiJTRjoxMDA5IiwiZXhwIjoxNzUwMDA2NTcwfQ.VZrZLmq1WZLjV11Wj_Pd6OqPxHDyG_apRkwhrhGSKyh-EEMTRLliCx8qrn5zzbSftwkrpzoSoMsHVLF_IJFCbg",
+  warehouse: process.env.SNOWFLAKE_WAREHOUSE || "LOOKER",
+  database: process.env.SNOWFLAKE_DATABASE || "DBT_CORE_PROD_DATABASE",
+  schema: process.env.SNOWFLAKE_SCHEMA || "USER_SEGMENTATION_PROJECT_V4"
 });
