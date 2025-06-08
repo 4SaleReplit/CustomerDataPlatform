@@ -11,6 +11,7 @@ import UserProfile from "./pages/UserProfile";
 import Cohorts from "./pages/Cohorts";
 import CohortBuilder from "./pages/CohortBuilder";
 import CohortDetail from "./pages/CohortDetail";
+import CohortEdit from "./pages/CohortEdit";
 import Segments from "./pages/Segments";
 import SegmentDetail from "./pages/SegmentDetail";
 import Campaigns from "./pages/Campaigns";
@@ -41,8 +42,8 @@ const App = () => (
           <Route path="/users/:userId" component={() => <Layout><UserProfile /></Layout>} />
           <Route path="/cohorts" component={() => <Layout><Cohorts /></Layout>} />
           <Route path="/cohorts/new" component={() => <Layout><CohortBuilder /></Layout>} />
-          <Route path="/cohorts/:cohortId" component={() => <Layout><CohortDetail /></Layout>} />
-          <Route path="/cohorts/:cohortId/edit" component={() => <Layout><CohortDetail /></Layout>} />
+          <Route path="/cohorts/:id" component={() => <Layout><CohortDetail /></Layout>} />
+          <Route path="/cohorts/:id/edit" component={() => <Layout><CohortEdit /></Layout>} />
           <Route path="/segments" component={() => <Layout><Segments /></Layout>} />
           <Route path="/segments/:segmentId" component={() => <Layout><SegmentDetail /></Layout>} />
           <Route path="/segments/:segmentId/edit" component={() => <Layout><SegmentDetail /></Layout>} />

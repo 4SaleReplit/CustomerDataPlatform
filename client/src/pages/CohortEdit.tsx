@@ -1,77 +1,76 @@
-
 import React from 'react';
 import { useLocation, useParams } from 'wouter';
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import CohortEditor from '@/components/cohorts/CohortEditor';
-
-// Mock cohort data - in a real app this would come from an API
-const mockCohorts = [
-  {
-    id: 1,
-    name: 'Premium Users',
-    description: 'Users with premium account type',
-    conditions: [
-      {
-        id: '1',
-        type: 'attribute' as const,
-        attribute: 'user_type',
-        operator: 'equals',
-        value: 'premium'
-      }
-    ]
-  },
-  {
-    id: 2,
-    name: 'Active Listers',
-    description: 'Users who posted listings in the last 30 days',
-    conditions: [
-      {
-        id: '1',
-        type: 'attribute' as const,
-        attribute: 'total_listings_count',
-        operator: 'greater_than',
-        value: '0'
-      },
-      {
-        id: '2',
-        type: 'attribute' as const,
-        attribute: 'last_app_open_date',
-        operator: 'in_last_days',
-        value: '30',
-        logicalOperator: 'AND' as const
-      }
-    ]
-  }
-];
 
 export default function CohortEdit() {
   const [location, setLocation] = useLocation();
   const { id } = useParams<{ id: string }>();
   
-  // Find the cohort by ID
-  const cohort = mockCohorts.find(c => c.id === parseInt(id || '0'));
-  
-  if (!cohort) {
+  // Fetch cohort data from database
+  const { data: cohortData, isLoading, error } = useQuery({
+    queryKey: ['/api/cohorts', id],
+    queryFn: () => apiRequest(`/api/cohorts/${id}`),
+    enabled: !!id
+  });
+
+  if (isLoading) {
     return (
-      <div className="text-center py-8">
-        <h1 className="text-2xl font-bold text-red-600">Cohort not found</h1>
-        <p className="text-gray-600 mt-2">The cohort you're looking for doesn't exist.</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg font-medium">Loading cohort...</div>
+        </div>
       </div>
     );
   }
 
-  const handleSave = (data: { name: string; description: string; conditions: any[] }) => {
-    console.log('Updating cohort:', { id, ...data });
-    // Here you would typically call an API to update the cohort
-    setLocation('/cohorts');
+  if (error || !cohortData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg font-medium text-red-600">Error loading cohort</div>
+          <div className="text-sm text-gray-600 mt-2">
+            {error?.message || 'Cohort not found'}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Parse conditions from database JSON
+  const conditions = Array.isArray(cohortData.conditions) ? cohortData.conditions : [];
+
+  const handleSave = async (data: { name: string; description: string; conditions: any[] }) => {
+    try {
+      await apiRequest(`/api/cohorts/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: data.name,
+          description: data.description,
+          conditions: data.conditions
+        }),
+      });
+      
+      // Redirect back to cohorts list after successful update
+      setLocation('/cohorts');
+    } catch (error) {
+      console.error('Failed to update cohort:', error);
+      // Handle error - could show a toast notification
+    }
   };
 
   return (
     <CohortEditor 
-      initialName={cohort.name}
-      initialDescription={cohort.description}
-      initialConditions={cohort.conditions}
+      initialName={cohortData.name}
+      initialDescription={cohortData.description || ''}
+      initialConditions={conditions}
       onSave={handleSave}
-      title={`Edit Cohort: ${cohort.name}`}
+      title={`Edit Cohort: ${cohortData.name}`}
+      backUrl="/cohorts"
     />
   );
 }
