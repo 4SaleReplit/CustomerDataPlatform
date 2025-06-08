@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Plus, Users, TrendingUp, TrendingDown } from 'lucide-react';
-import { DashboardGrid } from './DashboardGrid';
+import { SimpleDashboardGrid } from './SimpleDashboardGrid';
 
 export interface DashboardTile {
   id: string;
@@ -272,7 +272,7 @@ export function DashboardBuilder({
       )}
 
       {/* Dashboard Grid - Show tiles */}
-      <DashboardGrid
+      <SimpleDashboardGrid
         tiles={tiles}
         isEditMode={isEditMode}
         onEditTile={onEditTile || (() => {})}
