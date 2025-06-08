@@ -2,8 +2,57 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { snowflakeService } from "./services/snowflake";
+import { insertTeamSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Database connection test
+  app.get("/api/db/test", async (req, res) => {
+    try {
+      const testUser = await storage.createUser({ 
+        username: `test_${Date.now()}`, 
+        password: "test" 
+      });
+      res.json({ connected: true, testUserId: testUser.id });
+    } catch (error) {
+      console.error("Database test error:", error);
+      res.json({ 
+        connected: false, 
+        error: error instanceof Error ? error.message : "Database connection failed" 
+      });
+    }
+  });
+
+  // Team management routes
+  app.post("/api/team", async (req, res) => {
+    try {
+      const validatedData = insertTeamSchema.parse(req.body);
+      const teamMember = await storage.createTeamMember(validatedData);
+      res.status(201).json(teamMember);
+    } catch (error) {
+      console.error("Create team member error:", error);
+      res.status(400).json({ 
+        error: error instanceof Error ? error.message : "Failed to create team member" 
+      });
+    }
+  });
+
+  app.get("/api/team/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const teamMember = await storage.getTeamMember(id);
+      
+      if (!teamMember) {
+        return res.status(404).json({ error: "Team member not found" });
+      }
+      
+      res.json(teamMember);
+    } catch (error) {
+      console.error("Get team member error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get team member" 
+      });
+    }
+  });
   // Snowflake query execution endpoint
   app.post("/api/snowflake/query", async (req, res) => {
     try {
