@@ -481,6 +481,11 @@ export default function Cohorts() {
                               Sync to Amplitude
                             </DropdownMenuItem>
 
+                            <DropdownMenuItem onClick={() => syncToBraze(cohort.id, cohort.name)}>
+                              <RefreshCw className="mr-2 h-4 w-4" />
+                              Sync to Braze
+                            </DropdownMenuItem>
+
                             <DropdownMenuItem onClick={() => handleDuplicateCohort(cohort)}>
                               <Copy className="mr-2 h-4 w-4" />
                               Duplicate
