@@ -127,13 +127,13 @@ export default function Dashboard() {
   const lastSavedRef = useRef<string>('');
   const { toast } = useToast();
 
-  // Query to fetch tiles from database - only once with long cache
+  // Query to fetch tiles from database - refresh once to load new tiles
   const { data: dashboardTiles = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/dashboard/tiles'],
-    staleTime: Infinity, // Never consider stale
-    gcTime: Infinity, // Never garbage collect
+    staleTime: 30 * 1000, // Fresh for 30 seconds to load new tiles
+    gcTime: 60 * 60 * 1000, // Keep in cache for 1 hour
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: true,
     refetchOnReconnect: false,
   });
 
@@ -330,8 +330,7 @@ export default function Dashboard() {
 
   const handleTilesChange = (newTiles: DashboardTile[]) => {
     setTiles(newTiles);
-    // Disable auto-save to prevent continuous API calls
-    // debouncedSave(newTiles);
+    // Only manual save via button click
   };
 
   const handleTimeFiltersChange = (newFilters: TimeFilterState) => {
