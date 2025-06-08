@@ -261,6 +261,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Cohort refresh endpoint - recalculate user count
+  app.post("/api/cohorts/:id/refresh", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Get cohort details
+      const cohort = await storage.getCohort(id);
+      if (!cohort) {
+        return res.status(404).json({ error: "Cohort not found" });
+      }
+
+      // Execute the cohort query to get user count
+      if (!cohort.calculationQuery) {
+        return res.status(400).json({ error: "Cohort has no calculation query" });
+      }
+
+      const queryResult = await snowflakeService.executeQuery(cohort.calculationQuery);
+      if (!queryResult.success) {
+        return res.status(500).json({ 
+          error: `Failed to execute cohort query: ${queryResult.error}` 
+        });
+      }
+
+      // Count users from query result
+      const userCount = queryResult.rows ? queryResult.rows.length : 0;
+      
+      // Update cohort with new user count
+      const updatedCohort = await storage.updateCohort(id, { 
+        userCount: userCount,
+        lastCalculatedAt: new Date(),
+        calculationError: null
+      });
+
+      if (!updatedCohort) {
+        return res.status(404).json({ error: "Failed to update cohort" });
+      }
+
+      res.json({ 
+        message: "Cohort refreshed successfully",
+        userCount: userCount,
+        lastCalculatedAt: updatedCohort.lastCalculatedAt
+      });
+
+    } catch (error) {
+      console.error("Cohort refresh error:", error);
+      
+      // Update cohort with error info
+      try {
+        await storage.updateCohort(id, { 
+          calculationError: error instanceof Error ? error.message : "Unknown error",
+          lastCalculatedAt: new Date()
+        });
+      } catch (updateError) {
+        console.error("Failed to update cohort with error:", updateError);
+      }
+
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to refresh cohort" 
+      });
+    }
+  });
+
   // Amplitude sync endpoint
   app.post("/api/cohorts/:id/sync-amplitude", async (req, res) => {
     try {

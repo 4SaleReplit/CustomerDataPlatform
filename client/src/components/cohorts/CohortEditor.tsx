@@ -340,9 +340,63 @@ export default function CohortEditor({
     }));
   };
 
-  const calculateEstimate = () => {
-    const mockSize = Math.floor(Math.random() * 50000) + 1000;
-    setEstimatedSize(mockSize);
+  const calculateEstimate = async () => {
+    // Build SQL query from conditions
+    const whereConditions = conditions
+      .filter(condition => {
+        if (condition.type === 'attribute') {
+          return condition.attribute && condition.operator;
+        }
+        return condition.segmentTag;
+      })
+      .map(buildSqlCondition)
+      .filter(Boolean);
+
+    if (whereConditions.length === 0) {
+      setEstimatedSize(0);
+      return;
+    }
+
+    // Join conditions with logical operators
+    let whereClause = whereConditions[0];
+    for (let i = 1; i < whereConditions.length; i++) {
+      const logicalOp = conditions[i].logicalOperator || 'AND';
+      whereClause += ` ${logicalOp} ${whereConditions[i]}`;
+    }
+
+    const countQuery = `SELECT COUNT(*) as count FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE ${whereClause}`;
+
+    try {
+      setIsExecuting(true);
+      const response = await apiRequest('/api/snowflake/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: countQuery })
+      });
+
+      if (response.success && response.rows && response.rows.length > 0) {
+        const count = response.rows[0][0] || 0;
+        setEstimatedSize(count);
+        setSqlQuery(countQuery);
+      } else {
+        setEstimatedSize(0);
+        toast({
+          title: "Query Error",
+          description: "Failed to calculate cohort size. Please check your conditions.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Calculate estimate error:', error);
+      setEstimatedSize(0);
+      toast({
+        title: "Error",
+        description: "Failed to calculate cohort size. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsExecuting(false);
+    }
   };
 
   const handleSave = async () => {
@@ -951,17 +1005,28 @@ export default function CohortEditor({
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Size Estimation</CardTitle>
+              <CardTitle>Cohort Size</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Button variant="outline" onClick={calculateEstimate} className="w-full">
-                <Calculator className="mr-2 h-4 w-4" />
-                Calculate Size
+              <Button 
+                variant="outline" 
+                onClick={calculateEstimate} 
+                className="w-full"
+                disabled={isExecuting || conditions.length === 0}
+              >
+                {isExecuting ? (
+                  <>Calculating...</>
+                ) : (
+                  <>
+                    <Calculator className="mr-2 h-4 w-4" />
+                    Calculate User Count
+                  </>
+                )}
               </Button>
               
               {estimatedSize !== null && (
                 <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Estimated users</p>
+                  <p className="text-sm text-gray-600">Total matching users</p>
                   <p className="text-2xl font-bold text-blue-600">
                     {estimatedSize.toLocaleString()}
                   </p>
