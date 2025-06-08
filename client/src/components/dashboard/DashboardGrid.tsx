@@ -32,12 +32,7 @@ export function DashboardGrid({
 }: DashboardGridProps) {
   const lastLayoutRef = useRef<any[]>([]);
   const userDraggedRef = useRef<boolean>(false);
-  const [gridKey, setGridKey] = useState(0);
-  
-  // Force re-render when tiles change significantly (after save)
-  useEffect(() => {
-    setGridKey(prev => prev + 1);
-  }, [tiles.map(t => `${t.id}-${t.x}-${t.y}-${t.width}-${t.height}`).join('|')]);
+  // Remove the problematic key-based re-rendering that breaks drag functionality
   
   // Convert tiles to react-grid-layout format with static positioning
   const layouts = {
@@ -138,7 +133,6 @@ export function DashboardGrid({
   return (
     <div className="dashboard-grid-container relative">
       <ResponsiveGridLayout
-        key={gridKey}
         className="layout"
         layouts={layouts}
         breakpoints={breakpoints}
