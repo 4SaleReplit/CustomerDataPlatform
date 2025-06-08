@@ -1,3 +1,5 @@
+import fetch, { Response } from 'node-fetch';
+
 interface SnowflakeConfig {
   account: string;
   accessToken: string;
@@ -59,7 +61,7 @@ export class SnowflakeService {
         };
       }
 
-      const respJson = await response.json();
+      const respJson = await response.json() as any;
       const statementHandle = respJson.statementHandle;
 
       if (!statementHandle) {
@@ -88,7 +90,7 @@ export class SnowflakeService {
           };
         }
 
-        const statusJson = await statusResponse.json();
+        const statusJson = await statusResponse.json() as any;
 
         if (statusJson.message === "Statement executed successfully.") {
           // 3. Extract data

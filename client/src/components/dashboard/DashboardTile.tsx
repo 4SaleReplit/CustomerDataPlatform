@@ -190,40 +190,101 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
         );
 
       case 'table':
-        const tableData = mockData as Array<{ id: number; name: string; value: number; status: string }>;
+        if (isSnowflakeLoading) {
+          return (
+            <div className="h-full flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3">
+                <RefreshCw className="h-6 w-6 animate-spin text-blue-600" />
+                <p className="text-sm text-gray-600">Executing query...</p>
+              </div>
+            </div>
+          );
+        }
+
+        if (snowflakeError) {
+          return (
+            <div className="h-full flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3 text-center">
+                <AlertCircle className="h-8 w-8 text-red-500" />
+                <div>
+                  <p className="text-sm font-medium text-red-600">Query Failed</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {snowflakeError instanceof Error ? snowflakeError.message : 'Unknown error'}
+                  </p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  Retry
+                </Button>
+              </div>
+            </div>
+          );
+        }
+
+        if (snowflakeData && snowflakeData.columns && snowflakeData.rows) {
+          return (
+            <div className="h-full flex flex-col p-4">
+              <ScrollArea className="flex-1">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {snowflakeData.columns.map((column, index) => (
+                        <TableHead key={index} className="text-left py-3 px-3 text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                          {column.name}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {snowflakeData.rows.map((row, rowIndex) => (
+                      <TableRow key={rowIndex} className="hover:bg-gray-50 transition-colors">
+                        {row.map((cell, cellIndex) => (
+                          <TableCell key={cellIndex} className="py-2 px-3 text-sm text-gray-900">
+                            {cell === null || cell === undefined ? (
+                              <span className="text-gray-400 italic">null</span>
+                            ) : typeof cell === 'boolean' ? (
+                              <Badge variant={cell ? 'default' : 'secondary'}>
+                                {cell.toString()}
+                              </Badge>
+                            ) : typeof cell === 'number' ? (
+                              <span className="font-mono">{cell.toLocaleString()}</span>
+                            ) : (
+                              <span>{String(cell)}</span>
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+              <div className="p-3 border-t bg-gray-50">
+                <div className="flex justify-between items-center text-xs text-gray-600">
+                  <span>{snowflakeData.rows.length} rows × {snowflakeData.columns.length} columns</span>
+                  <span>Last updated: {new Date().toLocaleTimeString()}</span>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
         return (
-          <div className="h-full p-4">
-            <ScrollArea className="h-full">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b-2 border-gray-200">
-                    <th className="text-left py-3 px-3 text-sm font-bold text-gray-700">Name</th>
-                    <th className="text-left py-3 px-3 text-sm font-bold text-gray-700">Value</th>
-                    <th className="text-left py-3 px-3 text-sm font-bold text-gray-700">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tableData.map((row, index) => (
-                    <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                      <td className="py-3 px-3 text-sm text-gray-900 font-medium">{row.name}</td>
-                      <td className="py-3 px-3 text-sm text-gray-700 font-mono">{row.value}</td>
-                      <td className="py-3 px-3">
-                        <Badge 
-                          variant={row.status === 'Active' ? 'default' : 'secondary'}
-                          className={`text-xs font-medium ${
-                            row.status === 'Active' 
-                              ? 'bg-green-100 text-green-800 border-green-200' 
-                              : 'bg-gray-100 text-gray-600 border-gray-200'
-                          }`}
-                        >
-                          {row.status}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </ScrollArea>
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-sm text-gray-500 mb-2">No query configured</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => onEdit?.(tile)}
+              >
+                Configure Query
+              </Button>
+            </div>
           </div>
         );
 
