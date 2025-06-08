@@ -421,7 +421,7 @@ export default function Cohorts() {
                           title={cohort.syncStatus === 'synced' ? 'Re-sync to Amplitude' : 'Sync to Amplitude'}
                           className={cohort.syncStatus === 'synced' ? 'text-green-600 hover:text-green-700' : 'text-blue-600 hover:text-blue-700'}
                         >
-                          <svg className="h-4 w-4" viewBox="0 0 100 100" fill="none">
+                          <svg className="h-6 w-6" viewBox="0 0 100 100" fill="none">
                             <circle cx="50" cy="50" r="48" fill="#4664FF"/>
                             <g fill="white">
                               <path d="M25 75L35 50L45 25C46 22 48 20 51 20C54 20 56 22 57 25L67 50L77 75"/>
