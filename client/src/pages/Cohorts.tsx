@@ -143,6 +143,29 @@ export default function Cohorts() {
     }
   };
 
+  // Sync to Amplitude function
+  const syncToAmplitude = async (cohortId: string, cohortName: string) => {
+    try {
+      const response = await apiRequest(`/api/cohorts/${cohortId}/sync-amplitude`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ownerEmail: "data-team@yourcompany.com" })
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/cohorts'] });
+      toast({
+        title: "Sync successful",
+        description: `Cohort "${cohortName}" synced to Amplitude with ${response.syncedUserCount} users.`
+      });
+    } catch (error) {
+      toast({
+        title: "Sync failed",
+        description: "Failed to sync cohort to Amplitude. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Filter cohorts
   const filteredCohorts = cohorts.filter((cohort: Cohort) => {
     const matchesSearch = cohort.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

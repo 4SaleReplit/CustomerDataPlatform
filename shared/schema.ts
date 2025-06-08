@@ -71,7 +71,9 @@ export const cohorts = pgTable("cohorts", {
   autoRefresh: boolean("auto_refresh").default(true),
   refreshFrequencyHours: integer("refresh_frequency_hours").default(24),
   nextRefreshAt: timestamp("next_refresh_at", { withTimezone: true }),
-  createdBy: uuid("created_by").references(() => team.id, { onDelete: 'set null' }),
+  lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+  amplitudeCohortId: varchar("amplitude_cohort_id", { length: 255 }),
+  createdBy: varchar("created_by", { length: 255 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
 });

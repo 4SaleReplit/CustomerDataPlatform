@@ -261,6 +261,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Amplitude sync endpoint
+  app.post("/api/cohorts/:id/sync-amplitude", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { ownerEmail = "data-team@yourcompany.com" } = req.body;
+      
+      // Get cohort details
+      const cohort = await storage.getCohort(id);
+      if (!cohort) {
+        return res.status(404).json({ error: "Cohort not found" });
+      }
+
+      // Execute the cohort query to get user IDs
+      if (!cohort.calculationQuery) {
+        return res.status(400).json({ error: "Cohort has no calculation query" });
+      }
+
+      const queryResult = await snowflakeService.executeQuery(cohort.calculationQuery);
+      if (!queryResult.success) {
+        return res.status(500).json({ error: "Failed to execute cohort query" });
+      }
+
+      // Extract user IDs from query result
+      const userIds = queryResult.rows.map(row => row[0]?.toString()).filter(Boolean);
+      
+      // Sync to Amplitude
+      const { amplitudeService } = await import('./services/amplitude');
+      const syncResult = await amplitudeService.syncCohort(cohort.name, userIds, ownerEmail);
+
+      if (syncResult.success) {
+        // Update cohort sync status
+        await storage.updateCohort(id, { 
+          syncStatus: 'synced',
+          lastSyncedAt: new Date(),
+          amplitudeCohortId: syncResult.cohortId
+        });
+
+        res.json({ 
+          message: "Successfully synced to Amplitude",
+          amplitudeCohortId: syncResult.cohortId,
+          syncedUserCount: userIds.length
+        });
+      } else {
+        res.status(500).json({ 
+          error: `Amplitude sync failed: ${syncResult.error}` 
+        });
+      }
+
+    } catch (error) {
+      console.error("Amplitude sync error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to sync to Amplitude" 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
