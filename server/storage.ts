@@ -10,7 +10,7 @@ import {
   type InsertDashboardTileInstance
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -100,13 +100,28 @@ export class DatabaseStorage implements IStorage {
 
   async saveDashboardLayout(tiles: InsertDashboardTileInstance[]): Promise<DashboardTileInstance[]> {
     const savedTiles: DashboardTileInstance[] = [];
+    const incomingTileIds = tiles.map(t => t.tileId);
     
+    // Get all existing tiles
+    const existingTiles = await db
+      .select()
+      .from(dashboardTileInstances);
+    
+    // Delete tiles that are no longer in the layout
+    const tilesToDelete = existingTiles
+      .filter(existing => !incomingTileIds.includes(existing.tileId))
+      .map(tile => tile.tileId);
+    
+    // Delete tiles that are no longer in the layout one by one
+    for (const tileId of tilesToDelete) {
+      await db
+        .delete(dashboardTileInstances)
+        .where(eq(dashboardTileInstances.tileId, tileId));
+    }
+    
+    // Process incoming tiles (update existing or create new)
     for (const tile of tiles) {
-      // Check if tile exists
-      const [existing] = await db
-        .select()
-        .from(dashboardTileInstances)
-        .where(eq(dashboardTileInstances.tileId, tile.tileId));
+      const existing = existingTiles.find(e => e.tileId === tile.tileId);
       
       if (existing) {
         // Update existing tile

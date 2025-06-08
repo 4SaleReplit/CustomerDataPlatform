@@ -287,29 +287,52 @@ export default function Dashboard() {
     setEditingTile(null);
   };
 
-  const handleRemoveTile = (tileId: string) => {
-    const updatedTiles = tiles.filter(tile => tile.id !== tileId);
-    setTiles(updatedTiles);
-    // Disable auto-save - use manual save only
-    // debouncedSave(updatedTiles);
+  const handleRemoveTile = async (tileId: string) => {
+    try {
+      // Delete from database first
+      await apiRequest(`/api/dashboard/tiles/${tileId}`, {
+        method: 'DELETE'
+      });
+      
+      // Update local state
+      const updatedTiles = tiles.filter(tile => tile.id !== tileId);
+      setTiles(updatedTiles);
+      
+      // Refresh the tiles from database
+      refetch();
+    } catch (error) {
+      console.error('Failed to delete tile:', error);
+    }
   };
 
-  const handleDuplicateTile = (tile: DashboardTile) => {
-    const newTile: DashboardTile = {
-      ...tile,
-      id: `tile-${Date.now()}`,
-      title: `${tile.title} (Copy)`,
-      x: tile.x + 1,
-      y: tile.y,
-      refreshConfig: {
-        ...tile.refreshConfig,
-        lastRefreshed: new Date()
-      }
-    };
-    const updatedTiles = [...tiles, newTile];
-    setTiles(updatedTiles);
-    // Disable auto-save - use manual save only
-    // debouncedSave(updatedTiles);
+  const handleDuplicateTile = async (tile: DashboardTile) => {
+    try {
+      const newTileId = `tile-${Date.now()}`;
+      const newTileData = {
+        tileId: newTileId,
+        type: tile.type,
+        title: `${tile.title} (Copy)`,
+        x: Math.min(tile.x + 1, 11), // Ensure within grid bounds
+        y: tile.y,
+        width: tile.width,
+        height: tile.height,
+        icon: tile.icon,
+        dataSource: tile.dataSource,
+        refreshConfig: tile.refreshConfig
+      };
+
+      // Create in database first
+      await apiRequest('/api/dashboard/tiles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTileData)
+      });
+
+      // Refresh tiles from database
+      refetch();
+    } catch (error) {
+      console.error('Failed to duplicate tile:', error);
+    }
   };
 
   const handleRefreshTile = (tileId: string) => {
