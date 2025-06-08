@@ -37,18 +37,112 @@ const mockSegmentTags = [
 ];
 
 const userAttributes = [
-  { value: 'user_type', label: 'User Type', type: 'string' },
-  { value: 'total_listings_count', label: 'Total Listings Count', type: 'number' },
-  { value: 'paid_listings_count', label: 'Paid Listings Count', type: 'number' },
-  { value: 'current_credits_in_wallet', label: 'Current Credits', type: 'number' },
-  { value: 'user_account_creation_date', label: 'Account Creation Date', type: 'date' },
-  { value: 'last_app_open_date', label: 'Last App Open Date', type: 'date' },
-  { value: 'favorite_vertical', label: 'Favorite Vertical', type: 'string' },
-  { value: 'lifecycle_stage', label: 'Lifecycle Stage', type: 'string' },
-  { value: 'user_email', label: 'User Email', type: 'string' },
-  { value: 'user_phone', label: 'User Phone', type: 'string' },
-  { value: 'average_listing_price', label: 'Average Listing Price', type: 'number' },
-  { value: 'total_revenue', label: 'Total Revenue', type: 'number' }
+  // Basic User Info
+  { value: 'USER_ID', label: 'User ID', type: 'number' },
+  { value: 'USER_TYPE', label: 'User Type', type: 'string' },
+  { value: 'PHONE', label: 'Phone Number', type: 'string' },
+  { value: 'CURRENT_CREDITS_IN_WALLET', label: 'Current Credits in Wallet', type: 'number' },
+  { value: 'IS_BLOCK', label: 'Is Blocked', type: 'boolean' },
+  
+  // Date Fields
+  { value: 'USER_ACCOUNT_CREATION_DATE', label: 'Account Creation Date', type: 'date' },
+  { value: 'FIRST_PAID_LISTING_DATE', label: 'First Paid Listing Date', type: 'date' },
+  { value: 'LAST_PAID_LISTING_DATE', label: 'Last Paid Listing Date', type: 'date' },
+  { value: 'FIRST_TRANSACTION_DATE', label: 'First Transaction Date', type: 'date' },
+  { value: 'LAST_TRANSACTION_DATE', label: 'Last Transaction Date', type: 'date' },
+  
+  // Activity Metrics
+  { value: 'DAYS_SINCE_LAST_PAID_LISTING', label: 'Days Since Last Paid Listing', type: 'number' },
+  { value: 'DAYS_SINCE_LAST_PAID_TRANSACTION', label: 'Days Since Last Paid Transaction', type: 'number' },
+  { value: 'DAYS_SINCE_LAST_TRANSACTION', label: 'Days Since Last Transaction', type: 'number' },
+  { value: 'ACTIVE_MONTHS_LAST_6', label: 'Active Months (Last 6)', type: 'number' },
+  { value: 'ACTIVE_WEEKS_LAST_12', label: 'Active Weeks (Last 12)', type: 'number' },
+  
+  // Listing Counts
+  { value: 'PAID_LISTINGS_COUNT', label: 'Paid Listings Count', type: 'number' },
+  { value: 'FREE_LISTINGS_COUNT', label: 'Free Listings Count', type: 'number' },
+  { value: 'TOTAL_LISTINGS_COUNT', label: 'Total Listings Count', type: 'number' },
+  { value: 'OFFICE_LISTINGS_COUNT', label: 'Office Listings Count', type: 'number' },
+  
+  // Credits & Spending
+  { value: 'TOTAL_CREDITS_SPENT', label: 'Total Credits Spent', type: 'number' },
+  { value: 'TOTAL_PREMIUM_CREDITS_SPENT', label: 'Total Premium Credits Spent', type: 'number' },
+  { value: 'TOTAL_FREE_CREDITS_SPENT', label: 'Total Free Credits Spent', type: 'number' },
+  
+  // Add-ons
+  { value: 'EXTRA_ADDONS_COUNT', label: 'Extra Add-ons Count', type: 'number' },
+  { value: 'EXTRA_ADDONS_TOTAL_CREDITS', label: 'Extra Add-ons Total Credits', type: 'number' },
+  { value: 'EXTRA_ADDONS_PREMIUM_CREDITS', label: 'Extra Add-ons Premium Credits', type: 'number' },
+  { value: 'EXTRA_ADDONS_FREE_CREDITS', label: 'Extra Add-ons Free Credits', type: 'number' },
+  
+  // Arrays & Categories
+  { value: 'VERTICALS_LISTED_IN', label: 'Verticals Listed In', type: 'array' },
+  { value: 'LEVELS_1_LISTED_IN', label: 'Level 1 Categories Listed In', type: 'array' },
+  { value: 'PLANS_OR_BUNDLES_USED', label: 'Plans or Bundles Used', type: 'array' },
+  
+  // Favorites & Preferences
+  { value: 'FAVORITE_VERTICAL', label: 'Favorite Vertical', type: 'string' },
+  { value: 'FAVORITE_LEVEL_1', label: 'Favorite Level 1 Category', type: 'string' },
+  { value: 'FAVORITE_PLAN_OR_BUNDLE', label: 'Favorite Plan or Bundle', type: 'string' },
+  { value: 'FAVORITE_EXTRA_ADDON', label: 'Favorite Extra Add-on', type: 'string' },
+  { value: 'TOP_EXTRA_ADDONS', label: 'Top Extra Add-ons', type: 'string' },
+  
+  // Category Counts
+  { value: 'NUMBER_OF_VERTICALS_LISTED_IN', label: 'Number of Verticals Listed In', type: 'number' },
+  { value: 'NUMBER_OF_LEVEL1_CATEGORIES_LISTED_IN', label: 'Number of Level 1 Categories Listed In', type: 'number' },
+  { value: 'IS_MULTIVERTICAL_USER', label: 'Is Multi-Vertical User', type: 'boolean' },
+  
+  // Plan-specific Listings
+  { value: 'BASIC_LISTINGS_COUNT', label: 'Basic Listings Count', type: 'number' },
+  { value: 'BASIC_CREDITS_SPENT', label: 'Basic Credits Spent', type: 'number' },
+  { value: 'PRO_LISTINGS_COUNT', label: 'Pro Listings Count', type: 'number' },
+  { value: 'PRO_CREDITS_SPENT', label: 'Pro Credits Spent', type: 'number' },
+  { value: 'EXTRA_LISTINGS_COUNT', label: 'Extra Listings Count', type: 'number' },
+  { value: 'EXTRA_CREDITS_SPENT', label: 'Extra Credits Spent', type: 'number' },
+  { value: 'PLUS_LISTINGS_COUNT', label: 'Plus Listings Count', type: 'number' },
+  { value: 'PLUS_CREDITS_SPENT', label: 'Plus Credits Spent', type: 'number' },
+  { value: 'SUPER_LISTINGS_COUNT', label: 'Super Listings Count', type: 'number' },
+  { value: 'SUPER_CREDITS_SPENT', label: 'Super Credits Spent', type: 'number' },
+  { value: 'STANDARD_LISTINGS_COUNT', label: 'Standard Listings Count', type: 'number' },
+  { value: 'STANDARD_CREDITS_SPENT', label: 'Standard Credits Spent', type: 'number' },
+  { value: 'PREMIUM_LISTINGS_COUNT', label: 'Premium Listings Count', type: 'number' },
+  { value: 'PREMIUM_CREDITS_SPENT', label: 'Premium Credits Spent', type: 'number' },
+  { value: 'OPTIMUM_LISTINGS_COUNT', label: 'Optimum Listings Count', type: 'number' },
+  { value: 'OPTIMUM_CREDITS_SPENT', label: 'Optimum Credits Spent', type: 'number' },
+  
+  // Office-specific Listings
+  { value: 'CAR_OFFICES_LISTINGS_COUNT', label: 'Car Offices Listings Count', type: 'number' },
+  { value: 'CAR_OFFICES_CREDITS_SPENT', label: 'Car Offices Credits Spent', type: 'number' },
+  { value: 'PROPERTY_OFFICES_LISTINGS_COUNT', label: 'Property Offices Listings Count', type: 'number' },
+  { value: 'PROPERTY_OFFICES_CREDITS_SPENT', label: 'Property Offices Credits Spent', type: 'number' },
+  { value: 'ELECTRONICS_SHOPS_LISTINGS_COUNT', label: 'Electronics Shops Listings Count', type: 'number' },
+  { value: 'ELECTRONICS_SHOPS_CREDITS_SPENT', label: 'Electronics Shops Credits Spent', type: 'number' },
+  
+  // Add-on specific Listings
+  { value: 'ADDON_PINNING_LISTINGS_COUNT', label: 'Add-on Pinning Listings Count', type: 'number' },
+  { value: 'ADDON_PINNING_CREDITS_SPENT', label: 'Add-on Pinning Credits Spent', type: 'number' },
+  { value: 'ADDON_EXTENDED_LISTINGS_COUNT', label: 'Add-on Extended Listings Count', type: 'number' },
+  { value: 'ADDON_EXTENDED_CREDITS_SPENT', label: 'Add-on Extended Credits Spent', type: 'number' },
+  { value: 'ADDON_PROMOTED_LISTINGS_COUNT', label: 'Add-on Promoted Listings Count', type: 'number' },
+  { value: 'ADDON_PROMOTED_CREDITS_SPENT', label: 'Add-on Promoted Credits Spent', type: 'number' },
+  { value: 'ADDON_PINNING_SHUFFLE_LISTINGS_COUNT', label: 'Add-on Pinning Shuffle Listings Count', type: 'number' },
+  { value: 'ADDON_PINNING_SHUFFLE_CREDITS_SPENT', label: 'Add-on Pinning Shuffle Credits Spent', type: 'number' },
+  { value: 'ADDON_PREMIUM_LISTINGS_COUNT', label: 'Add-on Premium Listings Count', type: 'number' },
+  { value: 'ADDON_PREMIUM_CREDITS_SPENT', label: 'Add-on Premium Credits Spent', type: 'number' },
+  { value: 'ADDON_POWER_PIN_LISTINGS_COUNT', label: 'Add-on Power Pin Listings Count', type: 'number' },
+  { value: 'ADDON_POWER_PIN_CREDITS_SPENT', label: 'Add-on Power Pin Credits Spent', type: 'number' },
+  { value: 'ADDON_REFRESH_LISTINGS_COUNT', label: 'Add-on Refresh Listings Count', type: 'number' },
+  { value: 'ADDON_REFRESH_CREDITS_SPENT', label: 'Add-on Refresh Credits Spent', type: 'number' },
+  { value: 'ADDON_VIP_LISTINGS_COUNT', label: 'Add-on VIP Listings Count', type: 'number' },
+  { value: 'ADDON_VIP_CREDITS_SPENT', label: 'Add-on VIP Credits Spent', type: 'number' },
+  
+  // Offers
+  { value: 'OFFER_50_DAYS_USED', label: 'Offer 50% Days Used', type: 'number' },
+  { value: 'OFFER_BARAKA_DAYS_USED', label: 'Offer Baraka Days Used', type: 'number' },
+  { value: 'OFFER_TOTAL_DAYS_USED', label: 'Offer Total Days Used', type: 'number' },
+  { value: 'OFFER_50_PERCENTAGE', label: 'Offer 50% Percentage', type: 'number' },
+  { value: 'OFFER_BARAKA_PERCENTAGE', label: 'Offer Baraka Percentage', type: 'number' },
+  { value: 'OFFER_TOTAL_PERCENTAGE', label: 'Offer Total Percentage', type: 'number' }
 ];
 
 const stringOperators = [
@@ -96,6 +190,27 @@ const dateOperators = [
   { value: 'is_not_null', label: 'Is Not Null' }
 ];
 
+const booleanOperators = [
+  { value: 'equals', label: 'Is True' },
+  { value: 'not_equals', label: 'Is False' },
+  { value: 'is_null', label: 'Is Null' },
+  { value: 'is_not_null', label: 'Is Not Null' }
+];
+
+const arrayOperators = [
+  { value: 'contains', label: 'Contains' },
+  { value: 'not_contains', label: 'Does Not Contain' },
+  { value: 'contains_all', label: 'Contains All' },
+  { value: 'contains_any', label: 'Contains Any' },
+  { value: 'array_length_equals', label: 'Array Length Equals' },
+  { value: 'array_length_greater_than', label: 'Array Length Greater Than' },
+  { value: 'array_length_less_than', label: 'Array Length Less Than' },
+  { value: 'is_empty', label: 'Is Empty Array' },
+  { value: 'is_not_empty', label: 'Is Not Empty Array' },
+  { value: 'is_null', label: 'Is Null' },
+  { value: 'is_not_null', label: 'Is Not Null' }
+];
+
 export default function CohortEditor({
   initialName = '',
   initialDescription = '',
@@ -118,6 +233,10 @@ export default function CohortEditor({
         return numberOperators;
       case 'date':
         return dateOperators;
+      case 'boolean':
+        return booleanOperators;
+      case 'array':
+        return arrayOperators;
       case 'string':
       default:
         return stringOperators;
@@ -125,17 +244,53 @@ export default function CohortEditor({
   };
 
   const getInputPlaceholder = (operator: string, attributeType: string) => {
+    // Array type placeholders
+    if (attributeType === 'array') {
+      if (operator === 'contains' || operator === 'not_contains') return 'Enter value to search in array';
+      if (operator === 'contains_all' || operator === 'contains_any') return 'Enter comma-separated values';
+      if (operator.includes('array_length_')) return 'Enter number';
+      return 'Enter array value';
+    }
+    
+    // Boolean type (no value input needed for most boolean operators)
+    if (attributeType === 'boolean') {
+      return 'No value needed';
+    }
+    
+    // String type placeholders
     if (operator === 'regex') return 'Enter regex pattern (e.g., ^[A-Z].*)';
     if (operator === 'like') return 'Enter SQL pattern (e.g., %example%)';
     if (operator === 'in' || operator === 'not_in') return 'Enter comma-separated values';
-    if (operator === 'between' || operator === 'not_between') return 'Enter range (e.g., 10,100)';
-    if (operator.includes('in_last_') || operator.includes('in_next_')) return 'Enter number of days/weeks/months/years';
-    if (attributeType === 'date' && (operator === 'before' || operator === 'after' || operator === 'equals')) return 'YYYY-MM-DD or YYYY-MM-DD HH:MM:SS';
-    if (operator === 'between' && attributeType === 'date') return 'Start date, End date (YYYY-MM-DD)';
+    
+    // Number type placeholders
+    if (attributeType === 'number') {
+      if (operator === 'between' || operator === 'not_between') return 'Enter range (e.g., 10,100)';
+      return 'Enter number';
+    }
+    
+    // Date type placeholders
+    if (attributeType === 'date') {
+      if (operator.includes('in_last_') || operator.includes('in_next_')) return 'Enter number of days/weeks/months/years';
+      if (operator === 'before' || operator === 'after' || operator === 'equals') return 'YYYY-MM-DD or YYYY-MM-DD HH:MM:SS';
+      if (operator === 'between') return 'Start date, End date (YYYY-MM-DD)';
+      return 'Enter date (YYYY-MM-DD)';
+    }
+    
     return 'Enter value';
   };
 
-  const shouldShowValueInput = (operator: string) => {
+  const shouldShowValueInput = (operator: string, attributeType: string = 'string') => {
+    // Boolean operators typically don't need value input except for null checks
+    if (attributeType === 'boolean') {
+      return ['is_null', 'is_not_null'].includes(operator);
+    }
+    
+    // Array operators that don't need value input
+    if (attributeType === 'array') {
+      return !['is_empty', 'is_not_empty', 'is_null', 'is_not_null'].includes(operator);
+    }
+    
+    // General operators that don't need value input
     return !['is_empty', 'is_not_empty', 'is_null', 'is_not_null'].includes(operator);
   };
 
@@ -346,7 +501,7 @@ export default function CohortEditor({
                             </Select>
                           </div>
 
-                          {shouldShowValueInput(condition.operator || '') && (
+                          {shouldShowValueInput(condition.operator || '', getSelectedAttribute(condition.attribute || '')?.type || 'string') && (
                             <div className="flex-1">
                               <Label>Value</Label>
                               <Input
