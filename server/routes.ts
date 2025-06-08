@@ -350,6 +350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Sync to Braze
+      const { brazeService } = await import('./services/braze');
       const syncResult = await brazeService.syncCohort(cohort.name, userIds);
       
       if (syncResult.success) {

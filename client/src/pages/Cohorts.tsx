@@ -5,6 +5,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Eye, Edit, Trash2, RefreshCw, Filter, SortAsc, SortDesc, MoreHorizontal, Copy, BarChart3 } from 'lucide-react';
 import amplitudeLogo from '@assets/AMPL_1749419466685.png';
+import brazeLogo from '@assets/BRZE_1749419981281.png';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +34,9 @@ interface Cohort {
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
+  brazeLastSyncedAt: string | null;
+  brazeSegmentId: string | null;
+  brazeSyncStatus: string;
 }
 
 // Remove mock cohorts data - now using database
@@ -162,6 +166,28 @@ export default function Cohorts() {
       toast({
         title: "Sync failed",
         description: "Failed to sync cohort to Amplitude. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Sync to Braze function
+  const syncToBraze = async (cohortId: string, cohortName: string) => {
+    try {
+      const response = await apiRequest(`/api/cohorts/${cohortId}/sync-braze`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/cohorts'] });
+      toast({
+        title: "Sync successful",
+        description: `Cohort "${cohortName}" synced to Braze with ${response.syncedUserCount} users.`
+      });
+    } catch (error) {
+      toast({
+        title: "Sync failed",
+        description: "Failed to sync cohort to Braze. Please try again.",
         variant: "destructive"
       });
     }
@@ -425,6 +451,20 @@ export default function Cohorts() {
                           <img 
                             src={amplitudeLogo} 
                             alt="Amplitude" 
+                            className="h-6 w-6 rounded-full"
+                          />
+                        </Button>
+                        
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => syncToBraze(cohort.id, cohort.name)}
+                          title={cohort.brazeSyncStatus === 'synced' ? 'Re-sync to Braze' : 'Sync to Braze'}
+                          className={cohort.brazeSyncStatus === 'synced' ? 'text-green-600 hover:text-green-700' : 'text-orange-600 hover:text-orange-700'}
+                        >
+                          <img 
+                            src={brazeLogo} 
+                            alt="Braze" 
                             className="h-6 w-6 rounded-full"
                           />
                         </Button>
