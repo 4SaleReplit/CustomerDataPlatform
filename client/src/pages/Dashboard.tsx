@@ -6,6 +6,7 @@ import { DashboardBuilder, type DashboardTile } from '@/components/dashboard/Das
 import { TileEditDialog } from '@/components/dashboard/TileEditDialog';
 import { TimeFilter, type TimeFilterState } from '@/components/dashboard/TimeFilter';
 import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 
 const initialTiles: DashboardTile[] = [
   {
@@ -134,22 +135,12 @@ export default function Dashboard() {
   });
   const [isLoaded, setIsLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [dashboardKey, setDashboardKey] = useState(0);
   
-  // Load tiles from database using direct fetch (no caching)
+  // Load tiles from database
   const loadTiles = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/dashboard/tiles', {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      });
-      const data = await response.json();
-      
+      const data = await apiRequest('/api/dashboard/tiles');
       if (data && Array.isArray(data) && data.length > 0) {
         const convertedTiles = data.map((dbTile: any) => ({
           id: dbTile.tileId,
@@ -174,7 +165,7 @@ export default function Dashboard() {
     }
   };
 
-  // Save tiles to database using direct fetch (no caching)
+  // Save tiles to database
   const saveTiles = async (tilesToSave: DashboardTile[]) => {
     try {
       const tileInstances = tilesToSave.map(tile => ({
@@ -193,20 +184,14 @@ export default function Dashboard() {
 
       console.log('Saving layout with tiles:', tilesToSave.map(t => ({ id: t.id, x: t.x, y: t.y, width: t.width, height: t.height })));
 
-      const response = await fetch('/api/dashboard/save-layout', {
+      const response = await apiRequest('/api/dashboard/save-layout', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tiles: tileInstances }),
       });
 
-      const data = await response.json();
       console.log('Layout saved successfully');
-      return data;
+      return response;
     } catch (error) {
       console.error('Failed to save layout:', error);
       throw error;
@@ -242,10 +227,7 @@ export default function Dashboard() {
         }));
         
         console.log('Immediately updating state with saved positions:', updatedTiles.map(t => ({ id: t.id, x: t.x, y: t.y, width: t.width, height: t.height })));
-        
-        // Force complete re-render by updating both tiles and dashboard key
         setTiles(updatedTiles);
-        setDashboardKey(prev => prev + 1);
       }
       
       setIsEditMode(false);
@@ -386,7 +368,6 @@ export default function Dashboard() {
       {/* Dashboard Content */}
       <div className="flex-1 p-6">
         <DashboardBuilder
-          key={dashboardKey}
           tiles={tiles}
           onTilesChange={handleTilesChange}
           isEditMode={isEditMode}
