@@ -405,12 +405,24 @@ export default function CohortDetail() {
             </Card>
 
             {/* Amplitude Sync Card */}
-            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={syncToAmplitude}>
+            <Card className={`cursor-pointer transition-all ${isSyncingAmplitude ? 'pointer-events-none opacity-75' : 'hover:shadow-md'}`} onClick={syncToAmplitude}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <img src={amplitudeLogo} alt="Amplitude" className="h-10 w-10 rounded-full" />
+                  <div className="relative h-10 w-10">
+                    {isSyncingAmplitude ? (
+                      <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+                    ) : amplitudeSuccess ? (
+                      <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                        <CheckCircle2 className="h-6 w-6 text-green-600" />
+                      </div>
+                    ) : (
+                      <img src={amplitudeLogo} alt="Amplitude" className="h-10 w-10 rounded-full" />
+                    )}
+                  </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">Sync to Amplitude</h3>
+                    <h3 className="font-semibold text-gray-900">
+                      {isSyncingAmplitude ? 'Syncing to Amplitude...' : amplitudeSuccess ? 'Amplitude Sync Complete!' : 'Sync to Amplitude'}
+                    </h3>
                     <div className="flex items-center gap-2 mt-1">
                       {getSyncStatusBadge(cohort.syncStatus)}
                     </div>
@@ -425,12 +437,24 @@ export default function CohortDetail() {
             </Card>
 
             {/* Braze Sync Card */}
-            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={syncToBraze}>
+            <Card className={`cursor-pointer transition-all ${isSyncingBraze ? 'pointer-events-none opacity-75' : 'hover:shadow-md'}`} onClick={syncToBraze}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <img src={brazeLogo} alt="Braze" className="h-10 w-10 rounded-full" />
+                  <div className="relative h-10 w-10">
+                    {isSyncingBraze ? (
+                      <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+                    ) : brazeSuccess ? (
+                      <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                        <CheckCircle2 className="h-6 w-6 text-green-600" />
+                      </div>
+                    ) : (
+                      <img src={brazeLogo} alt="Braze" className="h-10 w-10 rounded-full" />
+                    )}
+                  </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">Sync to Braze</h3>
+                    <h3 className="font-semibold text-gray-900">
+                      {isSyncingBraze ? 'Syncing to Braze...' : brazeSuccess ? 'Braze Sync Complete!' : 'Sync to Braze'}
+                    </h3>
                     <div className="flex items-center gap-2 mt-1">
                       {getSyncStatusBadge(cohort.brazeSyncStatus || 'not_synced')}
                     </div>
