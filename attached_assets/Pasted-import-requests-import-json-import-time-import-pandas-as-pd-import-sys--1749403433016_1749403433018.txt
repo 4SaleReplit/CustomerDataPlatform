@@ -1,0 +1,113 @@
+import requests
+import json
+import time
+import pandas as pd
+import sys
+
+# ==============================================================================
+# Config - Using the exact values from your working script
+# ==============================================================================
+SNOWFLAKE_ACCOUNT = "q84sale.snowflakecomputing.com"
+ACCESS_TOKEN = "eyJraWQiOiIzNjUyNTkwNTY5ODU1MzkwIiwiYWxnIjoiRVMyNTYifQ.eyJwIjoiNTU3MzQxMDk1MDk6NTU3MzQxMDg0MjEiLCJpc3MiOiJTRjoxMDA5IiwiZXhwIjoxNzUwMDA2NTcwfQ.VZrZLmq1WZLjV11Wj_Pd6OqPxHDyG_apRkwhrhGSKyh-EEMTRLliCx8qrn5zzbSftwkrpzoSoMsHVLF_IJFCbg"
+WAREHOUSE = "LOOKER"
+DATABASE = "DBT_CORE_PROD_DATABASE"
+# Set schema to match your working example
+SCHEMA = "USER_SEGMENTATION_PROJECT_V4"
+
+# The SQL query you want to run
+SQL_QUERY = '''
+select * from
+DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4
+limit 10;
+'''
+
+# ==============================================================================
+# Main Script (Cleaned)
+# ==============================================================================
+
+def get_snowflake_data_as_df(account, warehouse, database, schema, access_token, query):
+    """
+    Executes a query on Snowflake and returns the result as a Pandas DataFrame.
+    Runs silently without printing status updates.
+    """
+    statements_url = f"https://{account}/api/v2/statements"
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+
+    payload = {
+        "statement": query,
+        "warehouse": warehouse,
+        "database": database,
+        "schema": schema,
+        "timeout": 60
+    }
+
+    # 1. SUBMIT THE ASYNCHRONOUS QUERY
+    try:
+        response = requests.post(statements_url, headers=headers, data=json.dumps(payload))
+        # print(response.text)
+        if not response.ok:
+            print('Silently fail if the request was not okay')
+            return None
+    except requests.exceptions.RequestException:
+        # Silently fail on connection errors
+        return None
+
+    # # The status code for async submission must be 202
+    # if response.status_code != 202:
+    #     return None
+
+    resp_json = response.json()
+    # print(resp_json)
+    statement_handle = resp_json.get("statementHandle")
+
+    if not statement_handle:
+        return None
+
+    # 2. POLL FOR RESULTS
+    status_url = f"{statements_url}/{statement_handle}"
+    while True:
+        try:
+            status_response = requests.get(status_url, headers=headers)
+            status_response.raise_for_status()
+            status_json = status_response.json()
+
+            if status_json.get("message") == "Statement executed successfully.":
+                break # Exit the loop on success
+            elif status_json.get("message") and "FAILED" in status_json.get("message").upper():
+                return None # Silently fail if query fails
+
+            time.sleep(2)
+
+        except requests.exceptions.RequestException:
+            return None # Silently fail on polling error
+
+    # 3. EXTRACT DATA AND CREATE DATAFRAME
+    try:
+        columns = [col['name'] for col in status_json['resultSetMetaData']['rowType']]
+        rows = status_json['data']
+        print(rows, 'rows')
+        df = pd.DataFrame(rows, columns=columns)
+        return df
+
+    except (KeyError, TypeError):
+        # Silently fail if the final JSON is malformed
+        print('error')
+        return None
+
+
+# --- Execute the function and print the final result ---
+if __name__ == "__main__":
+    final_df = get_snowflake_data_as_df(
+        account=SNOWFLAKE_ACCOUNT,
+        warehouse=WAREHOUSE,
+        database=DATABASE,
+        schema=SCHEMA,
+        access_token=ACCESS_TOKEN,
+        query=SQL_QUERY
+    )
+

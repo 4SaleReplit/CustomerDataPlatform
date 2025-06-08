@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Settings, X, GripVertical, MoreVertical, RefreshCw, Edit, Copy, Trash2, Users, TrendingUp, TrendingDown } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Settings, X, GripVertical, MoreVertical, RefreshCw, Edit, Copy, Trash2, Users, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import type { DashboardTile } from './DashboardBuilder';
 
 interface DashboardTileProps {
@@ -66,19 +69,36 @@ const generateMockData = (tile: DashboardTile) => {
 export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onDuplicate, onRefresh }: DashboardTileProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const queryClient = useQueryClient();
+  
+  // Query for Snowflake data when tile type is 'table'
+  const { data: snowflakeData, isLoading: isSnowflakeLoading, error: snowflakeError, refetch: refetchSnowflake } = useQuery({
+    queryKey: ['snowflake-query', tile.id, tile.dataSource.query],
+    queryFn: () => apiRequest('/api/snowflake/query', {
+      method: 'POST',
+      body: JSON.stringify({ query: tile.dataSource.query })
+    }),
+    enabled: tile.type === 'table' && !!tile.dataSource.query,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 30, // 30 minutes
+  });
+  
   const mockData = generateMockData(tile);
 
   const handleRefresh = async () => {
-    if (!onRefresh) return;
-    
     setIsRefreshing(true);
-    console.log(`Refreshing tile: ${tile.title}`);
     
-    // Simulate refresh delay
-    setTimeout(() => {
+    // Refresh Snowflake data for table tiles
+    if (tile.type === 'table') {
+      await refetchSnowflake();
+    }
+    
+    // Call parent refresh handler
+    if (onRefresh) {
       onRefresh(tile.id);
-      setIsRefreshing(false);
-    }, 1000);
+    }
+    
+    setIsRefreshing(false);
   };
 
   const handleDuplicate = () => {
