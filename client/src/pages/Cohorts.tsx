@@ -414,8 +414,17 @@ export default function Cohorts() {
                             <Eye className="h-4 w-4" />
                           </Button>
                         </Link>
-                        <Button variant="ghost" size="sm">
-                          <RefreshCw className="h-4 w-4" />
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => syncToAmplitude(cohort.id, cohort.name)}
+                          title={cohort.syncStatus === 'synced' ? 'Re-sync to Amplitude' : 'Sync to Amplitude'}
+                          className={cohort.syncStatus === 'synced' ? 'text-green-600 hover:text-green-700' : 'text-blue-600 hover:text-blue-700'}
+                        >
+                          <svg className="h-5 w-5" viewBox="0 0 100 100" fill="currentColor">
+                            <path d="M50 10L20 35h20v40h20V35h20L50 10z"/>
+                            <circle cx="50" cy="80" r="8"/>
+                          </svg>
                         </Button>
                         
                         <DropdownMenu>
