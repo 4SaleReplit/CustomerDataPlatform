@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, Plus, Trash2, Calculator, Tags } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Calculator, Tags, Play, Copy } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -223,6 +226,10 @@ export default function CohortEditor({
   const [cohortDescription, setCohortDescription] = useState(initialDescription);
   const [conditions, setConditions] = useState<Condition[]>(initialConditions);
   const [estimatedSize, setEstimatedSize] = useState<number | null>(null);
+  const [sqlQuery, setSqlQuery] = useState('');
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [queryResult, setQueryResult] = useState<{ count: number; userIds: string[] } | null>(null);
+  const { toast } = useToast();
 
   const getOperatorsForAttribute = (attributeValue: string) => {
     const attribute = userAttributes.find(attr => attr.value === attributeValue);
@@ -352,6 +359,236 @@ export default function CohortEditor({
 
   const getSelectedAttribute = (attributeValue: string) => {
     return userAttributes.find(attr => attr.value === attributeValue);
+  };
+
+  const buildSqlCondition = (condition: Condition): string => {
+    if (condition.type === 'segment') {
+      // For segments, we'll assume they're stored as tags or computed fields
+      return `${condition.segmentTag} = 1`;
+    }
+
+    if (!condition.attribute || !condition.operator) return '';
+
+    const attribute = condition.attribute;
+    const operator = condition.operator;
+    const value = condition.value || '';
+    const attributeType = getSelectedAttribute(attribute)?.type || 'string';
+
+    switch (operator) {
+      case 'equals':
+        if (attributeType === 'boolean') return `${attribute} = 1`;
+        if (attributeType === 'string') return `${attribute} = '${value}'`;
+        return `${attribute} = ${value}`;
+      
+      case 'not_equals':
+        if (attributeType === 'boolean') return `${attribute} = 0`;
+        if (attributeType === 'string') return `${attribute} != '${value}'`;
+        return `${attribute} != ${value}`;
+      
+      case 'greater_than':
+        return `${attribute} > ${value}`;
+      
+      case 'less_than':
+        return `${attribute} < ${value}`;
+      
+      case 'greater_than_equal':
+        return `${attribute} >= ${value}`;
+      
+      case 'less_than_equal':
+        return `${attribute} <= ${value}`;
+      
+      case 'contains':
+        if (attributeType === 'array') return `ARRAY_CONTAINS(${attribute}, '${value}')`;
+        return `${attribute} LIKE '%${value}%'`;
+      
+      case 'not_contains':
+        if (attributeType === 'array') return `NOT ARRAY_CONTAINS(${attribute}, '${value}')`;
+        return `${attribute} NOT LIKE '%${value}%'`;
+      
+      case 'starts_with':
+        return `${attribute} LIKE '${value}%'`;
+      
+      case 'ends_with':
+        return `${attribute} LIKE '%${value}'`;
+      
+      case 'between':
+        const [min, max] = value.split(',').map(v => v.trim());
+        if (attributeType === 'date') return `${attribute} BETWEEN '${min}' AND '${max}'`;
+        return `${attribute} BETWEEN ${min} AND ${max}`;
+      
+      case 'in':
+        const inValues = value.split(',').map(v => v.trim());
+        if (attributeType === 'string') {
+          return `${attribute} IN (${inValues.map(v => `'${v}'`).join(', ')})`;
+        }
+        return `${attribute} IN (${inValues.join(', ')})`;
+      
+      case 'not_in':
+        const notInValues = value.split(',').map(v => v.trim());
+        if (attributeType === 'string') {
+          return `${attribute} NOT IN (${notInValues.map(v => `'${v}'`).join(', ')})`;
+        }
+        return `${attribute} NOT IN (${notInValues.join(', ')})`;
+      
+      case 'is_null':
+        return `${attribute} IS NULL`;
+      
+      case 'is_not_null':
+        return `${attribute} IS NOT NULL`;
+      
+      case 'is_empty':
+        if (attributeType === 'array') return `ARRAY_SIZE(${attribute}) = 0`;
+        return `${attribute} = ''`;
+      
+      case 'is_not_empty':
+        if (attributeType === 'array') return `ARRAY_SIZE(${attribute}) > 0`;
+        return `${attribute} != ''`;
+      
+      case 'like':
+        return `${attribute} LIKE '${value}'`;
+      
+      case 'regex':
+        return `REGEXP_LIKE(${attribute}, '${value}')`;
+      
+      case 'before':
+        return `${attribute} < '${value}'`;
+      
+      case 'after':
+        return `${attribute} > '${value}'`;
+      
+      case 'in_last_days':
+        return `${attribute} >= CURRENT_DATE - INTERVAL ${value} DAY`;
+      
+      case 'in_last_weeks':
+        return `${attribute} >= CURRENT_DATE - INTERVAL ${value} WEEK`;
+      
+      case 'in_last_months':
+        return `${attribute} >= CURRENT_DATE - INTERVAL ${value} MONTH`;
+      
+      case 'in_last_years':
+        return `${attribute} >= CURRENT_DATE - INTERVAL ${value} YEAR`;
+      
+      case 'contains_all':
+        const allValues = value.split(',').map(v => v.trim());
+        return allValues.map(v => `ARRAY_CONTAINS(${attribute}, '${v}')`).join(' AND ');
+      
+      case 'contains_any':
+        const anyValues = value.split(',').map(v => v.trim());
+        return `(${anyValues.map(v => `ARRAY_CONTAINS(${attribute}, '${v}')`).join(' OR ')})`;
+      
+      case 'array_length_equals':
+        return `ARRAY_SIZE(${attribute}) = ${value}`;
+      
+      case 'array_length_greater_than':
+        return `ARRAY_SIZE(${attribute}) > ${value}`;
+      
+      case 'array_length_less_than':
+        return `ARRAY_SIZE(${attribute}) < ${value}`;
+      
+      default:
+        return '';
+    }
+  };
+
+  const buildSqlQuery = (conditions: Condition[]): string => {
+    const baseQuery = 'SELECT USER_ID FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4';
+    
+    if (conditions.length === 0) {
+      return baseQuery;
+    }
+
+    const validConditions = conditions.filter(condition => {
+      if (condition.type === 'segment') return condition.segmentTag;
+      return condition.attribute && condition.operator;
+    });
+
+    if (validConditions.length === 0) {
+      return baseQuery;
+    }
+
+    const whereClause = validConditions.map((condition, index) => {
+      const sqlCondition = buildSqlCondition(condition);
+      if (index === 0) return sqlCondition;
+      
+      const logicalOp = condition.logicalOperator || 'AND';
+      return `${logicalOp} ${sqlCondition}`;
+    }).join('\n  ');
+
+    return `${baseQuery}\nWHERE ${whereClause}`;
+  };
+
+  // Build SQL query whenever conditions change
+  useEffect(() => {
+    const query = buildSqlQuery(conditions);
+    setSqlQuery(query);
+  }, [conditions]);
+
+  const executeSqlQuery = async () => {
+    if (!sqlQuery.trim() || conditions.length === 0) {
+      toast({
+        title: "No conditions",
+        description: "Please add at least one condition before executing the query.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsExecuting(true);
+    try {
+      // Execute count query
+      const countQuery = sqlQuery.replace('SELECT USER_ID', 'SELECT COUNT(*) as count');
+      const countResult = await apiRequest('/api/snowflake/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: countQuery })
+      });
+
+      if (!countResult.success) {
+        throw new Error(countResult.error || 'Query execution failed');
+      }
+
+      const count = countResult.rows[0][0];
+
+      // Execute limited query to get sample user IDs
+      const limitedQuery = `${sqlQuery}\nLIMIT 100`;
+      const userResult = await apiRequest('/api/snowflake/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: limitedQuery })
+      });
+
+      if (!userResult.success) {
+        throw new Error(userResult.error || 'User query execution failed');
+      }
+
+      const userIds = userResult.rows.map((row: any[]) => row[0].toString());
+
+      setQueryResult({ count, userIds });
+      setEstimatedSize(count);
+
+      toast({
+        title: "Query executed successfully",
+        description: `Found ${count} users matching the criteria.`
+      });
+
+    } catch (error) {
+      console.error('Query execution error:', error);
+      toast({
+        title: "Query execution failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  const copySqlToClipboard = () => {
+    navigator.clipboard.writeText(sqlQuery);
+    toast({
+      title: "SQL copied",
+      description: "The SQL query has been copied to your clipboard."
+    });
   };
 
   return (
@@ -626,6 +863,77 @@ export default function CohortEditor({
                   View All Segment Tags
                 </Button>
               </Link>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                SQL Query Preview
+                <div className="flex gap-2">
+                  <Button
+                    onClick={copySqlToClipboard}
+                    variant="outline"
+                    size="sm"
+                    className="h-6 px-2"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    onClick={executeSqlQuery}
+                    disabled={isExecuting || conditions.length === 0}
+                    variant="default"
+                    size="sm"
+                    className="h-6 px-2"
+                  >
+                    {isExecuting ? (
+                      <>...</>
+                    ) : (
+                      <>
+                        <Play className="h-3 w-3 mr-1" />
+                        Run
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded border">
+                <pre className="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap overflow-x-auto">
+                  {sqlQuery || 'SELECT USER_ID FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4'}
+                </pre>
+              </div>
+              
+              {queryResult && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded">
+                    <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                      Total Users: {queryResult.count.toLocaleString()}
+                    </span>
+                  </div>
+                  
+                  {queryResult.userIds.length > 0 && (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-gray-600 dark:text-gray-400">
+                        Sample User IDs (first 100):
+                      </Label>
+                      <div className="bg-gray-50 dark:bg-gray-900 p-2 rounded border max-h-32 overflow-y-auto">
+                        <div className="text-xs font-mono text-gray-700 dark:text-gray-300">
+                          {queryResult.userIds.slice(0, 20).join(', ')}
+                          {queryResult.userIds.length > 20 && '...'}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {conditions.length === 0 && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Add conditions above to build your SQL query
+                </p>
+              )}
             </CardContent>
           </Card>
 
