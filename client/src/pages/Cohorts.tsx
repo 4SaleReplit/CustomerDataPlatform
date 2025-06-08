@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'wouter';
 import { Plus, Eye, Edit, Trash2, RefreshCw, Filter, SortAsc, SortDesc, MoreHorizontal, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

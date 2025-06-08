@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'wouter';
 import CohortEditor from '@/components/cohorts/CohortEditor';
 
 // Mock cohort data - in a real app this would come from an API
@@ -44,7 +44,7 @@ const mockCohorts = [
 ];
 
 export default function CohortEdit() {
-  const navigate = useNavigate();
+  const [location, setLocation] = useLocation();
   const { id } = useParams<{ id: string }>();
   
   // Find the cohort by ID
@@ -62,7 +62,7 @@ export default function CohortEdit() {
   const handleSave = (data: { name: string; description: string; conditions: any[] }) => {
     console.log('Updating cohort:', { id, ...data });
     // Here you would typically call an API to update the cohort
-    navigate('/cohorts');
+    setLocation('/cohorts');
   };
 
   return (

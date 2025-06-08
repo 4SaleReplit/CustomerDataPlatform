@@ -1,15 +1,15 @@
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'wouter';
 import CohortEditor from '@/components/cohorts/CohortEditor';
 
 export default function CohortBuilder() {
-  const navigate = useNavigate();
+  const [location, setLocation] = useLocation();
 
   const handleSave = (data: { name: string; description: string; conditions: any[] }) => {
     console.log('Saving cohort:', data);
     // Here you would typically call an API to save the cohort
-    navigate('/cohorts');
+    setLocation('/cohorts');
   };
 
   return (
