@@ -317,6 +317,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Braze sync endpoint
+  app.post("/api/cohorts/:id/sync-braze", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const cohort = await storage.getCohort(id);
+      
+      if (!cohort) {
+        return res.status(404).json({ error: "Cohort not found" });
+      }
+
+      if (!cohort.calculationQuery) {
+        return res.status(400).json({ 
+          error: "Cohort has no calculation query. Please calculate the cohort first." 
+        });
+      }
+
+      // Execute the cohort query to get user IDs
+      const queryResult = await snowflakeService.executeQuery(cohort.calculationQuery);
+      
+      if (!queryResult.success || !queryResult.rows) {
+        throw new Error(`Query execution failed: ${queryResult.error}`);
+      }
+
+      // Extract user IDs from query results
+      const userIds = queryResult.rows.map(row => String(row[0])).filter(id => id && id.trim() !== '');
+      
+      if (userIds.length === 0) {
+        return res.status(400).json({ 
+          error: "No user IDs found in cohort query results" 
+        });
+      }
+
+      // Sync to Braze
+      const syncResult = await brazeService.syncCohort(cohort.name, userIds);
+      
+      if (syncResult.success) {
+        // Update cohort with Braze sync status
+        await storage.updateCohort(id, {
+          brazeLastSyncedAt: new Date(),
+          brazeSegmentId: syncResult.segmentId,
+          brazeSyncStatus: 'synced'
+        });
+
+        res.json({ 
+          message: "Successfully synced to Braze",
+          brazeSegmentId: syncResult.segmentId,
+          syncedUserCount: userIds.length
+        });
+      } else {
+        res.status(500).json({ 
+          error: `Braze sync failed: ${syncResult.error}` 
+        });
+      }
+
+    } catch (error) {
+      console.error("Braze sync error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to sync to Braze" 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

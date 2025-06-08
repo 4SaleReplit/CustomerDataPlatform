@@ -425,7 +425,7 @@ export default function Cohorts() {
                           <img 
                             src={amplitudeLogo} 
                             alt="Amplitude" 
-                            className="h-12 w-12 rounded-full"
+                            className="h-6 w-6 rounded-full"
                           />
                         </Button>
                         

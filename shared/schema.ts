@@ -73,6 +73,9 @@ export const cohorts = pgTable("cohorts", {
   nextRefreshAt: timestamp("next_refresh_at", { withTimezone: true }),
   lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
   amplitudeCohortId: varchar("amplitude_cohort_id", { length: 255 }),
+  brazeLastSyncedAt: timestamp("braze_last_synced_at", { withTimezone: true }),
+  brazeSegmentId: varchar("braze_segment_id", { length: 255 }),
+  brazeSyncStatus: text("braze_sync_status").notNull().default('not_synced'),
   createdBy: varchar("created_by", { length: 255 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
