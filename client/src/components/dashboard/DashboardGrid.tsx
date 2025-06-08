@@ -67,6 +67,10 @@ export function DashboardGrid({
   const handleLayoutChange = (layout: any[]) => {
     if (!isEditMode) return;
     
+    console.log('GRID: Layout change detected in edit mode');
+    console.log('GRID: Current layout:', layout.map(item => ({ id: item.i, x: item.x, y: item.y, w: item.w, h: item.h })));
+    console.log('GRID: Current tiles state:', tiles.map(t => ({ id: t.id, x: t.x, y: t.y, width: t.width, height: t.height })));
+    
     // Process all layout changes in edit mode
     layout.forEach(item => {
       const tile = tiles.find(t => t.id === item.i);
@@ -76,10 +80,12 @@ export function DashboardGrid({
         const sizeChanged = tile.width !== item.w || tile.height !== item.h;
         
         if (positionChanged) {
+          console.log(`GRID: Position change detected for ${item.i}: (${tile.x}, ${tile.y}) -> (${item.x}, ${item.y})`);
           onTileMove(item.i, { x: item.x, y: item.y });
         }
         
         if (sizeChanged) {
+          console.log(`GRID: Size change detected for ${item.i}: (${tile.width}x${tile.height}) -> (${item.w}x${item.h})`);
           onTileResize(item.i, { width: item.w, height: item.h });
         }
       }
