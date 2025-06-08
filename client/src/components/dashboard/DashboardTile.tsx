@@ -250,19 +250,19 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
 
         return (
           <div className="h-full flex flex-col">
-            <div className="p-4 border-b bg-gray-50">
+            <div className="p-4 border-b bg-gray-50 flex-shrink-0">
               <h3 className="font-medium text-gray-900">{tile.title}</h3>
               <p className="text-sm text-green-600 mt-1">
                 Live Snowflake Data ({snowflakeData.rows.length} rows)
               </p>
             </div>
-            <ScrollArea className="flex-1">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
+            <div className="flex-1 overflow-hidden">
+              <div className="h-full w-full overflow-auto">
+                <Table className="min-w-full">
+                  <TableHeader className="sticky top-0 bg-white">
                     <TableRow>
                       {snowflakeData.columns?.map((column: any, index: number) => (
-                        <TableHead key={index} className="whitespace-nowrap">
+                        <TableHead key={index} className="whitespace-nowrap px-4 py-2 text-left border-b">
                           {column.name}
                         </TableHead>
                       ))}
@@ -270,9 +270,9 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
                   </TableHeader>
                   <TableBody>
                     {snowflakeData.rows.map((row: any[], rowIndex: number) => (
-                      <TableRow key={rowIndex}>
+                      <TableRow key={rowIndex} className="border-b hover:bg-gray-50">
                         {row.map((cell: any, cellIndex: number) => (
-                          <TableCell key={cellIndex} className="whitespace-nowrap">
+                          <TableCell key={cellIndex} className="whitespace-nowrap px-4 py-2">
                             {cell?.toString() || '-'}
                           </TableCell>
                         ))}
@@ -281,7 +281,7 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
                   </TableBody>
                 </Table>
               </div>
-            </ScrollArea>
+            </div>
           </div>
         );
 
