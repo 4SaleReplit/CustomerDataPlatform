@@ -89,6 +89,28 @@ export default function CohortDetail() {
     }
   };
 
+  // Refresh cohort user count
+  const refreshUserCount = async () => {
+    try {
+      const response = await apiRequest(`/api/cohorts/${id}/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/cohorts', id] });
+      toast({
+        title: "Refresh successful",
+        description: `Cohort user count updated: ${response.userCount.toLocaleString()} users.`
+      });
+    } catch (error) {
+      toast({
+        title: "Refresh failed",
+        description: "Failed to refresh cohort user count. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Save cohort updates
   const handleSave = async () => {
     try {

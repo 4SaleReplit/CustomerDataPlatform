@@ -10,7 +10,8 @@ import {
   type DashboardTileInstance,
   type InsertDashboardTileInstance,
   type Cohort,
-  type InsertCohort
+  type InsertCohort,
+  type UpdateCohort
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, or } from "drizzle-orm";
@@ -36,7 +37,7 @@ export interface IStorage {
   getCohorts(): Promise<Cohort[]>;
   getCohort(id: string): Promise<Cohort | undefined>;
   createCohort(cohort: InsertCohort): Promise<Cohort>;
-  updateCohort(id: string, updates: Partial<InsertCohort>): Promise<Cohort | undefined>;
+  updateCohort(id: string, updates: UpdateCohort): Promise<Cohort | undefined>;
   deleteCohort(id: string): Promise<boolean>;
 }
 
@@ -177,7 +178,7 @@ export class DatabaseStorage implements IStorage {
     return cohort;
   }
 
-  async updateCohort(id: string, updates: Partial<InsertCohort>): Promise<Cohort | undefined> {
+  async updateCohort(id: string, updates: UpdateCohort): Promise<Cohort | undefined> {
     const [updatedCohort] = await db
       .update(cohorts)
       .set({ ...updates, updatedAt: new Date() })

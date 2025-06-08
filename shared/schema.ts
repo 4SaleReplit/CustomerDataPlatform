@@ -131,9 +131,13 @@ export const insertCohortSchema = createInsertSchema(cohorts).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-  userCount: true,
-  lastCalculatedAt: true,
 });
+
+export const updateCohortSchema = createInsertSchema(cohorts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
 
 export const insertSegmentSchema = createInsertSchema(segments).omit({
   id: true,
@@ -159,6 +163,7 @@ export type User = typeof users.$inferSelect;
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type Team = typeof team.$inferSelect;
 export type InsertCohort = z.infer<typeof insertCohortSchema>;
+export type UpdateCohort = z.infer<typeof updateCohortSchema>;
 export type Cohort = typeof cohorts.$inferSelect;
 export type InsertSegment = z.infer<typeof insertSegmentSchema>;
 export type Segment = typeof segments.$inferSelect;
