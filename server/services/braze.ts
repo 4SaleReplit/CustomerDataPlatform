@@ -114,7 +114,33 @@ export class BrazeService {
         }
       }
 
-      // Step 2: Log completion and provide instructions for segment creation
+      // Step 2: Verify sync by checking a sample user
+      if (userIds.length > 0) {
+        try {
+          const sampleUserId = userIds[0];
+          const verifyResponse = await fetch(`${this.instanceUrl}/users/export/ids`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.apiKey}`
+            },
+            body: JSON.stringify({
+              external_ids: [sampleUserId],
+              fields_to_export: ["external_id", "custom_attributes"]
+            })
+          });
+
+          if (verifyResponse.ok) {
+            const verifyResult = await verifyResponse.json() as any;
+            if (verifyResult.users && verifyResult.users[0]?.custom_attributes?.[cohortAttribute]) {
+              console.log(`✓ Verification successful: User ${sampleUserId} has attribute ${cohortAttribute} = true`);
+            }
+          }
+        } catch (verifyError) {
+          console.warn('Verification check failed:', verifyError);
+        }
+      }
+
       console.log(`Successfully synced ${totalProcessed} users to Braze with attribute: ${cohortAttribute}`);
       console.log(`To create a segment in Braze:`);
       console.log(`1. Go to Braze Dashboard > Segments`);
