@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'wouter';
 import { 
   BarChart3, 
   Users, 
@@ -38,7 +38,7 @@ const navigation = [
 ];
 
 export function AppSidebar() {
-  const location = useLocation();
+  const [location] = useLocation();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
 
@@ -61,8 +61,8 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {navigation.map((item) => {
-                const isActive = location.pathname === item.href || 
-                  (item.href !== '/' && location.pathname.startsWith(item.href));
+                const isActive = location === item.href || 
+                  (item.href !== '/' && location.startsWith(item.href));
                 
                 return (
                   <SidebarMenuItem key={item.name}>
@@ -71,14 +71,13 @@ export function AppSidebar() {
                       isActive={isActive}
                       tooltip={isCollapsed ? item.name : undefined}
                     >
-                      <NavLink
-                        to={item.href}
-                        end={item.href === '/'}
+                      <Link
+                        href={item.href}
                         className="flex items-center gap-3"
                       >
                         <item.icon className="h-5 w-5 flex-shrink-0" />
                         {!isCollapsed && <span>{item.name}</span>}
-                      </NavLink>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Eye, Edit, Trash2, Play, Pause, Search, Filter, MoreHorizontal, Copy } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
