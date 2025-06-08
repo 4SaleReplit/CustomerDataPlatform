@@ -59,21 +59,25 @@ export function DashboardGrid({
   };
 
   const handleLayoutChange = (layout: any[]) => {
-    if (!isEditMode || !userDraggedRef.current) return;
+    if (!isEditMode) return;
     
-    // Only process changes when user actually dragged/resized a tile
+    console.log('Layout change detected:', layout.map(item => ({ id: item.i, x: item.x, y: item.y, w: item.w, h: item.h })));
+    
+    // Process all layout changes in edit mode
     layout.forEach(item => {
       const tile = tiles.find(t => t.id === item.i);
       if (tile) {
-        // Only update if there's an actual change from user interaction
+        // Check for actual changes
         const positionChanged = tile.x !== item.x || tile.y !== item.y;
         const sizeChanged = tile.width !== item.w || tile.height !== item.h;
         
         if (positionChanged) {
+          console.log(`Position changed for ${item.i}: from (${tile.x}, ${tile.y}) to (${item.x}, ${item.y})`);
           onTileMove(item.i, { x: item.x, y: item.y });
         }
         
         if (sizeChanged) {
+          console.log(`Size changed for ${item.i}: from (${tile.width}, ${tile.height}) to (${item.w}, ${item.h})`);
           onTileResize(item.i, { width: item.w, height: item.h });
         }
       }

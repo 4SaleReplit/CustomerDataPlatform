@@ -127,6 +127,26 @@ export function DashboardBuilder({
     onTilesChange([...tiles, newTile]);
   };
 
+  const handleTileMove = (tileId: string, newPosition: { x: number; y: number }) => {
+    console.log(`Moving tile ${tileId} to position:`, newPosition);
+    const updatedTiles = tiles.map(tile => 
+      tile.id === tileId 
+        ? { ...tile, x: newPosition.x, y: newPosition.y }
+        : tile
+    );
+    onTilesChange(updatedTiles);
+  };
+
+  const handleTileResize = (tileId: string, newSize: { width: number; height: number }) => {
+    console.log(`Resizing tile ${tileId} to size:`, newSize);
+    const updatedTiles = tiles.map(tile => 
+      tile.id === tileId 
+        ? { ...tile, width: newSize.width, height: newSize.height }
+        : tile
+    );
+    onTilesChange(updatedTiles);
+  };
+
   return (
     <div className="space-y-6">
       {/* Add Tile Button - Prominent position in edit mode */}
@@ -257,8 +277,8 @@ export function DashboardBuilder({
         onRemoveTile={onRemoveTile || handleRemoveTile}
         onDuplicateTile={onDuplicateTile || handleDuplicateTile}
         onRefreshTile={onRefreshTile || (() => {})}
-        onTileMove={() => {}}
-        onTileResize={() => {}}
+        onTileMove={handleTileMove}
+        onTileResize={handleTileResize}
       />
     </div>
   );
