@@ -130,6 +130,7 @@ export default function Dashboard() {
   // Query to fetch tiles from database - force fresh data
   const { data: dashboardTiles = [], isLoading, refetch } = useQuery<any[]>({
     queryKey: ['/api/dashboard/tiles'],
+    queryFn: () => apiRequest('/api/dashboard/tiles'),
     staleTime: 0, // Always fetch fresh data
     gcTime: 0, // Don't cache
     refetchOnWindowFocus: false,
