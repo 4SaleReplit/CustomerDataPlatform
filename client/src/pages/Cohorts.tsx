@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'wouter';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import { Plus, Eye, Edit, Trash2, RefreshCw, Filter, SortAsc, SortDesc, MoreHorizontal, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,8 +15,27 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 
-// Mock cohort data
-const mockCohorts = [
+interface Cohort {
+  id: string;
+  name: string;
+  description: string | null;
+  conditions: any;
+  userCount: number | null;
+  status: string;
+  syncStatus: string;
+  calculationQuery: string | null;
+  lastCalculatedAt: string | null;
+  calculationError: string | null;
+  autoRefresh: boolean;
+  refreshFrequencyHours: number;
+  nextRefreshAt: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Remove mock cohorts data - now using database
+const removedMockCohorts = [
   {
     id: 1,
     name: 'Premium Users',
@@ -94,12 +116,37 @@ export default function Cohorts() {
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [duplicatingCohort, setDuplicatingCohort] = useState<any>(null);
   const [newCohortName, setNewCohortName] = useState('');
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch cohorts from database
+  const { data: cohorts = [], isLoading, error } = useQuery({
+    queryKey: ['/api/cohorts'],
+    queryFn: () => apiRequest('/api/cohorts'),
+  });
+
+  // Delete cohort function
+  const deleteCohort = async (cohortId: string) => {
+    try {
+      await apiRequest(`/api/cohorts/${cohortId}`, { method: 'DELETE' });
+      queryClient.invalidateQueries({ queryKey: ['/api/cohorts'] });
+      toast({
+        title: "Cohort deleted",
+        description: "The cohort has been successfully deleted."
+      });
+    } catch (error) {
+      toast({
+        title: "Delete failed",
+        description: "Failed to delete the cohort. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
 
   // Filter cohorts
-  const filteredCohorts = mockCohorts.filter(cohort => {
+  const filteredCohorts = cohorts.filter((cohort: Cohort) => {
     const matchesSearch = cohort.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         cohort.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         cohort.creator.toLowerCase().includes(searchTerm.toLowerCase());
+                         (cohort.description && cohort.description.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = statusFilter === 'all' || cohort.status === statusFilter;
     const matchesSyncStatus = syncStatusFilter === 'all' || cohort.syncStatus === syncStatusFilter;
     
@@ -107,7 +154,7 @@ export default function Cohorts() {
   });
 
   // Sort cohorts
-  const sortedCohorts = [...filteredCohorts].sort((a, b) => {
+  const sortedCohorts = [...filteredCohorts].sort((a: Cohort, b: Cohort) => {
     let aValue, bValue;
     
     switch (sortBy) {
@@ -116,16 +163,16 @@ export default function Cohorts() {
         bValue = b.name.toLowerCase();
         break;
       case 'userCount':
-        aValue = a.userCount;
-        bValue = b.userCount;
+        aValue = a.userCount || 0;
+        bValue = b.userCount || 0;
         break;
-      case 'createdDate':
-        aValue = new Date(a.createdDate);
-        bValue = new Date(b.createdDate);
+      case 'createdAt':
+        aValue = new Date(a.createdAt);
+        bValue = new Date(b.createdAt);
         break;
-      case 'updatedDate':
-        aValue = new Date(a.updatedDate);
-        bValue = new Date(b.updatedDate);
+      case 'updatedAt':
+        aValue = new Date(a.updatedAt);
+        bValue = new Date(b.updatedAt);
         break;
       default:
         aValue = a.name.toLowerCase();

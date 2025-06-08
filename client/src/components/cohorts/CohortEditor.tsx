@@ -345,12 +345,62 @@ export default function CohortEditor({
     setEstimatedSize(mockSize);
   };
 
-  const handleSave = () => {
-    onSave({
-      name: cohortName,
-      description: cohortDescription,
-      conditions: conditions
-    });
+  const handleSave = async () => {
+    if (!cohortName.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a cohort name",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (conditions.length === 0) {
+      toast({
+        title: "Validation Error", 
+        description: "Please add at least one condition",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const cohortData = {
+        name: cohortName,
+        description: cohortDescription || '',
+        conditions: conditions,
+        calculationQuery: sqlQuery,
+        userCount: queryResult?.count || 0,
+        status: 'active' as const,
+        syncStatus: 'not_synced' as const
+      };
+
+      await apiRequest('/api/cohorts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cohortData)
+      });
+
+      toast({
+        title: "Cohort saved successfully",
+        description: `Created cohort "${cohortName}" with ${queryResult?.count || 0} users.`
+      });
+
+      // Call the original onSave for navigation
+      onSave({
+        name: cohortName,
+        description: cohortDescription,
+        conditions: conditions
+      });
+
+    } catch (error) {
+      console.error('Save cohort error:', error);
+      toast({
+        title: "Failed to save cohort",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive"
+      });
+    }
   };
 
   const getSelectedSegmentTag = (tagName: string) => {
