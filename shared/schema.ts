@@ -76,7 +76,7 @@ export const cohorts = pgTable("cohorts", {
   brazeLastSyncedAt: timestamp("braze_last_synced_at", { withTimezone: true }),
   brazeSegmentId: varchar("braze_segment_id", { length: 255 }),
   brazeSyncStatus: text("braze_sync_status").notNull().default('not_synced'),
-  createdBy: varchar("created_by", { length: 255 }),
+  createdBy: uuid("created_by").references(() => team.id, { onDelete: 'set null' }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
 });
