@@ -35,6 +35,10 @@ interface DashboardBuilderProps {
   tiles: DashboardTile[];
   onTilesChange: (tiles: DashboardTile[]) => void;
   isEditMode: boolean;
+  onEditTile?: (tile: DashboardTile) => void;
+  onRemoveTile?: (tileId: string) => void;
+  onDuplicateTile?: (tile: DashboardTile) => void;
+  onRefreshTile?: (tileId: string) => void;
 }
 
 const TILE_TYPES = [
@@ -59,7 +63,15 @@ const ICON_OPTIONS = [
   { value: 'trending-down', label: 'Trending Down', component: TrendingDown }
 ];
 
-export function DashboardBuilder({ tiles, onTilesChange, isEditMode }: DashboardBuilderProps) {
+export function DashboardBuilder({ 
+  tiles, 
+  onTilesChange, 
+  isEditMode, 
+  onEditTile, 
+  onRemoveTile, 
+  onDuplicateTile, 
+  onRefreshTile 
+}: DashboardBuilderProps) {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [newTile, setNewTile] = useState<Partial<DashboardTile>>({
     type: 'metric',
@@ -135,10 +147,10 @@ export function DashboardBuilder({ tiles, onTilesChange, isEditMode }: Dashboard
       <DashboardGrid
         tiles={tiles}
         isEditMode={isEditMode}
-        onEditTile={() => {}}
-        onRemoveTile={handleRemoveTile}
-        onDuplicateTile={handleDuplicateTile}
-        onRefreshTile={() => {}}
+        onEditTile={onEditTile || (() => {})}
+        onRemoveTile={onRemoveTile || handleRemoveTile}
+        onDuplicateTile={onDuplicateTile || handleDuplicateTile}
+        onRefreshTile={onRefreshTile || (() => {})}
         onTileMove={() => {}}
         onTileResize={() => {}}
       />

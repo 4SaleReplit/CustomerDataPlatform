@@ -431,6 +431,10 @@ export default function Dashboard() {
             tiles={tiles}
             onTilesChange={handleTilesChange}
             isEditMode={isEditMode}
+            onEditTile={handleEditTile}
+            onRemoveTile={handleRemoveTile}
+            onDuplicateTile={handleDuplicateTile}
+            onRefreshTile={handleRefreshTile}
           />
         </div>
       </div>
