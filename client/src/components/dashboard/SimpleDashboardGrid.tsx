@@ -24,8 +24,12 @@ export function SimpleDashboardGrid({
   onTileResize
 }: SimpleDashboardGridProps) {
   const [draggedTile, setDraggedTile] = useState<string | null>(null);
+  const [resizingTile, setResizingTile] = useState<string | null>(null);
+  const [resizeHandle, setResizeHandle] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [tempPosition, setTempPosition] = useState<{ x: number; y: number } | null>(null);
+  const [tempSize, setTempSize] = useState<{ width: number; height: number } | null>(null);
+  const [initialTileData, setInitialTileData] = useState<DashboardTile | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
   const GRID_COLS = 12;
@@ -69,39 +73,102 @@ export function SimpleDashboardGrid({
     console.log(`DRAG START: ${tileId} at (${tile.x}, ${tile.y})`);
   }, [isEditMode, tiles]);
 
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent, tileId: string, handle: string) => {
+    if (!isEditMode) return;
+    
+    e.preventDefault();
+    e.stopPropagation(); // Prevent drag from starting
+    
+    const tile = tiles.find(t => t.id === tileId);
+    if (!tile) return;
+
+    setResizingTile(tileId);
+    setResizeHandle(handle);
+    setTempSize({ width: tile.width, height: tile.height });
+    setInitialTileData(tile);
+
+    console.log(`RESIZE START: ${tileId} handle ${handle} at size (${tile.width}x${tile.height})`);
+  }, [isEditMode, tiles]);
+
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!draggedTile || !gridRef.current) return;
+    if (!gridRef.current) return;
 
     const gridRect = gridRef.current.getBoundingClientRect();
-    const pixelX = e.clientX - gridRect.left - dragOffset.x;
-    const pixelY = e.clientY - gridRect.top - dragOffset.y;
 
-    const gridPos = pixelsToGrid(pixelX, pixelY);
-    
-    // Constrain to grid bounds
-    const constrainedX = Math.max(0, Math.min(GRID_COLS - 1, gridPos.x));
-    const constrainedY = Math.max(0, gridPos.y);
+    // Handle dragging
+    if (draggedTile) {
+      const pixelX = e.clientX - gridRect.left - dragOffset.x;
+      const pixelY = e.clientY - gridRect.top - dragOffset.y;
 
-    setTempPosition({ x: constrainedX, y: constrainedY });
-  }, [draggedTile, dragOffset]);
+      const gridPos = pixelsToGrid(pixelX, pixelY);
+      
+      // Constrain to grid bounds
+      const constrainedX = Math.max(0, Math.min(GRID_COLS - 1, gridPos.x));
+      const constrainedY = Math.max(0, gridPos.y);
 
-  const handleMouseUp = useCallback(() => {
-    if (!draggedTile || !tempPosition) return;
-
-    const tile = tiles.find(t => t.id === draggedTile);
-    if (tile && (tile.x !== tempPosition.x || tile.y !== tempPosition.y)) {
-      console.log(`DRAG END: Moving ${draggedTile} from (${tile.x}, ${tile.y}) to (${tempPosition.x}, ${tempPosition.y})`);
-      onTileMove(draggedTile, tempPosition);
+      setTempPosition({ x: constrainedX, y: constrainedY });
     }
 
+    // Handle resizing
+    if (resizingTile && initialTileData && resizeHandle) {
+      const mouseX = e.clientX - gridRect.left;
+      const mouseY = e.clientY - gridRect.top;
+      
+      const tilePixelPos = gridToPixels(initialTileData.x, initialTileData.y);
+      const currentWidth = initialTileData.width * CELL_WIDTH + (initialTileData.width - 1) * GAP;
+      const currentHeight = initialTileData.height * CELL_HEIGHT + (initialTileData.height - 1) * GAP;
+
+      let newWidth = initialTileData.width;
+      let newHeight = initialTileData.height;
+
+      // Calculate new dimensions based on resize handle
+      if (resizeHandle.includes('right')) {
+        const newPixelWidth = mouseX - tilePixelPos.x;
+        newWidth = Math.max(2, Math.round(newPixelWidth / (CELL_WIDTH + GAP)));
+      }
+      if (resizeHandle.includes('bottom')) {
+        const newPixelHeight = mouseY - tilePixelPos.y;
+        newHeight = Math.max(1, Math.round(newPixelHeight / (CELL_HEIGHT + GAP)));
+      }
+
+      // Constrain to grid bounds
+      newWidth = Math.min(newWidth, GRID_COLS - initialTileData.x);
+      
+      setTempSize({ width: newWidth, height: newHeight });
+    }
+  }, [draggedTile, resizingTile, dragOffset, initialTileData, resizeHandle]);
+
+  const handleMouseUp = useCallback(() => {
+    // Handle drag completion
+    if (draggedTile && tempPosition) {
+      const tile = tiles.find(t => t.id === draggedTile);
+      if (tile && (tile.x !== tempPosition.x || tile.y !== tempPosition.y)) {
+        console.log(`DRAG END: Moving ${draggedTile} from (${tile.x}, ${tile.y}) to (${tempPosition.x}, ${tempPosition.y})`);
+        onTileMove(draggedTile, tempPosition);
+      }
+    }
+
+    // Handle resize completion
+    if (resizingTile && tempSize && initialTileData) {
+      if (initialTileData.width !== tempSize.width || initialTileData.height !== tempSize.height) {
+        console.log(`RESIZE END: Resizing ${resizingTile} from (${initialTileData.width}x${initialTileData.height}) to (${tempSize.width}x${tempSize.height})`);
+        onTileResize(resizingTile, tempSize);
+      }
+    }
+
+    // Reset all states
     setDraggedTile(null);
+    setResizingTile(null);
+    setResizeHandle(null);
     setTempPosition(null);
+    setTempSize(null);
+    setInitialTileData(null);
     setDragOffset({ x: 0, y: 0 });
-  }, [draggedTile, tempPosition, tiles, onTileMove]);
+  }, [draggedTile, resizingTile, tempPosition, tempSize, initialTileData, tiles, onTileMove, onTileResize]);
 
   // Attach global mouse events
   React.useEffect(() => {
-    if (draggedTile) {
+    if (draggedTile || resizingTile) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       return () => {
@@ -109,7 +176,7 @@ export function SimpleDashboardGrid({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [draggedTile, handleMouseMove, handleMouseUp]);
+  }, [draggedTile, resizingTile, handleMouseMove, handleMouseUp]);
 
   // Get tile position (use temp position if dragging)
   const getTilePosition = (tile: DashboardTile) => {
@@ -117,6 +184,14 @@ export function SimpleDashboardGrid({
       return tempPosition;
     }
     return { x: tile.x, y: tile.y };
+  };
+
+  // Get tile size (use temp size if resizing)
+  const getTileSize = (tile: DashboardTile) => {
+    if (resizingTile === tile.id && tempSize) {
+      return tempSize;
+    }
+    return { width: tile.width, height: tile.height };
   };
 
   return (
@@ -131,20 +206,22 @@ export function SimpleDashboardGrid({
     >
       {tiles.map((tile) => {
         const position = getTilePosition(tile);
+        const size = getTileSize(tile);
         const pixelPos = gridToPixels(position.x, position.y);
         const isDragging = draggedTile === tile.id;
+        const isResizing = resizingTile === tile.id;
 
         return (
           <div
             key={tile.id}
-            className={`absolute transition-all duration-200 ${isDragging ? 'z-50 shadow-2xl' : 'z-10'} ${
+            className={`absolute transition-all duration-200 ${isDragging || isResizing ? 'z-50 shadow-2xl' : 'z-10'} ${
               isEditMode ? 'cursor-move' : ''
             }`}
             style={{
               left: `${pixelPos.x}px`,
               top: `${pixelPos.y}px`,
-              width: `${tile.width * CELL_WIDTH + (tile.width - 1) * GAP}px`,
-              height: `${tile.height * CELL_HEIGHT + (tile.height - 1) * GAP}px`,
+              width: `${size.width * CELL_WIDTH + (size.width - 1) * GAP}px`,
+              height: `${size.height * CELL_HEIGHT + (size.height - 1) * GAP}px`,
               transform: isDragging ? 'scale(1.05)' : 'scale(1)',
               opacity: isDragging ? 0.9 : 1
             }}
@@ -158,6 +235,32 @@ export function SimpleDashboardGrid({
               onDuplicate={onDuplicateTile}
               onRefresh={onRefreshTile}
             />
+            
+            {/* Resize handles - only show in edit mode */}
+            {isEditMode && (
+              <>
+                {/* Bottom-right corner handle */}
+                <div
+                  className="absolute bottom-0 right-0 w-4 h-4 bg-blue-500 opacity-50 hover:opacity-100 cursor-se-resize border border-white"
+                  style={{ transform: 'translate(50%, 50%)' }}
+                  onMouseDown={(e) => handleResizeMouseDown(e, tile.id, 'bottom-right')}
+                />
+                
+                {/* Right edge handle */}
+                <div
+                  className="absolute top-1/2 right-0 w-2 h-8 bg-blue-500 opacity-50 hover:opacity-100 cursor-e-resize"
+                  style={{ transform: 'translate(50%, -50%)' }}
+                  onMouseDown={(e) => handleResizeMouseDown(e, tile.id, 'right')}
+                />
+                
+                {/* Bottom edge handle */}
+                <div
+                  className="absolute bottom-0 left-1/2 w-8 h-2 bg-blue-500 opacity-50 hover:opacity-100 cursor-s-resize"
+                  style={{ transform: 'translate(-50%, 50%)' }}
+                  onMouseDown={(e) => handleResizeMouseDown(e, tile.id, 'bottom')}
+                />
+              </>
+            )}
           </div>
         );
       })}
