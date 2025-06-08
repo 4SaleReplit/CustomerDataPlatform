@@ -128,7 +128,7 @@ export default function Dashboard() {
   const { toast } = useToast();
 
   // Query to fetch tiles from database - only once with long cache
-  const { data: dashboardTiles = [], isLoading } = useQuery({
+  const { data: dashboardTiles = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/dashboard/tiles'],
     staleTime: Infinity, // Never consider stale
     gcTime: Infinity, // Never garbage collect
@@ -182,7 +182,7 @@ export default function Dashboard() {
     if (!isInitialized && !isLoading) {
       let tilesToUse = initialTiles;
       
-      if (dashboardTiles.length > 0) {
+      if (Array.isArray(dashboardTiles) && dashboardTiles.length > 0) {
         // Convert database tiles to frontend format
         tilesToUse = dashboardTiles.map((dbTile: any) => ({
           id: dbTile.tileId,
@@ -264,7 +264,8 @@ export default function Dashboard() {
     );
     setTiles(updatedTiles);
     setEditingTile(null);
-    debouncedSave(updatedTiles);
+    // Disable auto-save - use manual save only
+    // debouncedSave(updatedTiles);
   };
 
   const handleCloseEditDialog = () => {
@@ -274,7 +275,8 @@ export default function Dashboard() {
   const handleRemoveTile = (tileId: string) => {
     const updatedTiles = tiles.filter(tile => tile.id !== tileId);
     setTiles(updatedTiles);
-    debouncedSave(updatedTiles);
+    // Disable auto-save - use manual save only
+    // debouncedSave(updatedTiles);
   };
 
   const handleDuplicateTile = (tile: DashboardTile) => {
@@ -291,7 +293,8 @@ export default function Dashboard() {
     };
     const updatedTiles = [...tiles, newTile];
     setTiles(updatedTiles);
-    debouncedSave(updatedTiles);
+    // Disable auto-save - use manual save only
+    // debouncedSave(updatedTiles);
   };
 
   const handleRefreshTile = (tileId: string) => {
