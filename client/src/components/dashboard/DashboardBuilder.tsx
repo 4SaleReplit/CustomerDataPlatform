@@ -49,20 +49,6 @@ const TILE_TYPES = [
   { value: 'gauge', label: 'Gauge' }
 ];
 
-const DATA_TABLES = [
-  { value: 'users', label: 'Users' },
-  { value: 'listings', label: 'Listings' },
-  { value: 'transactions', label: 'Transactions' },
-  { value: 'events', label: 'Events' },
-  { value: 'cohorts', label: 'Cohorts' }
-];
-
-const ICON_OPTIONS = [
-  { value: 'users', label: 'Users', component: Users },
-  { value: 'trending-up', label: 'Trending Up', component: TrendingUp },
-  { value: 'trending-down', label: 'Trending Down', component: TrendingDown }
-];
-
 export function DashboardBuilder({ 
   tiles, 
   onTilesChange, 
@@ -80,8 +66,8 @@ export function DashboardBuilder({
     height: 2,
     icon: 'users',
     dataSource: {
-      table: 'users',
-      query: 'SELECT COUNT(*) as value FROM users',
+      table: 'DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4',
+      query: 'SELECT COUNT(*) as value FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4',
       aggregation: 'count'
     },
     refreshConfig: {
@@ -116,8 +102,8 @@ export function DashboardBuilder({
       height: 2,
       icon: 'users',
       dataSource: {
-        table: 'users',
-        query: 'SELECT COUNT(*) as value FROM users',
+        table: 'DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4',
+        query: 'SELECT COUNT(*) as value FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4',
         aggregation: 'count'
       },
       refreshConfig: {
@@ -143,6 +129,126 @@ export function DashboardBuilder({
 
   return (
     <div className="space-y-6">
+      {/* Add Tile Button - Prominent position in edit mode */}
+      {isEditMode && (
+        <div className="flex justify-center">
+          <Sheet open={isConfigOpen} onOpenChange={setIsConfigOpen}>
+            <SheetTrigger asChild>
+              <Button className="gap-2" size="lg">
+                <Plus className="h-4 w-4" />
+                Add Tile
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="w-[400px] sm:w-[500px]">
+              <SheetHeader>
+                <SheetTitle>Add New Tile</SheetTitle>
+              </SheetHeader>
+              <div className="space-y-6 mt-6">
+                <div className="space-y-2">
+                  <Label>Tile Type</Label>
+                  <Select
+                    value={newTile.type}
+                    onValueChange={(value) => setNewTile({...newTile, type: value as DashboardTile['type']})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TILE_TYPES.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Input
+                    placeholder="Enter tile title..."
+                    value={newTile.title}
+                    onChange={(e) => setNewTile({...newTile, title: e.target.value})}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Width</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="12"
+                      value={newTile.width}
+                      onChange={(e) => setNewTile({...newTile, width: parseInt(e.target.value)})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Height</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="6"
+                      value={newTile.height}
+                      onChange={(e) => setNewTile({...newTile, height: parseInt(e.target.value)})}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Snowflake Query</Label>
+                  <Textarea
+                    placeholder="Enter SQL query for Snowflake..."
+                    value={newTile.dataSource?.query}
+                    onChange={(e) => setNewTile({
+                      ...newTile,
+                      dataSource: {...newTile.dataSource!, query: e.target.value}
+                    })}
+                    rows={4}
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <Label className="text-base font-semibold">Refresh Configuration</Label>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label>Auto Refresh on Dashboard Load</Label>
+                      <p className="text-xs text-gray-500">Refresh data when dashboard is loaded</p>
+                    </div>
+                    <Switch
+                      checked={newTile.refreshConfig?.refreshOnLoad}
+                      onCheckedChange={(checked) => setNewTile({
+                        ...newTile,
+                        refreshConfig: {...newTile.refreshConfig!, refreshOnLoad: checked}
+                      })}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label>Auto Refresh (Real-time)</Label>
+                      <p className="text-xs text-gray-500">Automatically refresh data periodically</p>
+                    </div>
+                    <Switch
+                      checked={newTile.refreshConfig?.autoRefresh}
+                      onCheckedChange={(checked) => setNewTile({
+                        ...newTile,
+                        refreshConfig: {...newTile.refreshConfig!, autoRefresh: checked}
+                      })}
+                    />
+                  </div>
+                </div>
+
+                <Button onClick={addTile} className="w-full">
+                  Add Tile
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      )}
+
       {/* Dashboard Grid - Show tiles */}
       <DashboardGrid
         tiles={tiles}
@@ -154,146 +260,6 @@ export function DashboardBuilder({
         onTileMove={() => {}}
         onTileResize={() => {}}
       />
-
-      {/* Add Tile Button - Only in edit mode */}
-      {isEditMode && (
-        <Sheet open={isConfigOpen} onOpenChange={setIsConfigOpen}>
-          <SheetTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Tile
-            </Button>
-          </SheetTrigger>
-          <SheetContent className="w-[400px] sm:w-[500px]">
-            <SheetHeader>
-              <SheetTitle>Add New Tile</SheetTitle>
-            </SheetHeader>
-            <div className="space-y-6 mt-6">
-              <div className="space-y-2">
-                <Label>Tile Type</Label>
-                <Select
-                  value={newTile.type}
-                  onValueChange={(value) => setNewTile({...newTile, type: value as DashboardTile['type']})}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TILE_TYPES.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Title</Label>
-                <Input
-                  placeholder="Enter tile title..."
-                  value={newTile.title}
-                  onChange={(e) => setNewTile({...newTile, title: e.target.value})}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Width</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="12"
-                    value={newTile.width}
-                    onChange={(e) => setNewTile({...newTile, width: parseInt(e.target.value)})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Height</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="6"
-                    value={newTile.height}
-                    onChange={(e) => setNewTile({...newTile, height: parseInt(e.target.value)})}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Data Source Table</Label>
-                <Select
-                  value={newTile.dataSource?.table}
-                  onValueChange={(value) => setNewTile({
-                    ...newTile,
-                    dataSource: {...newTile.dataSource!, table: value}
-                  })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DATA_TABLES.map((table) => (
-                      <SelectItem key={table.value} value={table.value}>
-                        {table.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Query</Label>
-                <Textarea
-                  placeholder="Enter SQL query..."
-                  value={newTile.dataSource?.query}
-                  onChange={(e) => setNewTile({
-                    ...newTile,
-                    dataSource: {...newTile.dataSource!, query: e.target.value}
-                  })}
-                  rows={4}
-                />
-              </div>
-
-              <div className="space-y-4">
-                <Label className="text-base font-semibold">Refresh Configuration</Label>
-                
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <Label>Auto Refresh on Dashboard Load</Label>
-                    <p className="text-xs text-gray-500">Refresh data when dashboard is loaded</p>
-                  </div>
-                  <Switch
-                    checked={newTile.refreshConfig?.refreshOnLoad}
-                    onCheckedChange={(checked) => setNewTile({
-                      ...newTile,
-                      refreshConfig: {...newTile.refreshConfig!, refreshOnLoad: checked}
-                    })}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <Label>Auto Refresh (Real-time)</Label>
-                    <p className="text-xs text-gray-500">Automatically refresh data periodically</p>
-                  </div>
-                  <Switch
-                    checked={newTile.refreshConfig?.autoRefresh}
-                    onCheckedChange={(checked) => setNewTile({
-                      ...newTile,
-                      refreshConfig: {...newTile.refreshConfig!, autoRefresh: checked}
-                    })}
-                  />
-                </div>
-              </div>
-
-              <Button onClick={addTile} className="w-full">
-                Add Tile
-              </Button>
-            </div>
-          </SheetContent>
-        </Sheet>
-      )}
     </div>
   );
 }
