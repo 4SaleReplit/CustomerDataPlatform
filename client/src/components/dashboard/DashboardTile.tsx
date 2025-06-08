@@ -222,34 +222,32 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
 
         return (
           <div className="h-full flex flex-col p-2">
-            <ScrollArea className="flex-1 w-full">
-              <div className="min-w-max w-full overflow-x-auto">
-                <Table className="w-full">
-                  <TableHeader className="sticky top-0 bg-background z-10">
-                    <TableRow className="border-b">
-                      {snowflakeData.columns.map((col: any, idx: number) => (
-                        <TableHead key={idx} className="font-semibold text-xs px-3 py-2 text-muted-foreground bg-muted/30 whitespace-nowrap">
-                          {col.name}
-                        </TableHead>
+            <div className="flex-1 overflow-auto">
+              <Table className="min-w-max">
+                <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableRow className="border-b">
+                    {snowflakeData.columns.map((col: any, idx: number) => (
+                      <TableHead key={idx} className="font-semibold text-xs px-3 py-2 text-muted-foreground bg-muted/30 whitespace-nowrap min-w-24">
+                        {col.name}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {snowflakeData.rows.slice(0, 100).map((row: any[], idx: number) => (
+                    <TableRow key={idx} className="hover:bg-muted/30 border-b border-border/30">
+                      {row.map((cell, cellIdx) => (
+                        <TableCell key={cellIdx} className="text-xs px-3 py-2 whitespace-nowrap min-w-24">
+                          <div className="text-foreground" title={cell !== null && cell !== undefined ? String(cell) : ''}>
+                            {cell !== null && cell !== undefined ? String(cell) : '-'}
+                          </div>
+                        </TableCell>
                       ))}
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {snowflakeData.rows.slice(0, 100).map((row: any[], idx: number) => (
-                      <TableRow key={idx} className="hover:bg-muted/30 border-b border-border/30">
-                        {row.map((cell, cellIdx) => (
-                          <TableCell key={cellIdx} className="text-xs px-3 py-2 whitespace-nowrap">
-                            <div className="text-foreground max-w-48 truncate" title={cell !== null && cell !== undefined ? String(cell) : ''}>
-                              {cell !== null && cell !== undefined ? String(cell) : '-'}
-                            </div>
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </ScrollArea>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         );
 
