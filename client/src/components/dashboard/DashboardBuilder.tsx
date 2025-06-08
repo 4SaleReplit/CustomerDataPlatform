@@ -95,7 +95,8 @@ export function DashboardBuilder({ tiles, onTilesChange, isEditMode }: Dashboard
       }
     };
 
-    onTilesChange([...tiles, tile]);
+    // Temporarily disable auto-save to prevent continuous API calls
+    // onTilesChange([...tiles, tile]);
     setIsConfigOpen(false);
     setNewTile({
       type: 'metric',
