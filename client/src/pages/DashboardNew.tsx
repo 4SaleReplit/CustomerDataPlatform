@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw, Settings, X, Save, Plus } from 'lucide-react';
@@ -6,7 +7,7 @@ import { DashboardBuilder, type DashboardTile } from '@/components/dashboard/Das
 import { TileEditDialog } from '@/components/dashboard/TileEditDialog';
 import { TimeFilter, type TimeFilterState } from '@/components/dashboard/TimeFilter';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 const initialTiles: DashboardTile[] = [
   {
@@ -134,11 +135,9 @@ export default function Dashboard() {
     granularity: 'day'
   });
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   
-  // Load tiles from database
+  // Load tiles from database on mount
   const loadTiles = async () => {
-    setIsLoading(true);
     try {
       const data = await apiRequest('/api/dashboard/tiles');
       if (data && Array.isArray(data) && data.length > 0) {
@@ -159,10 +158,8 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error('Failed to load tiles:', error);
-    } finally {
-      setIsLoaded(true);
-      setIsLoading(false);
     }
+    setIsLoaded(true);
   };
 
   // Save tiles to database
@@ -181,8 +178,6 @@ export default function Dashboard() {
         dataSource: tile.dataSource,
         refreshConfig: tile.refreshConfig
       }));
-
-      console.log('Saving layout with tiles:', tilesToSave.map(t => ({ id: t.id, x: t.x, y: t.y, width: t.width, height: t.height })));
 
       const response = await apiRequest('/api/dashboard/save-layout', {
         method: 'POST',
@@ -205,14 +200,9 @@ export default function Dashboard() {
 
   // Handle manual save
   const handleSaveLayout = async () => {
-    console.log('Manual save triggered with tiles:', tiles.map(t => ({ id: t.id, x: t.x, y: t.y, width: t.width, height: t.height })));
     try {
       await saveTiles(tiles);
       setIsEditMode(false);
-      
-      // Reload tiles from database to ensure UI reflects saved state
-      await loadTiles();
-      
       toast({
         title: "Dashboard Saved",
         description: "Layout saved successfully.",
@@ -264,6 +254,7 @@ export default function Dashboard() {
   };
 
   const handleRefreshTile = (tileId: string) => {
+    // Implement tile refresh logic
     console.log('Refreshing tile:', tileId);
   };
 
@@ -302,10 +293,9 @@ export default function Dashboard() {
               variant="outline"
               size="sm"
               onClick={() => loadTiles()}
-              disabled={isLoading}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
-              {isLoading ? 'Loading...' : 'Refresh'}
+              Refresh
             </Button>
             {isEditMode && (
               <Button
