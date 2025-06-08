@@ -100,6 +100,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test Braze connection endpoint
+  app.get("/api/braze/test", async (req, res) => {
+    try {
+      const { brazeService } = await import('./services/braze');
+      const result = await brazeService.testConnection();
+      
+      res.json({
+        connected: result.success,
+        error: result.error
+      });
+    } catch (error) {
+      console.error("Braze connection test error:", error);
+      res.status(500).json({ 
+        connected: false,
+        error: error instanceof Error ? error.message : "Connection test failed" 
+      });
+    }
+  });
+
   // Dashboard tile persistence routes
   app.get("/api/dashboard/tiles", async (req, res) => {
     try {
