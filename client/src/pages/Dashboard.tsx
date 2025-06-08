@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DashboardBuilder, type DashboardTile } from '@/components/dashboard/DashboardBuilder';
@@ -8,6 +8,8 @@ import { TimeFilter, type TimeFilterState } from '@/components/dashboard/TimeFil
 import { TrendingUp, TrendingDown, Users, UserPlus, Clock, Target, DollarSign, Activity, Settings, RefreshCw, Eye, EyeOff, Save, X } from 'lucide-react';
 import { TileEditDialog } from '@/components/dashboard/TileEditDialog';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 
 // Enhanced KPI metrics data
 const kpiMetrics = [

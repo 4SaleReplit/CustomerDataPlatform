@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { snowflakeService } from "./services/snowflake";
-import { insertTeamSchema } from "@shared/schema";
+import { insertTeamSchema, insertDashboardTileInstanceSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Database connection test
@@ -96,6 +96,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         connected: false,
         error: error instanceof Error ? error.message : "Connection test failed" 
+      });
+    }
+  });
+
+  // Dashboard tile persistence routes
+  app.get("/api/dashboard/tiles", async (req, res) => {
+    try {
+      const { dashboardId } = req.query;
+      const tiles = await storage.getDashboardTiles(dashboardId as string);
+      res.json(tiles);
+    } catch (error) {
+      console.error("Get dashboard tiles error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get dashboard tiles" 
+      });
+    }
+  });
+
+  app.post("/api/dashboard/tiles", async (req, res) => {
+    try {
+      const validatedData = insertDashboardTileInstanceSchema.parse(req.body);
+      const tile = await storage.createDashboardTile(validatedData);
+      res.status(201).json(tile);
+    } catch (error) {
+      console.error("Create dashboard tile error:", error);
+      res.status(400).json({ 
+        error: error instanceof Error ? error.message : "Failed to create dashboard tile" 
+      });
+    }
+  });
+
+  app.put("/api/dashboard/tiles/:tileId", async (req, res) => {
+    try {
+      const { tileId } = req.params;
+      const updates = req.body;
+      const tile = await storage.updateDashboardTile(tileId, updates);
+      
+      if (!tile) {
+        return res.status(404).json({ error: "Dashboard tile not found" });
+      }
+      
+      res.json(tile);
+    } catch (error) {
+      console.error("Update dashboard tile error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to update dashboard tile" 
+      });
+    }
+  });
+
+  app.delete("/api/dashboard/tiles/:tileId", async (req, res) => {
+    try {
+      const { tileId } = req.params;
+      const deleted = await storage.deleteDashboardTile(tileId);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Dashboard tile not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete dashboard tile error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to delete dashboard tile" 
+      });
+    }
+  });
+
+  app.post("/api/dashboard/save-layout", async (req, res) => {
+    try {
+      const { tiles } = req.body;
+      const savedTiles = await storage.saveDashboardLayout(tiles);
+      res.json(savedTiles);
+    } catch (error) {
+      console.error("Save dashboard layout error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to save dashboard layout" 
       });
     }
   });

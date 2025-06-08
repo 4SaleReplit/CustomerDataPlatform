@@ -91,6 +91,25 @@ export const segments = pgTable("segments", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
 });
 
+// Dashboard tile instances for persistence
+export const dashboardTileInstances = pgTable("dashboard_tile_instances", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tileId: varchar("tile_id", { length: 255 }).notNull(), // Frontend-generated ID
+  dashboardId: uuid("dashboard_id").references(() => dashboardConfigurations.id, { onDelete: 'cascade' }),
+  type: text("type").notNull(), // 'chart', 'metric', 'table', etc.
+  title: varchar("title", { length: 255 }).notNull(),
+  x: integer("x").notNull().default(0),
+  y: integer("y").notNull().default(0),
+  width: integer("width").notNull().default(4),
+  height: integer("height").notNull().default(3),
+  icon: varchar("icon", { length: 50 }),
+  dataSource: jsonb("data_source").notNull(), // Contains table, query, aggregation, etc.
+  refreshConfig: jsonb("refresh_config").notNull(), // Contains autoRefresh, refreshOnLoad, etc.
+  createdBy: uuid("created_by").references(() => team.id, { onDelete: 'set null' }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -123,6 +142,12 @@ export const insertDashboardTileSchema = createInsertSchema(dashboardTiles).omit
   updatedAt: true,
 });
 
+export const insertDashboardTileInstanceSchema = createInsertSchema(dashboardTileInstances).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Type exports
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -134,3 +159,5 @@ export type InsertSegment = z.infer<typeof insertSegmentSchema>;
 export type Segment = typeof segments.$inferSelect;
 export type InsertDashboardTile = z.infer<typeof insertDashboardTileSchema>;
 export type DashboardTileType = typeof dashboardTiles.$inferSelect;
+export type InsertDashboardTileInstance = z.infer<typeof insertDashboardTileInstanceSchema>;
+export type DashboardTileInstance = typeof dashboardTileInstances.$inferSelect;

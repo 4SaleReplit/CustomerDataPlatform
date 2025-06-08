@@ -1,4 +1,14 @@
-import { users, team, type User, type InsertUser, type Team, type InsertTeam } from "@shared/schema";
+import { 
+  users, 
+  team, 
+  dashboardTileInstances,
+  type User, 
+  type InsertUser, 
+  type Team, 
+  type InsertTeam,
+  type DashboardTileInstance,
+  type InsertDashboardTileInstance
+} from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -11,6 +21,13 @@ export interface IStorage {
   getTeamMember(id: string): Promise<Team | undefined>;
   getTeamMemberByEmail(email: string): Promise<Team | undefined>;
   createTeamMember(member: InsertTeam): Promise<Team>;
+  
+  // Dashboard tile management
+  getDashboardTiles(dashboardId?: string): Promise<DashboardTileInstance[]>;
+  createDashboardTile(tile: InsertDashboardTileInstance): Promise<DashboardTileInstance>;
+  updateDashboardTile(tileId: string, updates: Partial<InsertDashboardTileInstance>): Promise<DashboardTileInstance | undefined>;
+  deleteDashboardTile(tileId: string): Promise<boolean>;
+  saveDashboardLayout(tiles: InsertDashboardTileInstance[]): Promise<DashboardTileInstance[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -48,6 +65,68 @@ export class DatabaseStorage implements IStorage {
       .values(insertTeam)
       .returning();
     return member;
+  }
+
+  async getDashboardTiles(dashboardId?: string): Promise<DashboardTileInstance[]> {
+    if (dashboardId) {
+      return await db.select().from(dashboardTileInstances).where(eq(dashboardTileInstances.dashboardId, dashboardId));
+    }
+    return await db.select().from(dashboardTileInstances);
+  }
+
+  async createDashboardTile(tile: InsertDashboardTileInstance): Promise<DashboardTileInstance> {
+    const [newTile] = await db
+      .insert(dashboardTileInstances)
+      .values(tile)
+      .returning();
+    return newTile;
+  }
+
+  async updateDashboardTile(tileId: string, updates: Partial<InsertDashboardTileInstance>): Promise<DashboardTileInstance | undefined> {
+    const [updatedTile] = await db
+      .update(dashboardTileInstances)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(dashboardTileInstances.tileId, tileId))
+      .returning();
+    return updatedTile;
+  }
+
+  async deleteDashboardTile(tileId: string): Promise<boolean> {
+    const result = await db
+      .delete(dashboardTileInstances)
+      .where(eq(dashboardTileInstances.tileId, tileId));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async saveDashboardLayout(tiles: InsertDashboardTileInstance[]): Promise<DashboardTileInstance[]> {
+    const savedTiles: DashboardTileInstance[] = [];
+    
+    for (const tile of tiles) {
+      // Check if tile exists
+      const [existing] = await db
+        .select()
+        .from(dashboardTileInstances)
+        .where(eq(dashboardTileInstances.tileId, tile.tileId));
+      
+      if (existing) {
+        // Update existing tile
+        const [updated] = await db
+          .update(dashboardTileInstances)
+          .set({ ...tile, updatedAt: new Date() })
+          .where(eq(dashboardTileInstances.tileId, tile.tileId))
+          .returning();
+        savedTiles.push(updated);
+      } else {
+        // Create new tile
+        const [created] = await db
+          .insert(dashboardTileInstances)
+          .values(tile)
+          .returning();
+        savedTiles.push(created);
+      }
+    }
+    
+    return savedTiles;
   }
 }
 
