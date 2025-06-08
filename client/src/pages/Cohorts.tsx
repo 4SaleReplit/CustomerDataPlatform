@@ -421,12 +421,12 @@ export default function Cohorts() {
                           title={cohort.syncStatus === 'synced' ? 'Re-sync to Amplitude' : 'Sync to Amplitude'}
                           className={cohort.syncStatus === 'synced' ? 'text-green-600 hover:text-green-700' : 'text-blue-600 hover:text-blue-700'}
                         >
-                          <svg className="h-6 w-6" viewBox="0 0 100 100" fill="none">
-                            <circle cx="50" cy="50" r="48" fill="#4664FF"/>
-                            <g fill="white">
-                              <path d="M25 75L35 50L45 25C46 22 48 20 51 20C54 20 56 22 57 25L67 50L77 75"/>
-                              <path d="M20 50L80 50"/>
-                              <path d="M55 20C60 25 65 35 70 50C75 65 75 75 70 80"/>
+                          <svg className="h-12 w-12" viewBox="0 0 100 100" fill="none">
+                            <circle cx="50" cy="50" r="50" fill="#4664FF"/>
+                            <g fill="black" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M20 75L30 50L40 25C41 23 43 22 45 22C47 22 49 23 50 25L60 50L70 75" stroke="black" fill="none"/>
+                              <line x1="15" y1="50" x2="85" y2="50" stroke="black"/>
+                              <path d="M52 25C58 30 65 40 72 55C78 70 78 80 72 85" stroke="black" fill="none"/>
                             </g>
                           </svg>
                         </Button>
