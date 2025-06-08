@@ -160,11 +160,11 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
       case 'metric':
         const metricValue = snowflakeData.rows?.[0]?.[0];
         return (
-          <div className="h-full flex flex-col justify-center items-center p-4">
-            <div className="text-3xl font-bold text-blue-600 mb-2">
+          <div className="h-full flex flex-col justify-center items-center p-6">
+            <div className="text-4xl font-bold text-primary mb-3">
               {typeof metricValue === 'number' ? metricValue.toLocaleString() : metricValue || 'N/A'}
             </div>
-            <div className="text-sm text-gray-500 text-center">
+            <div className="text-sm text-muted-foreground text-center font-medium">
               {tile.dataSource.aggregation || 'Total'}
             </div>
           </div>
@@ -172,7 +172,7 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
 
       case 'chart':
         if (!snowflakeData.rows?.length) {
-          return <div className="h-full flex items-center justify-center text-gray-500">No data available</div>;
+          return <div className="h-full flex items-center justify-center text-muted-foreground">No data available</div>;
         }
 
         const chartDataFormatted = snowflakeData.rows.map((row: any[], index: number) => ({
@@ -183,12 +183,33 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
         return (
           <div className="h-full p-4">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartDataFormatted}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="value" stroke="#3B82F6" strokeWidth={2} />
+              <LineChart data={chartDataFormatted} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                <XAxis 
+                  dataKey="name" 
+                  tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
+                />
+                <YAxis 
+                  tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--background))', 
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '6px',
+                    fontSize: '12px'
+                  }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="hsl(var(--primary))" 
+                  strokeWidth={2}
+                  dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, r: 3 }}
+                  activeDot={{ r: 5, stroke: 'hsl(var(--primary))', strokeWidth: 2 }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -196,38 +217,44 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
 
       case 'table':
         if (!snowflakeData.columns?.length || !snowflakeData.rows?.length) {
-          return <div className="h-full flex items-center justify-center text-gray-500">No data available</div>;
+          return <div className="h-full flex items-center justify-center text-muted-foreground">No data available</div>;
         }
 
         return (
-          <ScrollArea className="h-full">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {snowflakeData.columns.map((col: any, idx: number) => (
-                    <TableHead key={idx} className="font-semibold">
-                      {col.name}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {snowflakeData.rows.slice(0, 50).map((row: any[], idx: number) => (
-                  <TableRow key={idx}>
-                    {row.map((cell, cellIdx) => (
-                      <TableCell key={cellIdx} className="text-sm">
-                        {cell !== null && cell !== undefined ? String(cell) : '-'}
-                      </TableCell>
+          <div className="h-full flex flex-col p-2">
+            <ScrollArea className="flex-1">
+              <div className="min-w-full">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-background z-10">
+                    <TableRow className="border-b">
+                      {snowflakeData.columns.map((col: any, idx: number) => (
+                        <TableHead key={idx} className="font-semibold text-xs px-3 py-2 text-muted-foreground bg-muted/30">
+                          {col.name}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {snowflakeData.rows.slice(0, 100).map((row: any[], idx: number) => (
+                      <TableRow key={idx} className="hover:bg-muted/30 border-b border-border/30">
+                        {row.map((cell, cellIdx) => (
+                          <TableCell key={cellIdx} className="text-xs px-3 py-2 max-w-32">
+                            <div className="truncate text-foreground" title={cell !== null && cell !== undefined ? String(cell) : ''}>
+                              {cell !== null && cell !== undefined ? String(cell) : '-'}
+                            </div>
+                          </TableCell>
+                        ))}
+                      </TableRow>
                     ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </ScrollArea>
+                  </TableBody>
+                </Table>
+              </div>
+            </ScrollArea>
+          </div>
         );
 
       default:
-        return <div className="h-full flex items-center justify-center text-gray-500">Unsupported tile type</div>;
+        return <div className="h-full flex items-center justify-center text-muted-foreground">Unsupported tile type</div>;
     }
   };
 
@@ -235,35 +262,39 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
 
   return (
     <Card 
-      className="h-full flex flex-col relative group"
+      className="h-full flex flex-col relative group border shadow-sm hover:shadow-md transition-shadow duration-200 bg-card"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <CardHeader className="pb-2 flex-shrink-0">
+      <CardHeader className="pb-3 px-4 pt-4 flex-shrink-0 border-b border-border/50">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <IconComponent className="w-4 h-4 text-blue-600" />
-            <CardTitle className="text-sm font-medium truncate">{tile.title}</CardTitle>
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="flex-shrink-0">
+              <IconComponent className="w-4 h-4 text-primary" />
+            </div>
+            <CardTitle className="text-sm font-semibold truncate text-foreground">
+              {tile.title}
+            </CardTitle>
           </div>
           
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-shrink-0">
             {/* Edit mode controls */}
             {isEditMode && (
               <>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent"
                   onClick={handleEdit}
                 >
-                  <Settings className="w-3 h-3" />
+                  <Settings className="w-3.5 h-3.5" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-move"
+                  className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-move hover:bg-accent"
                 >
-                  <GripVertical className="w-3 h-3" />
+                  <GripVertical className="w-3.5 h-3.5" />
                 </Button>
               </>
             )}
@@ -274,31 +305,31 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent"
                 >
-                  <MoreVertical className="w-3 h-3" />
+                  <MoreVertical className="w-3.5 h-3.5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={handleEdit}>
+                <DropdownMenuItem onClick={handleEdit} className="text-sm">
                   <Edit className="w-4 h-4 mr-2" />
                   Edit Configuration
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleRefresh}>
+                <DropdownMenuItem onClick={handleRefresh} className="text-sm">
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Refresh Data
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleClearCacheAndRefresh}>
+                <DropdownMenuItem onClick={handleClearCacheAndRefresh} className="text-sm">
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Clear Cache & Refresh
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleDuplicate}>
+                <DropdownMenuItem onClick={handleDuplicate} className="text-sm">
                   <Copy className="w-4 h-4 mr-2" />
                   Duplicate Tile
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleDelete} className="text-red-600">
+                <DropdownMenuItem onClick={handleDelete} className="text-red-600 text-sm">
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete Tile
                 </DropdownMenuItem>
@@ -308,11 +339,13 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
         </div>
       </CardHeader>
       
-      <CardContent className="flex-1 p-2 relative">
-        {renderTileContent()}
+      <CardContent className="flex-1 p-0 relative overflow-hidden">
+        <div className="h-full">
+          {renderTileContent()}
+        </div>
         
         {/* Last refresh timestamp in bottom-left corner */}
-        <div className="absolute bottom-1 left-2 text-xs text-gray-400 bg-white/80 dark:bg-gray-800/80 px-1 rounded">
+        <div className="absolute bottom-2 left-2 text-xs text-muted-foreground bg-background/90 dark:bg-background/90 px-2 py-1 rounded border shadow-sm">
           Last: {formatTimestamp(lastRefreshTime)}
         </div>
       </CardContent>
