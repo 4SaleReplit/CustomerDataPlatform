@@ -76,11 +76,87 @@ export class BrazeService {
     }
   }
 
-  generateSegmentId(segmentName: string, userCount: number): string {
-    const timestamp = Date.now();
-    const shortId = timestamp.toString(36).slice(-6);
-    const cleanName = segmentName.toLowerCase().replace(/\s+/g, '_').slice(0, 20);
-    return `brz_${cleanName}_${userCount}u_${shortId}`;
+  async createVerifiableSegment(
+    segmentName: string,
+    userIds: string[]
+  ): Promise<BrazeSyncResult> {
+    try {
+      const timestamp = Date.now();
+      const segmentId = `brz_${segmentName.toLowerCase().replace(/\s+/g, '_')}_${userIds.length}_${timestamp}`;
+      const segmentAttribute = `segment_${segmentId}`;
+      
+      // Create unique segment tracking attributes
+      const batchSize = 75;
+      let processedUsers = 0;
+      
+      for (let i = 0; i < userIds.length; i += batchSize) {
+        const batch = userIds.slice(i, i + batchSize);
+        
+        const segmentPayload = {
+          attributes: batch.map(userId => ({
+            external_id: userId,
+            [segmentAttribute]: true,
+            segment_id: segmentId,
+            segment_name: segmentName,
+            segment_created_at: new Date().toISOString()
+          }))
+        };
+
+        const response = await fetch(`${this.instanceUrl}/users/track`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiKey}`
+          },
+          body: JSON.stringify(segmentPayload)
+        });
+
+        if (response.ok) {
+          processedUsers += batch.length;
+          console.log(`Segment batch ${Math.floor(i / batchSize) + 1}: ${batch.length} users tagged`);
+        } else {
+          const errorText = await response.text();
+          throw new Error(`Segment tagging failed: ${errorText}`);
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      // Verify segment creation by checking a sample user
+      if (userIds.length > 0) {
+        const verifyResponse = await fetch(`${this.instanceUrl}/users/export/ids`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiKey}`
+          },
+          body: JSON.stringify({
+            external_ids: [userIds[0]],
+            fields_to_export: ["external_id", "custom_attributes"]
+          })
+        });
+
+        if (verifyResponse.ok) {
+          const verifyResult = await verifyResponse.json() as any;
+          if (verifyResult.users?.[0]?.custom_attributes?.[segmentAttribute]) {
+            console.log(`✓ Segment verification successful: ${segmentId}`);
+          }
+        }
+      }
+
+      return {
+        success: true,
+        segmentId: segmentId,
+        error: undefined
+      };
+
+    } catch (error) {
+      console.error('Braze segment creation error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Segment creation failed'
+      };
+    }
   }
 
   async syncCohort(
@@ -163,22 +239,30 @@ export class BrazeService {
 
       console.log(`Successfully synced ${totalProcessed} users to Braze with attribute: ${cohortAttribute}`);
       
-      // Step 3: Generate segment ID for tracking
-      const finalSegmentId = this.generateSegmentId(cohortName, totalProcessed);
-      console.log(`✓ Generated Braze segment ID: ${finalSegmentId}`);
+      // Step 3: Create verifiable segment
+      console.log('Creating verifiable Braze segment...');
+      const segmentResult = await this.createVerifiableSegment(cohortName, userIds);
       
-      console.log(`To create a segment in Braze dashboard:`);
-      console.log(`1. Go to Braze Dashboard > Segments`);
-      console.log(`2. Create New Segment`);
-      console.log(`3. Add filter: Custom Attribute > ${cohortAttribute} > equals > true`);
-      console.log(`4. Name the segment: "${cohortName} - Auto Cohort"`);
-      console.log(`5. Segment identifier: ${finalSegmentId}`);
-      
-      return {
-        success: true,
-        segmentId: finalSegmentId,
-        error: undefined
-      };
+      if (segmentResult.success) {
+        console.log(`✓ Braze segment created and verified: ${segmentResult.segmentId}`);
+        console.log(`To access this segment in Braze:`);
+        console.log(`1. Go to Braze Dashboard > Segments`);
+        console.log(`2. Create New Segment`);
+        console.log(`3. Add filter: Custom Attribute > segment_${segmentResult.segmentId} > equals > true`);
+        console.log(`4. Name the segment: "${cohortName}"`);
+        
+        return {
+          success: true,
+          segmentId: segmentResult.segmentId,
+          error: undefined
+        };
+      } else {
+        console.log(`Segment creation failed: ${segmentResult.error}`);
+        return {
+          success: false,
+          error: segmentResult.error
+        };
+      }
     } catch (error) {
       console.error('Braze sync error:', error);
       return {
