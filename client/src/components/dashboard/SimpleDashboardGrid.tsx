@@ -40,6 +40,61 @@ export function SimpleDashboardGrid({
   // Calculate grid dimensions
   const gridRows = Math.max(6, Math.max(...tiles.map(tile => tile.y + tile.height)));
 
+  // Check if two tiles overlap
+  const tilesOverlap = (tile1: DashboardTile, tile2: DashboardTile) => {
+    return !(
+      tile1.x >= tile2.x + tile2.width ||
+      tile2.x >= tile1.x + tile1.width ||
+      tile1.y >= tile2.y + tile2.height ||
+      tile2.y >= tile1.y + tile1.height
+    );
+  };
+
+  // Resolve collisions by pushing tiles down
+  const resolveCollisions = useCallback((updatedTiles: DashboardTile[], modifiedTileId: string): DashboardTile[] => {
+    const result = [...updatedTiles];
+    const modifiedTile = result.find(t => t.id === modifiedTileId);
+    if (!modifiedTile) return result;
+
+    // Find tiles that overlap with the modified tile
+    const overlappingTiles = result.filter(tile => 
+      tile.id !== modifiedTileId && tilesOverlap(modifiedTile, tile)
+    );
+
+    // Push overlapping tiles down
+    overlappingTiles.forEach(overlappingTile => {
+      const newY = modifiedTile.y + modifiedTile.height;
+      const tileIndex = result.findIndex(t => t.id === overlappingTile.id);
+      if (tileIndex !== -1) {
+        result[tileIndex] = { ...result[tileIndex], y: newY };
+      }
+    });
+
+    // Recursively resolve any new collisions created by pushing tiles
+    let hasCollisions = true;
+    while (hasCollisions) {
+      hasCollisions = false;
+      for (let i = 0; i < result.length; i++) {
+        for (let j = i + 1; j < result.length; j++) {
+          if (tilesOverlap(result[i], result[j])) {
+            // Push the lower tile further down
+            const lowerTile = result[i].y > result[j].y ? i : j;
+            const upperTile = result[i].y > result[j].y ? j : i;
+            result[lowerTile] = {
+              ...result[lowerTile],
+              y: result[upperTile].y + result[upperTile].height
+            };
+            hasCollisions = true;
+            break;
+          }
+        }
+        if (hasCollisions) break;
+      }
+    }
+
+    return result;
+  }, []);
+
   // Convert grid position to pixel position
   const gridToPixels = (gridX: number, gridY: number) => ({
     x: gridX * (CELL_WIDTH + GAP),
@@ -139,20 +194,54 @@ export function SimpleDashboardGrid({
   }, [draggedTile, resizingTile, dragOffset, initialTileData, resizeHandle]);
 
   const handleMouseUp = useCallback(() => {
-    // Handle drag completion
+    // Handle drag completion with collision resolution
     if (draggedTile && tempPosition) {
       const tile = tiles.find(t => t.id === draggedTile);
       if (tile && (tile.x !== tempPosition.x || tile.y !== tempPosition.y)) {
         console.log(`DRAG END: Moving ${draggedTile} from (${tile.x}, ${tile.y}) to (${tempPosition.x}, ${tempPosition.y})`);
-        onTileMove(draggedTile, tempPosition);
+        
+        // Create updated tiles array with new position
+        const updatedTiles = tiles.map(t => 
+          t.id === draggedTile ? { ...t, x: tempPosition.x, y: tempPosition.y } : t
+        );
+        
+        // Resolve collisions and apply all changes
+        const resolvedTiles = resolveCollisions(updatedTiles, draggedTile);
+        
+        // Apply position changes for all affected tiles
+        resolvedTiles.forEach(resolvedTile => {
+          const originalTile = tiles.find(t => t.id === resolvedTile.id);
+          if (originalTile && (originalTile.x !== resolvedTile.x || originalTile.y !== resolvedTile.y)) {
+            onTileMove(resolvedTile.id, { x: resolvedTile.x, y: resolvedTile.y });
+          }
+        });
       }
     }
 
-    // Handle resize completion
+    // Handle resize completion with collision resolution
     if (resizingTile && tempSize && initialTileData) {
       if (initialTileData.width !== tempSize.width || initialTileData.height !== tempSize.height) {
         console.log(`RESIZE END: Resizing ${resizingTile} from (${initialTileData.width}x${initialTileData.height}) to (${tempSize.width}x${tempSize.height})`);
+        
+        // Create updated tiles array with new size
+        const updatedTiles = tiles.map(t => 
+          t.id === resizingTile ? { ...t, width: tempSize.width, height: tempSize.height } : t
+        );
+        
+        // Resolve collisions and apply all changes
+        const resolvedTiles = resolveCollisions(updatedTiles, resizingTile);
+        
+        // Apply size change first
         onTileResize(resizingTile, tempSize);
+        
+        // Then apply position changes for displaced tiles
+        resolvedTiles.forEach(resolvedTile => {
+          const originalTile = tiles.find(t => t.id === resolvedTile.id);
+          if (originalTile && resolvedTile.id !== resizingTile && 
+              (originalTile.x !== resolvedTile.x || originalTile.y !== resolvedTile.y)) {
+            onTileMove(resolvedTile.id, { x: resolvedTile.x, y: resolvedTile.y });
+          }
+        });
       }
     }
 
@@ -164,7 +253,7 @@ export function SimpleDashboardGrid({
     setTempSize(null);
     setInitialTileData(null);
     setDragOffset({ x: 0, y: 0 });
-  }, [draggedTile, resizingTile, tempPosition, tempSize, initialTileData, tiles, onTileMove, onTileResize]);
+  }, [draggedTile, resizingTile, tempPosition, tempSize, initialTileData, tiles, onTileMove, onTileResize, resolveCollisions]);
 
   // Attach global mouse events
   React.useEffect(() => {
