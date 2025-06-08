@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useParams } from 'wouter';
-import { ArrowLeft, Edit, Users, Calendar, Save, RefreshCw, Loader2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Edit, Users, Calendar, Save, RefreshCw, Loader2, CheckCircle2, Info, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -97,7 +97,7 @@ export default function CohortDetail() {
       
       toast({
         title: "Sync successful",
-        description: `Cohort synced to Braze with ${response.syncedUserCount} users.`
+        description: `${response.syncedUserCount} users synced to Braze. Create a segment in Braze dashboard using the custom attribute.`
       });
       
       // Show success for 3 seconds, then reset
@@ -467,6 +467,40 @@ export default function CohortDetail() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Braze Instructions Card - shown after successful sync */}
+            {brazeSuccess && (
+              <Card className="border-blue-200 bg-blue-50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-blue-900">
+                    <Info className="h-5 w-5" />
+                    Next: Create Braze Segment
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-blue-800">
+                    User attributes have been synced. Create a segment in Braze:
+                  </p>
+                  <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+                    <li>Go to Braze Dashboard → Segments</li>
+                    <li>Click "Create Segment"</li>
+                    <li>Add filter: Custom Attribute</li>
+                    <li>Select: <code className="bg-blue-100 px-1 rounded">cohort_{cohort.name.toLowerCase().replace(/\s+/g, '_')}</code></li>
+                    <li>Set comparison: "equals true"</li>
+                    <li>Name it: "{cohort.name} - Auto Cohort"</li>
+                  </ol>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full mt-3 text-blue-700 border-blue-300 hover:bg-blue-100"
+                    onClick={() => window.open('https://dashboard.braze.com/segments', '_blank')}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open Braze Dashboard
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>

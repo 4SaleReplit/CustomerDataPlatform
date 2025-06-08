@@ -68,16 +68,15 @@ export class BrazeService {
     userIds: string[]
   ): Promise<BrazeSyncResult> {
     try {
-      const url = `${this.instanceUrl}/users/track`;
-      const batchSize = 75; // Braze allows up to 75 attributes per request
       const cohortAttribute = `cohort_${cohortName.toLowerCase().replace(/\s+/g, '_')}`;
       
-      // Process users in batches
+      // Step 1: Create/update user attributes in batches
+      const batchSize = 75;
       let totalProcessed = 0;
+      
       for (let i = 0; i < userIds.length; i += batchSize) {
         const batch = userIds.slice(i, i + batchSize);
         
-        // Create attribute objects for this batch
         const attributeObjects: BrazeUserAttributeRequest[] = batch.map(userId => ({
           external_id: userId,
           [cohortAttribute]: true
@@ -87,7 +86,7 @@ export class BrazeService {
           attributes: attributeObjects
         };
 
-        const response = await fetch(url, {
+        const response = await fetch(`${this.instanceUrl}/users/track`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -98,12 +97,11 @@ export class BrazeService {
 
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(`Braze API error: ${response.status} - ${errorText}`);
+          throw new Error(`Braze users/track API error: ${response.status} - ${errorText}`);
         }
 
         const result = await response.json() as any;
         
-        // Check if the batch had errors
         if (result.errors && result.errors.length > 0) {
           console.warn(`Braze batch ${i / batchSize + 1} had errors:`, result.errors);
         }
@@ -111,11 +109,18 @@ export class BrazeService {
         totalProcessed += batch.length;
         console.log(`Processed batch ${Math.floor(i / batchSize) + 1}: ${batch.length} users (${totalProcessed}/${userIds.length} total)`);
         
-        // Add a small delay between batches to avoid rate limiting
         if (i + batchSize < userIds.length) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
+
+      // Step 2: Log completion and provide instructions for segment creation
+      console.log(`Successfully synced ${totalProcessed} users to Braze with attribute: ${cohortAttribute}`);
+      console.log(`To create a segment in Braze:`);
+      console.log(`1. Go to Braze Dashboard > Segments`);
+      console.log(`2. Create New Segment`);
+      console.log(`3. Add filter: Custom Attribute > ${cohortAttribute} > equals > true`);
+      console.log(`4. Name the segment: "${cohortName} - Auto Cohort"`);
       
       return {
         success: true,
