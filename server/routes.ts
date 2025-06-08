@@ -263,8 +263,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Cohort refresh endpoint - recalculate user count
   app.post("/api/cohorts/:id/refresh", async (req, res) => {
+    const { id } = req.params;
     try {
-      const { id } = req.params;
       
       // Get cohort details
       const cohort = await storage.getCohort(id);

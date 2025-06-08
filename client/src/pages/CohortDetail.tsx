@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useParams } from 'wouter';
-import { ArrowLeft, Edit, Users, Calendar, Save } from 'lucide-react';
+import { ArrowLeft, Edit, Users, Calendar, Save, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -282,9 +282,20 @@ export default function CohortDetail() {
             {/* Overview card */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Cohort Overview
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Cohort Overview
+                  </div>
+                  <Button
+                    onClick={refreshUserCount}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Refresh Count
+                  </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -294,6 +305,11 @@ export default function CohortDetail() {
                       {cohort.userCount ? cohort.userCount.toLocaleString() : '-'}
                     </div>
                     <div className="text-sm text-gray-600">Total Users</div>
+                    {cohort.lastCalculatedAt && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Last updated: {new Date(cohort.lastCalculatedAt).toLocaleString()}
+                      </div>
+                    )}
                   </div>
                   <div className="text-center p-4 bg-gray-50 rounded-lg">
                     <div className="text-lg font-semibold">{getStatusBadge(cohort.status)}</div>
