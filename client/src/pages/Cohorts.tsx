@@ -425,6 +425,11 @@ export default function Cohorts() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem onClick={() => syncToAmplitude(cohort.id, cohort.name)}>
+                              <RefreshCw className="mr-2 h-4 w-4" />
+                              Sync to Amplitude
+                            </DropdownMenuItem>
+
                             <DropdownMenuItem onClick={() => handleDuplicateCohort(cohort)}>
                               <Copy className="mr-2 h-4 w-4" />
                               Duplicate
