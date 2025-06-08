@@ -163,7 +163,9 @@ export default function Dashboard() {
       });
     },
     onSuccess: (savedTiles) => {
-      // Update local state with saved tiles
+      console.log('Save success, received tiles:', savedTiles);
+      
+      // Update local state immediately with saved tiles
       if (savedTiles && Array.isArray(savedTiles)) {
         const convertedTiles = savedTiles.map((dbTile: any) => ({
           id: dbTile.tileId,
@@ -177,12 +179,21 @@ export default function Dashboard() {
           dataSource: dbTile.dataSource,
           refreshConfig: dbTile.refreshConfig
         }));
+        
+        // Force state update
         setTiles(convertedTiles);
-        console.log('Updated tiles from save response:', convertedTiles);
+        setIsInitialized(true);
+        console.log('Updated local state with saved tiles:', convertedTiles);
+        
+        // Update cache with new data
+        queryClient.setQueryData(['/api/dashboard/tiles'], savedTiles);
+        
+        // Update reference for comparison
+        lastSavedRef.current = JSON.stringify(convertedTiles.map(t => ({ 
+          id: t.id, x: t.x, y: t.y, width: t.width, height: t.height 
+        })));
       }
       
-      // Force cache invalidation and refresh
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/tiles'] });
       toast({
         title: "Dashboard Saved",
         description: "Layout saved successfully.",
@@ -288,9 +299,12 @@ export default function Dashboard() {
     
     try {
       await saveTilesMutation.mutateAsync(tiles);
+      console.log("Save completed successfully");
+      
       lastSavedRef.current = JSON.stringify(tiles.map(t => ({ 
         id: t.id, x: t.x, y: t.y, width: t.width, height: t.height 
       })));
+      
       // Exit edit mode after successful save
       setIsEditMode(false);
     } catch (error) {
