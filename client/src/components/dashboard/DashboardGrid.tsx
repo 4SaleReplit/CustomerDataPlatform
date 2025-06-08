@@ -1,13 +1,11 @@
 
-import React, { useRef, useEffect, useState } from 'react';
-import { Responsive, WidthProvider } from 'react-grid-layout';
+import React, { useRef } from 'react';
+import GridLayout from 'react-grid-layout';
 import { DashboardTileComponent } from './DashboardTile';
 import type { DashboardTile } from './DashboardBuilder';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import './DashboardGrid.css';
-
-const ResponsiveGridLayout = WidthProvider(Responsive);
 
 interface DashboardGridProps {
   tiles: DashboardTile[];
@@ -31,67 +29,48 @@ export function DashboardGrid({
   onTileResize
 }: DashboardGridProps) {
   const lastLayoutRef = useRef<any[]>([]);
-  const userDraggedRef = useRef<boolean>(false);
-  // Remove the problematic key-based re-rendering that breaks drag functionality
   
-  // Convert tiles to react-grid-layout format with static positioning
-  const layouts = {
-    lg: tiles.map(tile => ({
-      i: tile.id,
-      x: tile.x,
-      y: tile.y,
-      w: tile.width,
-      h: tile.height,
-      minW: 2,
-      minH: 1,
-      maxW: 12,
-      maxH: 6,
-      static: !isEditMode // Make tiles static in view mode
-    }))
-  };
+  // Convert tiles to react-grid-layout format
+  const layout = tiles.map(tile => ({
+    i: tile.id,
+    x: tile.x,
+    y: tile.y,
+    w: tile.width,
+    h: tile.height,
+    minW: 2,
+    minH: 1,
+    maxW: 12,
+    maxH: 6,
+    static: !isEditMode
+  }));
 
-  // Track when user initiates drag/resize
-  const handleDragStart = () => {
-    userDraggedRef.current = true;
-  };
-
-  const handleDragStop = () => {
-    userDraggedRef.current = false;
-  };
-
-  const handleLayoutChange = (layout: any[]) => {
+  const handleLayoutChange = (newLayout: any[]) => {
     if (!isEditMode) return;
     
     console.log('GRID: Layout change detected in edit mode');
-    console.log('GRID: Current layout:', layout.map(item => ({ id: item.i, x: item.x, y: item.y, w: item.w, h: item.h })));
-    console.log('GRID: Current tiles state:', tiles.map(t => ({ id: t.id, x: t.x, y: t.y, width: t.width, height: t.height })));
+    console.log('GRID: New layout:', newLayout.map(item => ({ id: item.i, x: item.x, y: item.y, w: item.w, h: item.h })));
     
     // Process all layout changes in edit mode
-    layout.forEach(item => {
+    newLayout.forEach(item => {
       const tile = tiles.find(t => t.id === item.i);
       if (tile) {
-        // Check for actual changes
         const positionChanged = tile.x !== item.x || tile.y !== item.y;
         const sizeChanged = tile.width !== item.w || tile.height !== item.h;
         
         if (positionChanged) {
-          console.log(`GRID: Position change detected for ${item.i}: (${tile.x}, ${tile.y}) -> (${item.x}, ${item.y})`);
+          console.log(`GRID: Position change for ${item.i}: (${tile.x}, ${tile.y}) -> (${item.x}, ${item.y})`);
           onTileMove(item.i, { x: item.x, y: item.y });
         }
         
         if (sizeChanged) {
-          console.log(`GRID: Size change detected for ${item.i}: (${tile.width}x${tile.height}) -> (${item.w}x${item.h})`);
+          console.log(`GRID: Size change for ${item.i}: (${tile.width}x${tile.height}) -> (${item.w}x${item.h})`);
           onTileResize(item.i, { width: item.w, height: item.h });
         }
       }
     });
     
-    // Store current layout for comparison
-    lastLayoutRef.current = layout.map(item => ({ ...item }));
+    lastLayoutRef.current = newLayout.map(item => ({ ...item }));
   };
-
-  const breakpoints = { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 };
-  const cols = { lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 };
 
   if (!isEditMode) {
     // Static grid for view mode
@@ -132,17 +111,13 @@ export function DashboardGrid({
 
   return (
     <div className="dashboard-grid-container relative">
-      <ResponsiveGridLayout
+      <GridLayout
         className="layout"
-        layouts={layouts}
-        breakpoints={breakpoints}
-        cols={cols}
+        layout={layout}
+        cols={12}
         rowHeight={80}
+        width={1200}
         onLayoutChange={handleLayoutChange}
-        onDragStart={handleDragStart}
-        onDragStop={handleDragStop}
-        onResizeStart={handleDragStart}
-        onResizeStop={handleDragStop}
         isDraggable={isEditMode}
         isResizable={isEditMode}
         margin={[16, 16]}
@@ -150,13 +125,10 @@ export function DashboardGrid({
         useCSSTransforms={false}
         preventCollision={false}
         compactType={null}
-        verticalCompact={false}
         autoSize={true}
         allowOverlap={true}
         isBounded={false}
         transformScale={1}
-        droppingItem={{ i: '__dropping-elem__', w: 1, h: 1 }}
-        style={{ minHeight: 'auto' }}
       >
         {tiles.map((tile) => (
           <div key={tile.id} className="dashboard-tile-wrapper relative">
@@ -170,7 +142,7 @@ export function DashboardGrid({
             />
           </div>
         ))}
-      </ResponsiveGridLayout>
+      </GridLayout>
     </div>
   );
 }
