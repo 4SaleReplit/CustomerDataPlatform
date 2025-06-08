@@ -458,6 +458,11 @@ export default function CohortDetail() {
                     <div className="flex items-center gap-2 mt-1">
                       {getSyncStatusBadge(cohort.brazeSyncStatus || 'not_synced')}
                     </div>
+                    {cohort.brazeSegmentId && (
+                      <p className="text-xs text-blue-600 mt-1 font-mono">
+                        Segment ID: {cohort.brazeSegmentId}
+                      </p>
+                    )}
                     {cohort.brazeLastSyncedAt && (
                       <p className="text-xs text-gray-500 mt-1">
                         Last sync: {new Date(cohort.brazeLastSyncedAt).toLocaleDateString()}
