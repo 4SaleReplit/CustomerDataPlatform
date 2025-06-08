@@ -3,7 +3,7 @@ import { Link } from 'wouter';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Eye, Edit, Trash2, RefreshCw, Filter, SortAsc, SortDesc, MoreHorizontal, Copy } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, RefreshCw, Filter, SortAsc, SortDesc, MoreHorizontal, Copy, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -419,12 +419,9 @@ export default function Cohorts() {
                           size="sm"
                           onClick={() => syncToAmplitude(cohort.id, cohort.name)}
                           title={cohort.syncStatus === 'synced' ? 'Re-sync to Amplitude' : 'Sync to Amplitude'}
-                          className={cohort.syncStatus === 'synced' ? 'text-green-600 hover:text-green-700' : 'text-blue-600 hover:text-blue-700'}
+                          className={cohort.syncStatus === 'synced' ? 'text-green-600 hover:text-green-700' : 'text-purple-600 hover:text-purple-700'}
                         >
-                          <svg className="h-5 w-5" viewBox="0 0 100 100" fill="currentColor">
-                            <path d="M50 10L20 35h20v40h20V35h20L50 10z"/>
-                            <circle cx="50" cy="80" r="8"/>
-                          </svg>
+                          <BarChart3 className="h-4 w-4" />
                         </Button>
                         
                         <DropdownMenu>
