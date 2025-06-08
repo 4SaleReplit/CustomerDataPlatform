@@ -161,8 +161,8 @@ const initialTiles: DashboardTile[] = [
 ];
 
 export default function Dashboard() {
-  const [savedTiles, setSavedTiles] = useState<DashboardTile[]>(initialTiles);
-  const [currentTiles, setCurrentTiles] = useState<DashboardTile[]>(initialTiles);
+  const [savedTiles, setSavedTiles] = useState<DashboardTile[]>([]);
+  const [currentTiles, setCurrentTiles] = useState<DashboardTile[]>([]);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingTile, setEditingTile] = useState<DashboardTile | null>(null);
   const [timeFilters, setTimeFilters] = useState<TimeFilterState>({
@@ -171,6 +171,78 @@ export default function Dashboard() {
     granularity: 'daily'
   });
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Load dashboard tiles from database
+  const { data: dashboardTiles = [], isLoading } = useQuery({
+    queryKey: ['/api/dashboard/tiles'],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Save dashboard layout mutation
+  const saveTilesMutation = useMutation({
+    mutationFn: async (tiles: DashboardTile[]) => {
+      const tileInstances = tiles.map(tile => ({
+        tileId: tile.id,
+        dashboardId: null, // Default dashboard for now
+        type: tile.type,
+        title: tile.title,
+        x: tile.x,
+        y: tile.y,
+        width: tile.width,
+        height: tile.height,
+        icon: tile.icon,
+        dataSource: tile.dataSource,
+        refreshConfig: tile.refreshConfig,
+        createdBy: null
+      }));
+      
+      return apiRequest('/api/dashboard/save-layout', {
+        method: 'POST',
+        body: JSON.stringify({ tiles: tileInstances }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/tiles'] });
+      toast({
+        title: "Dashboard Saved",
+        description: "Your dashboard layout has been saved successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Save Failed",
+        description: error instanceof Error ? error.message : "Failed to save dashboard layout",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Initialize tiles from database or fallback to initial tiles
+  useEffect(() => {
+    if (dashboardTiles.length > 0) {
+      // Convert database tiles to frontend format
+      const convertedTiles: DashboardTile[] = dashboardTiles.map((dbTile: any) => ({
+        id: dbTile.tileId,
+        type: dbTile.type,
+        title: dbTile.title,
+        x: dbTile.x,
+        y: dbTile.y,
+        width: dbTile.width,
+        height: dbTile.height,
+        icon: dbTile.icon,
+        dataSource: dbTile.dataSource,
+        refreshConfig: dbTile.refreshConfig
+      }));
+      setSavedTiles(convertedTiles);
+      setCurrentTiles(convertedTiles);
+    } else if (!isLoading) {
+      // No tiles in database, use initial tiles and save them
+      setSavedTiles(initialTiles);
+      setCurrentTiles(initialTiles);
+      saveTilesMutation.mutate(initialTiles);
+    }
+  }, [dashboardTiles, isLoading]);
 
   // Function to get comparison text based on granularity
   const getComparisonText = (granularity: string) => {
@@ -210,10 +282,7 @@ export default function Dashboard() {
   const handleSaveLayout = () => {
     setSavedTiles([...currentTiles]);
     setIsEditMode(false);
-    toast({
-      title: "Layout saved",
-      description: "Dashboard layout has been saved successfully.",
-    });
+    saveTilesMutation.mutate(currentTiles);
     console.log('Layout saved:', currentTiles);
   };
 
@@ -291,26 +360,43 @@ export default function Dashboard() {
     // TODO: Apply filters to dashboard data
   };
 
+  // Debounced auto-save function
+  const debouncedSave = React.useCallback(
+    React.useMemo(
+      () => {
+        let timeoutId: NodeJS.Timeout;
+        return (tiles: DashboardTile[]) => {
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => {
+            saveTilesMutation.mutate(tiles);
+          }, 1000); // Save after 1 second of no changes
+        };
+      },
+      [saveTilesMutation]
+    ),
+    [saveTilesMutation]
+  );
+
   const handleTileMove = (tileId: string, newPosition: { x: number; y: number }) => {
     console.log(`Moving tile ${tileId} to position:`, newPosition);
-    setCurrentTiles(prevTiles =>
-      prevTiles.map(tile =>
-        tile.id === tileId
-          ? { ...tile, x: newPosition.x, y: newPosition.y }
-          : tile
-      )
+    const updatedTiles = currentTiles.map(tile =>
+      tile.id === tileId
+        ? { ...tile, x: newPosition.x, y: newPosition.y }
+        : tile
     );
+    setCurrentTiles(updatedTiles);
+    debouncedSave(updatedTiles);
   };
 
   const handleTileResize = (tileId: string, newSize: { width: number; height: number }) => {
     console.log(`Resizing tile ${tileId} to size:`, newSize);
-    setCurrentTiles(prevTiles =>
-      prevTiles.map(tile =>
-        tile.id === tileId
-          ? { ...tile, width: newSize.width, height: newSize.height }
-          : tile
-      )
+    const updatedTiles = currentTiles.map(tile =>
+      tile.id === tileId
+        ? { ...tile, width: newSize.width, height: newSize.height }
+        : tile
     );
+    setCurrentTiles(updatedTiles);
+    debouncedSave(updatedTiles);
   };
 
   const handleTilesChange = (newTiles: DashboardTile[]) => {
