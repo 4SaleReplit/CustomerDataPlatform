@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import { DashboardTileComponent } from './DashboardTile';
 import type { DashboardTile } from './DashboardBuilder';
@@ -30,7 +30,10 @@ export function DashboardGrid({
   onTileMove,
   onTileResize
 }: DashboardGridProps) {
-  // Convert tiles to react-grid-layout format
+  const lastLayoutRef = useRef<any[]>([]);
+  const userDraggedRef = useRef<boolean>(false);
+  
+  // Convert tiles to react-grid-layout format with static positioning
   const layouts = {
     lg: tiles.map(tile => ({
       i: tile.id,
@@ -41,27 +44,43 @@ export function DashboardGrid({
       minW: 2,
       minH: 1,
       maxW: 12,
-      maxH: 6
+      maxH: 6,
+      static: !isEditMode // Make tiles static in view mode
     }))
   };
 
+  // Track when user initiates drag/resize
+  const handleDragStart = () => {
+    userDraggedRef.current = true;
+  };
+
+  const handleDragStop = () => {
+    userDraggedRef.current = false;
+  };
+
   const handleLayoutChange = (layout: any[]) => {
-    if (!isEditMode) return;
+    if (!isEditMode || !userDraggedRef.current) return;
     
+    // Only process changes when user actually dragged/resized a tile
     layout.forEach(item => {
       const tile = tiles.find(t => t.id === item.i);
       if (tile) {
-        // Check if position changed
-        if (tile.x !== item.x || tile.y !== item.y) {
+        // Only update if there's an actual change from user interaction
+        const positionChanged = tile.x !== item.x || tile.y !== item.y;
+        const sizeChanged = tile.width !== item.w || tile.height !== item.h;
+        
+        if (positionChanged) {
           onTileMove(item.i, { x: item.x, y: item.y });
         }
         
-        // Check if size changed
-        if (tile.width !== item.w || tile.height !== item.h) {
+        if (sizeChanged) {
           onTileResize(item.i, { width: item.w, height: item.h });
         }
       }
     });
+    
+    // Store current layout for comparison
+    lastLayoutRef.current = layout.map(item => ({ ...item }));
   };
 
   const breakpoints = { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 };
@@ -113,6 +132,10 @@ export function DashboardGrid({
         cols={cols}
         rowHeight={80}
         onLayoutChange={handleLayoutChange}
+        onDragStart={handleDragStart}
+        onDragStop={handleDragStop}
+        onResizeStart={handleDragStart}
+        onResizeStop={handleDragStop}
         isDraggable={isEditMode}
         isResizable={isEditMode}
         margin={[16, 16]}
@@ -125,6 +148,7 @@ export function DashboardGrid({
         allowOverlap={true}
         isBounded={false}
         transformScale={1}
+        droppingItem={{ i: '__dropping-elem__', w: 1, h: 1 }}
         style={{ minHeight: 'auto' }}
       >
         {tiles.map((tile) => (
