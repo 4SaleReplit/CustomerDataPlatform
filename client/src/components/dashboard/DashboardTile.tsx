@@ -350,8 +350,8 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
         
         {/* Snowflake data source indicator in bottom-right corner */}
         {tile.dataSource?.query && (
-          <div className="absolute bottom-2 right-2 text-blue-500 bg-background/90 dark:bg-background/90 p-1 rounded border shadow-sm">
-            <SiSnowflake className="w-3 h-3" title="Snowflake Data Source" />
+          <div className="absolute bottom-2 right-2 text-blue-500 bg-background/90 dark:bg-background/90 p-1.5 rounded border shadow-sm">
+            <SiSnowflake className="w-5 h-5" title="Snowflake Data Source" />
           </div>
         )}
       </CardContent>
