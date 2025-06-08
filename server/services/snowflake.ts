@@ -53,11 +53,13 @@ export class SnowflakeService {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.log(`Snowflake query error: ${response.status} - ${errorText}`);
         return {
           columns: [],
           rows: [],
           success: false,
-          error: `HTTP ${response.status}: ${response.statusText}`
+          error: `HTTP ${response.status}: ${response.statusText} - ${errorText}`
         };
       }
 

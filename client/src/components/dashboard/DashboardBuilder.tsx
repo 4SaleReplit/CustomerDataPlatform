@@ -115,6 +115,20 @@ export function DashboardBuilder({ tiles, onTilesChange, isEditMode }: Dashboard
     });
   };
 
+  const handleRemoveTile = (tileId: string) => {
+    onTilesChange(tiles.filter(tile => tile.id !== tileId));
+  };
+
+  const handleDuplicateTile = (tile: DashboardTile) => {
+    const newTile: DashboardTile = {
+      ...tile,
+      id: `tile-${Date.now()}`,
+      x: tile.x + 1,
+      y: tile.y + 1
+    };
+    onTilesChange([...tiles, newTile]);
+  };
+
   return (
     <div className="space-y-6">
       {/* Dashboard Grid - Show tiles */}
@@ -122,8 +136,8 @@ export function DashboardBuilder({ tiles, onTilesChange, isEditMode }: Dashboard
         tiles={tiles}
         isEditMode={isEditMode}
         onEditTile={() => {}}
-        onRemoveTile={() => {}}
-        onDuplicateTile={() => {}}
+        onRemoveTile={handleRemoveTile}
+        onDuplicateTile={handleDuplicateTile}
         onRefreshTile={() => {}}
         onTileMove={() => {}}
         onTileResize={() => {}}
