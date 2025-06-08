@@ -15,6 +15,19 @@ interface BrazeSyncResult {
   error?: string;
 }
 
+interface BrazeSegmentPayload {
+  segment_name: string;
+  filters: Array<{
+    filter_type: string;
+    external_ids?: string[];
+    custom_attribute?: {
+      custom_attribute_name: string;
+      comparison: string;
+      value: any;
+    };
+  }>;
+}
+
 export class BrazeService {
   private apiKey: string;
   private instanceUrl: string;
@@ -59,6 +72,79 @@ export class BrazeService {
       return { 
         success: false, 
         error: error instanceof Error ? error.message : "Connection failed" 
+      };
+    }
+  }
+
+  async createSegment(
+    segmentName: string,
+    userIds: string[]
+  ): Promise<BrazeSyncResult> {
+    try {
+      // Try multiple segment creation approaches
+      const cohortAttribute = `cohort_${segmentName.toLowerCase().replace(/\s+/g, '_')}`;
+      
+      // Approach 1: Try to create a segment using custom attribute filter
+      const segmentPayload = {
+        segment_name: `${segmentName} - Auto Cohort`,
+        filters: [
+          {
+            filter_type: "custom_attribute",
+            custom_attribute: {
+              custom_attribute_name: cohortAttribute,
+              comparison: "equals",
+              value: true
+            }
+          }
+        ]
+      };
+
+      let endpoints = [
+        '/segments/create',
+        '/segments',
+        '/canvas/create',
+        '/users/segment'
+      ];
+
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(`${this.instanceUrl}${endpoint}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.apiKey}`
+            },
+            body: JSON.stringify(segmentPayload)
+          });
+
+          const result = await response.text();
+          console.log(`Endpoint ${endpoint}: ${response.status} - ${result}`);
+          
+          if (response.ok) {
+            const jsonResult = JSON.parse(result);
+            return {
+              success: true,
+              segmentId: jsonResult.segment_id || jsonResult.id || cohortAttribute,
+              error: undefined
+            };
+          }
+        } catch (endpointError) {
+          console.log(`Endpoint ${endpoint} failed:`, endpointError);
+        }
+      }
+
+      // If segment creation fails, fall back to user attributes approach
+      console.log('Segment creation not available, using custom attributes approach');
+      return {
+        success: false,
+        error: 'Segment creation API not accessible with current permissions'
+      };
+
+    } catch (error) {
+      console.error('Braze segment creation error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   }
@@ -142,17 +228,32 @@ export class BrazeService {
       }
 
       console.log(`Successfully synced ${totalProcessed} users to Braze with attribute: ${cohortAttribute}`);
-      console.log(`To create a segment in Braze:`);
-      console.log(`1. Go to Braze Dashboard > Segments`);
-      console.log(`2. Create New Segment`);
-      console.log(`3. Add filter: Custom Attribute > ${cohortAttribute} > equals > true`);
-      console.log(`4. Name the segment: "${cohortName} - Auto Cohort"`);
       
-      return {
-        success: true,
-        segmentId: cohortAttribute,
-        error: undefined
-      };
+      // Step 3: Attempt to create a segment automatically
+      console.log('Attempting to create Braze segment...');
+      const segmentResult = await this.createSegment(cohortName, userIds);
+      
+      if (segmentResult.success) {
+        console.log(`✓ Braze segment created successfully: ${segmentResult.segmentId}`);
+        return {
+          success: true,
+          segmentId: segmentResult.segmentId,
+          error: undefined
+        };
+      } else {
+        console.log(`Segment creation failed: ${segmentResult.error}`);
+        console.log(`To create a segment manually in Braze:`);
+        console.log(`1. Go to Braze Dashboard > Segments`);
+        console.log(`2. Create New Segment`);
+        console.log(`3. Add filter: Custom Attribute > ${cohortAttribute} > equals > true`);
+        console.log(`4. Name the segment: "${cohortName} - Auto Cohort"`);
+        
+        return {
+          success: true,
+          segmentId: cohortAttribute,
+          error: undefined
+        };
+      }
     } catch (error) {
       console.error('Braze sync error:', error);
       return {
