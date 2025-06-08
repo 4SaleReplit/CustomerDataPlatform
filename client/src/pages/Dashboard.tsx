@@ -271,6 +271,8 @@ export default function Dashboard() {
     lastSavedRef.current = JSON.stringify(tiles.map(t => ({ 
       id: t.id, x: t.x, y: t.y, width: t.width, height: t.height 
     })));
+    // Exit edit mode after saving
+    setIsEditMode(false);
   };
 
   const handleEditTile = (tile: DashboardTile) => {
@@ -411,15 +413,17 @@ export default function Dashboard() {
               <RefreshCw className="h-4 w-4 mr-2" />
               {isLoading ? 'Loading...' : 'Refresh'}
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleManualSave}
-              disabled={saveTilesMutation.isPending}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {saveTilesMutation.isPending ? 'Saving...' : 'Save'}
-            </Button>
+            {isEditMode && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleManualSave}
+                disabled={saveTilesMutation.isPending}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {saveTilesMutation.isPending ? 'Saving...' : 'Save Layout'}
+              </Button>
+            )}
             <Button
               variant={isEditMode ? "default" : "outline"}
               size="sm"
