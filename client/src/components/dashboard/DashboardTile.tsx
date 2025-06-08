@@ -40,8 +40,10 @@ const getIconComponent = (iconName: string) => {
 export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onDuplicate, onRefresh }: DashboardTileProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
+  const queryClient = useQueryClient();
 
-  // Fetch authentic Snowflake data for table tiles
+  // Fetch authentic Snowflake data with caching strategy
   const { data: snowflakeData, isLoading: snowflakeLoading, refetch: refetchSnowflake } = useQuery({
     queryKey: ['/api/snowflake/query', tile.id],
     queryFn: async () => {
@@ -50,11 +52,12 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: tile.dataSource.query })
       });
+      setLastRefreshTime(new Date());
       return response;
     },
-    enabled: tile.type === 'table' && !!tile.dataSource.query,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 30, // 30 minutes
+    enabled: !!tile.dataSource.query,
+    staleTime: 1000 * 60 * 15, // 15 minutes - data stays fresh
+    gcTime: 1000 * 60 * 60, // 1 hour - cache for longer
   });
   
   // Fetch authentic Snowflake data for metric tiles
@@ -67,11 +70,12 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: tile.dataSource.query })
       });
+      setLastRefreshTime(new Date());
       return response;
     },
     enabled: tile.type === 'metric' && !!tile.dataSource.query,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 30, // 30 minutes
+    staleTime: 1000 * 60 * 15, // 15 minutes
+    gcTime: 1000 * 60 * 60, // 1 hour
   });
 
   // Fetch authentic Snowflake data for chart tiles
@@ -84,31 +88,58 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: tile.dataSource.query })
       });
+      setLastRefreshTime(new Date());
       return response;
     },
     enabled: tile.type === 'chart' && !!tile.dataSource.query,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 30, // 30 minutes
+    staleTime: 1000 * 60 * 15, // 15 minutes
+    gcTime: 1000 * 60 * 60, // 1 hour
   });
 
+  // Manual refresh function
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    
-    // Refresh Snowflake data based on tile type
-    if (tile.type === 'table') {
-      await refetchSnowflake();
-    } else if (tile.type === 'metric') {
-      await refetchMetric();
-    } else if (tile.type === 'chart') {
-      await refetchChart();
+    try {
+      // Invalidate and refetch based on tile type
+      if (tile.type === 'table') {
+        await queryClient.invalidateQueries({ queryKey: ['/api/snowflake/query', tile.id] });
+        await refetchSnowflake();
+      } else if (tile.type === 'metric') {
+        await queryClient.invalidateQueries({ queryKey: ['/api/snowflake/query', tile.id, 'metric'] });
+        await refetchMetric();
+      } else if (tile.type === 'chart') {
+        await queryClient.invalidateQueries({ queryKey: ['/api/snowflake/query', tile.id, 'chart'] });
+        await refetchChart();
+      }
+    } finally {
+      setIsRefreshing(false);
     }
-    
-    // Call parent refresh handler
-    if (onRefresh) {
-      onRefresh(tile.id);
+  };
+
+  // Clear cache and refresh for this tile
+  const handleClearCacheAndRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      // Clear cached data
+      queryClient.removeQueries({ queryKey: ['/api/snowflake/query', tile.id] });
+      setLastRefreshTime(null);
+      
+      // Refetch based on tile type
+      if (tile.type === 'table') {
+        await refetchSnowflake();
+      } else if (tile.type === 'metric') {
+        await refetchMetric();
+      } else if (tile.type === 'chart') {
+        await refetchChart();
+      }
+      
+      // Call parent refresh handler
+      if (onRefresh) {
+        onRefresh(tile.id);
+      }
+    } finally {
+      setIsRefreshing(false);
     }
-    
-    setIsRefreshing(false);
   };
 
   const handleDuplicate = () => {
