@@ -162,40 +162,10 @@ export default function Dashboard() {
         body: JSON.stringify({ tiles: tileInstances }),
       });
     },
-    onSuccess: (savedTiles) => {
-      console.log('Save success, received tiles:', savedTiles);
-      
-      // Update local state immediately with saved tiles
-      if (savedTiles && Array.isArray(savedTiles)) {
-        const convertedTiles = savedTiles.map((dbTile: any) => ({
-          id: dbTile.tileId,
-          type: dbTile.type,
-          title: dbTile.title,
-          x: dbTile.x,
-          y: dbTile.y,
-          width: dbTile.width,
-          height: dbTile.height,
-          icon: dbTile.icon,
-          dataSource: dbTile.dataSource,
-          refreshConfig: dbTile.refreshConfig
-        }));
-        
-        console.log('Updated local state with saved tiles:', convertedTiles);
-        
-        // Update cache with new data to prevent refetch override
-        queryClient.setQueryData(['/api/dashboard/tiles'], savedTiles);
-        
-        // Update reference for comparison
-        lastSavedRef.current = JSON.stringify(convertedTiles.map(t => ({ 
-          id: t.id, x: t.x, y: t.y, width: t.width, height: t.height 
-        })));
-        
-        // Force state update after cache is set
-        setTiles(convertedTiles);
-        
-        // Prevent useEffect from overriding this by keeping isInitialized true
-        // (Don't call setIsInitialized here as it's already true from initial load)
-      }
+    onSuccess: () => {
+      // Simple approach - just invalidate cache and let refetch handle the update
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/tiles'] });
+      refetch();
       
       toast({
         title: "Dashboard Saved",
@@ -218,7 +188,7 @@ export default function Dashboard() {
 
   // Initialize tiles when data loads from database
   useEffect(() => {
-    if (!isLoading && dashboardTiles && !isInitialized) {
+    if (!isLoading && dashboardTiles) {
       console.log('Loading dashboard tiles:', dashboardTiles.length, dashboardTiles);
       
       if (Array.isArray(dashboardTiles) && dashboardTiles.length > 0) {
@@ -254,7 +224,7 @@ export default function Dashboard() {
       
       setIsInitialized(true);
     }
-  }, [dashboardTiles, isLoading, isInitialized]);
+  }, [dashboardTiles, isLoading]);
 
   // Debounced save function that only saves when tiles actually change
   const debouncedSave = useCallback((tilesToSave: DashboardTile[]) => {
