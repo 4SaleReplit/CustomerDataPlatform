@@ -419,9 +419,16 @@ export default function Cohorts() {
                           size="sm"
                           onClick={() => syncToAmplitude(cohort.id, cohort.name)}
                           title={cohort.syncStatus === 'synced' ? 'Re-sync to Amplitude' : 'Sync to Amplitude'}
-                          className={cohort.syncStatus === 'synced' ? 'text-green-600 hover:text-green-700' : 'text-purple-600 hover:text-purple-700'}
+                          className={cohort.syncStatus === 'synced' ? 'text-green-600 hover:text-green-700' : 'text-blue-600 hover:text-blue-700'}
                         >
-                          <BarChart3 className="h-4 w-4" />
+                          <svg className="h-4 w-4" viewBox="0 0 100 100" fill="none">
+                            <circle cx="50" cy="50" r="48" fill="#4664FF"/>
+                            <g fill="white">
+                              <path d="M25 75L35 50L45 25C46 22 48 20 51 20C54 20 56 22 57 25L67 50L77 75"/>
+                              <path d="M20 50L80 50"/>
+                              <path d="M55 20C60 25 65 35 70 50C75 65 75 75 70 80"/>
+                            </g>
+                          </svg>
                         </Button>
                         
                         <DropdownMenu>
