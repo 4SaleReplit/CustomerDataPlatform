@@ -206,12 +206,27 @@ export default function Dashboard() {
   // Handle manual save
   const handleSaveLayout = async () => {
     console.log('Manual save triggered with tiles:', tiles.map(t => ({ id: t.id, x: t.x, y: t.y, width: t.width, height: t.height })));
+    
+    // Store current positions for comparison
+    const currentPositions = tiles.map(t => ({ id: t.id, x: t.x, y: t.y, width: t.width, height: t.height }));
+    console.log('Positions before save:', currentPositions);
+    
     try {
-      await saveTiles(tiles);
+      const savedData = await saveTiles(tiles);
+      console.log('Save response data:', savedData);
+      
       setIsEditMode(false);
       
-      // Reload tiles from database to ensure UI reflects saved state
-      await loadTiles();
+      // Wait a moment then reload
+      setTimeout(async () => {
+        console.log('Reloading data after save...');
+        await loadTiles();
+        
+        // Log positions after reload
+        setTimeout(() => {
+          console.log('Positions after reload:', tiles.map(t => ({ id: t.id, x: t.x, y: t.y, width: t.width, height: t.height })));
+        }, 100);
+      }, 500);
       
       toast({
         title: "Dashboard Saved",
