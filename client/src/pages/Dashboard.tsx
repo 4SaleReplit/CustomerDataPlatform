@@ -180,18 +180,21 @@ export default function Dashboard() {
           refreshConfig: dbTile.refreshConfig
         }));
         
-        // Force state update
-        setTiles(convertedTiles);
-        setIsInitialized(true);
         console.log('Updated local state with saved tiles:', convertedTiles);
         
-        // Update cache with new data
+        // Update cache with new data to prevent refetch override
         queryClient.setQueryData(['/api/dashboard/tiles'], savedTiles);
         
         // Update reference for comparison
         lastSavedRef.current = JSON.stringify(convertedTiles.map(t => ({ 
           id: t.id, x: t.x, y: t.y, width: t.width, height: t.height 
         })));
+        
+        // Force state update after cache is set
+        setTiles(convertedTiles);
+        
+        // Prevent useEffect from overriding this by keeping isInitialized true
+        // (Don't call setIsInitialized here as it's already true from initial load)
       }
       
       toast({
@@ -215,7 +218,7 @@ export default function Dashboard() {
 
   // Initialize tiles when data loads from database
   useEffect(() => {
-    if (!isLoading && dashboardTiles) {
+    if (!isLoading && dashboardTiles && !isInitialized) {
       console.log('Loading dashboard tiles:', dashboardTiles.length, dashboardTiles);
       
       if (Array.isArray(dashboardTiles) && dashboardTiles.length > 0) {
@@ -251,7 +254,7 @@ export default function Dashboard() {
       
       setIsInitialized(true);
     }
-  }, [dashboardTiles, isLoading]);
+  }, [dashboardTiles, isLoading, isInitialized]);
 
   // Debounced save function that only saves when tiles actually change
   const debouncedSave = useCallback((tilesToSave: DashboardTile[]) => {
