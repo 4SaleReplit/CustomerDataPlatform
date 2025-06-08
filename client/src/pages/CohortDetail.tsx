@@ -237,25 +237,6 @@ export default function CohortDetail() {
           </div>
           
           <div className="flex gap-2">
-            {/* Sync buttons */}
-            <Button
-              onClick={syncToAmplitude}
-              className="flex items-center gap-2"
-              variant="outline"
-            >
-              <img src={amplitudeLogo} alt="Amplitude" className="h-5 w-5 rounded-full" />
-              Sync to Amplitude
-            </Button>
-            
-            <Button
-              onClick={syncToBraze}
-              className="flex items-center gap-2"
-              variant="outline"
-            >
-              <img src={brazeLogo} alt="Braze" className="h-5 w-5 rounded-full" />
-              Sync to Braze
-            </Button>
-            
             {isEditing ? (
               <div className="flex gap-2">
                 <Button onClick={handleSave} className="flex items-center gap-2">
@@ -399,26 +380,43 @@ export default function CohortDetail() {
               </CardContent>
             </Card>
 
-            {/* Sync status card */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Sync Status</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Amplitude</span>
-                  {getSyncStatusBadge(cohort.syncStatus)}
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Braze</span>
-                  {getSyncStatusBadge(cohort.brazeSyncStatus || 'not_synced')}
-                </div>
-                {cohort.lastSyncedAt && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Last Synced</span>
-                    <span className="font-medium text-sm">{new Date(cohort.lastSyncedAt).toLocaleDateString()}</span>
+            {/* Amplitude Sync Card */}
+            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={syncToAmplitude}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <img src={amplitudeLogo} alt="Amplitude" className="h-10 w-10 rounded-full" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900">Sync to Amplitude</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      {getSyncStatusBadge(cohort.syncStatus)}
+                    </div>
+                    {cohort.lastSyncedAt && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Last sync: {new Date(cohort.lastSyncedAt).toLocaleDateString()}
+                      </p>
+                    )}
                   </div>
-                )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Braze Sync Card */}
+            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={syncToBraze}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <img src={brazeLogo} alt="Braze" className="h-10 w-10 rounded-full" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900">Sync to Braze</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      {getSyncStatusBadge(cohort.brazeSyncStatus || 'not_synced')}
+                    </div>
+                    {cohort.brazeLastSyncedAt && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Last sync: {new Date(cohort.brazeLastSyncedAt).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
