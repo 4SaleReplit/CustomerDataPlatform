@@ -207,26 +207,30 @@ export default function Dashboard() {
   const handleSaveLayout = async () => {
     console.log('Manual save triggered with tiles:', tiles.map(t => ({ id: t.id, x: t.x, y: t.y, width: t.width, height: t.height })));
     
-    // Store current positions for comparison
-    const currentPositions = tiles.map(t => ({ id: t.id, x: t.x, y: t.y, width: t.width, height: t.height }));
-    console.log('Positions before save:', currentPositions);
-    
     try {
       const savedData = await saveTiles(tiles);
       console.log('Save response data:', savedData);
       
-      setIsEditMode(false);
-      
-      // Wait a moment then reload
-      setTimeout(async () => {
-        console.log('Reloading data after save...');
-        await loadTiles();
+      // Convert saved data back to tile format and update state immediately
+      if (savedData && Array.isArray(savedData)) {
+        const updatedTiles = savedData.map((dbTile: any) => ({
+          id: dbTile.tileId,
+          type: dbTile.type,
+          title: dbTile.title,
+          x: dbTile.x,
+          y: dbTile.y,
+          width: dbTile.width,
+          height: dbTile.height,
+          icon: dbTile.icon,
+          dataSource: dbTile.dataSource,
+          refreshConfig: dbTile.refreshConfig
+        }));
         
-        // Log positions after reload
-        setTimeout(() => {
-          console.log('Positions after reload:', tiles.map(t => ({ id: t.id, x: t.x, y: t.y, width: t.width, height: t.height })));
-        }, 100);
-      }, 500);
+        console.log('Immediately updating state with saved positions:', updatedTiles.map(t => ({ id: t.id, x: t.x, y: t.y, width: t.width, height: t.height })));
+        setTiles(updatedTiles);
+      }
+      
+      setIsEditMode(false);
       
       toast({
         title: "Dashboard Saved",

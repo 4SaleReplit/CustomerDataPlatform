@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import { DashboardTileComponent } from './DashboardTile';
 import type { DashboardTile } from './DashboardBuilder';
@@ -32,6 +32,12 @@ export function DashboardGrid({
 }: DashboardGridProps) {
   const lastLayoutRef = useRef<any[]>([]);
   const userDraggedRef = useRef<boolean>(false);
+  const [gridKey, setGridKey] = useState(0);
+  
+  // Force re-render when tiles change significantly (after save)
+  useEffect(() => {
+    setGridKey(prev => prev + 1);
+  }, [tiles.map(t => `${t.id}-${t.x}-${t.y}-${t.width}-${t.height}`).join('|')]);
   
   // Convert tiles to react-grid-layout format with static positioning
   const layouts = {
@@ -61,8 +67,6 @@ export function DashboardGrid({
   const handleLayoutChange = (layout: any[]) => {
     if (!isEditMode) return;
     
-    console.log('Layout change detected:', layout.map(item => ({ id: item.i, x: item.x, y: item.y, w: item.w, h: item.h })));
-    
     // Process all layout changes in edit mode
     layout.forEach(item => {
       const tile = tiles.find(t => t.id === item.i);
@@ -72,12 +76,10 @@ export function DashboardGrid({
         const sizeChanged = tile.width !== item.w || tile.height !== item.h;
         
         if (positionChanged) {
-          console.log(`Position changed for ${item.i}: from (${tile.x}, ${tile.y}) to (${item.x}, ${item.y})`);
           onTileMove(item.i, { x: item.x, y: item.y });
         }
         
         if (sizeChanged) {
-          console.log(`Size changed for ${item.i}: from (${tile.width}, ${tile.height}) to (${item.w}, ${item.h})`);
           onTileResize(item.i, { width: item.w, height: item.h });
         }
       }
@@ -130,6 +132,7 @@ export function DashboardGrid({
   return (
     <div className="dashboard-grid-container relative">
       <ResponsiveGridLayout
+        key={gridKey}
         className="layout"
         layouts={layouts}
         breakpoints={breakpoints}
