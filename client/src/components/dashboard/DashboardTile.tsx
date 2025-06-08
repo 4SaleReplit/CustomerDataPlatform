@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Settings, X, GripVertical, MoreVertical, RefreshCw, Edit, Copy, Trash2, Users, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
+import { SiSnowflake } from 'react-icons/si';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -346,6 +347,13 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
         <div className="absolute bottom-2 left-2 text-xs text-muted-foreground bg-background/90 dark:bg-background/90 px-2 py-1 rounded border shadow-sm">
           Last: {formatTimestamp(lastRefreshTime)}
         </div>
+        
+        {/* Snowflake data source indicator in bottom-right corner */}
+        {tile.dataSource?.query && (
+          <div className="absolute bottom-2 right-2 text-blue-500 bg-background/90 dark:bg-background/90 p-1 rounded border shadow-sm">
+            <SiSnowflake className="w-3 h-3" title="Snowflake Data Source" />
+          </div>
+        )}
       </CardContent>
     </Card>
   );
