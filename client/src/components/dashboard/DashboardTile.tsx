@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Settings, X, GripVertical, MoreVertical, RefreshCw, Edit, Copy, Trash2, Users, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
+import { Settings, X, GripVertical, MoreVertical, MoreHorizontal, RefreshCw, Edit, Copy, Trash2, Users, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -228,41 +228,91 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
 
         if (snowflakeData && snowflakeData.columns && snowflakeData.rows) {
           return (
-            <div className="h-full flex flex-col p-4">
-              <ScrollArea className="flex-1">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {snowflakeData.columns.map((column, index) => (
-                        <TableHead key={index} className="text-left py-3 px-3 text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                          {column.name}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {snowflakeData.rows.map((row, rowIndex) => (
-                      <TableRow key={rowIndex} className="hover:bg-gray-50 transition-colors">
-                        {row.map((cell, cellIndex) => (
-                          <TableCell key={cellIndex} className="py-2 px-3 text-sm text-gray-900">
-                            {cell === null || cell === undefined ? (
-                              <span className="text-gray-400 italic">null</span>
-                            ) : typeof cell === 'boolean' ? (
-                              <Badge variant={cell ? 'default' : 'secondary'}>
-                                {cell.toString()}
-                              </Badge>
-                            ) : typeof cell === 'number' ? (
-                              <span className="font-mono">{cell.toLocaleString()}</span>
-                            ) : (
-                              <span>{String(cell)}</span>
-                            )}
-                          </TableCell>
+            <div className="h-full flex flex-col">
+              {/* Header with title and refresh button */}
+              <div className="flex items-center justify-between p-3 border-b bg-gray-50">
+                <h3 className="text-sm font-medium text-gray-900">{tile.title}</h3>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className="h-8 w-8 p-0"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={handleRefresh} disabled={isRefreshing}>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Refresh Data
+                      </DropdownMenuItem>
+                      {isEditMode && onEdit && (
+                        <DropdownMenuItem onClick={() => onEdit(tile)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Tile
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+
+              {/* Horizontally scrollable table */}
+              <div className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full w-full">
+                  <div className="overflow-x-auto">
+                    <Table className="min-w-full">
+                      <TableHeader className="sticky top-0 bg-white z-10 border-b">
+                        <TableRow>
+                          {snowflakeData.columns.map((column: any, index: number) => (
+                            <TableHead 
+                              key={index} 
+                              className="text-left py-3 px-4 text-xs font-semibold text-gray-700 uppercase tracking-wide bg-gray-50 border-r border-gray-200 whitespace-nowrap min-w-[120px]"
+                            >
+                              {column.name}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {snowflakeData.rows.map((row: any, rowIndex: number) => (
+                          <TableRow key={rowIndex} className="hover:bg-gray-50 transition-colors border-b">
+                            {row.map((cell: any, cellIndex: number) => (
+                              <TableCell 
+                                key={cellIndex} 
+                                className="py-2 px-4 text-sm text-gray-900 border-r border-gray-100 whitespace-nowrap min-w-[120px]"
+                              >
+                                {cell === null || cell === undefined ? (
+                                  <span className="text-gray-400 italic">null</span>
+                                ) : typeof cell === 'boolean' ? (
+                                  <Badge variant={cell ? 'default' : 'secondary'}>
+                                    {cell.toString()}
+                                  </Badge>
+                                ) : typeof cell === 'number' ? (
+                                  <span className="font-mono">{cell.toLocaleString()}</span>
+                                ) : (
+                                  <span className="truncate max-w-[200px]" title={String(cell)}>
+                                    {String(cell)}
+                                  </span>
+                                )}
+                              </TableCell>
+                            ))}
+                          </TableRow>
                         ))}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </ScrollArea>
+              </div>
+
+              {/* Footer with stats */}
               <div className="p-3 border-t bg-gray-50">
                 <div className="flex justify-between items-center text-xs text-gray-600">
                   <span>{snowflakeData.rows.length} rows × {snowflakeData.columns.length} columns</span>
