@@ -328,8 +328,7 @@ export default function Dashboard() {
         : tile
     );
     setTiles(updatedTiles);
-    // Disable auto-save - use manual save only
-    // debouncedSave(updatedTiles);
+    debouncedSave(updatedTiles);
   };
 
   const handleTileResize = (tileId: string, newSize: { width: number; height: number }) => {
@@ -339,8 +338,7 @@ export default function Dashboard() {
         : tile
     );
     setTiles(updatedTiles);
-    // Disable auto-save - use manual save only
-    // debouncedSave(updatedTiles);
+    debouncedSave(updatedTiles);
   };
 
   const handleTilesChange = (newTiles: DashboardTile[]) => {
