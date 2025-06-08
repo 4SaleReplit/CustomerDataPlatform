@@ -163,15 +163,9 @@ export class BrazeService {
 
       console.log(`Successfully synced ${totalProcessed} users to Braze with attribute: ${cohortAttribute}`);
       
-      // Step 3: Create cohort tracking with aliases
-      console.log('Creating Braze cohort tracking...');
-      const cohortResult = await this.createCohortWithAliases(cohortName, userIds);
-      
-      let finalSegmentId = cohortAttribute;
-      if (cohortResult.success && cohortResult.segmentId) {
-        console.log(`✓ Braze cohort tracking created: ${cohortResult.segmentId}`);
-        finalSegmentId = cohortResult.segmentId;
-      }
+      // Step 3: Generate segment ID for tracking
+      const finalSegmentId = this.generateSegmentId(cohortName, totalProcessed);
+      console.log(`✓ Generated Braze segment ID: ${finalSegmentId}`);
       
       console.log(`To create a segment in Braze dashboard:`);
       console.log(`1. Go to Braze Dashboard > Segments`);
