@@ -167,7 +167,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/dashboard/save-layout", async (req, res) => {
     try {
       const { tiles } = req.body;
+      console.log("Saving layout with", tiles.length, "tiles:", tiles.map((t: any) => ({ id: t.tileId, x: t.x, y: t.y, w: t.width, h: t.height })));
       const savedTiles = await storage.saveDashboardLayout(tiles);
+      console.log("Layout saved successfully, returning", savedTiles.length, "tiles");
       res.json(savedTiles);
     } catch (error) {
       console.error("Save dashboard layout error:", error);

@@ -163,7 +163,8 @@ export default function Dashboard() {
       });
     },
     onSuccess: () => {
-      // Don't invalidate to prevent refetching
+      // Force refresh to ensure persistence
+      refetch();
       toast({
         title: "Dashboard Saved",
         description: "Layout saved successfully.",
@@ -263,6 +264,9 @@ export default function Dashboard() {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
+    console.log("Manual save triggered with tiles:", tiles.map(t => ({ 
+      id: t.id, x: t.x, y: t.y, width: t.width, height: t.height 
+    })));
     saveTilesMutation.mutate(tiles);
     lastSavedRef.current = JSON.stringify(tiles.map(t => ({ 
       id: t.id, x: t.x, y: t.y, width: t.width, height: t.height 
