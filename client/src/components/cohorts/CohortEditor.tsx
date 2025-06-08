@@ -372,7 +372,8 @@ export default function CohortEditor({
         calculationQuery: sqlQuery,
         userCount: queryResult?.count || 0,
         status: 'active' as const,
-        syncStatus: 'not_synced' as const
+        syncStatus: 'not_synced' as const,
+        createdBy: 'Admin User'
       };
 
       await apiRequest('/api/cohorts', {

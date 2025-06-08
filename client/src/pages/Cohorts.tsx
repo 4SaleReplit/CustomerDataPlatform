@@ -353,20 +353,20 @@ export default function Cohorts() {
                   <th className="text-left py-3 px-4 font-medium">Sync Status</th>
                   <th 
                     className="text-left py-3 px-4 font-medium cursor-pointer hover:bg-gray-50"
-                    onClick={() => handleSort('createdDate')}
+                    onClick={() => handleSort('createdAt')}
                   >
                     <div className="flex items-center gap-2">
                       Created At
-                      {getSortIcon('createdDate')}
+                      {getSortIcon('createdAt')}
                     </div>
                   </th>
                   <th 
                     className="text-left py-3 px-4 font-medium cursor-pointer hover:bg-gray-50"
-                    onClick={() => handleSort('updatedDate')}
+                    onClick={() => handleSort('updatedAt')}
                   >
                     <div className="flex items-center gap-2">
                       Updated At
-                      {getSortIcon('updatedDate')}
+                      {getSortIcon('updatedAt')}
                     </div>
                   </th>
                   <th className="text-left py-3 px-4 font-medium">Creator</th>
@@ -377,13 +377,13 @@ export default function Cohorts() {
                 {paginatedCohorts.map((cohort) => (
                   <tr key={cohort.id} className="border-b hover:bg-gray-50">
                     <td className="py-3 px-4 font-medium">{cohort.name}</td>
-                    <td className="py-3 px-4 text-gray-600">{cohort.description}</td>
-                    <td className="py-3 px-4 font-medium">{cohort.userCount.toLocaleString()}</td>
+                    <td className="py-3 px-4 text-gray-600">{cohort.description || '-'}</td>
+                    <td className="py-3 px-4 font-medium">{cohort.userCount ? cohort.userCount.toLocaleString() : '-'}</td>
                     <td className="py-3 px-4">{getStatusBadge(cohort.status)}</td>
                     <td className="py-3 px-4">{getSyncStatusBadge(cohort.syncStatus)}</td>
-                    <td className="py-3 px-4 text-gray-600">{cohort.createdDate}</td>
-                    <td className="py-3 px-4 text-gray-600">{cohort.updatedDate}</td>
-                    <td className="py-3 px-4 text-gray-600">{cohort.creator}</td>
+                    <td className="py-3 px-4 text-gray-600">{new Date(cohort.createdAt).toLocaleDateString()}</td>
+                    <td className="py-3 px-4 text-gray-600">{new Date(cohort.updatedAt).toLocaleDateString()}</td>
+                    <td className="py-3 px-4 text-gray-600">{cohort.createdBy || 'System'}</td>
                     <td className="py-3 px-4">
                       <div className="flex gap-2">
                         <Link to={`/cohorts/${cohort.id}`}>

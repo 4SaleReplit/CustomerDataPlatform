@@ -165,9 +165,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCohort(insertCohort: InsertCohort): Promise<Cohort> {
+    const now = new Date();
     const [cohort] = await db
       .insert(cohorts)
-      .values(insertCohort)
+      .values({
+        ...insertCohort,
+        createdAt: now,
+        updatedAt: now
+      })
       .returning();
     return cohort;
   }
