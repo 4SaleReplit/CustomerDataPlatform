@@ -1,320 +1,389 @@
 import React, { useState } from 'react';
 import { Link, useParams } from 'wouter';
-import { ArrowLeft, Edit, Users, TrendingUp, Calendar, User, RefreshCw, Save } from 'lucide-react';
+import { ArrowLeft, Edit, Users, Calendar, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import type { Cohort } from '@shared/schema';
-
-// Mock cohort data - in real app this would come from API
-const mockCohortData: Record<string, any> = {
-  '1': {
-    id: 1,
-    name: 'Premium Users',
-    description: 'Users with premium account type',
-    userCount: 15234,
-    createdDate: '2024-05-15',
-    updatedDate: '2024-05-28',
-    creator: 'John Smith',
-    status: 'active',
-    syncStatus: 'synced',
-    conditions: [
-      { attribute: 'user_type', operator: 'equals', value: 'premium' }
-    ],
-    stats: {
-      avgCltv: 450.75,
-      conversionRate: 12.5,
-      churnRate: 3.2,
-      avgListings: 8.5,
-      totalRevenue: 6875234.50
-    }
-  },
-  '2': {
-    id: 2,
-    name: 'Active Listers',
-    description: 'Users who posted listings in the last 30 days',
-    userCount: 8976,
-    createdDate: '2024-05-20',
-    updatedDate: '2024-06-01',
-    creator: 'Sarah Wilson',
-    status: 'active',
-    syncStatus: 'pending',
-    conditions: [
-      { attribute: 'last_listing_date', operator: 'within_days', value: '30' }
-    ],
-    stats: {
-      avgCltv: 320.45,
-      conversionRate: 8.7,
-      churnRate: 5.1,
-      avgListings: 12.3,
-      totalRevenue: 2890456.75
-    }
-  }
-};
+import amplitudeLogo from '@assets/AMPL_1749419466685.png';
+import brazeLogo from '@assets/BRZE_1749419981281.png';
 
 export default function CohortDetail() {
-  const { cohortId } = useParams();
+  const { id } = useParams<{ id: string }>();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
-  const [cohortData, setCohortData] = useState(cohortId ? mockCohortData[cohortId] || null : null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    description: '',
+    autoRefresh: true,
+    refreshFrequencyHours: 24
+  });
 
-  if (!cohortData) {
+  // Fetch cohort data from API
+  const { data: cohort, isLoading, error } = useQuery({
+    queryKey: ['/api/cohorts', id],
+    queryFn: () => apiRequest(`/api/cohorts/${id}`),
+    enabled: !!id
+  });
+
+  // Update form when cohort data loads
+  React.useEffect(() => {
+    if (cohort) {
+      setEditForm({
+        name: cohort.name || '',
+        description: cohort.description || '',
+        autoRefresh: cohort.autoRefresh ?? true,
+        refreshFrequencyHours: cohort.refreshFrequencyHours || 24
+      });
+    }
+  }, [cohort]);
+
+  // Sync to Amplitude
+  const syncToAmplitude = async () => {
+    try {
+      const response = await apiRequest(`/api/cohorts/${id}/sync-amplitude`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ownerEmail: "data-team@yourcompany.com" })
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/cohorts', id] });
+      toast({
+        title: "Sync successful",
+        description: `Cohort synced to Amplitude with ${response.syncedUserCount} users.`
+      });
+    } catch (error) {
+      toast({
+        title: "Sync failed",
+        description: "Failed to sync cohort to Amplitude. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Sync to Braze
+  const syncToBraze = async () => {
+    try {
+      const response = await apiRequest(`/api/cohorts/${id}/sync-braze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/cohorts', id] });
+      toast({
+        title: "Sync successful",
+        description: `Cohort synced to Braze with ${response.syncedUserCount} users.`
+      });
+    } catch (error) {
+      toast({
+        title: "Sync failed",
+        description: "Failed to sync cohort to Braze. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Save cohort updates
+  const handleSave = async () => {
+    try {
+      await apiRequest(`/api/cohorts/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm)
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/cohorts', id] });
+      setIsEditing(false);
+      toast({
+        title: "Success",
+        description: "Cohort updated successfully."
+      });
+    } catch (error) {
+      toast({
+        title: "Error", 
+        description: "Failed to update cohort.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Get status badge
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      'active': { text: 'Active', className: 'bg-green-100 text-green-800' },
+      'draft': { text: 'Draft', className: 'bg-gray-100 text-gray-800' },
+      'calculating': { text: 'Calculating', className: 'bg-blue-100 text-blue-800' },
+      'error': { text: 'Error', className: 'bg-red-100 text-red-800' }
+    };
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig['draft'];
+    return <Badge className={config.className}>{config.text}</Badge>;
+  };
+
+  // Get sync status badge
+  const getSyncStatusBadge = (status: string) => {
+    const statusConfig = {
+      'synced': { text: 'Synced', className: 'bg-green-100 text-green-800' },
+      'pending': { text: 'Pending', className: 'bg-yellow-100 text-yellow-800' },
+      'not_synced': { text: 'Not Synced', className: 'bg-gray-100 text-gray-800' },
+      'error': { text: 'Error', className: 'bg-red-100 text-red-800' }
+    };
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig['not_synced'];
+    return <Badge className={config.className}>{config.text}</Badge>;
+  };
+
+  if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Link to="/cohorts">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Cohorts
-            </Button>
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900">Cohort Not Found</h1>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-4 mb-6">
+            <Link to="/cohorts">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Cohorts
+              </Button>
+            </Link>
+          </div>
+          <div className="text-center py-12">Loading cohort details...</div>
         </div>
-        <Card>
-          <CardContent className="p-6">
-            <p>The cohort you're looking for doesn't exist.</p>
-          </CardContent>
-        </Card>
       </div>
     );
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>;
-      case 'calculating':
-        return <Badge className="bg-yellow-100 text-yellow-800">Calculating</Badge>;
-      case 'paused':
-        return <Badge variant="secondary">Paused</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const getSyncStatusBadge = (status: string) => {
-    switch (status) {
-      case 'synced':
-        return <Badge variant="default" className="bg-blue-100 text-blue-800">Synced</Badge>;
-      case 'pending':
-        return <Badge className="bg-orange-100 text-orange-800">Pending</Badge>;
-      case 'not_synced':
-        return <Badge variant="outline">Not Synced</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const handleSave = () => {
-    // TODO: Implement save functionality
-    console.log('Saving cohort:', cohortData);
-    setIsEditing(false);
-  };
+  if (error || !cohort) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-4 mb-6">
+            <Link to="/cohorts">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Cohorts
+              </Button>
+            </Link>
+          </div>
+          <div className="text-center py-12 text-red-600">
+            Error loading cohort: {error?.message || 'Cohort not found'}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link to="/cohorts">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Cohorts
-            </Button>
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900">
-            {isEditing ? 'Edit Cohort' : cohortData.name}
-          </h1>
-        </div>
-        <div className="flex gap-2">
-          {isEditing ? (
-            <>
-              <Button variant="outline" onClick={() => setIsEditing(false)}>
-                Cancel
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <Link to="/cohorts">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Cohorts
               </Button>
-              <Button onClick={handleSave}>
-                <Save className="mr-2 h-4 w-4" />
-                Save Changes
-              </Button>
-            </>
-          ) : (
-            <Button onClick={() => setIsEditing(true)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Cohort
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {isEditing ? (
+                  <Input
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                    className="text-2xl font-bold border-none p-0 h-auto"
+                  />
+                ) : (
+                  cohort.name
+                )}
+              </h1>
+              <p className="text-gray-600 mt-1">
+                {isEditing ? (
+                  <Textarea
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                    className="mt-2"
+                    placeholder="Cohort description..."
+                  />
+                ) : (
+                  cohort.description || 'No description provided'
+                )}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex gap-2">
+            {/* Sync buttons */}
+            <Button
+              onClick={syncToAmplitude}
+              className="flex items-center gap-2"
+              variant="outline"
+            >
+              <img src={amplitudeLogo} alt="Amplitude" className="h-5 w-5 rounded-full" />
+              Sync to Amplitude
             </Button>
-          )}
+            
+            <Button
+              onClick={syncToBraze}
+              className="flex items-center gap-2"
+              variant="outline"
+            >
+              <img src={brazeLogo} alt="Braze" className="h-5 w-5 rounded-full" />
+              Sync to Braze
+            </Button>
+            
+            {isEditing ? (
+              <div className="flex gap-2">
+                <Button onClick={handleSave} className="flex items-center gap-2">
+                  <Save className="h-4 w-4" />
+                  Save Changes
+                </Button>
+                <Button variant="outline" onClick={() => setIsEditing(false)}>
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <Button onClick={() => setIsEditing(true)} className="flex items-center gap-2">
+                <Edit className="h-4 w-4" />
+                Edit Cohort
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Users</p>
-                <p className="text-2xl font-bold">{cohortData.userCount.toLocaleString()}</p>
-              </div>
-              <Users className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Avg CLTV</p>
-                <p className="text-2xl font-bold">${cohortData.stats.avgCltv}</p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Conversion Rate</p>
-                <p className="text-2xl font-bold">{cohortData.stats.conversionRate}%</p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Churn Rate</p>
-                <p className="text-2xl font-bold">{cohortData.stats.churnRate}%</p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-red-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Revenue</p>
-                <p className="text-2xl font-bold">${(cohortData.stats.totalRevenue / 1000000).toFixed(1)}M</p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-orange-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Basic Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Cohort Name</Label>
-                <Input
-                  id="name"
-                  value={cohortData.name}
-                  onChange={(e) => setCohortData({ ...cohortData, name: e.target.value })}
-                  disabled={!isEditing}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={cohortData.description}
-                  onChange={(e) => setCohortData({ ...cohortData, description: e.target.value })}
-                  disabled={!isEditing}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Conditions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Conditions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {cohortData.conditions.map((condition, index) => (
-                  <div key={index} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-                    <Badge variant="outline">{condition.attribute}</Badge>
-                    <span className="text-sm text-gray-500">{condition.operator}</span>
-                    <Badge>{condition.value}</Badge>
+        {/* Main content grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left column - Cohort details */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Overview card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Cohort Overview
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {cohort.userCount ? cohort.userCount.toLocaleString() : '-'}
+                    </div>
+                    <div className="text-sm text-gray-600">Total Users</div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <div className="text-lg font-semibold">{getStatusBadge(cohort.status)}</div>
+                    <div className="text-sm text-gray-600 mt-1">Status</div>
+                  </div>
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <div className="text-lg font-semibold">{getSyncStatusBadge(cohort.syncStatus)}</div>
+                    <div className="text-sm text-gray-600 mt-1">Amplitude Sync</div>
+                  </div>
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <div className="text-lg font-semibold">{getSyncStatusBadge(cohort.brazeSyncStatus || 'not_synced')}</div>
+                    <div className="text-sm text-gray-600 mt-1">Braze Sync</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Status Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Status</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Status</span>
-                {getStatusBadge(cohortData.status)}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Sync Status</span>
-                {getSyncStatusBadge(cohortData.syncStatus)}
-              </div>
-              <Button variant="outline" className="w-full">
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Refresh Data
-              </Button>
-            </CardContent>
-          </Card>
+            {/* Settings card */}
+            {isEditing && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Cohort Settings</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="autoRefresh">Auto Refresh</Label>
+                      <p className="text-sm text-gray-600">Automatically recalculate cohort users</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      id="autoRefresh"
+                      checked={editForm.autoRefresh}
+                      onChange={(e) => setEditForm({...editForm, autoRefresh: e.target.checked})}
+                      className="h-4 w-4"
+                    />
+                  </div>
+                  
+                  {editForm.autoRefresh && (
+                    <div>
+                      <Label htmlFor="refreshFrequency">Refresh Frequency (hours)</Label>
+                      <Input
+                        type="number"
+                        id="refreshFrequency"
+                        value={editForm.refreshFrequencyHours}
+                        onChange={(e) => setEditForm({...editForm, refreshFrequencyHours: parseInt(e.target.value) || 24})}
+                        min="1"
+                        max="168"
+                        className="mt-1"
+                      />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
-          {/* Metadata */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Metadata</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-600">Created</p>
-                  <p className="text-sm font-medium">{cohortData.createdDate}</p>
+          {/* Right column - Metadata and actions */}
+          <div className="space-y-6">
+            {/* Metadata card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Metadata
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Created</span>
+                  <span className="font-medium">{new Date(cohort.createdAt).toLocaleDateString()}</span>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-600">Last Updated</p>
-                  <p className="text-sm font-medium">{cohortData.updatedDate}</p>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Updated</span>
+                  <span className="font-medium">{new Date(cohort.updatedAt).toLocaleDateString()}</span>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-600">Creator</p>
-                  <p className="text-sm font-medium">{cohortData.creator}</p>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Created by</span>
+                  <span className="font-medium">{cohort.createdBy || 'System'}</span>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+                {cohort.lastCalculatedAt && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Last Calculated</span>
+                    <span className="font-medium">{new Date(cohort.lastCalculatedAt).toLocaleDateString()}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Sync status card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Sync Status</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Amplitude</span>
+                  {getSyncStatusBadge(cohort.syncStatus)}
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Braze</span>
+                  {getSyncStatusBadge(cohort.brazeSyncStatus || 'not_synced')}
+                </div>
+                {cohort.lastSyncedAt && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Last Synced</span>
+                    <span className="font-medium text-sm">{new Date(cohort.lastSyncedAt).toLocaleDateString()}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
