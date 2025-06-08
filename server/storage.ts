@@ -2,12 +2,15 @@ import {
   users, 
   team, 
   dashboardTileInstances,
+  cohorts,
   type User, 
   type InsertUser, 
   type Team, 
   type InsertTeam,
   type DashboardTileInstance,
-  type InsertDashboardTileInstance
+  type InsertDashboardTileInstance,
+  type Cohort,
+  type InsertCohort
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, or } from "drizzle-orm";
@@ -28,6 +31,13 @@ export interface IStorage {
   updateDashboardTile(tileId: string, updates: Partial<InsertDashboardTileInstance>): Promise<DashboardTileInstance | undefined>;
   deleteDashboardTile(tileId: string): Promise<boolean>;
   saveDashboardLayout(tiles: InsertDashboardTileInstance[]): Promise<DashboardTileInstance[]>;
+  
+  // Cohort management
+  getCohorts(): Promise<Cohort[]>;
+  getCohort(id: string): Promise<Cohort | undefined>;
+  createCohort(cohort: InsertCohort): Promise<Cohort>;
+  updateCohort(id: string, updates: Partial<InsertCohort>): Promise<Cohort | undefined>;
+  deleteCohort(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -142,6 +152,40 @@ export class DatabaseStorage implements IStorage {
     }
     
     return savedTiles;
+  }
+
+  // Cohort management methods
+  async getCohorts(): Promise<Cohort[]> {
+    return await db.select().from(cohorts);
+  }
+
+  async getCohort(id: string): Promise<Cohort | undefined> {
+    const [cohort] = await db.select().from(cohorts).where(eq(cohorts.id, id));
+    return cohort || undefined;
+  }
+
+  async createCohort(insertCohort: InsertCohort): Promise<Cohort> {
+    const [cohort] = await db
+      .insert(cohorts)
+      .values(insertCohort)
+      .returning();
+    return cohort;
+  }
+
+  async updateCohort(id: string, updates: Partial<InsertCohort>): Promise<Cohort | undefined> {
+    const [updatedCohort] = await db
+      .update(cohorts)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(cohorts.id, id))
+      .returning();
+    return updatedCohort || undefined;
+  }
+
+  async deleteCohort(id: string): Promise<boolean> {
+    const result = await db
+      .delete(cohorts)
+      .where(eq(cohorts.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 }
 

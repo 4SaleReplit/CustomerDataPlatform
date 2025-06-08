@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { snowflakeService } from "./services/snowflake";
-import { insertTeamSchema, insertDashboardTileInstanceSchema } from "@shared/schema";
+import { insertTeamSchema, insertDashboardTileInstanceSchema, insertCohortSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Database connection test
@@ -175,6 +175,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Save dashboard layout error:", error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : "Failed to save dashboard layout" 
+      });
+    }
+  });
+
+  // Cohort management routes
+  app.get("/api/cohorts", async (req, res) => {
+    try {
+      const cohorts = await storage.getCohorts();
+      res.json(cohorts);
+    } catch (error) {
+      console.error("Get cohorts error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get cohorts" 
+      });
+    }
+  });
+
+  app.get("/api/cohorts/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const cohort = await storage.getCohort(id);
+      
+      if (!cohort) {
+        return res.status(404).json({ error: "Cohort not found" });
+      }
+      
+      res.json(cohort);
+    } catch (error) {
+      console.error("Get cohort error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get cohort" 
+      });
+    }
+  });
+
+  app.post("/api/cohorts", async (req, res) => {
+    try {
+      console.log("Saving cohort:", req.body);
+      const validatedData = insertCohortSchema.parse(req.body);
+      const cohort = await storage.createCohort(validatedData);
+      res.status(201).json(cohort);
+    } catch (error) {
+      console.error("Create cohort error:", error);
+      res.status(400).json({ 
+        error: error instanceof Error ? error.message : "Failed to create cohort" 
+      });
+    }
+  });
+
+  app.put("/api/cohorts/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const cohort = await storage.updateCohort(id, updates);
+      
+      if (!cohort) {
+        return res.status(404).json({ error: "Cohort not found" });
+      }
+      
+      res.json(cohort);
+    } catch (error) {
+      console.error("Update cohort error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to update cohort" 
+      });
+    }
+  });
+
+  app.delete("/api/cohorts/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteCohort(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Cohort not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete cohort error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to delete cohort" 
       });
     }
   });
