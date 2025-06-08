@@ -6,7 +6,7 @@ import { DashboardBuilder, type DashboardTile } from '@/components/dashboard/Das
 import { TileEditDialog } from '@/components/dashboard/TileEditDialog';
 import { TimeFilter, type TimeFilterState } from '@/components/dashboard/TimeFilter';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 const initialTiles: DashboardTile[] = [
   {
@@ -286,6 +286,31 @@ export default function Dashboard() {
     console.log('Refreshing tile:', tileId);
   };
 
+  // Global refresh function - clears all caches and refreshes all tiles
+  const handleGlobalRefresh = async () => {
+    setIsLoading(true);
+    try {
+      // Clear all Snowflake query caches
+      queryClient.removeQueries({ queryKey: ['/api/snowflake/query'] });
+      
+      // Force reload of tiles data
+      await loadTiles();
+      
+      toast({
+        title: "Dashboard Refreshed",
+        description: "All tile data has been refreshed successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Refresh Failed",
+        description: "Failed to refresh dashboard data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleTimeFiltersChange = (newFilters: TimeFilterState) => {
     setTimeFilters(newFilters);
   };
@@ -320,11 +345,11 @@ export default function Dashboard() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => loadTiles()}
+              onClick={handleGlobalRefresh}
               disabled={isLoading}
             >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              {isLoading ? 'Loading...' : 'Refresh'}
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              {isLoading ? 'Refreshing...' : 'Refresh All'}
             </Button>
             {isEditMode && (
               <Button
