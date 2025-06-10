@@ -500,13 +500,13 @@ export default function Segments() {
                     <td className="py-3 px-4 text-gray-600">{segment.description || '-'}</td>
                     <td className="py-3 px-4">
                       <code className="font-mono text-xs bg-gray-50 rounded px-2 py-1">
-                        {segment.rule || `${segment.attribute} ${segment.operator} ${segment.value}`}
+                        {segment.conditions?.rule || `${segment.conditions?.attribute || ''} ${segment.conditions?.operator || ''} ${segment.conditions?.value || ''}`}
                       </code>
                     </td>
                     <td className="py-3 px-4 font-medium">
                       {segment.conditions?.userCount > 0 ? segment.conditions.userCount.toLocaleString() : '-'}
                     </td>
-                    <td className="py-3 px-4">{getStatusBadge(segment.status || 'active')}</td>
+                    <td className="py-3 px-4">{getStatusBadge(segment.isActive ? 'active' : 'inactive')}</td>
                     <td className="py-3 px-4 text-sm text-gray-600">
                       {segment.createdAt ? new Date(segment.createdAt).toLocaleDateString() : '-'}
                     </td>
@@ -521,7 +521,7 @@ export default function Segments() {
                             <Eye className="h-4 w-4" />
                           </Button>
                         </Link>
-                        {segment.status === 'active' ? (
+                        {segment.isActive ? (
                           <Button variant="ghost" size="sm" title="Pause">
                             <Pause className="h-4 w-4" />
                           </Button>
