@@ -3,6 +3,7 @@ import {
   team, 
   dashboardTileInstances,
   cohorts,
+  segments,
   type User, 
   type InsertUser, 
   type Team, 
@@ -11,7 +12,9 @@ import {
   type InsertDashboardTileInstance,
   type Cohort,
   type InsertCohort,
-  type UpdateCohort
+  type UpdateCohort,
+  type Segment,
+  type InsertSegment
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, or } from "drizzle-orm";
@@ -39,6 +42,13 @@ export interface IStorage {
   createCohort(cohort: InsertCohort): Promise<Cohort>;
   updateCohort(id: string, updates: UpdateCohort): Promise<Cohort | undefined>;
   deleteCohort(id: string): Promise<boolean>;
+  
+  // Segment management
+  getSegments(): Promise<Segment[]>;
+  getSegment(id: string): Promise<Segment | undefined>;
+  createSegment(segment: InsertSegment): Promise<Segment>;
+  updateSegment(id: string, updates: Partial<InsertSegment>): Promise<Segment | undefined>;
+  deleteSegment(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -191,6 +201,45 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(cohorts)
       .where(eq(cohorts.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Segment storage methods
+  async getSegments(): Promise<Segment[]> {
+    return await db.select().from(segments);
+  }
+
+  async getSegment(id: string): Promise<Segment | undefined> {
+    const [segment] = await db.select().from(segments).where(eq(segments.id, id));
+    return segment || undefined;
+  }
+
+  async createSegment(insertSegment: InsertSegment): Promise<Segment> {
+    const now = new Date();
+    const [segment] = await db
+      .insert(segments)
+      .values({
+        ...insertSegment,
+        createdAt: now,
+        updatedAt: now
+      })
+      .returning();
+    return segment;
+  }
+
+  async updateSegment(id: string, updates: Partial<InsertSegment>): Promise<Segment | undefined> {
+    const [updatedSegment] = await db
+      .update(segments)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(segments.id, id))
+      .returning();
+    return updatedSegment || undefined;
+  }
+
+  async deleteSegment(id: string): Promise<boolean> {
+    const result = await db
+      .delete(segments)
+      .where(eq(segments.id, id));
     return result.rowCount !== null && result.rowCount > 0;
   }
 }

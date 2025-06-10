@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
-import { Plus, Eye, Edit, Trash2, Play, Pause, Search, Filter, MoreHorizontal, Copy } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, Play, Pause, Search, Filter, MoreHorizontal, Copy, RefreshCw } from 'lucide-react';
 import { Link } from 'wouter';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +14,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 
 // Mock segment data with enhanced fields
 const mockSegments = [

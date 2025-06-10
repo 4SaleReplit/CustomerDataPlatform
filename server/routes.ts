@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { snowflakeService } from "./services/snowflake";
-import { insertTeamSchema, insertDashboardTileInstanceSchema, insertCohortSchema } from "@shared/schema";
+import { insertTeamSchema, insertDashboardTileInstanceSchema, insertCohortSchema, insertSegmentSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Database connection test
@@ -457,6 +457,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Braze sync error:", error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : "Failed to sync to Braze" 
+      });
+    }
+  });
+
+  // Segments management routes
+  app.get("/api/segments", async (req, res) => {
+    try {
+      const segments = await storage.getSegments();
+      res.json(segments);
+    } catch (error) {
+      console.error("Get segments error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get segments" 
+      });
+    }
+  });
+
+  app.get("/api/segments/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const segment = await storage.getSegment(id);
+      
+      if (!segment) {
+        return res.status(404).json({ error: "Segment not found" });
+      }
+      
+      res.json(segment);
+    } catch (error) {
+      console.error("Get segment error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get segment" 
+      });
+    }
+  });
+
+  app.post("/api/segments", async (req, res) => {
+    try {
+      console.log("Creating segment:", req.body);
+      const validatedData = insertSegmentSchema.parse(req.body);
+      const segment = await storage.createSegment(validatedData);
+      res.status(201).json(segment);
+    } catch (error) {
+      console.error("Create segment error:", error);
+      res.status(400).json({ 
+        error: error instanceof Error ? error.message : "Failed to create segment" 
+      });
+    }
+  });
+
+  app.put("/api/segments/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const segment = await storage.updateSegment(id, updates);
+      
+      if (!segment) {
+        return res.status(404).json({ error: "Segment not found" });
+      }
+      
+      res.json(segment);
+    } catch (error) {
+      console.error("Update segment error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to update segment" 
+      });
+    }
+  });
+
+  app.delete("/api/segments/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteSegment(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Segment not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete segment error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to delete segment" 
+      });
+    }
+  });
+
+  // Get Snowflake column schema for segment attributes
+  app.get("/api/snowflake/schema", async (req, res) => {
+    try {
+      const query = "DESCRIBE TABLE DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4";
+      const result = await snowflakeService.executeQuery(query);
+      
+      if (!result.success) {
+        return res.status(500).json({ 
+          error: `Failed to get schema: ${result.error}` 
+        });
+      }
+
+      // Transform schema results into useful format
+      const columns = result.rows.map(row => ({
+        name: row[0],
+        type: row[1],
+        nullable: row[2] === 'Y',
+        default: row[3],
+        primaryKey: row[4] === 'Y',
+        uniqueKey: row[5] === 'Y',
+        check: row[6],
+        expression: row[7],
+        comment: row[8]
+      }));
+
+      res.json({ columns });
+    } catch (error) {
+      console.error("Get schema error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get schema" 
       });
     }
   });
