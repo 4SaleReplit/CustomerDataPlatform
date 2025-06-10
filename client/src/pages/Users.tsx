@@ -246,12 +246,12 @@ export default function Users() {
               <thead>
                 <tr className="border-b">
                   <th className="text-left py-3 px-4 font-medium">User ID</th>
-                  <th className="text-left py-3 px-4 font-medium">Email</th>
-                  <th className="text-left py-3 px-4 font-medium">Phone</th>
+                  <th className="text-left py-3 px-4 font-medium">Contact</th>
                   <th className="text-left py-3 px-4 font-medium">Type</th>
                   <th className="text-left py-3 px-4 font-medium">Listings</th>
-                  <th className="text-left py-3 px-4 font-medium">Created</th>
                   <th className="text-left py-3 px-4 font-medium">CLTV</th>
+                  <th className="text-left py-3 px-4 font-medium">Last Activity</th>
+                  <th className="text-left py-3 px-4 font-medium">Status</th>
                   <th className="text-left py-3 px-4 font-medium">Actions</th>
                 </tr>
               </thead>
@@ -265,26 +265,38 @@ export default function Users() {
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="text-sm">
-                        {user.EMAIL || 'N/A'}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-sm">
-                        {user.PHONE_NUMBER || 'N/A'}
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium">{user.EMAIL || 'N/A'}</div>
+                        <div className="text-xs text-gray-500">{user.PHONE_NUMBER || 'No phone'}</div>
                       </div>
                     </td>
                     <td className="py-3 px-4">
                       {getUserTypeBadge(user.USER_TYPE)}
                     </td>
-                    <td className="py-3 px-4 text-sm">
-                      {formatNumber(user.TOTAL_LISTINGS_COUNT)}
+                    <td className="py-3 px-4">
+                      <div className="text-center">
+                        <div className="text-lg font-semibold">{formatNumber(user.TOTAL_LISTINGS_COUNT)}</div>
+                        <div className="text-xs text-gray-500">listings</div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="text-center">
+                        <div className="text-lg font-semibold text-green-600">
+                          {user.CLTV ? `$${Number(user.CLTV).toFixed(0)}` : '$0'}
+                        </div>
+                        <div className="text-xs text-gray-500">lifetime value</div>
+                      </div>
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600">
-                      {formatDate(user.CREATED_DATE)}
+                      {formatDate(user.LAST_ACTIVE_DATE || user.CREATED_DATE)}
                     </td>
-                    <td className="py-3 px-4 text-sm font-medium">
-                      {user.CLTV ? `$${Number(user.CLTV).toFixed(2)}` : 'N/A'}
+                    <td className="py-3 px-4">
+                      <Badge 
+                        variant={user.IS_ACTIVE === 'TRUE' || user.IS_ACTIVE === true ? 'default' : 'secondary'}
+                        className={user.IS_ACTIVE === 'TRUE' || user.IS_ACTIVE === true ? 'bg-green-100 text-green-800' : ''}
+                      >
+                        {user.IS_ACTIVE === 'TRUE' || user.IS_ACTIVE === true ? 'Active' : 'Inactive'}
+                      </Badge>
                     </td>
                     <td className="py-3 px-4">
                       <Link to={`/users/${user.USER_ID || user.id}`}>

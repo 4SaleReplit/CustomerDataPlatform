@@ -1,140 +1,135 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useParams, Link } from 'wouter';
-import { ArrowLeft, Edit, Save, X, AlertTriangle, TrendingUp, TrendingDown, Users, Calendar, DollarSign, Activity, Target, Star, Mail, Phone, MapPin, Clock, Hash, UserCheck } from 'lucide-react';
+import { ArrowLeft, RefreshCw, AlertCircle, Users, DollarSign, Activity, Target, Mail, Phone, Hash, Calendar, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Progress } from '@/components/ui/progress';
-
-// Enhanced mock user profile data
-const mockUserProfile = {
-  id: 1,
-  user_id: 'USR_001_JD_2024', // Added user ID
-  email: 'john.doe@email.com',
-  name: 'John Doe',
-  phone: '+1 (555) 123-4567',
-  location: 'San Francisco, CA',
-  user_type: 'premium',
-  user_roles: ['lister', 'buyer'], // Added user roles
-  account_status: 'active',
-  created_date: '2024-01-15T10:30:00Z',
-  last_login: '2024-06-02T14:22:00Z',
-  
-  // Financial Metrics
-  total_listings: 15,
-  paid_listings_count: 8,
-  total_purchases: 12, // Added purchase count
-  cltv: 450.00,
-  current_credits: 125,
-  total_spent: 1250.00,
-  avg_monthly_spend: 125.00,
-  
-  // Behavioral Metrics
-  favorite_vertical: 'Electronics',
-  verticals_listed_in: ['Electronics', 'Home & Garden', 'Automotive'],
-  lifecycle_stage: 'active_user',
-  engagement_score: 85,
-  satisfaction_score: 4.2,
-  avg_session_duration: '12m 34s',
-  monthly_active_days: 18,
-  
-  // Risk Analysis
-  churn_risk_score: 25, // 0-100, lower is better
-  churn_risk_level: 'low',
-  churn_factors: [
-    { factor: 'Recent Activity', impact: 'positive', score: 8 },
-    { factor: 'Payment History', impact: 'positive', score: 9 },
-    { factor: 'Support Tickets', impact: 'neutral', score: 6 },
-    { factor: 'Feature Usage', impact: 'positive', score: 7 }
-  ],
-  
-  // Advanced Analytics
-  conversion_rate: 68.5,
-  avg_listing_views: 245,
-  response_rate: 94,
-  listing_success_rate: 72,
-  referral_count: 3,
-  
-  listings: [
-    { id: 1, title: 'iPhone 13 Pro', category: 'Electronics', date: '2024-05-28', status: 'active', views: 156, inquiries: 8 },
-    { id: 2, title: 'Garden Tools Set', category: 'Home & Garden', date: '2024-05-25', status: 'sold', views: 89, inquiries: 12 },
-    { id: 3, title: 'Car Tires', category: 'Automotive', date: '2024-05-20', status: 'active', views: 234, inquiries: 15 },
-  ],
-  
-  transactions: [
-    { id: 1, date: '2024-05-28', type: 'listing_fee', amount: 25.00, status: 'completed' },
-    { id: 2, date: '2024-05-25', type: 'promotion', amount: 15.00, status: 'completed' },
-    { id: 3, date: '2024-05-20', type: 'listing_fee', amount: 25.00, status: 'completed' },
-  ],
-  
-  cohorts: ['Premium Users', 'Active Listers', 'Electronics Enthusiasts'],
-  
-  // Communication History
-  support_tickets: 2,
-  last_support_contact: '2024-04-15',
-  email_opens: 85,
-  email_clicks: 42,
-  communication_preference: 'email'
-};
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 
 export default function UserProfile() {
   const { userId } = useParams();
-  const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState(mockUserProfile);
 
-  const handleSave = () => {
-    console.log('Saving user data:', editData);
-    setIsEditing(false);
-  };
+  // Fetch user data from Snowflake
+  const { data: userData, isLoading: userLoading, error: userError } = useQuery({
+    queryKey: ['user', userId],
+    queryFn: async () => {
+      const response = await apiRequest('/api/snowflake/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          query: `SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE USER_ID = '${userId}' LIMIT 1` 
+        })
+      });
+      return response;
+    },
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
 
-  const handleCancel = () => {
-    setEditData(mockUserProfile);
-    setIsEditing(false);
-  };
+  // Process user data
+  const userProfile = userData?.success && userData?.rows?.length > 0 ? 
+    (() => {
+      const row = userData.rows[0];
+      const columns = userData.columns || [];
+      const userObject: any = {};
+      
+      columns.forEach((col: any, colIndex: number) => {
+        userObject[col.name] = row[colIndex];
+      });
+      
+      return userObject;
+    })() : null;
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getChurnRiskColor = (level: string) => {
-    switch (level) {
-      case 'low': return 'text-green-600 bg-green-100';
-      case 'medium': return 'text-yellow-600 bg-yellow-100';
-      case 'high': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch {
+      return dateString;
     }
   };
 
-  const getFactorImpactIcon = (impact: string) => {
-    switch (impact) {
-      case 'positive': return <TrendingUp className="h-4 w-4 text-green-600" />;
-      case 'negative': return <TrendingDown className="h-4 w-4 text-red-600" />;
-      default: return <Activity className="h-4 w-4 text-gray-600" />;
+  const formatNumber = (num: any) => {
+    if (num === null || num === undefined) return 'N/A';
+    if (typeof num === 'number') return num.toLocaleString();
+    return String(num);
+  };
+
+  const getUserTypeBadge = (type: string) => {
+    if (!type) return <Badge variant="outline">Unknown</Badge>;
+    
+    const normalizedType = type.toLowerCase();
+    switch (normalizedType) {
+      case 'premium':
+      case 'vip':
+        return <Badge className="bg-blue-100 text-blue-800">Premium</Badge>;
+      case 'regular':
+      case 'standard':
+        return <Badge variant="outline">Regular</Badge>;
+      case 'lister':
+        return <Badge className="bg-purple-100 text-purple-800">Lister</Badge>;
+      case 'browser':
+        return <Badge className="bg-green-100 text-green-800">Browser</Badge>;
+      default:
+        return <Badge variant="outline">{type}</Badge>;
     }
   };
 
-  const getUserRoleBadges = (roles: string[]) => {
-    return roles.map(role => {
-      switch (role) {
-        case 'lister':
-          return <Badge key={role} className="bg-purple-100 text-purple-800">Lister</Badge>;
-        case 'buyer':
-          return <Badge key={role} className="bg-orange-100 text-orange-800">Buyer</Badge>;
-        default:
-          return <Badge key={role} variant="outline">{role}</Badge>;
-      }
-    });
-  };
+  // Loading state
+  if (userLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="flex items-center gap-2 text-gray-500">
+          <RefreshCw className="w-5 h-5 animate-spin" />
+          Loading user profile...
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (userError || !userData?.success) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="text-center">
+          <div className="flex items-center justify-center mb-2">
+            <AlertCircle className="w-6 h-6 text-red-500" />
+          </div>
+          <div className="text-red-500 mb-2">Failed to load user profile</div>
+          <div className="text-sm text-gray-500">{userData?.error || 'User not found'}</div>
+          <Link to="/users">
+            <Button className="mt-4">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Users
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // No user found
+  if (!userProfile) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="text-center">
+          <div className="text-gray-500 mb-2">User not found</div>
+          <div className="text-sm text-gray-400">No user found with ID: {userId}</div>
+          <Link to="/users">
+            <Button className="mt-4">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Users
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -146,35 +141,15 @@ export default function UserProfile() {
               Back to Users
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900">360° User Profile</h1>
+          <h1 className="text-3xl font-bold text-gray-900">User Profile</h1>
           <Badge variant="outline" className="text-lg px-3 py-1">
             <Hash className="mr-1 h-4 w-4" />
-            {mockUserProfile.user_id}
+            {userProfile.USER_ID}
           </Badge>
-        </div>
-        
-        <div className="flex gap-2">
-          {isEditing ? (
-            <>
-              <Button variant="outline" onClick={handleCancel}>
-                <X className="mr-2 h-4 w-4" />
-                Cancel
-              </Button>
-              <Button onClick={handleSave}>
-                <Save className="mr-2 h-4 w-4" />
-                Save Changes
-              </Button>
-            </>
-          ) : (
-            <Button onClick={() => setIsEditing(true)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit User
-            </Button>
-          )}
         </div>
       </div>
 
-      {/* Enhanced User Summary */}
+      {/* User Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="pb-3">
@@ -185,34 +160,24 @@ export default function UserProfile() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <h3 className="font-medium text-lg">{mockUserProfile.name}</h3>
+              <h3 className="font-medium text-lg">{userProfile.USER_ID}</h3>
               <p className="text-gray-600 flex items-center text-sm">
                 <Mail className="mr-1 h-3 w-3" />
-                {mockUserProfile.email}
+                {userProfile.EMAIL || 'No email'}
               </p>
               <p className="text-gray-600 flex items-center text-sm">
                 <Phone className="mr-1 h-3 w-3" />
-                {mockUserProfile.phone}
-              </p>
-              <p className="text-gray-600 flex items-center text-sm">
-                <MapPin className="mr-1 h-3 w-3" />
-                {mockUserProfile.location}
+                {userProfile.PHONE_NUMBER || 'No phone'}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Badge className="bg-blue-100 text-blue-800">{mockUserProfile.user_type}</Badge>
-              <Badge variant="default" className="bg-green-100 text-green-800">
-                {mockUserProfile.account_status}
+              {getUserTypeBadge(userProfile.USER_TYPE)}
+              <Badge 
+                variant={userProfile.IS_ACTIVE === 'TRUE' || userProfile.IS_ACTIVE === true ? 'default' : 'secondary'}
+                className={userProfile.IS_ACTIVE === 'TRUE' || userProfile.IS_ACTIVE === true ? 'bg-green-100 text-green-800' : ''}
+              >
+                {userProfile.IS_ACTIVE === 'TRUE' || userProfile.IS_ACTIVE === true ? 'Active' : 'Inactive'}
               </Badge>
-            </div>
-            <div className="pt-2">
-              <p className="text-xs text-gray-500 mb-1 flex items-center">
-                <UserCheck className="mr-1 h-3 w-3" />
-                User Roles:
-              </p>
-              <div className="flex flex-wrap gap-1">
-                {getUserRoleBadges(mockUserProfile.user_roles)}
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -220,26 +185,23 @@ export default function UserProfile() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
-              <Activity className="mr-2 h-4 w-4" />
-              Engagement Metrics
+              <Target className="mr-2 h-4 w-4" />
+              Activity Metrics
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-sm text-gray-600">Engagement Score</span>
-                <span className="text-sm font-medium">{mockUserProfile.engagement_score}%</span>
-              </div>
-              <Progress value={mockUserProfile.engagement_score} className="h-2" />
+              <p className="text-sm text-gray-600">Total Listings</p>
+              <p className="text-2xl font-bold text-blue-600">{formatNumber(userProfile.TOTAL_LISTINGS_COUNT)}</p>
             </div>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
-                <p className="text-gray-600">Active Days</p>
-                <p className="font-medium">{mockUserProfile.monthly_active_days}/30</p>
+                <p className="text-gray-600">Paid Listings</p>
+                <p className="font-medium">{formatNumber(userProfile.PAID_LISTINGS_COUNT)}</p>
               </div>
               <div>
-                <p className="text-gray-600">Avg Session</p>
-                <p className="font-medium">{mockUserProfile.avg_session_duration}</p>
+                <p className="text-gray-600">Free Listings</p>
+                <p className="font-medium">{formatNumber(userProfile.FREE_LISTINGS_COUNT)}</p>
               </div>
             </div>
           </CardContent>
@@ -255,51 +217,38 @@ export default function UserProfile() {
           <CardContent className="space-y-3">
             <div>
               <p className="text-sm text-gray-600">Customer Lifetime Value</p>
-              <p className="text-2xl font-bold text-green-600">${mockUserProfile.cltv.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-green-600">
+                {userProfile.CLTV ? `$${Number(userProfile.CLTV).toFixed(2)}` : '$0.00'}
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
-                <p className="text-gray-600">Total Spent</p>
-                <p className="font-medium">${mockUserProfile.total_spent}</p>
+                <p className="text-gray-600">Credits</p>
+                <p className="font-medium">{formatNumber(userProfile.CURRENT_CREDITS)}</p>
               </div>
               <div>
-                <p className="text-gray-600">Avg Monthly</p>
-                <p className="font-medium">${mockUserProfile.avg_monthly_spend}</p>
+                <p className="text-gray-600">Region</p>
+                <p className="font-medium">{userProfile.REGION || 'N/A'}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className={`border-2 ${mockUserProfile.churn_risk_level === 'high' ? 'border-red-200' : mockUserProfile.churn_risk_level === 'medium' ? 'border-yellow-200' : 'border-green-200'}`}>
+        <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
-              <AlertTriangle className="mr-2 h-4 w-4" />
-              Churn Risk Analysis
+              <Calendar className="mr-2 h-4 w-4" />
+              Timeline
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-sm text-gray-600">Risk Score</span>
-                <Badge className={getChurnRiskColor(mockUserProfile.churn_risk_level)}>
-                  {mockUserProfile.churn_risk_level} ({mockUserProfile.churn_risk_score}%)
-                </Badge>
-              </div>
-              <Progress value={100 - mockUserProfile.churn_risk_score} className="h-2" />
+              <p className="text-sm text-gray-600">Member Since</p>
+              <p className="text-lg font-semibold">{formatDate(userProfile.CREATED_DATE)}</p>
             </div>
-            <div className="text-sm">
-              <p className="text-gray-600 mb-2">Key Factors:</p>
-              <div className="space-y-1">
-                {mockUserProfile.churn_factors.slice(0, 2).map((factor, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <span className="flex items-center">
-                      {getFactorImpactIcon(factor.impact)}
-                      <span className="ml-1 text-xs">{factor.factor}</span>
-                    </span>
-                    <span className="text-xs font-medium">{factor.score}/10</span>
-                  </div>
-                ))}
-              </div>
+            <div>
+              <p className="text-sm text-gray-600">Last Active</p>
+              <p className="font-medium">{formatDate(userProfile.LAST_ACTIVE_DATE || userProfile.CREATED_DATE)}</p>
             </div>
           </CardContent>
         </Card>
@@ -312,7 +261,7 @@ export default function UserProfile() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Total Listings</p>
-                <p className="text-2xl font-bold">{mockUserProfile.total_listings}</p>
+                <p className="text-2xl font-bold">{formatNumber(userProfile.TOTAL_LISTINGS_COUNT)}</p>
               </div>
               <Target className="h-8 w-8 text-blue-600" />
             </div>
@@ -323,10 +272,10 @@ export default function UserProfile() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Purchases</p>
-                <p className="text-2xl font-bold">{mockUserProfile.total_purchases}</p>
+                <p className="text-sm text-gray-600">Paid Listings</p>
+                <p className="text-2xl font-bold">{formatNumber(userProfile.PAID_LISTINGS_COUNT)}</p>
               </div>
-              <Activity className="h-8 w-8 text-green-600" />
+              <TrendingUp className="h-8 w-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
@@ -335,10 +284,10 @@ export default function UserProfile() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Response Rate</p>
-                <p className="text-2xl font-bold">{mockUserProfile.response_rate}%</p>
+                <p className="text-sm text-gray-600">Free Listings</p>
+                <p className="text-2xl font-bold">{formatNumber(userProfile.FREE_LISTINGS_COUNT)}</p>
               </div>
-              <Clock className="h-8 w-8 text-purple-600" />
+              <Activity className="h-8 w-8 text-purple-600" />
             </div>
           </CardContent>
         </Card>
@@ -347,13 +296,10 @@ export default function UserProfile() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Satisfaction Score</p>
-                <p className="text-2xl font-bold flex items-center">
-                  {mockUserProfile.satisfaction_score}
-                  <Star className="h-4 w-4 text-yellow-500 ml-1" />
-                </p>
+                <p className="text-sm text-gray-600">Current Credits</p>
+                <p className="text-2xl font-bold">{formatNumber(userProfile.CURRENT_CREDITS)}</p>
               </div>
-              <Star className="h-8 w-8 text-yellow-600" />
+              <DollarSign className="h-8 w-8 text-yellow-600" />
             </div>
           </CardContent>
         </Card>
@@ -361,292 +307,79 @@ export default function UserProfile() {
 
       {/* Detailed Information */}
       <Card>
-        <CardContent className="p-6">
-          <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="listings">Listings</TabsTrigger>
-              <TabsTrigger value="transactions">Transactions</TabsTrigger>
-              <TabsTrigger value="risk-analysis">Risk Analysis</TabsTrigger>
-              <TabsTrigger value="engagement">Engagement</TabsTrigger>
-              <TabsTrigger value="cohorts">Cohorts</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview" className="space-y-6 mt-6">
-              {isEditing ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="user_id">User ID</Label>
-                    <Input
-                      id="user_id"
-                      value={editData.user_id}
-                      onChange={(e) => setEditData({...editData, user_id: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
-                    <Input
-                      id="name"
-                      value={editData.name}
-                      onChange={(e) => setEditData({...editData, name: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={editData.email}
-                      onChange={(e) => setEditData({...editData, email: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input
-                      id="phone"
-                      value={editData.phone}
-                      onChange={(e) => setEditData({...editData, phone: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="user_type">User Type</Label>
-                    <Select value={editData.user_type} onValueChange={(value) => setEditData({...editData, user_type: value})}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="premium">Premium</SelectItem>
-                        <SelectItem value="regular">Regular</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+        <CardHeader>
+          <CardTitle>User Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div>
+              <h4 className="font-semibold mb-3 text-gray-800">Contact Information</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">User ID:</span>
+                  <span className="font-mono">{userProfile.USER_ID}</span>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <h4 className="font-medium mb-3">Basic Information</h4>
-                    <div className="space-y-2 text-sm">
-                      <p><span className="font-medium">User ID:</span> {mockUserProfile.user_id}</p>
-                      <p><span className="font-medium">Internal ID:</span> {mockUserProfile.id}</p>
-                      <p><span className="font-medium">Created:</span> {formatDate(mockUserProfile.created_date)}</p>
-                      <p><span className="font-medium">Last Login:</span> {formatDate(mockUserProfile.last_login)}</p>
-                      <p><span className="font-medium">Lifecycle Stage:</span> {mockUserProfile.lifecycle_stage}</p>
-                      <p><span className="font-medium">Favorite Vertical:</span> {mockUserProfile.favorite_vertical}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-3">Activity Summary</h4>
-                    <div className="space-y-2 text-sm">
-                      <p><span className="font-medium">Total Listings:</span> {mockUserProfile.total_listings}</p>
-                      <p><span className="font-medium">Paid Listings:</span> {mockUserProfile.paid_listings_count}</p>
-                      <p><span className="font-medium">Total Purchases:</span> {mockUserProfile.total_purchases}</p>
-                      <p><span className="font-medium">Success Rate:</span> {mockUserProfile.listing_success_rate}%</p>
-                      <p><span className="font-medium">Referrals:</span> {mockUserProfile.referral_count}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-3">User Roles & Verticals</h4>
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-sm font-medium mb-2">Roles:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {getUserRoleBadges(mockUserProfile.user_roles)}
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium mb-2">Verticals Listed In:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {mockUserProfile.verticals_listed_in.map((vertical) => (
-                            <Badge key={vertical} variant="outline">{vertical}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Email:</span>
+                  <span>{userProfile.EMAIL || 'N/A'}</span>
                 </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="listings" className="mt-6">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2">Title</th>
-                      <th className="text-left py-2">Category</th>
-                      <th className="text-left py-2">Date Posted</th>
-                      <th className="text-left py-2">Views</th>
-                      <th className="text-left py-2">Inquiries</th>
-                      <th className="text-left py-2">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mockUserProfile.listings.map((listing) => (
-                      <tr key={listing.id} className="border-b">
-                        <td className="py-2">{listing.title}</td>
-                        <td className="py-2">{listing.category}</td>
-                        <td className="py-2">{listing.date}</td>
-                        <td className="py-2">{listing.views}</td>
-                        <td className="py-2">{listing.inquiries}</td>
-                        <td className="py-2">
-                          <Badge variant={listing.status === 'active' ? 'default' : 'secondary'}>
-                            {listing.status}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="transactions" className="mt-6">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2">Date</th>
-                      <th className="text-left py-2">Type</th>
-                      <th className="text-left py-2">Amount</th>
-                      <th className="text-left py-2">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mockUserProfile.transactions.map((transaction) => (
-                      <tr key={transaction.id} className="border-b">
-                        <td className="py-2">{transaction.date}</td>
-                        <td className="py-2">{transaction.type}</td>
-                        <td className="py-2">${transaction.amount.toFixed(2)}</td>
-                        <td className="py-2">
-                          <Badge variant="default" className="bg-green-100 text-green-800">
-                            {transaction.status}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="risk-analysis" className="mt-6">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Churn Risk Factors</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {mockUserProfile.churn_factors.map((factor, index) => (
-                          <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                            <div className="flex items-center">
-                              {getFactorImpactIcon(factor.impact)}
-                              <span className="ml-2 font-medium">{factor.factor}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Progress value={factor.score * 10} className="w-20 h-2" />
-                              <span className="text-sm font-medium">{factor.score}/10</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Risk Mitigation Actions</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
-                          <h5 className="font-medium text-blue-900">Recommended Actions</h5>
-                          <ul className="text-sm text-blue-800 mt-2 space-y-1">
-                            <li>• Send personalized engagement email</li>
-                            <li>• Offer listing promotion discount</li>
-                            <li>• Schedule check-in call</li>
-                          </ul>
-                        </div>
-                        <div className="p-3 rounded-lg bg-green-50 border border-green-200">
-                          <h5 className="font-medium text-green-900">Retention Score</h5>
-                          <p className="text-sm text-green-800 mt-1">
-                            Based on current metrics, retention probability is <strong>85%</strong>
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Phone:</span>
+                  <span>{userProfile.PHONE_NUMBER || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Region:</span>
+                  <span>{userProfile.REGION || 'N/A'}</span>
                 </div>
               </div>
-            </TabsContent>
+            </div>
 
-            <TabsContent value="engagement" className="mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Communication Metrics</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Email Open Rate</span>
-                      <span className="font-medium">{mockUserProfile.email_opens}%</span>
-                    </div>
-                    <Progress value={mockUserProfile.email_opens} className="h-2" />
-                    
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Email Click Rate</span>
-                      <span className="font-medium">{mockUserProfile.email_clicks}%</span>
-                    </div>
-                    <Progress value={mockUserProfile.email_clicks} className="h-2" />
-                    
-                    <div className="text-sm">
-                      <p><span className="font-medium">Support Tickets:</span> {mockUserProfile.support_tickets}</p>
-                      <p><span className="font-medium">Last Contact:</span> {mockUserProfile.last_support_contact}</p>
-                      <p><span className="font-medium">Preferred Channel:</span> {mockUserProfile.communication_preference}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Behavioral Insights</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span className="text-sm">Peak Activity Time</span>
-                        <span className="font-medium">2-4 PM</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm">Avg Time to List</span>
-                        <span className="font-medium">2.3 days</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm">Feature Adoption</span>
-                        <span className="font-medium">78%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm">Mobile Usage</span>
-                        <span className="font-medium">65%</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="cohorts" className="mt-6">
-              <div>
-                <h4 className="font-medium mb-4">Active Cohort Memberships</h4>
-                <div className="flex flex-wrap gap-2">
-                  {mockUserProfile.cohorts.map((cohort) => (
-                    <Badge key={cohort} className="bg-blue-100 text-blue-800">{cohort}</Badge>
-                  ))}
+            <div>
+              <h4 className="font-semibold mb-3 text-gray-800">Account Status</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">User Type:</span>
+                  <span>{userProfile.USER_TYPE || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Active Status:</span>
+                  <span>{userProfile.IS_ACTIVE === 'TRUE' || userProfile.IS_ACTIVE === true ? 'Active' : 'Inactive'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Created:</span>
+                  <span>{formatDate(userProfile.CREATED_DATE)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Last Active:</span>
+                  <span>{formatDate(userProfile.LAST_ACTIVE_DATE || userProfile.CREATED_DATE)}</span>
                 </div>
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-3 text-gray-800">Financial Metrics</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">CLTV:</span>
+                  <span className="font-semibold text-green-600">
+                    {userProfile.CLTV ? `$${Number(userProfile.CLTV).toFixed(2)}` : '$0.00'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Current Credits:</span>
+                  <span>{formatNumber(userProfile.CURRENT_CREDITS)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total Listings:</span>
+                  <span>{formatNumber(userProfile.TOTAL_LISTINGS_COUNT)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Paid/Free:</span>
+                  <span>{formatNumber(userProfile.PAID_LISTINGS_COUNT)}/{formatNumber(userProfile.FREE_LISTINGS_COUNT)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
