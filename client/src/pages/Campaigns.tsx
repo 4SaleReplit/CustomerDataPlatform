@@ -228,13 +228,15 @@ export default function Campaigns() {
                     <td className="py-3 px-4">
                       <div className="flex gap-2">
                         <Link to={`/campaigns/${campaign.id}/analytics`}>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" title="View Analytics">
                             <BarChart3 className="h-4 w-4" />
                           </Button>
                         </Link>
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <Link to={`/campaigns/${campaign.id}`}>
+                          <Button variant="ghost" size="sm" title="View Details">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </Link>
                         {campaign.status === 'active' ? (
                           <Button variant="ghost" size="sm">
                             <Pause className="h-4 w-4" />
@@ -257,10 +259,12 @@ export default function Campaigns() {
                               <Copy className="mr-2 h-4 w-4" />
                               Duplicate
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEditCampaign(campaign)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
+                            <Link to={`/campaigns/${campaign.id}/edit`}>
+                              <DropdownMenuItem>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                            </Link>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
