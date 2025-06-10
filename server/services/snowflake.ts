@@ -145,9 +145,9 @@ import { config } from "dotenv";
 config();
 
 export const snowflakeService = new SnowflakeService({
-  account: process.env.SNOWFLAKE_ACCOUNT || "q84sale",
-  accessToken: process.env.SNOWFLAKE_ACCESS_TOKEN || "eyJraWQiOiIzNjUyNTkwNTY5ODU1MzkwIiwiYWxnIjoiRVMyNTYifQ.eyJwIjoiNTU3MzQxMDk1MDk6NTU3MzQxMDg0MjEiLCJpc3MiOiJTRjoxMDA5IiwiZXhwIjoxNzUwMDA2NTcwfQ.VZrZLmq1WZLjV11Wj_Pd6OqPxHDyG_apRkwhrhGSKyh-EEMTRLliCx8qrn5zzbSftwkrpzoSoMsHVLF_IJFCbg",
-  warehouse: process.env.SNOWFLAKE_WAREHOUSE || "LOOKER",
+  account: process.env.SNOWFLAKE_ACCOUNT || "dj50829.eu-central-1",
+  accessToken: process.env.SNOWFLAKE_ACCESS_TOKEN || "eyJraWQiOiIzNjUyNTkwNTY5ODU1MzkwIiwiYWxnIjoiRVMyNTYifQ.eyJwIjoiNTU3MzQxMDk1MDk6NTU3MzQxMDg2NzciLCJpc3MiOiJTRjoxMDA5IiwiZXhwIjoxNzgxMDc4OTY5fQ.h-ZNqFz0A8Co0L5G7eFmw4Onh-0jHBA9XP4Mec8iDfHFVG4RrldPH32kbZ0Y46Lk2XP5jD1LwTjGWIvJPz1kpw",
+  warehouse: process.env.SNOWFLAKE_WAREHOUSE || "COMPUTE_WH",
   database: process.env.SNOWFLAKE_DATABASE || "DBT_CORE_PROD_DATABASE",
-  schema: process.env.SNOWFLAKE_SCHEMA || "USER_SEGMENTATION_PROJECT_V4"
+  schema: process.env.SNOWFLAKE_SCHEMA || "OPERATIONS"
 });
