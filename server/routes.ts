@@ -773,6 +773,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update campaign job conversion status
+  app.post("/api/campaigns/:campaignId/jobs/:jobId/convert", async (req, res) => {
+    try {
+      const { campaignId, jobId } = req.params;
+      const { itemType, soldTimestamp } = req.body;
+      
+      // Get the job from database
+      const jobs = await storage.getCampaignJobs(campaignId);
+      const job = jobs.find(j => j.jobId === jobId);
+      
+      if (!job) {
+        return res.status(404).json({ error: "Campaign job not found" });
+      }
+      
+      // Update the recommendation to mark item as sold
+      const updatedRecommendation = { ...job.recommendation };
+      if (updatedRecommendation.upselling_items) {
+        updatedRecommendation.upselling_items = updatedRecommendation.upselling_items.map((item: any) => {
+          if (item.item_type === itemType) {
+            return { ...item, sold: soldTimestamp || new Date().toISOString() };
+          }
+          return item;
+        });
+      }
+      
+      // Update job in database with new recommendation
+      await db.update(campaignJobs)
+        .set({ recommendation: updatedRecommendation })
+        .where(eq(campaignJobs.jobId, jobId));
+      
+      // Update campaign conversion count
+      const campaign = await storage.getCampaign(campaignId);
+      if (campaign) {
+        await storage.updateCampaign(campaignId, {
+          conversions: (campaign.conversions || 0) + 1
+        });
+      }
+      
+      res.json({ success: true, updatedRecommendation });
+    } catch (error) {
+      console.error("Convert campaign job error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to convert campaign job" 
+      });
+    }
+  });
+
+  // Simulate random conversions for testing
+  app.post("/api/campaigns/:campaignId/simulate-conversions", async (req, res) => {
+    try {
+      const { campaignId } = req.params;
+      const { conversionRate = 0.1 } = req.body; // Default 10% conversion rate
+      
+      const jobs = await storage.getCampaignJobs(campaignId);
+      const sentJobs = jobs.filter(job => job.status === 'sent');
+      
+      let conversionsCreated = 0;
+      
+      for (const job of sentJobs) {
+        if (Math.random() < conversionRate) {
+          // Randomly select one item to convert
+          if (job.recommendation?.upselling_items?.length > 0) {
+            const itemIndex = Math.floor(Math.random() * job.recommendation.upselling_items.length);
+            const item = job.recommendation.upselling_items[itemIndex];
+            
+            if (item.sold === null) {
+              const soldTimestamp = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString();
+              
+              const updatedRecommendation = { ...job.recommendation };
+              updatedRecommendation.upselling_items[itemIndex] = {
+                ...item,
+                sold: soldTimestamp
+              };
+              
+              await db.update(campaignJobs)
+                .set({ recommendation: updatedRecommendation })
+                .where(eq(campaignJobs.jobId, job.jobId));
+              
+              conversionsCreated++;
+            }
+          }
+        }
+      }
+      
+      // Update campaign conversion count
+      const campaign = await storage.getCampaign(campaignId);
+      if (campaign) {
+        await storage.updateCampaign(campaignId, {
+          conversions: (campaign.conversions || 0) + conversionsCreated
+        });
+      }
+      
+      res.json({ 
+        success: true, 
+        conversionsCreated,
+        totalJobs: sentJobs.length,
+        conversionRate: conversionRate * 100
+      });
+    } catch (error) {
+      console.error("Simulate conversions error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to simulate conversions" 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
