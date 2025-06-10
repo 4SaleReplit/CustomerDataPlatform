@@ -147,11 +147,28 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
     }
 
     if (!snowflakeData || !snowflakeData.success) {
+      const isNetworkPolicyError = snowflakeData?.error?.includes('Network Policy Error');
+      
+      if (isNetworkPolicyError) {
+        return (
+          <div className="h-full flex flex-col items-center justify-center p-4 text-center">
+            <div className="flex items-center gap-2 text-orange-500 mb-2">
+              <SiSnowflake className="w-5 h-5" />
+              <AlertCircle className="w-4 h-4" />
+            </div>
+            <div className="text-sm font-medium text-orange-600 mb-1">Snowflake Network Policy</div>
+            <div className="text-xs text-muted-foreground">
+              Contact your Snowflake admin to whitelist Replit IP ranges
+            </div>
+          </div>
+        );
+      }
+      
       return (
         <div className="h-full flex items-center justify-center">
           <div className="flex items-center gap-2 text-red-500">
             <AlertCircle className="w-4 h-4" />
-            {snowflakeData?.error || 'Failed to load data'}
+            <span className="text-sm">{snowflakeData?.error || 'Failed to load data'}</span>
           </div>
         </div>
       );

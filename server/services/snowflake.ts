@@ -55,6 +55,17 @@ export class SnowflakeService {
       if (!response.ok) {
         const errorText = await response.text();
         console.log(`Snowflake query error: ${response.status} - ${errorText}`);
+        
+        // Handle network policy errors specifically
+        if (errorText.includes("Network policy is required") || errorText.includes("390432")) {
+          return {
+            columns: [],
+            rows: [],
+            success: false,
+            error: "Snowflake Network Policy Error: Replit's IP address needs to be whitelisted in your Snowflake network policy. Please contact your Snowflake administrator to add Replit's IP ranges to the allowed network policy."
+          };
+        }
+        
         return {
           columns: [],
           rows: [],
