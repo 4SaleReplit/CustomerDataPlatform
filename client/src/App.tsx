@@ -17,6 +17,8 @@ import Segments from "./pages/Segments";
 import SegmentDetail from "./pages/SegmentDetail";
 import Campaigns from "./pages/Campaigns";
 import CampaignBuilder from "./pages/CampaignBuilder";
+import CampaignDetail from "./pages/CampaignDetail";
+import CampaignEdit from "./pages/CampaignEdit";
 import Promotions from "./pages/Promotions";
 import Calendar from "./pages/Calendar";
 import ActivityLog from "./pages/ActivityLog";
