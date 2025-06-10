@@ -78,6 +78,11 @@ export default function Segments() {
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Track page visit on component mount
+  React.useEffect(() => {
+    trackBusinessEvent.pageViewed('segments');
+  }, []);
   const itemsPerPage = 10;
 
   // Fetch segments from database

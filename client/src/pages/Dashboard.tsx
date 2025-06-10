@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw, Settings, X, Save, Plus } from 'lucide-react';
@@ -199,8 +199,9 @@ export default function Dashboard() {
     }
   };
 
-  // Load tiles on component mount
+  // Load tiles on component mount and track page view
   useEffect(() => {
+    trackBusinessEvent.pageViewed('dashboard');
     loadTiles();
   }, []);
 

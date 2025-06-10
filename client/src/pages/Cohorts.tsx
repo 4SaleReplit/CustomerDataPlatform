@@ -125,6 +125,11 @@ export default function Cohorts() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Track page visit on component mount
+  React.useEffect(() => {
+    trackBusinessEvent.pageViewed('cohorts');
+  }, []);
+
   // Fetch cohorts from database
   const { data: cohorts = [], isLoading, error } = useQuery({
     queryKey: ['/api/cohorts'],

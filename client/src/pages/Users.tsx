@@ -20,6 +20,11 @@ export default function Users() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const queryClient = useQueryClient();
 
+  // Track page visit on component mount
+  React.useEffect(() => {
+    trackBusinessEvent.pageViewed('users');
+  }, []);
+
   const usersPerPage = 10;
 
   // Fetch users from Snowflake with caching
