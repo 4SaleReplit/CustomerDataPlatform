@@ -45,6 +45,30 @@ export default function CampaignDetail() {
     queryFn: () => apiRequest('/api/cohorts')
   });
 
+  // Simulate conversions mutation
+  const simulateConversionsMutation = useMutation({
+    mutationFn: () => apiRequest(`/api/campaigns/${campaignId}/simulate-conversions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversionRate: 0.15 }) // 15% conversion rate
+    }),
+    onSuccess: (data) => {
+      toast({
+        title: "Conversions Simulated",
+        description: `Created ${data.conversionsCreated} conversions from ${data.totalJobs} jobs (${data.conversionRate}% rate)`
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/campaigns', campaignId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/campaigns', campaignId, 'jobs'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to simulate conversions",
+        variant: "destructive"
+      });
+    }
+  });
+
   if (campaignLoading) {
     return <div className="flex items-center justify-center h-64">Loading campaign...</div>;
   }

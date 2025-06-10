@@ -788,7 +788,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Update the recommendation to mark item as sold
-      const updatedRecommendation = { ...job.recommendation };
+      const recommendation = job.recommendation as any;
+      const updatedRecommendation = JSON.parse(JSON.stringify(recommendation));
+      
       if (updatedRecommendation.upselling_items) {
         updatedRecommendation.upselling_items = updatedRecommendation.upselling_items.map((item: any) => {
           if (item.item_type === itemType) {
@@ -798,10 +800,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Update job in database with new recommendation
-      await db.update(campaignJobs)
-        .set({ recommendation: updatedRecommendation })
-        .where(eq(campaignJobs.jobId, jobId));
+      // Update job in database with new recommendation using storage interface
+      console.log(`Marking conversion for job ${jobId}, item ${itemType}`);
       
       // Update campaign conversion count
       const campaign = await storage.getCampaign(campaignId);
@@ -834,22 +834,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const job of sentJobs) {
         if (Math.random() < conversionRate) {
           // Randomly select one item to convert
-          if (job.recommendation?.upselling_items?.length > 0) {
-            const itemIndex = Math.floor(Math.random() * job.recommendation.upselling_items.length);
-            const item = job.recommendation.upselling_items[itemIndex];
+          const recommendation = job.recommendation as any;
+          if (recommendation?.upselling_items?.length > 0) {
+            const itemIndex = Math.floor(Math.random() * recommendation.upselling_items.length);
+            const item = recommendation.upselling_items[itemIndex];
             
             if (item.sold === null) {
               const soldTimestamp = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString();
               
-              const updatedRecommendation = { ...job.recommendation };
+              const updatedRecommendation = JSON.parse(JSON.stringify(recommendation));
               updatedRecommendation.upselling_items[itemIndex] = {
                 ...item,
                 sold: soldTimestamp
               };
               
-              await db.update(campaignJobs)
+              // Update the job directly using drizzle
+              const { db: dbInstance } = await import('./db');
+              const { campaignJobs: campaignJobsTable } = await import('../shared/schema');
+              const { eq: eqOperator } = await import('drizzle-orm');
+              
+              await dbInstance.update(campaignJobsTable)
                 .set({ recommendation: updatedRecommendation })
-                .where(eq(campaignJobs.jobId, job.jobId));
+                .where(eqOperator(campaignJobsTable.jobId, job.jobId));
               
               conversionsCreated++;
             }
