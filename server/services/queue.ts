@@ -12,7 +12,6 @@ try {
   campaignQueue = new Bull('campaign processing', redisUrl, {
     redis: {
       maxRetriesPerRequest: 3,
-      retryDelayOnFailover: 100,
       lazyConnect: true
     },
     defaultJobOptions: {
@@ -159,32 +158,69 @@ if (campaignQueue) {
 
 // Queue a campaign for processing
 export async function queueCampaign(campaignId: string, cohortId: string, upsellItems: any[]) {
-  const job = await campaignQueue.add('process-campaign', {
-    campaignId,
-    cohortId,
-    upsellItems
-  });
+  if (campaignQueue) {
+    try {
+      const job = await campaignQueue.add('process-campaign', {
+        campaignId,
+        cohortId,
+        upsellItems
+      });
+      return job.id;
+    } catch (error) {
+      console.warn('Failed to queue campaign, processing directly:', error);
+    }
+  }
   
-  return job.id;
+  // Fallback to direct processing
+  console.log('Processing campaign directly without Redis queue');
+  const result = await processCampaign(campaignId, cohortId, upsellItems);
+  return `direct-${Date.now()}`;
 }
 
 // Get queue statistics
 export async function getQueueStats() {
-  const waiting = await campaignQueue.getWaiting();
-  const active = await campaignQueue.getActive();
-  const completed = await campaignQueue.getCompleted();
-  const failed = await campaignQueue.getFailed();
+  if (!campaignQueue) {
+    return {
+      waiting: 0,
+      active: 0,
+      completed: 0,
+      failed: 0,
+      mode: 'direct'
+    };
+  }
   
-  return {
-    waiting: waiting.length,
-    active: active.length,
-    completed: completed.length,
-    failed: failed.length
-  };
+  try {
+    const waiting = await campaignQueue.getWaiting();
+    const active = await campaignQueue.getActive();
+    const completed = await campaignQueue.getCompleted();
+    const failed = await campaignQueue.getFailed();
+    
+    return {
+      waiting: waiting.length,
+      active: active.length,
+      completed: completed.length,
+      failed: failed.length,
+      mode: 'redis'
+    };
+  } catch (error) {
+    return {
+      waiting: 0,
+      active: 0,
+      completed: 0,
+      failed: 0,
+      mode: 'error'
+    };
+  }
 }
 
 // Clean completed jobs older than 24 hours
 export async function cleanupJobs() {
-  await campaignQueue.clean(24 * 60 * 60 * 1000, 'completed');
-  await campaignQueue.clean(24 * 60 * 60 * 1000, 'failed');
+  if (campaignQueue) {
+    try {
+      await campaignQueue.clean(24 * 60 * 60 * 1000, 'completed');
+      await campaignQueue.clean(24 * 60 * 60 * 1000, 'failed');
+    } catch (error) {
+      console.warn('Failed to clean queue jobs:', error);
+    }
+  }
 }
