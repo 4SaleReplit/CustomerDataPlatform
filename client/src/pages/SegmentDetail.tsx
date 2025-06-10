@@ -13,51 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { trackBusinessEvent } from '@/lib/amplitude';
 
-// Mock segment data
-const mockSegmentData: Record<string, any> = {
-  '1': {
-    id: 1,
-    name: 'is_top_lister',
-    description: 'Users with more than 10 total listings',
-    rule: 'total_listings_count > 10',
-    userCount: 5432,
-    status: 'active',
-    createdDate: '2024-01-15',
-    updatedDate: '2024-06-01',
-    createdBy: 'John Smith',
-    conditions: [
-      { attribute: 'total_listings_count', operator: '>', value: '10' }
-    ],
-    stats: {
-      avgCltv: 485.23,
-      conversionRate: 12.5,
-      churnRate: 3.2,
-      avgListings: 15.7,
-      totalRevenue: 2641256.75
-    }
-  },
-  '2': {
-    id: 2,
-    name: 'is_high_value',
-    description: 'Users with CLTV > $500',
-    rule: 'cltv > 500',
-    userCount: 2341,
-    status: 'active',
-    createdDate: '2024-02-20',
-    updatedDate: '2024-05-28',
-    createdBy: 'Sarah Wilson',
-    conditions: [
-      { attribute: 'cltv', operator: '>', value: '500' }
-    ],
-    stats: {
-      avgCltv: 745.89,
-      conversionRate: 18.3,
-      churnRate: 2.1,
-      avgListings: 8.5,
-      totalRevenue: 1745632.10
-    }
-  }
-};
+
 
 function SegmentDetail() {
   const { segmentId } = useParams();
