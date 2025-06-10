@@ -49,6 +49,14 @@ export interface IStorage {
   createSegment(segment: InsertSegment): Promise<Segment>;
   updateSegment(id: string, updates: Partial<InsertSegment>): Promise<Segment | undefined>;
   deleteSegment(id: string): Promise<boolean>;
+  
+  // Campaign management
+  getCampaigns(): Promise<Campaign[]>;
+  getCampaign(id: string): Promise<Campaign | undefined>;
+  createCampaign(campaign: InsertCampaign): Promise<Campaign>;
+  updateCampaign(id: string, updates: Partial<InsertCampaign>): Promise<Campaign | undefined>;
+  deleteCampaign(id: string): Promise<boolean>;
+  getCampaignJobs(campaignId: string): Promise<CampaignJob[]>;
 }
 
 export class DatabaseStorage implements IStorage {

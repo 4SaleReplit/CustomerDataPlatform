@@ -115,6 +115,40 @@ export const dashboardTileInstances = pgTable("dashboard_tile_instances", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
 });
 
+// Campaigns
+export const campaigns = pgTable("campaigns", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  cohortId: uuid("cohort_id").references(() => cohorts.id),
+  status: text("status").notNull().default("draft"), // draft, active, paused, completed
+  schedule: text("schedule").notNull().default("now"), // now, later
+  scheduledDate: timestamp("scheduled_date", { withTimezone: true }),
+  upsellItems: jsonb("upsell_items").notNull(), // Array of upsell items
+  messagesSent: integer("messages_sent").default(0),
+  views: integer("views").default(0),
+  conversions: integer("conversions").default(0),
+  createdBy: uuid("created_by").references(() => team.id, { onDelete: 'set null' }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true })
+});
+
+// Campaign jobs tracking Redis queue jobs
+export const campaignJobs = pgTable("campaign_jobs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  campaignId: uuid("campaign_id").references(() => campaigns.id),
+  jobId: varchar("job_id", { length: 255 }).notNull(), // Redis Bull job ID
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  userAdvId: integer("user_adv_id").notNull(),
+  recommendation: jsonb("recommendation").notNull(), // The upselling recommendation
+  status: text("status").notNull().default("pending"), // pending, sent, failed
+  error: text("error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  processedAt: timestamp("processed_at", { withTimezone: true })
+});
+
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -157,6 +191,20 @@ export const insertDashboardTileInstanceSchema = createInsertSchema(dashboardTil
   updatedAt: true,
 });
 
+export const insertCampaignSchema = createInsertSchema(campaigns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  startedAt: true,
+  completedAt: true,
+});
+
+export const insertCampaignJobSchema = createInsertSchema(campaignJobs).omit({
+  id: true,
+  createdAt: true,
+  processedAt: true,
+});
+
 // Type exports
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -171,3 +219,7 @@ export type InsertDashboardTile = z.infer<typeof insertDashboardTileSchema>;
 export type DashboardTileType = typeof dashboardTiles.$inferSelect;
 export type InsertDashboardTileInstance = z.infer<typeof insertDashboardTileInstanceSchema>;
 export type DashboardTileInstance = typeof dashboardTileInstances.$inferSelect;
+export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
+export type Campaign = typeof campaigns.$inferSelect;
+export type InsertCampaignJob = z.infer<typeof insertCampaignJobSchema>;
+export type CampaignJob = typeof campaignJobs.$inferSelect;
