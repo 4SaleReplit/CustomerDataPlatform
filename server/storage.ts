@@ -14,7 +14,12 @@ import {
   type InsertCohort,
   type UpdateCohort,
   type Segment,
-  type InsertSegment
+  type InsertSegment,
+  campaigns,
+  type Campaign,
+  type InsertCampaign,
+  campaignJobs,
+  type CampaignJob
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, or } from "drizzle-orm";
@@ -249,6 +254,44 @@ export class DatabaseStorage implements IStorage {
       .delete(segments)
       .where(eq(segments.id, id));
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Campaign management methods
+  async getCampaigns(): Promise<Campaign[]> {
+    return await db.select().from(campaigns);
+  }
+
+  async getCampaign(id: string): Promise<Campaign | undefined> {
+    const [campaign] = await db.select().from(campaigns).where(eq(campaigns.id, id));
+    return campaign || undefined;
+  }
+
+  async createCampaign(insertCampaign: InsertCampaign): Promise<Campaign> {
+    const [campaign] = await db
+      .insert(campaigns)
+      .values(insertCampaign)
+      .returning();
+    return campaign;
+  }
+
+  async updateCampaign(id: string, updates: Partial<InsertCampaign>): Promise<Campaign | undefined> {
+    const [updatedCampaign] = await db
+      .update(campaigns)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(campaigns.id, id))
+      .returning();
+    return updatedCampaign || undefined;
+  }
+
+  async deleteCampaign(id: string): Promise<boolean> {
+    const result = await db
+      .delete(campaigns)
+      .where(eq(campaigns.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getCampaignJobs(campaignId: string): Promise<CampaignJob[]> {
+    return await db.select().from(campaignJobs).where(eq(campaignJobs.campaignId, campaignId));
   }
 }
 
