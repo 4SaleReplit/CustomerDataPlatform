@@ -146,6 +146,27 @@ export default function Segments() {
     }
   });
 
+  // Refresh segment mutation
+  const refreshSegmentMutation = useMutation({
+    mutationFn: (segmentId: string) => apiRequest(`/api/segments/${segmentId}/refresh`, {
+      method: 'POST'
+    }),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/segments'] });
+      toast({
+        title: "Segment Refreshed",
+        description: `User count updated: ${data.userCount.toLocaleString()} users`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to refresh segment",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Filter and sort segments
   const filteredSegments = segments
     .filter((segment: any) => {
@@ -464,7 +485,7 @@ export default function Segments() {
                       </code>
                     </td>
                     <td className="py-3 px-4 font-medium">
-                      {segment.userCount > 0 ? segment.userCount.toLocaleString() : '-'}
+                      {segment.conditions?.userCount > 0 ? segment.conditions.userCount.toLocaleString() : '-'}
                     </td>
                     <td className="py-3 px-4">{getStatusBadge(segment.status || 'active')}</td>
                     <td className="py-3 px-4 text-sm text-gray-600">
@@ -498,6 +519,11 @@ export default function Segments() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem onClick={() => refreshSegmentMutation.mutate(segment.id)}>
+                              <RefreshCw className="mr-2 h-4 w-4" />
+                              Refresh Count
+                            </DropdownMenuItem>
+                            
                             <DropdownMenuItem onClick={() => handleDuplicateSegment(segment)}>
                               <Copy className="mr-2 h-4 w-4" />
                               Duplicate
