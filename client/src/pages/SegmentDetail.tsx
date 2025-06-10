@@ -321,11 +321,11 @@ function SegmentDetail() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Total Users</span>
-                <span className="font-bold text-lg">{segmentData.userCount.toLocaleString()}</span>
+                <span className="font-bold text-lg">{segmentData.conditions?.userCount?.toLocaleString() || 'N/A'}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Status</span>
-                {getStatusBadge(segmentData.status)}
+                {getStatusBadge(segmentData.isActive ? 'active' : 'inactive')}
               </div>
             </CardContent>
           </Card>
@@ -340,21 +340,25 @@ function SegmentDetail() {
                 <Label className="text-sm text-gray-600">Created By</Label>
                 <div className="flex items-center gap-2 mt-1">
                   <User className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm">{segmentData.createdBy}</span>
+                  <span className="text-sm">{segmentData.createdBy || 'System'}</span>
                 </div>
               </div>
               <div>
                 <Label className="text-sm text-gray-600">Created At</Label>
                 <div className="flex items-center gap-2 mt-1">
                   <Calendar className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm">{new Date(segmentData.createdDate).toLocaleDateString()}</span>
+                  <span className="text-sm">
+                    {segmentData.createdAt ? new Date(segmentData.createdAt).toLocaleDateString() : 'Unknown'}
+                  </span>
                 </div>
               </div>
               <div>
                 <Label className="text-sm text-gray-600">Last Updated</Label>
                 <div className="flex items-center gap-2 mt-1">
                   <RefreshCw className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm">{new Date(segmentData.updatedDate).toLocaleDateString()}</span>
+                  <span className="text-sm">
+                    {segmentData.updatedAt ? new Date(segmentData.updatedAt).toLocaleDateString() : 'Unknown'}
+                  </span>
                 </div>
               </div>
             </CardContent>
