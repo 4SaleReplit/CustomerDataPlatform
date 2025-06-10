@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { trackBusinessEvent } from '@/lib/amplitude';
 
 // Helper functions for dynamic operator selection based on data type
 const getOperatorsForType = (dataType: string) => {
@@ -106,12 +107,20 @@ export default function Segments() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(segmentData)
     }),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/segments'] });
       toast({
         title: "Segment Created",
         description: "Segment tag has been created successfully.",
       });
+      
+      // Track segment creation in Amplitude
+      trackBusinessEvent.segmentCreated(
+        newSegment.name,
+        newSegment.attribute,
+        newSegment.operator
+      );
+      
       setIsCreateDialogOpen(false);
       setNewSegment({ name: '', description: '', attribute: '', operator: '', value: '' });
     },
@@ -157,6 +166,9 @@ export default function Segments() {
         title: "Segment Refreshed",
         description: `User count updated: ${data.userCount.toLocaleString()} users`,
       });
+      
+      // Track segment refresh in Amplitude
+      trackBusinessEvent.segmentRefreshed(data.segment.id, data.userCount);
     },
     onError: (error: any) => {
       toast({

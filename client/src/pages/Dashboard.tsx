@@ -7,6 +7,7 @@ import { TileEditDialog } from '@/components/dashboard/TileEditDialog';
 import { TimeFilter, type TimeFilterState } from '@/components/dashboard/TimeFilter';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { trackBusinessEvent } from '@/lib/amplitude';
 
 const initialTiles: DashboardTile[] = [
   {
