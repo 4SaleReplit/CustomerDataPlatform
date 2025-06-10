@@ -225,12 +225,15 @@ export default function Segments() {
     const segmentData = {
       name: newSegment.name,
       description: newSegment.description,
-      rule: rule,
-      attribute: newSegment.attribute,
-      operator: newSegment.operator,
-      value: newSegment.value,
-      status: 'active',
-      createdBy: 'Current User' // TODO: Get from auth context
+      segmentType: 'behavioral',
+      conditions: {
+        attribute: newSegment.attribute,
+        operator: newSegment.operator,
+        value: newSegment.value,
+        rule: rule
+      },
+      isActive: true,
+      autoAssign: false
     };
 
     createSegmentMutation.mutate(segmentData);

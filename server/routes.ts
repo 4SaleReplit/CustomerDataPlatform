@@ -496,7 +496,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("Creating segment:", req.body);
       const validatedData = insertSegmentSchema.parse(req.body);
+      
+      // Create the segment first
       const segment = await storage.createSegment(validatedData);
+      
+      // Calculate user count if conditions are provided
+      if (validatedData.conditions && typeof validatedData.conditions === 'object') {
+        try {
+          const conditions = validatedData.conditions as Record<string, any>;
+          if (conditions.rule) {
+            const query = `SELECT USER_ID FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE ${conditions.rule}`;
+            const queryResult = await snowflakeService.executeQuery(query);
+            
+            if (queryResult.success) {
+              const userCount = queryResult.rows ? queryResult.rows.length : 0;
+              // Update segment with user count
+              await storage.updateSegment(segment.id, { 
+                conditions: { 
+                  ...conditions, 
+                  userCount,
+                  lastCalculatedAt: new Date().toISOString(),
+                  calculationQuery: query
+                }
+              });
+            }
+          }
+        } catch (calcError) {
+          console.error("Segment calculation error:", calcError);
+          // Continue even if calculation fails
+        }
+      }
+      
       res.status(201).json(segment);
     } catch (error) {
       console.error("Create segment error:", error);
@@ -539,6 +569,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Delete segment error:", error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : "Failed to delete segment" 
+      });
+    }
+  });
+
+  // Segment refresh endpoint - recalculate user count
+  app.post("/api/segments/:id/refresh", async (req, res) => {
+    const { id } = req.params;
+    try {
+      // Get segment details
+      const segment = await storage.getSegment(id);
+      if (!segment) {
+        return res.status(404).json({ error: "Segment not found" });
+      }
+
+      // Execute the segment query to get user count
+      if (!segment.conditions || typeof segment.conditions !== 'object') {
+        return res.status(400).json({ error: "Segment has no conditions" });
+      }
+      
+      const conditions = segment.conditions as Record<string, any>;
+      if (!conditions.rule) {
+        return res.status(400).json({ error: "Segment has no calculation rule" });
+      }
+
+      const query = `SELECT USER_ID FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE ${conditions.rule}`;
+      const queryResult = await snowflakeService.executeQuery(query);
+      
+      if (!queryResult.success) {
+        return res.status(500).json({ 
+          error: `Failed to execute segment query: ${queryResult.error}` 
+        });
+      }
+
+      // Count users from query result
+      const userCount = queryResult.rows ? queryResult.rows.length : 0;
+      
+      // Update segment with new user count
+      const updatedSegment = await storage.updateSegment(id, { 
+        conditions: {
+          ...conditions,
+          userCount: userCount,
+          lastCalculatedAt: new Date().toISOString(),
+          calculationQuery: query
+        }
+      });
+
+      if (!updatedSegment) {
+        return res.status(404).json({ error: "Failed to update segment" });
+      }
+
+      res.json({ 
+        message: "Segment refreshed successfully",
+        userCount: userCount,
+        segment: updatedSegment
+      });
+
+    } catch (error) {
+      console.error("Segment refresh error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to refresh segment" 
       });
     }
   });
