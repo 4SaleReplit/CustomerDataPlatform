@@ -203,6 +203,14 @@ export default function UserProfile() {
                 <p className="text-gray-600">Free Listings</p>
                 <p className="font-medium">{formatNumber(userProfile.FREE_LISTINGS_COUNT)}</p>
               </div>
+              <div>
+                <p className="text-gray-600">Office Listings</p>
+                <p className="font-medium">{formatNumber(userProfile.OFFICE_LISTINGS_COUNT)}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Days Since Last Transaction</p>
+                <p className="font-medium">{formatNumber(userProfile.DAYS_SINCE_LAST_TRANSACTION)}</p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -218,17 +226,17 @@ export default function UserProfile() {
             <div>
               <p className="text-sm text-gray-600">Customer Lifetime Value</p>
               <p className="text-2xl font-bold text-green-600">
-                {userProfile.CLTV ? `$${Number(userProfile.CLTV).toFixed(2)}` : '$0.00'}
+                {userProfile.CLTV ? `${Number(userProfile.CLTV).toFixed(2)} KWD` : '0.00 KWD'}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
-                <p className="text-gray-600">Credits</p>
-                <p className="font-medium">{formatNumber(userProfile.CURRENT_CREDITS)}</p>
+                <p className="text-gray-600">Total Credits Spent</p>
+                <p className="font-medium">{formatNumber(userProfile.TOTAL_CREDITS_SPENT)} KWD</p>
               </div>
               <div>
-                <p className="text-gray-600">Region</p>
-                <p className="font-medium">{userProfile.REGION || 'N/A'}</p>
+                <p className="text-gray-600">Premium Credits Spent</p>
+                <p className="font-medium">{formatNumber(userProfile.TOTAL_PREMIUM_CREDITS_SPENT)} KWD</p>
               </div>
             </div>
           </CardContent>
@@ -296,8 +304,8 @@ export default function UserProfile() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Current Credits</p>
-                <p className="text-2xl font-bold">{formatNumber(userProfile.CURRENT_CREDITS)}</p>
+                <p className="text-sm text-gray-600">Office Listings</p>
+                <p className="text-2xl font-bold">{formatNumber(userProfile.OFFICE_LISTINGS_COUNT)}</p>
               </div>
               <DollarSign className="h-8 w-8 text-yellow-600" />
             </div>
@@ -362,20 +370,28 @@ export default function UserProfile() {
                 <div className="flex justify-between">
                   <span className="text-gray-600">CLTV:</span>
                   <span className="font-semibold text-green-600">
-                    {userProfile.CLTV ? `$${Number(userProfile.CLTV).toFixed(2)}` : '$0.00'}
+                    {userProfile.CLTV ? `${Number(userProfile.CLTV).toFixed(2)} KWD` : '0.00 KWD'}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Current Credits:</span>
-                  <span>{formatNumber(userProfile.CURRENT_CREDITS)}</span>
+                  <span className="text-gray-600">Total Credits Spent:</span>
+                  <span>{formatNumber(userProfile.TOTAL_CREDITS_SPENT)} KWD</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Premium Credits Spent:</span>
+                  <span>{formatNumber(userProfile.TOTAL_PREMIUM_CREDITS_SPENT)} KWD</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Days Since Last Transaction:</span>
+                  <span>{formatNumber(userProfile.DAYS_SINCE_LAST_TRANSACTION)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Total Listings:</span>
                   <span>{formatNumber(userProfile.TOTAL_LISTINGS_COUNT)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Paid/Free:</span>
-                  <span>{formatNumber(userProfile.PAID_LISTINGS_COUNT)}/{formatNumber(userProfile.FREE_LISTINGS_COUNT)}</span>
+                  <span className="text-gray-600">Paid/Free/Office:</span>
+                  <span>{formatNumber(userProfile.PAID_LISTINGS_COUNT)}/{formatNumber(userProfile.FREE_LISTINGS_COUNT)}/{formatNumber(userProfile.OFFICE_LISTINGS_COUNT)}</span>
                 </div>
               </div>
             </div>

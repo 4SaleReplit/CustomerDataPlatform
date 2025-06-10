@@ -29,7 +29,7 @@ export default function Users() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          query: 'SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 LIMIT 100' 
+          query: 'SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE CURRENT_CREDITS_IN_WALLET != 0 AND TOTAL_CREDITS_SPENT != 0 LIMIT 100' 
         })
       });
       return response;
@@ -246,11 +246,12 @@ export default function Users() {
               <thead>
                 <tr className="border-b">
                   <th className="text-left py-3 px-4 font-medium">User ID</th>
-                  <th className="text-left py-3 px-4 font-medium">Contact</th>
+                  <th className="text-left py-3 px-4 font-medium">Phone</th>
                   <th className="text-left py-3 px-4 font-medium">Type</th>
                   <th className="text-left py-3 px-4 font-medium">Listings</th>
-                  <th className="text-left py-3 px-4 font-medium">CLTV</th>
-                  <th className="text-left py-3 px-4 font-medium">Last Activity</th>
+                  <th className="text-left py-3 px-4 font-medium">Credits Spent</th>
+                  <th className="text-left py-3 px-4 font-medium">CLTV (KWD)</th>
+                  <th className="text-left py-3 px-4 font-medium">Days Since Last Transaction</th>
                   <th className="text-left py-3 px-4 font-medium">Status</th>
                   <th className="text-left py-3 px-4 font-medium">Actions</th>
                 </tr>
@@ -265,30 +266,58 @@ export default function Users() {
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="space-y-1">
-                        <div className="text-sm font-medium">{user.EMAIL || 'N/A'}</div>
-                        <div className="text-xs text-gray-500">{user.PHONE_NUMBER || 'No phone'}</div>
-                      </div>
+                      <div className="text-sm">{user.PHONE_NUMBER || 'No phone'}</div>
                     </td>
                     <td className="py-3 px-4">
                       {getUserTypeBadge(user.USER_TYPE)}
                     </td>
                     <td className="py-3 px-4">
-                      <div className="text-center">
-                        <div className="text-lg font-semibold">{formatNumber(user.TOTAL_LISTINGS_COUNT)}</div>
-                        <div className="text-xs text-gray-500">listings</div>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Total:</span>
+                          <span className="font-semibold">{formatNumber(user.TOTAL_LISTINGS_COUNT)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Paid:</span>
+                          <span className="font-medium text-blue-600">{formatNumber(user.PAID_LISTINGS_COUNT)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Free:</span>
+                          <span className="font-medium text-green-600">{formatNumber(user.FREE_LISTINGS_COUNT)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Office:</span>
+                          <span className="font-medium text-purple-600">{formatNumber(user.OFFICE_LISTINGS_COUNT)}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Total:</span>
+                          <span className="font-semibold">{formatNumber(user.TOTAL_CREDITS_SPENT)} KWD</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Premium:</span>
+                          <span className="font-medium text-orange-600">{formatNumber(user.TOTAL_PREMIUM_CREDITS_SPENT)} KWD</span>
+                        </div>
                       </div>
                     </td>
                     <td className="py-3 px-4">
                       <div className="text-center">
                         <div className="text-lg font-semibold text-green-600">
-                          {user.CLTV ? `$${Number(user.CLTV).toFixed(0)}` : '$0'}
+                          {user.CLTV ? `${Number(user.CLTV).toFixed(0)} KWD` : '0 KWD'}
                         </div>
                         <div className="text-xs text-gray-500">lifetime value</div>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-600">
-                      {formatDate(user.LAST_ACTIVE_DATE || user.CREATED_DATE)}
+                    <td className="py-3 px-4">
+                      <div className="text-center">
+                        <div className="text-lg font-semibold">
+                          {formatNumber(user.DAYS_SINCE_LAST_TRANSACTION)}
+                        </div>
+                        <div className="text-xs text-gray-500">days ago</div>
+                      </div>
                     </td>
                     <td className="py-3 px-4">
                       <Badge 
