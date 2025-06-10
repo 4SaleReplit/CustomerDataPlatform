@@ -8,7 +8,28 @@ import { Switch } from '@/components/ui/switch';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Plus, Users, TrendingUp, TrendingDown } from 'lucide-react';
 import { SimpleDashboardGrid } from './SimpleDashboardGrid';
-import type { DashboardTile } from '@/types/dashboard';
+
+export interface DashboardTile {
+  id: string;
+  type: 'metric' | 'chart' | 'table' | 'funnel' | 'gauge';
+  title: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  icon?: string;
+  dataSource: {
+    table: string;
+    query: string;
+    aggregation?: string;
+    groupBy?: string;
+  };
+  refreshConfig: {
+    autoRefresh: boolean;
+    refreshOnLoad: boolean;
+    lastRefreshed?: Date;
+  };
+}
 
 interface DashboardBuilderProps {
   tiles: DashboardTile[];
