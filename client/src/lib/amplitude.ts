@@ -23,10 +23,36 @@ export const initializeAmplitude = () => {
   }
 };
 
-// Track custom events
+// Track custom events with user context
 export const trackEvent = (eventName: string, eventProperties?: Record<string, any>) => {
   if (AMPLITUDE_API_KEY) {
-    amplitude.track(eventName, eventProperties);
+    // Get current user from localStorage to enrich events
+    const storedUser = localStorage.getItem('platform_user');
+    let userContext = {};
+    
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        userContext = {
+          platform_user_id: user.id,
+          platform_username: user.username,
+          platform_user_role: user.role,
+          platform: 'CDP'
+        };
+      } catch (error) {
+        console.warn('Failed to parse user context for tracking:', error);
+      }
+    }
+    
+    // Merge user context with event properties
+    const enrichedProperties = {
+      ...userContext,
+      ...eventProperties,
+      timestamp: new Date().toISOString()
+    };
+    
+    amplitude.track(eventName, enrichedProperties);
+    console.log('Amplitude event tracked:', eventName, enrichedProperties);
   }
 };
 

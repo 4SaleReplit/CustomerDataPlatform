@@ -13,6 +13,7 @@ import {
   Cable
 } from 'lucide-react';
 import { trackBusinessEvent } from '@/lib/amplitude';
+import { useUser } from '@/contexts/UserContext';
 import {
   Sidebar,
   SidebarContent,
@@ -23,6 +24,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
 
@@ -41,6 +43,7 @@ const navigation = [
 export function AppSidebar() {
   const [location] = useLocation();
   const { state } = useSidebar();
+  const { user } = useUser();
   const isCollapsed = state === "collapsed";
 
   return (
@@ -88,6 +91,28 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      
+      <SidebarFooter>
+        {user && (
+          <div className="px-3 py-2 border-t">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                {user.username.charAt(0).toUpperCase()}
+              </div>
+              {!isCollapsed && (
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {user.username}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">
+                    {user.role}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </SidebarFooter>
     </Sidebar>
   );
 }

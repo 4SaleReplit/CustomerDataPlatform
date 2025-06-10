@@ -5,6 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Router, Route, Switch } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { Layout } from "./components/layout/Layout";
+import { UserProvider } from "./contexts/UserContext";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import UserProfile from "./pages/UserProfile";
@@ -27,41 +28,43 @@ import Integrations from "./pages/Integrations";
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <Router>
-        <Switch>
-          {/* Auth Routes */}
-          <Route path="/login" component={Login} />
-          <Route path="/register" component={Register} />
-          
-          {/* Main App Routes */}
-          <Route path="/" component={() => <Layout><Dashboard /></Layout>} />
-          <Route path="/users" component={() => <Layout><Users /></Layout>} />
-          <Route path="/users/:userId" component={() => <Layout><UserProfile /></Layout>} />
-          <Route path="/cohorts" component={() => <Layout><Cohorts /></Layout>} />
-          <Route path="/cohorts/new" component={() => <Layout><CohortBuilder /></Layout>} />
-          <Route path="/cohorts/:id" component={() => <Layout><CohortDetail /></Layout>} />
-          <Route path="/cohorts/:id/edit" component={() => <Layout><CohortEdit /></Layout>} />
-          <Route path="/segments" component={() => <Layout><Segments /></Layout>} />
-          <Route path="/segments/:segmentId" component={() => <Layout><SegmentDetail /></Layout>} />
-          <Route path="/segments/:segmentId/edit" component={() => <Layout><SegmentDetail /></Layout>} />
-          <Route path="/campaigns" component={() => <Layout><Campaigns /></Layout>} />
-          <Route path="/campaigns/new" component={() => <Layout><CampaignBuilder /></Layout>} />
-          <Route path="/campaigns/:campaignId/edit" component={() => <Layout><CampaignBuilder /></Layout>} />
-          <Route path="/campaigns/:campaignId/analytics" component={() => <Layout><Campaigns /></Layout>} />
-          <Route path="/promotions" component={() => <Layout><Promotions /></Layout>} />
-          <Route path="/calendar" component={() => <Layout><Calendar /></Layout>} />
-          <Route path="/activity-log" component={() => <Layout><ActivityLog /></Layout>} />
-          <Route path="/integrations" component={() => <Layout><Integrations /></Layout>} />
-          <Route path="/admin" component={() => <Layout><Admin /></Layout>} />
-          
-          {/* Catch-all route */}
-          <Route component={NotFound} />
-        </Switch>
-      </Router>
-    </TooltipProvider>
+    <UserProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <Router>
+          <Switch>
+            {/* Auth Routes */}
+            <Route path="/login" component={Login} />
+            <Route path="/register" component={Register} />
+            
+            {/* Main App Routes */}
+            <Route path="/" component={() => <Layout><Dashboard /></Layout>} />
+            <Route path="/users" component={() => <Layout><Users /></Layout>} />
+            <Route path="/users/:userId" component={() => <Layout><UserProfile /></Layout>} />
+            <Route path="/cohorts" component={() => <Layout><Cohorts /></Layout>} />
+            <Route path="/cohorts/new" component={() => <Layout><CohortBuilder /></Layout>} />
+            <Route path="/cohorts/:id" component={() => <Layout><CohortDetail /></Layout>} />
+            <Route path="/cohorts/:id/edit" component={() => <Layout><CohortEdit /></Layout>} />
+            <Route path="/segments" component={() => <Layout><Segments /></Layout>} />
+            <Route path="/segments/:segmentId" component={() => <Layout><SegmentDetail /></Layout>} />
+            <Route path="/segments/:segmentId/edit" component={() => <Layout><SegmentDetail /></Layout>} />
+            <Route path="/campaigns" component={() => <Layout><Campaigns /></Layout>} />
+            <Route path="/campaigns/new" component={() => <Layout><CampaignBuilder /></Layout>} />
+            <Route path="/campaigns/:campaignId/edit" component={() => <Layout><CampaignBuilder /></Layout>} />
+            <Route path="/campaigns/:campaignId/analytics" component={() => <Layout><Campaigns /></Layout>} />
+            <Route path="/promotions" component={() => <Layout><Promotions /></Layout>} />
+            <Route path="/calendar" component={() => <Layout><Calendar /></Layout>} />
+            <Route path="/activity-log" component={() => <Layout><ActivityLog /></Layout>} />
+            <Route path="/integrations" component={() => <Layout><Integrations /></Layout>} />
+            <Route path="/admin" component={() => <Layout><Admin /></Layout>} />
+            
+            {/* Catch-all route */}
+            <Route component={NotFound} />
+          </Switch>
+        </Router>
+      </TooltipProvider>
+    </UserProvider>
   </QueryClientProvider>
 );
 
