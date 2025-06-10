@@ -219,7 +219,7 @@ function SegmentDetail() {
                 <div>
                   <Label>Status</Label>
                   <div className="mt-1">
-                    {getStatusBadge(segmentData.status)}
+                    {getStatusBadge(segmentData.isActive ? 'active' : 'inactive')}
                   </div>
                 </div>
               </div>
@@ -241,20 +241,19 @@ function SegmentDetail() {
                 <Label>Rule Logic</Label>
                 {isEditing ? (
                   <div className="mt-2 space-y-2">
-                    {segmentData.conditions.map((condition: any, index: number) => (
-                      <div key={index} className="grid grid-cols-3 gap-2">
-                        <Select value={condition.attribute}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="total_listings_count">Total Listings</SelectItem>
-                            <SelectItem value="cltv">CLTV</SelectItem>
-                            <SelectItem value="user_type">User Type</SelectItem>
-                            <SelectItem value="registration_date">Registration Date</SelectItem>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Select value={segmentData.conditions?.attribute || ''}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="TOTAL_CREDITS_SPENT">Total Credits Spent</SelectItem>
+                            <SelectItem value="TOTAL_LISTINGS_COUNT">Total Listings</SelectItem>
+                            <SelectItem value="USER_TYPE">User Type</SelectItem>
+                            <SelectItem value="CURRENT_CREDITS_IN_WALLET">Current Credits</SelectItem>
                           </SelectContent>
                         </Select>
-                        <Select value={condition.operator}>
+                        <Select value={segmentData.conditions?.operator || ''}>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
@@ -265,51 +264,47 @@ function SegmentDetail() {
                             <SelectItem value="!=">!=</SelectItem>
                           </SelectContent>
                         </Select>
-                        <Input value={condition.value} />
+                        <Input value={segmentData.conditions?.value || ''} />
                       </div>
-                    ))}
                   </div>
                 ) : (
-                  <code className="block mt-1 p-3 bg-gray-50 rounded text-sm font-mono">
-                    {segmentData.rule}
-                  </code>
+                  <div className="mt-2">
+                    <div className="bg-gray-50 p-3 rounded-md font-mono text-sm">
+                      {segmentData.conditions?.rule || 'No rule defined'}
+                    </div>
+                  </div>
                 )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Performance Stats */}
+          {/* Segment Statistics */}
           <Card>
             <CardHeader>
-              <CardTitle>Performance Metrics</CardTitle>
+              <CardTitle>Segment Statistics</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-4 border rounded-lg">
-                  <TrendingUp className="h-8 w-8 mx-auto text-blue-600 mb-2" />
-                  <p className="text-2xl font-bold">${segmentData.stats?.avgCltv?.toFixed(2)}</p>
-                  <p className="text-sm text-gray-600">Avg CLTV</p>
+                  <Users className="h-8 w-8 mx-auto text-blue-600 mb-2" />
+                  <p className="text-2xl font-bold">{segmentData.conditions?.userCount?.toLocaleString() || 'N/A'}</p>
+                  <p className="text-sm text-gray-600">Total Users</p>
                 </div>
                 <div className="text-center p-4 border rounded-lg">
-                  <Users className="h-8 w-8 mx-auto text-green-600 mb-2" />
-                  <p className="text-2xl font-bold">{segmentData.stats?.conversionRate}%</p>
-                  <p className="text-sm text-gray-600">Conversion Rate</p>
-                </div>
-                <div className="text-center p-4 border rounded-lg">
-                  <RefreshCw className="h-8 w-8 mx-auto text-orange-600 mb-2" />
-                  <p className="text-2xl font-bold">{segmentData.stats?.churnRate}%</p>
-                  <p className="text-sm text-gray-600">Churn Rate</p>
-                </div>
-                <div className="text-center p-4 border rounded-lg">
-                  <Calendar className="h-8 w-8 mx-auto text-purple-600 mb-2" />
-                  <p className="text-2xl font-bold">{segmentData.stats?.avgListings}</p>
-                  <p className="text-sm text-gray-600">Avg Listings</p>
+                  <Calendar className="h-8 w-8 mx-auto text-green-600 mb-2" />
+                  <p className="text-2xl font-bold">
+                    {segmentData.conditions?.lastCalculatedAt ? 
+                      new Date(segmentData.conditions.lastCalculatedAt).toLocaleDateString() : 
+                      'Never'
+                    }
+                  </p>
+                  <p className="text-sm text-gray-600">Last Calculated</p>
                 </div>
               </div>
               <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">Total Revenue</p>
-                <p className="text-2xl font-bold text-green-600">
-                  ${segmentData.stats?.totalRevenue?.toLocaleString()}
+                <p className="text-sm text-gray-600">Segment Type</p>
+                <p className="text-lg font-semibold capitalize">
+                  {segmentData.segmentType || 'Unknown'}
                 </p>
               </div>
             </CardContent>
