@@ -431,8 +431,8 @@ export default function Segments() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Creators</SelectItem>
-                  {uniqueCreators.map(creator => (
-                    <SelectItem key={creator} value={creator}>{creator}</SelectItem>
+                  {uniqueCreators.map((creator: any) => (
+                    <SelectItem key={String(creator)} value={String(creator)}>{String(creator)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

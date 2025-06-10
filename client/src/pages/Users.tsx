@@ -311,7 +311,10 @@ export default function Users() {
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <Link to={`/users/${user.USER_ID || user.id}`}>
+                      <Link 
+                        to={`/users/${user.USER_ID || user.id}`}
+                        onClick={() => trackBusinessEvent.userProfileViewed(String(user.USER_ID || user.id), 'users_list')}
+                      >
                         <Button variant="ghost" size="sm">
                           <Eye className="h-4 w-4" />
                         </Button>

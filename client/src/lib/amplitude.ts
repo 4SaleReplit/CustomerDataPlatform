@@ -184,6 +184,13 @@ export const trackBusinessEvent = {
       record_count: recordCount,
     });
   },
+
+  // Page navigation
+  pageViewed: (pageName: string) => {
+    trackEvent('Page Viewed', {
+      page_name: pageName,
+    });
+  },
 };
 
 export default amplitude;
