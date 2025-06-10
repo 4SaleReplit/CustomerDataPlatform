@@ -44,7 +44,7 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
   const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
   const queryClient = useQueryClient();
 
-  // Fetch authentic Snowflake data with caching strategy
+  // Fetch authentic Snowflake data with caching strategy - only refresh manually
   const { data: snowflakeData, isLoading: snowflakeLoading, refetch: refetchSnowflake } = useQuery({
     queryKey: ['/api/snowflake/query', tile.id],
     queryFn: async () => {
@@ -56,23 +56,39 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
       const timestamp = new Date();
       setLastRefreshTime(timestamp);
       
-      // Store timestamp in localStorage for persistence
+      // Store both data and timestamp in localStorage for persistence
       localStorage.setItem(`tile-${tile.id}-lastRefresh`, timestamp.toISOString());
+      localStorage.setItem(`tile-${tile.id}-data`, JSON.stringify(response));
       
       return response;
     },
-    enabled: !!tile.dataSource.query && (tile.refreshConfig?.refreshOnLoad !== false),
+    enabled: false, // Never auto-fetch - only manual refresh
     staleTime: Infinity, // Keep data indefinitely unless manually refreshed
-    gcTime: 1000 * 60 * 60 * 24, // Keep in cache for 24 hours
+    gcTime: Infinity, // Keep in cache indefinitely
   });
 
-  // Load timestamp from localStorage on mount
+  // Load cached data and timestamp from localStorage on mount
+  const [cachedData, setCachedData] = useState<any>(null);
+  
   useEffect(() => {
     const storedTimestamp = localStorage.getItem(`tile-${tile.id}-lastRefresh`);
+    const storedData = localStorage.getItem(`tile-${tile.id}-data`);
+    
     if (storedTimestamp) {
       setLastRefreshTime(new Date(storedTimestamp));
     }
-  }, [tile.id]);
+    
+    if (storedData) {
+      try {
+        const parsedData = JSON.parse(storedData);
+        setCachedData(parsedData);
+        // Set the cached data in react-query cache
+        queryClient.setQueryData(['/api/snowflake/query', tile.id], parsedData);
+      } catch (error) {
+        console.error('Failed to parse cached data:', error);
+      }
+    }
+  }, [tile.id, queryClient]);
 
   // Manual refresh function
   const handleRefresh = async () => {
@@ -134,6 +150,7 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
 
   const renderTileContent = () => {
     const isLoading = snowflakeLoading || isRefreshing;
+    const dataToRender = snowflakeData || cachedData;
     
     if (isLoading) {
       return (
@@ -146,7 +163,7 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
       );
     }
 
-    if (!snowflakeData || !snowflakeData.success) {
+    if (!dataToRender || !dataToRender.success) {
       const isNetworkPolicyError = snowflakeData?.error?.includes('Network Policy Error');
       
       if (isNetworkPolicyError) {
@@ -168,7 +185,7 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
         <div className="h-full flex items-center justify-center">
           <div className="flex items-center gap-2 text-red-500">
             <AlertCircle className="w-4 h-4" />
-            <span className="text-sm">{snowflakeData?.error || 'Failed to load data'}</span>
+            <span className="text-sm">{dataToRender?.error || 'Failed to load data'}</span>
           </div>
         </div>
       );
@@ -176,7 +193,7 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
 
     switch (tile.type) {
       case 'metric':
-        const metricValue = snowflakeData.rows?.[0]?.[0];
+        const metricValue = dataToRender.rows?.[0]?.[0];
         return (
           <div className="h-full flex flex-col justify-center items-center p-6">
             <div className="text-4xl font-bold text-primary mb-3">
@@ -189,11 +206,11 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
         );
 
       case 'chart':
-        if (!snowflakeData.rows?.length) {
+        if (!dataToRender.rows?.length) {
           return <div className="h-full flex items-center justify-center text-muted-foreground">No data available</div>;
         }
 
-        const chartDataFormatted = snowflakeData.rows.map((row: any[], index: number) => ({
+        const chartDataFormatted = dataToRender.rows.map((row: any[], index: number) => ({
           name: row[0] || `Item ${index + 1}`,
           value: Number(row[1]) || 0,
         }));
@@ -234,7 +251,7 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
         );
 
       case 'table':
-        if (!snowflakeData.columns?.length || !snowflakeData.rows?.length) {
+        if (!dataToRender.columns?.length || !dataToRender.rows?.length) {
           return <div className="h-full flex items-center justify-center text-muted-foreground">No data available</div>;
         }
 
@@ -244,7 +261,7 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
               <Table className="min-w-max">
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow className="border-b">
-                    {snowflakeData.columns.map((col: any, idx: number) => (
+                    {dataToRender.columns.map((col: any, idx: number) => (
                       <TableHead key={idx} className="font-semibold text-xs px-3 py-2 text-muted-foreground bg-muted/30 whitespace-nowrap min-w-24">
                         {col.name}
                       </TableHead>
@@ -252,7 +269,7 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {snowflakeData.rows.slice(0, 100).map((row: any[], idx: number) => (
+                  {dataToRender.rows.slice(0, 100).map((row: any[], idx: number) => (
                     <TableRow key={idx} className="hover:bg-muted/30 border-b border-border/30">
                       {row.map((cell, cellIdx) => (
                         <TableCell key={cellIdx} className="text-xs px-3 py-2 whitespace-nowrap min-w-24">
