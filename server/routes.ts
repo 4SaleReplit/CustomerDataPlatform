@@ -667,6 +667,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Campaign management routes
+  app.get("/api/campaigns", async (req, res) => {
+    try {
+      const campaigns = await storage.getCampaigns();
+      res.json(campaigns);
+    } catch (error) {
+      console.error("Get campaigns error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get campaigns" 
+      });
+    }
+  });
+
+  app.get("/api/campaigns/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const campaign = await storage.getCampaign(id);
+      
+      if (!campaign) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      
+      res.json(campaign);
+    } catch (error) {
+      console.error("Get campaign error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get campaign" 
+      });
+    }
+  });
+
+  app.post("/api/campaigns", async (req, res) => {
+    try {
+      const { insertCampaignSchema } = await import('../shared/schema');
+      const validatedData = insertCampaignSchema.parse(req.body);
+      
+      const campaign = await storage.createCampaign(validatedData);
+      
+      // Queue the campaign for processing if it's set to start now
+      if (validatedData.schedule === 'now' && validatedData.cohortId) {
+        const { queueCampaign } = await import('./services/queue');
+        const jobId = await queueCampaign(
+          campaign.id, 
+          validatedData.cohortId, 
+          validatedData.upsellItems as any[]
+        );
+        
+        // Update campaign status to active
+        await storage.updateCampaign(campaign.id, { status: 'active' });
+      }
+      
+      res.status(201).json(campaign);
+    } catch (error) {
+      console.error("Create campaign error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to create campaign" 
+      });
+    }
+  });
+
+  app.put("/api/campaigns/:id", async (req, res) => {
+    try {
+      const { insertCampaignSchema } = await import('../shared/schema');
+      const validatedData = insertCampaignSchema.partial().parse(req.body);
+      
+      const updatedCampaign = await storage.updateCampaign(req.params.id, validatedData);
+      if (!updatedCampaign) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      
+      res.json(updatedCampaign);
+    } catch (error) {
+      console.error("Update campaign error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to update campaign" 
+      });
+    }
+  });
+
+  app.delete("/api/campaigns/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteCampaign(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Delete campaign error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to delete campaign" 
+      });
+    }
+  });
+
+  app.get("/api/campaigns/:id/jobs", async (req, res) => {
+    try {
+      const jobs = await storage.getCampaignJobs(req.params.id);
+      res.json(jobs);
+    } catch (error) {
+      console.error("Get campaign jobs error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get campaign jobs" 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

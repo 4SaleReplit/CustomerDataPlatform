@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'wouter';
 import { Plus, Eye, Edit, Trash2, Play, Pause, BarChart3, MoreHorizontal, Copy } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,67 +13,51 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 
-// Mock campaign data
-const mockCampaigns = [
-  {
-    id: 1,
-    name: 'Welcome New Users',
-    description: 'Onboarding campaign for users registered in last 7 days',
-    targetCohort: 'New Users',
-    status: 'active',
-    startDate: '2024-06-01',
-    endDate: '2024-06-30',
-    messagesSent: 1234,
-    views: 892,
-    conversions: 156
-  },
-  {
-    id: 2,
-    name: 'Re-engage Inactive Users',
-    description: 'Win back users who haven\'t logged in for 30 days',
-    targetCohort: 'Inactive Users',
-    status: 'paused',
-    startDate: '2024-05-15',
-    endDate: '2024-06-15',
-    messagesSent: 5432,
-    views: 2341,
-    conversions: 234
-  },
-  {
-    id: 3,
-    name: 'Premium Upsell',
-    description: 'Promote premium features to regular users',
-    targetCohort: 'Regular Users',
-    status: 'scheduled',
-    startDate: '2024-06-10',
-    endDate: '2024-06-25',
-    messagesSent: 0,
-    views: 0,
-    conversions: 0
-  },
-  {
-    id: 4,
-    name: 'Listing Boost Promotion',
-    description: 'Promote listing boost feature to active listers',
-    targetCohort: 'Active Listers',
-    status: 'completed',
-    startDate: '2024-05-01',
-    endDate: '2024-05-31',
-    messagesSent: 8976,
-    views: 6234,
-    conversions: 891
-  }
-];
-
 export default function Campaigns() {
   const [searchTerm, setSearchTerm] = useState('');
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [duplicatingCampaign, setDuplicatingCampaign] = useState<any>(null);
   const [newCampaignName, setNewCampaignName] = useState('');
 
-  const filteredCampaigns = mockCampaigns.filter(campaign =>
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch campaigns from database
+  const { data: campaigns = [], isLoading: campaignsLoading } = useQuery({
+    queryKey: ['/api/campaigns'],
+    queryFn: () => apiRequest('/api/campaigns')
+  });
+
+  // Fetch cohorts for display purposes
+  const { data: cohorts = [] } = useQuery({
+    queryKey: ['/api/cohorts'],
+    queryFn: () => apiRequest('/api/cohorts')
+  });
+
+  // Delete campaign mutation
+  const deleteCampaignMutation = useMutation({
+    mutationFn: (campaignId: string) => apiRequest(`/api/campaigns/${campaignId}`, {
+      method: 'DELETE'
+    }),
+    onSuccess: () => {
+      toast({
+        title: "Campaign Deleted",
+        description: "Campaign has been successfully deleted."
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/campaigns'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete campaign",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const filteredCampaigns = campaigns.filter((campaign: any) =>
     campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    campaign.description.toLowerCase().includes(searchTerm.toLowerCase())
+    (campaign.description && campaign.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const getStatusBadge = (status: string) => {
@@ -118,9 +105,14 @@ export default function Campaigns() {
     // Here you would typically navigate to edit page or open edit modal
   };
 
-  const handleDeleteCampaign = (campaignId: number) => {
-    console.log('Deleting campaign:', campaignId);
-    // Here you would typically call an API to delete the campaign
+  const handleDeleteCampaign = (campaignId: string) => {
+    deleteCampaignMutation.mutate(campaignId);
+  };
+
+  // Helper function to get cohort name by ID
+  const getCohortName = (cohortId: string) => {
+    const cohort = cohorts.find((c: any) => c.id === cohortId);
+    return cohort ? cohort.name : 'Unknown Cohort';
   };
 
   return (

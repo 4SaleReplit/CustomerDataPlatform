@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 interface UpsellItem {
   id: string;
@@ -24,7 +27,7 @@ export default function CampaignBuilder() {
   const [campaignData, setCampaignData] = useState({
     name: '',
     description: '',
-    targetCohort: '',
+    cohortId: '',
     schedule: 'now',
     scheduledDate: '',
     scheduledTime: ''
@@ -40,12 +43,42 @@ export default function CampaignBuilder() {
     }
   ]);
 
-  const mockCohorts = [
-    'Premium Users',
-    'Active Listers',
-    'New Users',
-    'High Value Customers'
-  ];
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch real cohorts from database
+  const { data: cohorts = [], isLoading: cohortsLoading } = useQuery({
+    queryKey: ['/api/cohorts'],
+    queryFn: () => apiRequest('/api/cohorts')
+  });
+
+  // Get selected cohort details
+  const selectedCohort = cohorts.find((c: any) => c.id === campaignData.cohortId);
+
+  // Create campaign mutation
+  const createCampaignMutation = useMutation({
+    mutationFn: (campaignData: any) => apiRequest('/api/campaigns', {
+      method: 'POST',
+      body: JSON.stringify(campaignData),
+      headers: { 'Content-Type': 'application/json' }
+    }),
+    onSuccess: () => {
+      toast({
+        title: "Campaign Created",
+        description: "Your campaign has been created and queued for processing."
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/campaigns'] });
+      navigate('/campaigns');
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create campaign",
+        variant: "destructive"
+      });
+    }
+  });
 
   const itemTypes = [
     { value: 'refresh', label: 'Refresh Listing' },
@@ -96,11 +129,22 @@ export default function CampaignBuilder() {
   };
 
   const handleSubmit = () => {
-    // TODO: Implement campaign submission
-    console.log('Submitting campaign:', {
-      ...campaignData,
-      upsellItems: upsellItems
-    });
+    const campaignPayload = {
+      name: campaignData.name,
+      description: campaignData.description,
+      cohortId: campaignData.cohortId,
+      schedule: campaignData.schedule,
+      scheduledDate: campaignData.schedule === 'later' ? new Date(`${campaignData.scheduledDate}T${campaignData.scheduledTime}`) : null,
+      upsellItems: upsellItems.map(item => ({
+        item_type: item.item_type,
+        message: item.message,
+        metric_value: item.metric_value,
+        metric_indicator: item.metric_indicator,
+        valid_until: item.valid_until
+      }))
+    };
+    
+    createCampaignMutation.mutate(campaignPayload);
   };
 
   return (
@@ -179,23 +223,30 @@ export default function CampaignBuilder() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Target Cohort</Label>
-                  <Select value={campaignData.targetCohort} onValueChange={(value) => setCampaignData({...campaignData, targetCohort: value})}>
+                  <Select value={campaignData.cohortId} onValueChange={(value) => setCampaignData({...campaignData, cohortId: value})}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a cohort" />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockCohorts.map((cohort) => (
-                        <SelectItem key={cohort} value={cohort}>
-                          {cohort}
-                        </SelectItem>
-                      ))}
+                      {cohortsLoading ? (
+                        <SelectItem value="" disabled>Loading cohorts...</SelectItem>
+                      ) : (
+                        cohorts.map((cohort: any) => (
+                          <SelectItem key={cohort.id} value={cohort.id}>
+                            {cohort.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
-                {campaignData.targetCohort && (
+                {selectedCohort && (
                   <div className="p-4 bg-blue-50 rounded-lg">
                     <p className="text-sm text-gray-600">Estimated audience size</p>
-                    <p className="text-2xl font-bold text-blue-600">12,543 users</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {selectedCohort.userCount ? selectedCohort.userCount.toLocaleString() : 'Calculating...'}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">{selectedCohort.description}</p>
                   </div>
                 )}
               </div>
@@ -302,7 +353,7 @@ export default function CampaignBuilder() {
                       <h4 className="font-medium mb-2">Campaign Details</h4>
                       <p><strong>Name:</strong> {campaignData.name}</p>
                       <p><strong>Description:</strong> {campaignData.description}</p>
-                      <p><strong>Target:</strong> {campaignData.targetCohort}</p>
+                      <p><strong>Target:</strong> {selectedCohort ? selectedCohort.name : 'No cohort selected'}</p>
                     </div>
                     <div>
                       <h4 className="font-medium mb-2">Upsell Items</h4>
