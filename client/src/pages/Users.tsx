@@ -1,133 +1,176 @@
 
 import React, { useState } from 'react';
 import { Link } from 'wouter';
-import { Search, Filter, Download, Eye, Hash, UserCheck } from 'lucide-react';
+import { Search, Filter, Download, Eye, Hash, UserCheck, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-// Mock user data
-const mockUsers = [
-  {
-    id: 1,
-    user_id: 'USR_001_JD_2024',
-    email: 'john.doe@email.com',
-    name: 'John Doe',
-    user_type: 'premium',
-    user_roles: ['lister', 'buyer'],
-    account_status: 'active',
-    created_date: '2024-01-15',
-    last_login: '2024-06-02',
-    total_listings: 15,
-    total_purchases: 12,
-    cltv: 450.00
-  },
-  {
-    id: 2,
-    user_id: 'USR_002_JS_2024',
-    email: 'jane.smith@email.com',
-    name: 'Jane Smith',
-    user_type: 'regular',
-    user_roles: ['buyer'],
-    account_status: 'active',
-    created_date: '2024-02-20',
-    last_login: '2024-06-01',
-    total_listings: 0,
-    total_purchases: 8,
-    cltv: 180.00
-  },
-  {
-    id: 3,
-    user_id: 'USR_003_MW_2023',
-    email: 'mike.wilson@email.com',
-    name: 'Mike Wilson',
-    user_type: 'premium',
-    user_roles: ['lister'],
-    account_status: 'inactive',
-    created_date: '2023-12-10',
-    last_login: '2024-05-28',
-    total_listings: 23,
-    total_purchases: 0,
-    cltv: 680.00
-  },
-  {
-    id: 4,
-    user_id: 'USR_004_SJ_2024',
-    email: 'sarah.johnson@email.com',
-    name: 'Sarah Johnson',
-    user_type: 'regular',
-    user_roles: ['lister', 'buyer'],
-    account_status: 'active',
-    created_date: '2024-03-05',
-    last_login: '2024-06-03',
-    total_listings: 5,
-    total_purchases: 3,
-    cltv: 95.00
-  },
-];
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 
 export default function Users() {
   const [searchTerm, setSearchTerm] = useState('');
   const [userTypeFilter, setUserTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const queryClient = useQueryClient();
 
-  const filteredUsers = mockUsers.filter(user => {
-    const matchesSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.user_id.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = userTypeFilter === 'all' || user.user_type === userTypeFilter;
-    const matchesStatus = statusFilter === 'all' || user.account_status === statusFilter;
-    const matchesRole = roleFilter === 'all' || user.user_roles.includes(roleFilter);
-    
-    return matchesSearch && matchesType && matchesStatus && matchesRole;
+  const usersPerPage = 10;
+
+  // Fetch users from Snowflake with caching
+  const { data: usersData, isLoading: usersLoading, refetch: refetchUsers } = useQuery({
+    queryKey: ['users', 'snowflake'],
+    queryFn: async () => {
+      const response = await apiRequest('/api/snowflake/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          query: 'SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 LIMIT 100' 
+        })
+      });
+      return response;
+    },
+    staleTime: Infinity, // Keep data until manually refreshed
+    gcTime: 1000 * 60 * 60 * 24, // Cache for 24 hours
   });
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>;
-      case 'inactive':
-        return <Badge variant="secondary">Inactive</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['users', 'snowflake'] });
+      await refetchUsers();
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
+  // Process and filter users data
+  const processedUsers = usersData?.success && usersData?.rows ? 
+    usersData.rows.map((row: any[], index: number) => {
+      const columns = usersData.columns || [];
+      const userObject: any = {};
+      
+      columns.forEach((col: any, colIndex: number) => {
+        userObject[col.name] = row[colIndex];
+      });
+      
+      return {
+        id: index + 1,
+        ...userObject
+      };
+    }) : [];
+
+  const filteredUsers = processedUsers.filter((user: any) => {
+    const searchableFields = [
+      user.USER_ID,
+      user.EMAIL,
+      user.PHONE_NUMBER,
+      user.USER_TYPE
+    ].filter(Boolean).map(field => String(field).toLowerCase());
+    
+    const matchesSearch = !searchTerm || searchableFields.some(field => 
+      field.includes(searchTerm.toLowerCase())
+    );
+    
+    const matchesType = userTypeFilter === 'all' || 
+      (user.USER_TYPE && user.USER_TYPE.toLowerCase() === userTypeFilter);
+    
+    return matchesSearch && matchesType;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  const startIndex = (currentPage - 1) * usersPerPage;
+  const endIndex = startIndex + usersPerPage;
+  const currentUsers = filteredUsers.slice(startIndex, endIndex);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
   const getUserTypeBadge = (type: string) => {
-    switch (type) {
+    if (!type) return <Badge variant="outline">Unknown</Badge>;
+    
+    const normalizedType = type.toLowerCase();
+    switch (normalizedType) {
       case 'premium':
+      case 'vip':
         return <Badge className="bg-blue-100 text-blue-800">Premium</Badge>;
       case 'regular':
+      case 'standard':
         return <Badge variant="outline">Regular</Badge>;
+      case 'lister':
+        return <Badge className="bg-purple-100 text-purple-800">Lister</Badge>;
+      case 'browser':
+        return <Badge className="bg-green-100 text-green-800">Browser</Badge>;
       default:
         return <Badge variant="outline">{type}</Badge>;
     }
   };
 
-  const getUserRoleBadges = (roles: string[]) => {
-    return roles.map(role => {
-      switch (role) {
-        case 'lister':
-          return <Badge key={role} className="bg-purple-100 text-purple-800 mr-1">Lister</Badge>;
-        case 'buyer':
-          return <Badge key={role} className="bg-orange-100 text-orange-800 mr-1">Buyer</Badge>;
-        default:
-          return <Badge key={role} variant="outline" className="mr-1">{role}</Badge>;
-      }
-    });
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleDateString();
+    } catch {
+      return dateString;
+    }
   };
+
+  const formatNumber = (num: any) => {
+    if (num === null || num === undefined) return 'N/A';
+    if (typeof num === 'number') return num.toLocaleString();
+    return String(num);
+  };
+
+  if (usersLoading || isRefreshing) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="flex items-center gap-2 text-gray-500">
+          <RefreshCw className="w-5 h-5 animate-spin" />
+          Loading users from Snowflake...
+        </div>
+      </div>
+    );
+  }
+
+  if (!usersData?.success) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="text-center">
+          <div className="text-red-500 mb-2">Failed to load users</div>
+          <div className="text-sm text-gray-500">{usersData?.error || 'Unknown error'}</div>
+          <Button onClick={handleRefresh} className="mt-4">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">User Explorer</h1>
-        <Button>
-          <Download className="mr-2 h-4 w-4" />
-          Export Users
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh Data
+          </Button>
+          <Button>
+            <Download className="mr-2 h-4 w-4" />
+            Export Users
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -190,7 +233,12 @@ export default function Users() {
       {/* Results */}
       <Card>
         <CardHeader>
-          <CardTitle>Users ({filteredUsers.length})</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle>Users ({filteredUsers.length} total)</CardTitle>
+            <div className="text-sm text-gray-500">
+              Showing {currentUsers.length} of {filteredUsers.length} users
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -198,61 +246,48 @@ export default function Users() {
               <thead>
                 <tr className="border-b">
                   <th className="text-left py-3 px-4 font-medium">User ID</th>
-                  <th className="text-left py-3 px-4 font-medium">User</th>
+                  <th className="text-left py-3 px-4 font-medium">Email</th>
+                  <th className="text-left py-3 px-4 font-medium">Phone</th>
                   <th className="text-left py-3 px-4 font-medium">Type</th>
-                  <th className="text-left py-3 px-4 font-medium">Roles</th>
-                  <th className="text-left py-3 px-4 font-medium">Status</th>
-                  <th className="text-left py-3 px-4 font-medium">Created</th>
-                  <th className="text-left py-3 px-4 font-medium">Last Login</th>
                   <th className="text-left py-3 px-4 font-medium">Listings</th>
-                  <th className="text-left py-3 px-4 font-medium">Purchases</th>
+                  <th className="text-left py-3 px-4 font-medium">Created</th>
                   <th className="text-left py-3 px-4 font-medium">CLTV</th>
                   <th className="text-left py-3 px-4 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map((user) => (
+                {currentUsers.map((user: any) => (
                   <tr key={user.id} className="border-b hover:bg-gray-50">
                     <td className="py-3 px-4">
                       <div className="flex items-center text-sm font-mono">
                         <Hash className="mr-1 h-3 w-3 text-gray-400" />
-                        {user.user_id}
+                        {user.USER_ID || 'N/A'}
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <div>
-                        <div className="font-medium">{user.name}</div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
+                      <div className="text-sm">
+                        {user.EMAIL || 'N/A'}
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      {getUserTypeBadge(user.user_type)}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex flex-wrap">
-                        {getUserRoleBadges(user.user_roles)}
+                      <div className="text-sm">
+                        {user.PHONE_NUMBER || 'N/A'}
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      {getStatusBadge(user.account_status)}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-600">
-                      {user.created_date}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-600">
-                      {user.last_login}
+                      {getUserTypeBadge(user.USER_TYPE)}
                     </td>
                     <td className="py-3 px-4 text-sm">
-                      {user.total_listings}
+                      {formatNumber(user.TOTAL_LISTINGS_COUNT)}
                     </td>
-                    <td className="py-3 px-4 text-sm">
-                      {user.total_purchases}
+                    <td className="py-3 px-4 text-sm text-gray-600">
+                      {formatDate(user.CREATED_DATE)}
                     </td>
                     <td className="py-3 px-4 text-sm font-medium">
-                      ${user.cltv.toFixed(2)}
+                      {user.CLTV ? `$${Number(user.CLTV).toFixed(2)}` : 'N/A'}
                     </td>
                     <td className="py-3 px-4">
-                      <Link to={`/users/${user.id}`}>
+                      <Link to={`/users/${user.USER_ID || user.id}`}>
                         <Button variant="ghost" size="sm">
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -263,6 +298,61 @@ export default function Users() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6">
+              <div className="text-sm text-gray-500">
+                Page {currentPage} of {totalPages}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                
+                {/* Page numbers */}
+                <div className="flex gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const pageNum = currentPage <= 3 
+                      ? i + 1 
+                      : currentPage >= totalPages - 2 
+                        ? totalPages - 4 + i 
+                        : currentPage - 2 + i;
+                    
+                    if (pageNum < 1 || pageNum > totalPages) return null;
+                    
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => goToPage(pageNum)}
+                        className="w-9"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
