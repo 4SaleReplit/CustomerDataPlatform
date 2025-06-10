@@ -184,6 +184,7 @@ export default function Cohorts() {
         headers: { 'Content-Type': 'application/json' }
       });
       
+      trackBusinessEvent.cohortSyncedToBraze(cohortName, response.syncedUserCount || 0);
       queryClient.invalidateQueries({ queryKey: ['/api/cohorts'] });
       toast({
         title: "Sync successful",
@@ -306,9 +307,8 @@ export default function Cohorts() {
     }
   };
 
-  const handleDeleteCohort = (cohortId: number) => {
-    console.log('Deleting cohort:', cohortId);
-    // Here you would typically call an API to delete the cohort
+  const handleDeleteCohort = (cohortId: string, cohortName: string) => {
+    deleteCohort(cohortId, cohortName);
   };
 
   return (
@@ -524,7 +524,7 @@ export default function Cohorts() {
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                                   <AlertDialogAction 
-                                    onClick={() => handleDeleteCohort(cohort.id)}
+                                    onClick={() => handleDeleteCohort(cohort.id, cohort.name)}
                                     className="bg-red-600 hover:bg-red-700"
                                   >
                                     Delete

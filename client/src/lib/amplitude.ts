@@ -103,6 +103,12 @@ export const trackBusinessEvent = {
     });
   },
 
+  cohortDeleted: (cohortName: string) => {
+    trackEvent('Cohort Deleted', {
+      cohort_name: cohortName,
+    });
+  },
+
   cohortSyncedToAmplitude: (cohortId: string, userCount: number) => {
     trackEvent('Cohort Synced to Amplitude', {
       cohort_id: cohortId,

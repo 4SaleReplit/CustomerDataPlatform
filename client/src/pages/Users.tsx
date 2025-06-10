@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { trackEvent, trackBusinessEvent } from '@/lib/amplitude';
 
 export default function Users() {
   const [searchTerm, setSearchTerm] = useState('');
