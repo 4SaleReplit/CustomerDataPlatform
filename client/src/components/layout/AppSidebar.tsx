@@ -43,8 +43,17 @@ const navigation = [
 export function AppSidebar() {
   const [location] = useLocation();
   const { state } = useSidebar();
-  const { user } = useUser();
   const isCollapsed = state === "collapsed";
+  
+  // Safely get user context
+  let user = null;
+  try {
+    const userContext = useUser();
+    user = userContext?.user;
+  } catch (error) {
+    // User context not available, continue without user info
+    console.warn('User context not available in sidebar');
+  }
 
   return (
     <Sidebar collapsible="icon" className="border-r">
