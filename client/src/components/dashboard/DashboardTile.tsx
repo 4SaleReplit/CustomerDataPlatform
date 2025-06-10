@@ -44,7 +44,7 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
   const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
   const queryClient = useQueryClient();
 
-  // Fetch authentic Snowflake data with caching strategy - only refresh manually
+  // Fetch authentic Snowflake data with smart caching
   const { data: snowflakeData, isLoading: snowflakeLoading, refetch: refetchSnowflake } = useQuery({
     queryKey: ['/api/snowflake/query', tile.id],
     queryFn: async () => {
@@ -62,14 +62,14 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
       
       return response;
     },
-    enabled: false, // Never auto-fetch - only manual refresh
-    staleTime: Infinity, // Keep data indefinitely unless manually refreshed
-    gcTime: Infinity, // Keep in cache indefinitely
+    enabled: !!tile.dataSource.query,
+    staleTime: 1000 * 60 * 30, // 30 minutes before considering stale
+    gcTime: 1000 * 60 * 60 * 24, // Keep in cache for 24 hours
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
-  // Load cached data and timestamp from localStorage on mount
-  const [cachedData, setCachedData] = useState<any>(null);
-  
   useEffect(() => {
     const storedTimestamp = localStorage.getItem(`tile-${tile.id}-lastRefresh`);
     const storedData = localStorage.getItem(`tile-${tile.id}-data`);
@@ -81,8 +81,7 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
     if (storedData) {
       try {
         const parsedData = JSON.parse(storedData);
-        setCachedData(parsedData);
-        // Set the cached data in react-query cache
+        // Pre-populate the cache with stored data to prevent initial queries
         queryClient.setQueryData(['/api/snowflake/query', tile.id], parsedData);
       } catch (error) {
         console.error('Failed to parse cached data:', error);
@@ -150,7 +149,7 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
 
   const renderTileContent = () => {
     const isLoading = snowflakeLoading || isRefreshing;
-    const dataToRender = snowflakeData || cachedData;
+    const dataToRender = snowflakeData;
     
     if (isLoading) {
       return (
