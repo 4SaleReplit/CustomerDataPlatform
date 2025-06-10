@@ -4,6 +4,7 @@ import { ArrowLeft, RefreshCw, AlertCircle, Users, DollarSign, Activity, Target,
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 
@@ -313,89 +314,230 @@ export default function UserProfile() {
         </Card>
       </div>
 
-      {/* Detailed Information */}
+      {/* Detailed Information with Tabs */}
       <Card>
-        <CardHeader>
-          <CardTitle>User Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>
-              <h4 className="font-semibold mb-3 text-gray-800">Contact Information</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">User ID:</span>
-                  <span className="font-mono">{userProfile.USER_ID}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Email:</span>
-                  <span>{userProfile.EMAIL || 'N/A'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Phone:</span>
-                  <span>{userProfile.PHONE_NUMBER || 'N/A'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Region:</span>
-                  <span>{userProfile.REGION || 'N/A'}</span>
-                </div>
-              </div>
-            </div>
+        <CardContent className="p-6">
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="grid w-full grid-cols-6">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="listings">Listings</TabsTrigger>
+              <TabsTrigger value="transactions">Transactions</TabsTrigger>
+              <TabsTrigger value="financial">Financial</TabsTrigger>
+              <TabsTrigger value="engagement">Engagement</TabsTrigger>
+              <TabsTrigger value="demographics">Demographics</TabsTrigger>
+            </TabsList>
 
-            <div>
-              <h4 className="font-semibold mb-3 text-gray-800">Account Status</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">User Type:</span>
-                  <span>{userProfile.USER_TYPE || 'N/A'}</span>
+            <TabsContent value="overview" className="space-y-6 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                  <h4 className="font-semibold mb-3 text-gray-800">Contact Information</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">User ID:</span>
+                      <span className="font-mono">{userProfile.USER_ID || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Email:</span>
+                      <span>{userProfile.EMAIL || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Phone:</span>
+                      <span>{userProfile.PHONE || userProfile.PHONE_NUMBER || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Region:</span>
+                      <span>{userProfile.REGION || 'N/A'}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Active Status:</span>
-                  <span>{userProfile.IS_ACTIVE === 'TRUE' || userProfile.IS_ACTIVE === true ? 'Active' : 'Inactive'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Created:</span>
-                  <span>{formatDate(userProfile.CREATED_DATE)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Last Active:</span>
-                  <span>{formatDate(userProfile.LAST_ACTIVE_DATE || userProfile.CREATED_DATE)}</span>
-                </div>
-              </div>
-            </div>
 
-            <div>
-              <h4 className="font-semibold mb-3 text-gray-800">Financial Metrics</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">CLTV:</span>
-                  <span className="font-semibold text-green-600">
-                    {userProfile.CLTV ? `${Number(userProfile.CLTV).toFixed(2)} KWD` : '0.00 KWD'}
-                  </span>
+                <div>
+                  <h4 className="font-semibold mb-3 text-gray-800">Account Status</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">User Type:</span>
+                      <span>{userProfile.USER_TYPE || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Active Status:</span>
+                      <span>{userProfile.IS_ACTIVE === 'TRUE' || userProfile.IS_ACTIVE === true ? 'Active' : 'Inactive'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Created:</span>
+                      <span>{formatDate(userProfile.CREATED_DATE)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Last Active:</span>
+                      <span>{formatDate(userProfile.LAST_ACTIVE_DATE || userProfile.CREATED_DATE)}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Credits Spent:</span>
-                  <span>{formatNumber(userProfile.TOTAL_CREDITS_SPENT)} KWD</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Premium Credits Spent:</span>
-                  <span>{formatNumber(userProfile.TOTAL_PREMIUM_CREDITS_SPENT)} KWD</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Days Since Last Transaction:</span>
-                  <span>{formatNumber(userProfile.DAYS_SINCE_LAST_TRANSACTION)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Listings:</span>
-                  <span>{formatNumber(userProfile.TOTAL_LISTINGS_COUNT)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Paid/Free/Office:</span>
-                  <span>{formatNumber(userProfile.PAID_LISTINGS_COUNT)}/{formatNumber(userProfile.FREE_LISTINGS_COUNT)}/{formatNumber(userProfile.OFFICE_LISTINGS_COUNT)}</span>
+
+                <div>
+                  <h4 className="font-semibold mb-3 text-gray-800">Basic Metrics</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">CLTV:</span>
+                      <span className="font-semibold text-green-600">
+                        {userProfile.CLTV ? `${Number(userProfile.CLTV).toFixed(2)} KWD` : '0.00 KWD'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Total Listings:</span>
+                      <span>{formatNumber(userProfile.TOTAL_LISTINGS_COUNT)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Total Credits Spent:</span>
+                      <span>{formatNumber(userProfile.TOTAL_CREDITS_SPENT)} KWD</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Days Since Last Transaction:</span>
+                      <span>{formatNumber(userProfile.DAYS_SINCE_LAST_TRANSACTION)}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </TabsContent>
+
+            <TabsContent value="listings" className="space-y-6 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                  <h4 className="font-semibold mb-3 text-gray-800">Listing Counts</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Total Listings:</span>
+                      <span className="font-semibold">{formatNumber(userProfile.TOTAL_LISTINGS_COUNT)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Paid Listings:</span>
+                      <span className="font-medium text-blue-600">{formatNumber(userProfile.PAID_LISTINGS_COUNT)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Free Listings:</span>
+                      <span className="font-medium text-green-600">{formatNumber(userProfile.FREE_LISTINGS_COUNT)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Office Listings:</span>
+                      <span className="font-medium text-purple-600">{formatNumber(userProfile.OFFICE_LISTINGS_COUNT)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-3 text-gray-800">All Available Listing Data</h4>
+                  <div className="space-y-2 text-sm">
+                    {Object.keys(userProfile).filter(key => 
+                      key.includes('LISTING') && !['TOTAL_LISTINGS_COUNT', 'PAID_LISTINGS_COUNT', 'FREE_LISTINGS_COUNT', 'OFFICE_LISTINGS_COUNT'].includes(key)
+                    ).map(key => (
+                      <div key={key} className="flex justify-between">
+                        <span className="text-gray-600">{key.replace(/_/g, ' ')}:</span>
+                        <span>{formatNumber(userProfile[key])}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="transactions" className="space-y-6 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                  <h4 className="font-semibold mb-3 text-gray-800">Transaction Data</h4>
+                  <div className="space-y-2 text-sm">
+                    {Object.keys(userProfile).filter(key => 
+                      key.includes('TRANSACTION') || key.includes('PAYMENT')
+                    ).map(key => (
+                      <div key={key} className="flex justify-between">
+                        <span className="text-gray-600">{key.replace(/_/g, ' ')}:</span>
+                        <span>{formatNumber(userProfile[key])}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="financial" className="space-y-6 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                  <h4 className="font-semibold mb-3 text-gray-800">Credits & Spending</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Total Credits Spent:</span>
+                      <span className="font-semibold">{formatNumber(userProfile.TOTAL_CREDITS_SPENT)} KWD</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Premium Credits Spent:</span>
+                      <span className="font-medium text-orange-600">{formatNumber(userProfile.TOTAL_PREMIUM_CREDITS_SPENT)} KWD</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Free Credits Spent:</span>
+                      <span className="font-medium text-gray-600">{formatNumber(userProfile.TOTAL_FREE_CREDITS_SPENT)} KWD</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Current Credits in Wallet:</span>
+                      <span className="font-medium">{formatNumber(userProfile.CURRENT_CREDITS_IN_WALLET)} KWD</span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-3 text-gray-800">All Financial Data</h4>
+                  <div className="space-y-2 text-sm">
+                    {Object.keys(userProfile).filter(key => 
+                      (key.includes('CREDIT') || key.includes('CLTV') || key.includes('REVENUE') || key.includes('SPENT')) && 
+                      !['TOTAL_CREDITS_SPENT', 'TOTAL_PREMIUM_CREDITS_SPENT', 'TOTAL_FREE_CREDITS_SPENT', 'CURRENT_CREDITS_IN_WALLET'].includes(key)
+                    ).map(key => (
+                      <div key={key} className="flex justify-between">
+                        <span className="text-gray-600">{key.replace(/_/g, ' ')}:</span>
+                        <span>{key.includes('CREDIT') || key.includes('CLTV') || key.includes('REVENUE') || key.includes('SPENT') ? 
+                          `${formatNumber(userProfile[key])} KWD` : formatNumber(userProfile[key])}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="engagement" className="space-y-6 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                  <h4 className="font-semibold mb-3 text-gray-800">Engagement Metrics</h4>
+                  <div className="space-y-2 text-sm">
+                    {Object.keys(userProfile).filter(key => 
+                      key.includes('ACTIVITY') || key.includes('LOGIN') || key.includes('SESSION') || 
+                      key.includes('VISIT') || key.includes('ENGAGEMENT') || key.includes('ACTIVE')
+                    ).map(key => (
+                      <div key={key} className="flex justify-between">
+                        <span className="text-gray-600">{key.replace(/_/g, ' ')}:</span>
+                        <span>{formatNumber(userProfile[key])}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="demographics" className="space-y-6 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                  <h4 className="font-semibold mb-3 text-gray-800">All Other Data</h4>
+                  <div className="space-y-2 text-sm max-h-96 overflow-y-auto">
+                    {Object.keys(userProfile).filter(key => 
+                      !key.includes('LISTING') && !key.includes('CREDIT') && !key.includes('TRANSACTION') && 
+                      !key.includes('PAYMENT') && !key.includes('ACTIVITY') && !key.includes('LOGIN') && 
+                      !key.includes('SESSION') && !key.includes('VISIT') && !key.includes('ENGAGEMENT') && 
+                      !key.includes('ACTIVE') && !key.includes('CLTV') && !key.includes('REVENUE') && 
+                      !key.includes('SPENT') && !['USER_ID', 'EMAIL', 'PHONE', 'PHONE_NUMBER', 'REGION', 'USER_TYPE', 'IS_ACTIVE', 'CREATED_DATE', 'LAST_ACTIVE_DATE'].includes(key)
+                    ).map(key => (
+                      <div key={key} className="flex justify-between">
+                        <span className="text-gray-600">{key.replace(/_/g, ' ')}:</span>
+                        <span>{formatNumber(userProfile[key])}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
