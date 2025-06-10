@@ -101,11 +101,8 @@ export default function Campaigns() {
   };
 
   const handleEditCampaign = (campaign: any) => {
-    window.location.href = `/campaigns/${campaign.id}/edit`;
-  };
-
-  const handleViewCampaign = (campaign: any) => {
-    window.location.href = `/campaigns/${campaign.id}`;
+    console.log('Editing campaign:', campaign);
+    // Here you would typically navigate to edit page or open edit modal
   };
 
   const handleDeleteCampaign = (campaignId: string) => {
@@ -230,14 +227,14 @@ export default function Campaigns() {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleViewCampaign(campaign)} title="View Details">
-                          <Eye className="h-4 w-4" />
-                        </Button>
                         <Link to={`/campaigns/${campaign.id}/analytics`}>
-                          <Button variant="ghost" size="sm" title="Analytics">
+                          <Button variant="ghost" size="sm">
                             <BarChart3 className="h-4 w-4" />
                           </Button>
                         </Link>
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
                         {campaign.status === 'active' ? (
                           <Button variant="ghost" size="sm">
                             <Pause className="h-4 w-4" />

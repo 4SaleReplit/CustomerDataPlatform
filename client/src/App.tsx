@@ -17,7 +17,6 @@ import Segments from "./pages/Segments";
 import SegmentDetail from "./pages/SegmentDetail";
 import Campaigns from "./pages/Campaigns";
 import CampaignBuilder from "./pages/CampaignBuilder";
-import CampaignDetail from "./pages/CampaignDetail";
 import Promotions from "./pages/Promotions";
 import Calendar from "./pages/Calendar";
 import ActivityLog from "./pages/ActivityLog";
@@ -56,9 +55,8 @@ const AppRouter = () => {
         <Route path="/segments/:segmentId/edit" component={SegmentDetail} />
         <Route path="/campaigns" component={Campaigns} />
         <Route path="/campaigns/new" component={CampaignBuilder} />
-        <Route path="/campaigns/:campaignId" component={CampaignDetail} />
         <Route path="/campaigns/:campaignId/edit" component={CampaignBuilder} />
-        <Route path="/campaigns/:campaignId/analytics" component={CampaignDetail} />
+        <Route path="/campaigns/:campaignId/analytics" component={Campaigns} />
         <Route path="/promotions" component={Promotions} />
         <Route path="/calendar" component={Calendar} />
         <Route path="/activity-log" component={ActivityLog} />
