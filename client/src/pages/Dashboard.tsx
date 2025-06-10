@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw, Settings, X, Save, Plus } from 'lucide-react';
@@ -122,7 +122,7 @@ const initialTiles: DashboardTile[] = [
   }
 ];
 
-export default function Dashboard() {
+function Dashboard() {
   const { toast } = useToast();
   
   // State management
@@ -137,8 +137,10 @@ export default function Dashboard() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Load tiles from database
-  const loadTiles = async () => {
+  // Load tiles from database - memoized to prevent unnecessary calls
+  const loadTiles = useCallback(async () => {
+    if (isLoaded) return; // Don't reload if already loaded
+    
     setIsLoading(true);
     try {
       const data = await apiRequest('/api/dashboard/tiles');
@@ -164,7 +166,7 @@ export default function Dashboard() {
       setIsLoaded(true);
       setIsLoading(false);
     }
-  };
+  }, [isLoaded]);
 
   // Save tiles to database
   const saveTiles = async (tilesToSave: DashboardTile[]) => {
@@ -450,3 +452,6 @@ export default function Dashboard() {
     </div>
   );
 }
+
+// Memoize Dashboard component to prevent unnecessary re-renders during navigation
+export default React.memo(Dashboard);
