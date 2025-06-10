@@ -233,7 +233,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("Saving cohort:", req.body);
       const validatedData = insertCohortSchema.parse(req.body);
-      const cohort = await storage.createCohort(validatedData);
+      
+      // Add createdBy field with a default team member ID or null
+      const cohortData = {
+        ...validatedData,
+        createdBy: null // Set to null since we don't have user context yet
+      };
+      
+      const cohort = await storage.createCohort(cohortData);
       res.status(201).json(cohort);
     } catch (error) {
       console.error("Create cohort error:", error);

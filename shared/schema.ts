@@ -165,6 +165,7 @@ export const insertCohortSchema = createInsertSchema(cohorts).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  createdBy: true,
 });
 
 export const updateCohortSchema = createInsertSchema(cohorts).omit({
