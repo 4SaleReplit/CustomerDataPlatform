@@ -134,7 +134,7 @@ export default function Campaigns() {
             <CardTitle className="text-sm font-medium">Total Campaigns</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockCampaigns.length}</div>
+            <div className="text-2xl font-bold">{campaigns.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -143,7 +143,7 @@ export default function Campaigns() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {mockCampaigns.filter(c => c.status === 'active').length}
+              {campaigns.filter((c: any) => c.status === 'active').length}
             </div>
           </CardContent>
         </Card>
@@ -153,7 +153,7 @@ export default function Campaigns() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {mockCampaigns.reduce((sum, c) => sum + c.messagesSent, 0).toLocaleString()}
+              {campaigns.reduce((sum: number, c: any) => sum + (c.messagesSent || 0), 0).toLocaleString()}
             </div>
           </CardContent>
         </Card>
@@ -163,7 +163,7 @@ export default function Campaigns() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {mockCampaigns.reduce((sum, c) => sum + c.conversions, 0).toLocaleString()}
+              {campaigns.reduce((sum: number, c: any) => sum + (c.conversions || 0), 0).toLocaleString()}
             </div>
           </CardContent>
         </Card>
@@ -203,27 +203,27 @@ export default function Campaigns() {
                 </tr>
               </thead>
               <tbody>
-                {filteredCampaigns.map((campaign) => (
+                {filteredCampaigns.map((campaign: any) => (
                   <tr key={campaign.id} className="border-b hover:bg-gray-50">
                     <td className="py-3 px-4">
                       <div>
                         <div className="font-medium">{campaign.name}</div>
-                        <div className="text-sm text-gray-600">{campaign.description}</div>
+                        <div className="text-sm text-gray-600">{campaign.description || 'No description'}</div>
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <Badge variant="outline">{campaign.targetCohort}</Badge>
+                      <Badge variant="outline">{getCohortName(campaign.cohortId)}</Badge>
                     </td>
                     <td className="py-3 px-4">{getStatusBadge(campaign.status)}</td>
                     <td className="py-3 px-4 text-sm text-gray-600">
-                      <div>{campaign.startDate}</div>
-                      <div>to {campaign.endDate}</div>
+                      <div>{campaign.createdAt ? new Date(campaign.createdAt).toLocaleDateString() : '-'}</div>
+                      <div>{campaign.scheduledDate ? `Scheduled: ${new Date(campaign.scheduledDate).toLocaleDateString()}` : 'No end date'}</div>
                     </td>
-                    <td className="py-3 px-4 font-medium">{campaign.messagesSent.toLocaleString()}</td>
-                    <td className="py-3 px-4 font-medium">{campaign.views.toLocaleString()}</td>
-                    <td className="py-3 px-4 font-medium">{campaign.conversions.toLocaleString()}</td>
+                    <td className="py-3 px-4 font-medium">{(campaign.messagesSent || 0).toLocaleString()}</td>
+                    <td className="py-3 px-4 font-medium">{(campaign.views || 0).toLocaleString()}</td>
+                    <td className="py-3 px-4 font-medium">{(campaign.conversions || 0).toLocaleString()}</td>
                     <td className="py-3 px-4 font-medium">
-                      {getConversionRate(campaign.conversions, campaign.views)}
+                      {getConversionRate(campaign.conversions || 0, campaign.views || 0)}
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex gap-2">

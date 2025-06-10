@@ -4,9 +4,30 @@ import { campaignJobs, campaigns, cohorts } from '../../shared/schema';
 import { eq } from 'drizzle-orm';
 import { snowflakeService } from './snowflake';
 
-// Initialize Redis queue
+// Initialize Redis queue with error handling
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-export const campaignQueue = new Bull('campaign processing', redisUrl);
+let campaignQueue: Bull.Queue | null = null;
+
+try {
+  campaignQueue = new Bull('campaign processing', redisUrl, {
+    redis: {
+      maxRetriesPerRequest: 3,
+      retryDelayOnFailover: 100,
+      lazyConnect: true
+    },
+    defaultJobOptions: {
+      removeOnComplete: 10,
+      removeOnFail: 5,
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 2000,
+      },
+    }
+  });
+} catch (error) {
+  console.warn('Redis queue unavailable, using direct processing:', error);
+}
 
 interface CampaignJobData {
   campaignId: string;
@@ -56,10 +77,8 @@ function createUpsellRecommendation(userId: string, upsellItems: any[]): UpsellR
   };
 }
 
-// Process campaign job
-campaignQueue.process(async (job) => {
-  const { campaignId, cohortId, upsellItems } = job.data as CampaignJobData;
-  
+// Core processing function
+async function processCampaign(campaignId: string, cohortId: string, upsellItems: any[], jobId?: string): Promise<{ processed: number }> {
   try {
     // Get cohort data to access the calculation query
     const cohort = await db.select().from(cohorts).where(eq(cohorts.id, cohortId)).limit(1);
@@ -90,7 +109,7 @@ campaignQueue.process(async (job) => {
       // Store the job in the database
       await db.insert(campaignJobs).values({
         campaignId,
-        jobId: job.id.toString(),
+        jobId: jobId || 'direct-' + Date.now(),
         userId: userId,
         userAdvId: recommendation.user_adv_id,
         recommendation,
@@ -113,12 +132,12 @@ campaignQueue.process(async (job) => {
     return { processed: userIds.length };
     
   } catch (error) {
-    console.error('Campaign job failed:', error);
+    console.error('Campaign processing failed:', error);
     
     // Update job status to failed
     await db.insert(campaignJobs).values({
       campaignId,
-      jobId: job.id.toString(),
+      jobId: jobId || 'direct-' + Date.now(),
       userId: 'unknown',
       userAdvId: 0,
       recommendation: {},
@@ -128,7 +147,15 @@ campaignQueue.process(async (job) => {
     
     throw error;
   }
-});
+}
+
+// Process campaign job if Redis queue is available
+if (campaignQueue) {
+  campaignQueue.process(async (job) => {
+    const { campaignId, cohortId, upsellItems } = job.data as CampaignJobData;
+    return await processCampaign(campaignId, cohortId, upsellItems, job.id.toString());
+  });
+}
 
 // Queue a campaign for processing
 export async function queueCampaign(campaignId: string, cohortId: string, upsellItems: any[]) {
