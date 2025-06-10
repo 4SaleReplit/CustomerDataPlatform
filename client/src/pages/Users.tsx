@@ -248,11 +248,13 @@ export default function Users() {
                   <th className="text-left py-3 px-4 font-medium">User ID</th>
                   <th className="text-left py-3 px-4 font-medium">Phone</th>
                   <th className="text-left py-3 px-4 font-medium">Type</th>
-                  <th className="text-left py-3 px-4 font-medium">Listings</th>
-                  <th className="text-left py-3 px-4 font-medium">Credits Spent</th>
-                  <th className="text-left py-3 px-4 font-medium">CLTV (KWD)</th>
-                  <th className="text-left py-3 px-4 font-medium">Days Since Last Transaction</th>
-                  <th className="text-left py-3 px-4 font-medium">Status</th>
+                  <th className="text-left py-3 px-4 font-medium">Paid Listings</th>
+                  <th className="text-left py-3 px-4 font-medium">Free Listings</th>
+                  <th className="text-left py-3 px-4 font-medium">Total Listings</th>
+                  <th className="text-left py-3 px-4 font-medium">Office Listings</th>
+                  <th className="text-left py-3 px-4 font-medium">Total Credits Spent</th>
+                  <th className="text-left py-3 px-4 font-medium">Premium Credits Spent</th>
+                  <th className="text-left py-3 px-4 font-medium">Free Credits Spent</th>
                   <th className="text-left py-3 px-4 font-medium">Actions</th>
                 </tr>
               </thead>
@@ -272,60 +274,39 @@ export default function Users() {
                       {getUserTypeBadge(user.USER_TYPE)}
                     </td>
                     <td className="py-3 px-4">
-                      <div className="space-y-1 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Total:</span>
-                          <span className="font-semibold">{formatNumber(user.TOTAL_LISTINGS_COUNT)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Paid:</span>
-                          <span className="font-medium text-blue-600">{formatNumber(user.PAID_LISTINGS_COUNT)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Free:</span>
-                          <span className="font-medium text-green-600">{formatNumber(user.FREE_LISTINGS_COUNT)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Office:</span>
-                          <span className="font-medium text-purple-600">{formatNumber(user.OFFICE_LISTINGS_COUNT)}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="space-y-1 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Total:</span>
-                          <span className="font-semibold">{formatNumber(user.TOTAL_CREDITS_SPENT)} KWD</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Premium:</span>
-                          <span className="font-medium text-orange-600">{formatNumber(user.TOTAL_PREMIUM_CREDITS_SPENT)} KWD</span>
-                        </div>
+                      <div className="text-center">
+                        <div className="text-lg font-semibold text-blue-600">{formatNumber(user.PAID_LISTINGS_COUNT)}</div>
                       </div>
                     </td>
                     <td className="py-3 px-4">
                       <div className="text-center">
-                        <div className="text-lg font-semibold text-green-600">
-                          {user.CLTV ? `${Number(user.CLTV).toFixed(0)} KWD` : '0 KWD'}
-                        </div>
-                        <div className="text-xs text-gray-500">lifetime value</div>
+                        <div className="text-lg font-semibold text-green-600">{formatNumber(user.FREE_LISTINGS_COUNT)}</div>
                       </div>
                     </td>
                     <td className="py-3 px-4">
                       <div className="text-center">
-                        <div className="text-lg font-semibold">
-                          {formatNumber(user.DAYS_SINCE_LAST_TRANSACTION)}
-                        </div>
-                        <div className="text-xs text-gray-500">days ago</div>
+                        <div className="text-lg font-semibold">{formatNumber(user.TOTAL_LISTINGS_COUNT)}</div>
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <Badge 
-                        variant={user.IS_ACTIVE === 'TRUE' || user.IS_ACTIVE === true ? 'default' : 'secondary'}
-                        className={user.IS_ACTIVE === 'TRUE' || user.IS_ACTIVE === true ? 'bg-green-100 text-green-800' : ''}
-                      >
-                        {user.IS_ACTIVE === 'TRUE' || user.IS_ACTIVE === true ? 'Active' : 'Inactive'}
-                      </Badge>
+                      <div className="text-center">
+                        <div className="text-lg font-semibold text-purple-600">{formatNumber(user.OFFICE_LISTINGS_COUNT)}</div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="text-center">
+                        <div className="text-lg font-semibold">{formatNumber(user.TOTAL_CREDITS_SPENT)} KWD</div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="text-center">
+                        <div className="text-lg font-semibold text-orange-600">{formatNumber(user.TOTAL_PREMIUM_CREDITS_SPENT)} KWD</div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="text-center">
+                        <div className="text-lg font-semibold text-gray-600">{formatNumber(user.TOTAL_FREE_CREDITS_SPENT)} KWD</div>
+                      </div>
                     </td>
                     <td className="py-3 px-4">
                       <Link to={`/users/${user.USER_ID || user.id}`}>
