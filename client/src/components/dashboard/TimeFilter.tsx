@@ -7,16 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-
-export interface TimeFilterState {
-  chartType: string;
-  timeRange: string;
-  customDateRange?: {
-    from: Date;
-    to: Date;
-  };
-  granularity: string;
-}
+import type { TimeFilterState } from '@/types/dashboard';
 
 interface TimeFilterProps {
   filters: TimeFilterState;
@@ -66,15 +57,17 @@ export function TimeFilter({ filters, onFiltersChange }: TimeFilterProps) {
     onFiltersChange({ ...filters, granularity: value });
   };
 
-  const handleDateRangeSelect = (range: {from: Date | undefined; to: Date | undefined}) => {
-    setDateRange(range);
-    if (range.from && range.to) {
-      onFiltersChange({
-        ...filters,
-        timeRange: 'custom',
-        customDateRange: { from: range.from, to: range.to }
-      });
-      setIsDatePickerOpen(false);
+  const handleDateRangeSelect = (range: any) => {
+    if (range && typeof range === 'object') {
+      setDateRange(range);
+      if (range.from && range.to) {
+        onFiltersChange({
+          ...filters,
+          timeRange: 'custom',
+          customDateRange: { from: range.from, to: range.to }
+        });
+        setIsDatePickerOpen(false);
+      }
     }
   };
 
