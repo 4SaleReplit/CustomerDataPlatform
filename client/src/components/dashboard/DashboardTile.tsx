@@ -44,7 +44,7 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
   const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
   const queryClient = useQueryClient();
 
-  // Fetch authentic Snowflake data with smart caching
+  // Fetch authentic Snowflake data only when explicitly requested
   const { data: snowflakeData, isLoading: snowflakeLoading, refetch: refetchSnowflake } = useQuery({
     queryKey: ['/api/snowflake/query', tile.id],
     queryFn: async () => {
@@ -62,8 +62,8 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
       
       return response;
     },
-    enabled: !!tile.dataSource.query,
-    staleTime: 1000 * 60 * 30, // 30 minutes before considering stale
+    enabled: false, // Never auto-execute queries
+    staleTime: Infinity, // Data never becomes stale until manually refreshed
     gcTime: 1000 * 60 * 60 * 24, // Keep in cache for 24 hours
     refetchOnWindowFocus: false,
     refetchOnMount: false,
@@ -82,6 +82,25 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
       try {
         const parsedData = JSON.parse(storedData);
         // Pre-populate the cache with stored data to prevent initial queries
+        queryClient.setQueryData(['/api/snowflake/query', tile.id], parsedData);
+        console.log(`Loaded cached data for tile ${tile.id}`);
+      } catch (error) {
+        console.error(`Failed to parse cached data for tile ${tile.id}:`, error);
+        // Clean up invalid cached data
+        localStorage.removeItem(`tile-${tile.id}-data`);
+        localStorage.removeItem(`tile-${tile.id}-lastRefresh`);
+      }
+    } else {
+      console.log(`No cached data found for tile ${tile.id}`);
+    }
+  }, [tile.id, queryClient]);
+
+  // Load cached data on mount
+  useEffect(() => {
+    const storedData = localStorage.getItem(`tile-${tile.id}-data`);
+    if (storedData && !snowflakeData) {
+      try {
+        const parsedData = JSON.parse(storedData);
         queryClient.setQueryData(['/api/snowflake/query', tile.id], parsedData);
       } catch (error) {
         console.error('Failed to parse cached data:', error);

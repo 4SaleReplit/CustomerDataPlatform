@@ -299,11 +299,37 @@ export default function Dashboard() {
       // Track global dashboard refresh
       trackBusinessEvent.dashboardGlobalRefresh(tiles.length);
       
-      // Clear all Snowflake query caches
+      // Clear all Snowflake query caches and localStorage
       queryClient.removeQueries({ queryKey: ['/api/snowflake/query'] });
       
-      // Force reload of tiles data
-      await loadTiles();
+      // Clear all cached tile data from localStorage
+      tiles.forEach(tile => {
+        localStorage.removeItem(`tile-${tile.id}-data`);
+        localStorage.removeItem(`tile-${tile.id}-lastRefresh`);
+      });
+      
+      // Force refresh all tiles by enabling queries temporarily
+      const refreshPromises = tiles.map(async (tile) => {
+        return queryClient.fetchQuery({
+          queryKey: ['/api/snowflake/query', tile.id],
+          queryFn: async () => {
+            const response = await apiRequest('/api/snowflake/query', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ query: tile.dataSource.query })
+            });
+            
+            // Store refreshed data in localStorage
+            const timestamp = new Date();
+            localStorage.setItem(`tile-${tile.id}-lastRefresh`, timestamp.toISOString());
+            localStorage.setItem(`tile-${tile.id}-data`, JSON.stringify(response));
+            
+            return response;
+          }
+        });
+      });
+      
+      await Promise.all(refreshPromises);
       
       toast({
         title: "Dashboard Refreshed",
