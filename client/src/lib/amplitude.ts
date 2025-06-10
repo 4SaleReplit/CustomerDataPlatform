@@ -82,6 +82,12 @@ export const trackBusinessEvent = {
     });
   },
 
+  dashboardGlobalRefresh: (tileCount: number) => {
+    trackEvent('Dashboard Global Refresh', {
+      tile_count: tileCount,
+    });
+  },
+
   // Cohort management
   cohortCreated: (cohortName: string, conditionsCount: number) => {
     trackEvent('Cohort Created', {

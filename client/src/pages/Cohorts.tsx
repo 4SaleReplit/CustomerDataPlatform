@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { trackBusinessEvent } from '@/lib/amplitude';
 import { Plus, Eye, Edit, Trash2, RefreshCw, Filter, SortAsc, SortDesc, MoreHorizontal, Copy, BarChart3 } from 'lucide-react';
 import amplitudeLogo from '@assets/AMPL_1749419466685.png';
 import brazeLogo from '@assets/BRZE_1749419981281.png';
@@ -131,9 +132,12 @@ export default function Cohorts() {
   });
 
   // Delete cohort function
-  const deleteCohort = async (cohortId: string) => {
+  const deleteCohort = async (cohortId: string, cohortName?: string) => {
     try {
       await apiRequest(`/api/cohorts/${cohortId}`, { method: 'DELETE' });
+      if (cohortName) {
+        trackBusinessEvent.cohortDeleted(cohortName);
+      }
       queryClient.invalidateQueries({ queryKey: ['/api/cohorts'] });
       toast({
         title: "Cohort deleted",
@@ -157,6 +161,7 @@ export default function Cohorts() {
         body: JSON.stringify({ ownerEmail: "data-team@yourcompany.com" })
       });
       
+      trackBusinessEvent.cohortSyncedToAmplitude(cohortName, response.syncedUserCount || 0);
       queryClient.invalidateQueries({ queryKey: ['/api/cohorts'] });
       toast({
         title: "Sync successful",

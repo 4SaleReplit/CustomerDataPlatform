@@ -284,6 +284,10 @@ export default function Dashboard() {
   };
 
   const handleRefreshTile = (tileId: string) => {
+    const tile = tiles.find(t => t.id === tileId);
+    if (tile) {
+      trackBusinessEvent.dashboardTileRefreshed(tileId, tile.type);
+    }
     console.log('Refreshing tile:', tileId);
   };
 
@@ -291,6 +295,9 @@ export default function Dashboard() {
   const handleGlobalRefresh = async () => {
     setIsLoading(true);
     try {
+      // Track global dashboard refresh
+      trackBusinessEvent.dashboardGlobalRefresh(tiles.length);
+      
       // Clear all Snowflake query caches
       queryClient.removeQueries({ queryKey: ['/api/snowflake/query'] });
       
