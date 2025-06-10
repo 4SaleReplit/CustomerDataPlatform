@@ -29,7 +29,7 @@ export default function Users() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          query: 'SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE CURRENT_CREDITS_IN_WALLET != 0 AND TOTAL_CREDITS_SPENT != 0 LIMIT 100' 
+          query: 'SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE CURRENT_CREDITS_IN_WALLET != 0 AND TOTAL_CREDITS_SPENT != 0 AND PHONE IS NOT NULL AND PHONE != \'\' LIMIT 100' 
         })
       });
       return response;
@@ -268,7 +268,7 @@ export default function Users() {
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="text-sm">{user.PHONE_NUMBER || 'No phone'}</div>
+                      <div className="text-sm">{user.PHONE || user.PHONE_NUMBER}</div>
                     </td>
                     <td className="py-3 px-4">
                       {getUserTypeBadge(user.USER_TYPE)}
