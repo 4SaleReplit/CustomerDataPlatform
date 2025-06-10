@@ -12,6 +12,7 @@ import {
   FileText,
   Cable
 } from 'lucide-react';
+import { trackBusinessEvent } from '@/lib/amplitude';
 import {
   Sidebar,
   SidebarContent,
@@ -74,6 +75,7 @@ export function AppSidebar() {
                       <Link
                         href={item.href}
                         className="flex items-center gap-3"
+                        onClick={() => trackBusinessEvent.navigationItemClicked(item.name)}
                       >
                         <item.icon className="h-5 w-5 flex-shrink-0" />
                         {!isCollapsed && <span>{item.name}</span>}

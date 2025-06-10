@@ -191,6 +191,12 @@ export const trackBusinessEvent = {
       page_name: pageName,
     });
   },
+
+  navigationItemClicked: (itemName: string) => {
+    trackEvent('Navigation Item Clicked', {
+      item_name: itemName,
+    });
+  },
 };
 
 export default amplitude;
