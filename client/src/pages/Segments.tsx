@@ -17,64 +17,45 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 
-// Mock segment data with enhanced fields
-const mockSegments = [
-  {
-    id: 1,
-    name: 'is_top_lister',
-    description: 'Users with more than 10 total listings',
-    rule: 'total_listings_count > 10',
-    userCount: 5432,
-    status: 'active',
-    createdDate: '2024-01-15',
-    updatedDate: '2024-06-01',
-    createdBy: 'John Smith'
-  },
-  {
-    id: 2,
-    name: 'is_high_value',
-    description: 'Users with CLTV > $500',
-    rule: 'cltv > 500',
-    userCount: 2341,
-    status: 'active',
-    createdDate: '2024-02-20',
-    updatedDate: '2024-05-28',
-    createdBy: 'Sarah Wilson'
-  },
-  {
-    id: 3,
-    name: 'is_mobile_user',
-    description: 'Users who primarily use mobile app',
-    rule: 'mobile_sessions > web_sessions',
-    userCount: 0,
-    status: 'calculating',
-    createdDate: '2024-05-30',
-    updatedDate: '2024-06-02',
-    createdBy: 'Mike Chen'
-  },
-  {
-    id: 4,
-    name: 'is_electronics_seller',
-    description: 'Users who list primarily in Electronics',
-    rule: 'favorite_vertical = "Electronics"',
-    userCount: 8976,
-    status: 'inactive',
-    createdDate: '2024-03-10',
-    updatedDate: '2024-04-15',
-    createdBy: 'Lisa Brown'
-  },
-  {
-    id: 5,
-    name: 'is_new_user',
-    description: 'Users registered in the last 7 days',
-    rule: 'registration_date >= CURRENT_DATE - INTERVAL 7 DAY',
-    userCount: 1247,
-    status: 'active',
-    createdDate: '2024-05-25',
-    updatedDate: '2024-06-02',
-    createdBy: 'John Smith'
+// Helper functions for dynamic operator selection based on data type
+const getOperatorsForType = (dataType: string) => {
+  const numericTypes = ['NUMBER', 'INTEGER', 'FLOAT', 'DECIMAL', 'DOUBLE'];
+  const stringTypes = ['VARCHAR', 'TEXT', 'STRING', 'CHAR'];
+  const dateTypes = ['DATE', 'TIMESTAMP', 'DATETIME'];
+  
+  if (numericTypes.some(type => dataType.toUpperCase().includes(type))) {
+    return [
+      { value: '>', label: '>' },
+      { value: '<', label: '<' },
+      { value: '=', label: '=' },
+      { value: '!=', label: '!=' },
+      { value: '>=', label: '>=' },
+      { value: '<=', label: '<=' }
+    ];
+  } else if (stringTypes.some(type => dataType.toUpperCase().includes(type))) {
+    return [
+      { value: '=', label: '=' },
+      { value: '!=', label: '!=' },
+      { value: 'LIKE', label: 'Contains' },
+      { value: 'NOT LIKE', label: 'Does not contain' },
+      { value: 'IN', label: 'In list' },
+      { value: 'NOT IN', label: 'Not in list' }
+    ];
+  } else if (dateTypes.some(type => dataType.toUpperCase().includes(type))) {
+    return [
+      { value: '>', label: 'After' },
+      { value: '<', label: 'Before' },
+      { value: '=', label: 'On' },
+      { value: '>=', label: 'On or after' },
+      { value: '<=', label: 'On or before' }
+    ];
+  } else {
+    return [
+      { value: '=', label: '=' },
+      { value: '!=', label: '!=' }
+    ];
   }
-];
+};
 
 export default function Segments() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -91,23 +72,90 @@ export default function Segments() {
     operator: '',
     value: ''
   });
-  const [deleteSegmentId, setDeleteSegmentId] = useState<number | null>(null);
+  const [deleteSegmentId, setDeleteSegmentId] = useState<string | null>(null);
+  const [selectedAttribute, setSelectedAttribute] = useState<string>('');
 
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const itemsPerPage = 10;
 
+  // Fetch segments from database
+  const { data: segments = [], isLoading: segmentsLoading, refetch: refetchSegments } = useQuery({
+    queryKey: ['/api/segments'],
+    queryFn: () => apiRequest('/api/segments'),
+  });
+
+  // Fetch Snowflake schema for attribute dropdowns
+  const { data: schemaData, isLoading: schemaLoading } = useQuery({
+    queryKey: ['/api/snowflake/schema'],
+    queryFn: () => apiRequest('/api/snowflake/schema'),
+    staleTime: 1000 * 60 * 10, // Cache schema for 10 minutes
+  });
+
+  const availableColumns = schemaData?.columns || [];
+  const selectedColumn = availableColumns.find(col => col.name === selectedAttribute);
+  const availableOperators = selectedColumn ? getOperatorsForType(selectedColumn.type) : [];
+
   // Get unique creators for filter
-  const uniqueCreators = [...new Set(mockSegments.map(segment => segment.createdBy))];
+  const uniqueCreators = Array.from(new Set(segments.map((segment: any) => segment.createdBy).filter(Boolean)));
+
+  // Create segment mutation
+  const createSegmentMutation = useMutation({
+    mutationFn: (segmentData: any) => apiRequest('/api/segments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(segmentData)
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/segments'] });
+      toast({
+        title: "Segment Created",
+        description: "Segment tag has been created successfully.",
+      });
+      setIsCreateDialogOpen(false);
+      setNewSegment({ name: '', description: '', attribute: '', operator: '', value: '' });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create segment",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Delete segment mutation
+  const deleteSegmentMutation = useMutation({
+    mutationFn: (segmentId: string) => apiRequest(`/api/segments/${segmentId}`, {
+      method: 'DELETE'
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/segments'] });
+      toast({
+        title: "Segment Deleted",
+        description: "Segment tag has been deleted successfully.",
+      });
+      setDeleteSegmentId(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete segment",
+        variant: "destructive",
+      });
+    }
+  });
 
   // Filter and sort segments
-  const filteredSegments = mockSegments
-    .filter(segment => {
+  const filteredSegments = segments
+    .filter((segment: any) => {
       const matchesSearch = segment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           segment.description.toLowerCase().includes(searchTerm.toLowerCase());
+                           (segment.description || '').toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === 'all' || segment.status === statusFilter;
       const matchesCreator = creatorFilter === 'all' || segment.createdBy === creatorFilter;
       return matchesSearch && matchesStatus && matchesCreator;
     })
-    .sort((a, b) => {
+    .sort((a: any, b: any) => {
       let aValue, bValue;
       switch (sortBy) {
         case 'name':
@@ -115,16 +163,16 @@ export default function Segments() {
           bValue = b.name;
           break;
         case 'userCount':
-          aValue = a.userCount;
-          bValue = b.userCount;
+          aValue = a.userCount || 0;
+          bValue = b.userCount || 0;
           break;
-        case 'createdDate':
-          aValue = new Date(a.createdDate);
-          bValue = new Date(b.createdDate);
+        case 'createdAt':
+          aValue = new Date(a.createdAt);
+          bValue = new Date(b.createdAt);
           break;
-        case 'updatedDate':
-          aValue = new Date(a.updatedDate);
-          bValue = new Date(b.updatedDate);
+        case 'updatedAt':
+          aValue = new Date(a.updatedAt);
+          bValue = new Date(b.updatedAt);
           break;
         default:
           aValue = a.name;
@@ -159,20 +207,50 @@ export default function Segments() {
   };
 
   const handleCreateSegment = () => {
-    console.log('Creating segment:', newSegment);
-    setIsCreateDialogOpen(false);
-    setNewSegment({ name: '', description: '', attribute: '', operator: '', value: '' });
+    if (!newSegment.name || !newSegment.attribute || !newSegment.operator || !newSegment.value) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Build the SQL rule from the form inputs
+    const rule = `${newSegment.attribute} ${newSegment.operator} ${
+      newSegment.operator.includes('LIKE') ? `'%${newSegment.value}%'` : 
+      isNaN(Number(newSegment.value)) ? `'${newSegment.value}'` : newSegment.value
+    }`;
+
+    const segmentData = {
+      name: newSegment.name,
+      description: newSegment.description,
+      rule: rule,
+      attribute: newSegment.attribute,
+      operator: newSegment.operator,
+      value: newSegment.value,
+      status: 'active',
+      createdBy: 'Current User' // TODO: Get from auth context
+    };
+
+    createSegmentMutation.mutate(segmentData);
   };
 
-  const handleDeleteSegment = (segmentId: number) => {
-    console.log('Deleting segment:', segmentId);
-    // Here you would typically call an API to delete the segment
-    setDeleteSegmentId(null);
+  const handleDeleteSegment = (segmentId: string) => {
+    deleteSegmentMutation.mutate(segmentId);
   };
 
   const handleDuplicateSegment = (segment: any) => {
-    console.log('Duplicating segment:', segment);
-    // Here you would typically call an API to duplicate the segment
+    const duplicatedSegment = {
+      name: `${segment.name}_copy`,
+      description: segment.description,
+      attribute: segment.attribute,
+      operator: segment.operator,
+      value: segment.value,
+      status: 'active',
+      createdBy: 'Current User'
+    };
+    createSegmentMutation.mutate(duplicatedSegment);
   };
 
   const handleSort = (field: string) => {
@@ -224,32 +302,41 @@ export default function Segments() {
               <div className="grid grid-cols-3 gap-2">
                 <div className="space-y-2">
                   <Label>Attribute</Label>
-                  <Select value={newSegment.attribute} onValueChange={(value) => setNewSegment({...newSegment, attribute: value})}>
+                  <Select 
+                    value={newSegment.attribute} 
+                    onValueChange={(value) => {
+                      setNewSegment({...newSegment, attribute: value, operator: '', value: ''});
+                      setSelectedAttribute(value);
+                    }}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select" />
+                      <SelectValue placeholder={schemaLoading ? "Loading..." : "Select attribute"} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="total_listings_count">Total Listings</SelectItem>
-                      <SelectItem value="cltv">CLTV</SelectItem>
-                      <SelectItem value="user_type">User Type</SelectItem>
-                      <SelectItem value="registration_date">Registration Date</SelectItem>
-                      <SelectItem value="mobile_sessions">Mobile Sessions</SelectItem>
+                      {availableColumns.map((column: any) => (
+                        <SelectItem key={column.name} value={column.name}>
+                          {column.name} ({column.type})
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Operator</Label>
-                  <Select value={newSegment.operator} onValueChange={(value) => setNewSegment({...newSegment, operator: value})}>
+                  <Select 
+                    value={newSegment.operator} 
+                    onValueChange={(value) => setNewSegment({...newSegment, operator: value})}
+                    disabled={!selectedAttribute}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select" />
+                      <SelectValue placeholder="Select operator" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value=">">&gt;</SelectItem>
-                      <SelectItem value="<">&lt;</SelectItem>
-                      <SelectItem value="=">=</SelectItem>
-                      <SelectItem value="!=">!=</SelectItem>
-                      <SelectItem value=">=">≥</SelectItem>
-                      <SelectItem value="<=">≤</SelectItem>
+                      {availableOperators.map((op) => (
+                        <SelectItem key={op.value} value={op.value}>
+                          {op.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -353,37 +440,37 @@ export default function Segments() {
                     Users {sortBy === 'userCount' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
                   <th className="text-left py-3 px-4 font-medium">Status</th>
-                  <th className="text-left py-3 px-4 font-medium cursor-pointer hover:bg-gray-50" onClick={() => handleSort('createdDate')}>
-                    Created {sortBy === 'createdDate' && (sortOrder === 'asc' ? '↑' : '↓')}
+                  <th className="text-left py-3 px-4 font-medium cursor-pointer hover:bg-gray-50" onClick={() => handleSort('createdAt')}>
+                    Created {sortBy === 'createdAt' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th className="text-left py-3 px-4 font-medium cursor-pointer hover:bg-gray-50" onClick={() => handleSort('updatedDate')}>
-                    Updated {sortBy === 'updatedDate' && (sortOrder === 'asc' ? '↑' : '↓')}
+                  <th className="text-left py-3 px-4 font-medium cursor-pointer hover:bg-gray-50" onClick={() => handleSort('updatedAt')}>
+                    Updated {sortBy === 'updatedAt' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
                   <th className="text-left py-3 px-4 font-medium">Creator</th>
                   <th className="text-left py-3 px-4 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {paginatedSegments.map((segment) => (
+                {paginatedSegments.map((segment: any) => (
                   <tr key={segment.id} className="border-b hover:bg-gray-50">
                     <td className="py-3 px-4 font-mono text-sm">{segment.name}</td>
-                    <td className="py-3 px-4 text-gray-600">{segment.description}</td>
+                    <td className="py-3 px-4 text-gray-600">{segment.description || '-'}</td>
                     <td className="py-3 px-4">
                       <code className="font-mono text-xs bg-gray-50 rounded px-2 py-1">
-                        {segment.rule}
+                        {segment.rule || `${segment.attribute} ${segment.operator} ${segment.value}`}
                       </code>
                     </td>
                     <td className="py-3 px-4 font-medium">
                       {segment.userCount > 0 ? segment.userCount.toLocaleString() : '-'}
                     </td>
-                    <td className="py-3 px-4">{getStatusBadge(segment.status)}</td>
+                    <td className="py-3 px-4">{getStatusBadge(segment.status || 'active')}</td>
                     <td className="py-3 px-4 text-sm text-gray-600">
-                      {new Date(segment.createdDate).toLocaleDateString()}
+                      {segment.createdAt ? new Date(segment.createdAt).toLocaleDateString() : '-'}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600">
-                      {new Date(segment.updatedDate).toLocaleDateString()}
+                      {segment.updatedAt ? new Date(segment.updatedAt).toLocaleDateString() : '-'}
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-600">{segment.createdBy}</td>
+                    <td className="py-3 px-4 text-sm text-gray-600">{segment.createdBy || '-'}</td>
                     <td className="py-3 px-4">
                       <div className="flex gap-1">
                         <Link to={`/segments/${segment.id}`}>
