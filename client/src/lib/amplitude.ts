@@ -163,6 +163,12 @@ export const trackBusinessEvent = {
     });
   },
 
+  userDataRefreshed: (userCount: number) => {
+    trackEvent('User Data Refreshed', {
+      user_count: userCount,
+    });
+  },
+
   // Data exploration
   dataTableSorted: (tableName: string, sortColumn: string, sortDirection: string) => {
     trackEvent('Data Table Sorted', {

@@ -42,6 +42,7 @@ export default function Users() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
+      trackBusinessEvent.userDataRefreshed(filteredUsers.length);
       await queryClient.invalidateQueries({ queryKey: ['users', 'snowflake'] });
       await refetchUsers();
     } finally {

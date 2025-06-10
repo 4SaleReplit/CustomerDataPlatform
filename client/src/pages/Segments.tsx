@@ -94,7 +94,7 @@ export default function Segments() {
   });
 
   const availableColumns = schemaData?.columns || [];
-  const selectedColumn = availableColumns.find(col => col.name === selectedAttribute);
+  const selectedColumn = availableColumns.find((col: any) => col.name === selectedAttribute);
   const availableOperators = selectedColumn ? getOperatorsForType(selectedColumn.type) : [];
 
   // Get unique creators for filter
@@ -248,6 +248,8 @@ export default function Segments() {
       });
       return;
     }
+
+    trackBusinessEvent.segmentCreated(newSegment.name, newSegment.attribute, newSegment.operator);
 
     // Build the SQL rule from the form inputs
     const rule = `${newSegment.attribute} ${newSegment.operator} ${
