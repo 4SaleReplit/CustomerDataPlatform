@@ -11,7 +11,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { trackEvent, trackBusinessEvent } from '@/lib/amplitude';
 
-export default function Users() {
+function Users() {
   const [searchTerm, setSearchTerm] = useState('');
   const [userTypeFilter, setUserTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -390,3 +390,6 @@ export default function Users() {
     </div>
   );
 }
+
+// Memoize Users component to prevent unnecessary re-renders during navigation
+export default React.memo(Users);

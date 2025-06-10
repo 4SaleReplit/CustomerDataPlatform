@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Link } from 'wouter';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -111,7 +111,7 @@ const removedMockCohorts = [
   }
 ];
 
-export default function Cohorts() {
+function Cohorts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [syncStatusFilter, setSyncStatusFilter] = useState('all');
@@ -620,3 +620,6 @@ export default function Cohorts() {
     </div>
   );
 }
+
+// Memoize Cohorts component to prevent unnecessary re-renders during navigation
+export default React.memo(Cohorts);
