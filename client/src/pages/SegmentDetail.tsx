@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'wouter';
 import { ArrowLeft, Edit, Users, TrendingUp, Calendar, User, RefreshCw, Save, Play, Pause, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { trackBusinessEvent } from '@/lib/amplitude';
 
 // Mock segment data
 const mockSegmentData: Record<string, any> = {
@@ -56,14 +59,46 @@ const mockSegmentData: Record<string, any> = {
   }
 };
 
-export default function SegmentDetail() {
+function SegmentDetail() {
   const { segmentId } = useParams();
   const [isEditing, setIsEditing] = useState(false);
-  const [segmentData, setSegmentData] = useState(segmentId ? mockSegmentData[segmentId] || null : null);
+  const [segmentData, setSegmentData] = useState<any>(null);
 
-  if (!segmentData) {
+  // Track page visit
+  useEffect(() => {
+    trackBusinessEvent.pageViewed('segment-detail');
+  }, []);
+
+  // Fetch segment data from API
+  const { data: segment, isLoading, error } = useQuery({
+    queryKey: ['segments', segmentId],
+    queryFn: async () => {
+      const response = await apiRequest(`/api/segments/${segmentId}`);
+      return response;
+    },
+    enabled: !!segmentId,
+  });
+
+  useEffect(() => {
+    if (segment) {
+      setSegmentData(segment);
+    }
+  }, [segment]);
+
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-500" />
+          <p className="text-gray-600">Loading segment details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !segmentData) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Segment Not Found</h2>
           <p className="text-gray-600 mb-4">The segment you're looking for doesn't exist.</p>
@@ -354,3 +389,6 @@ export default function SegmentDetail() {
     </div>
   );
 }
+
+// Memoize SegmentDetail component for SPA behavior
+export default React.memo(SegmentDetail);
