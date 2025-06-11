@@ -398,6 +398,13 @@ export default function AdminNew() {
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem 
+                              onClick={() => resetPasswordMutation.mutate(member.id)}
+                              disabled={resetPasswordMutation.isPending}
+                            >
+                              <Key className="h-4 w-4 mr-2" />
+                              Reset Password
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
                               className="text-red-600"
                               onClick={() => deleteTeamMemberMutation.mutate(member.id)}
                             >
