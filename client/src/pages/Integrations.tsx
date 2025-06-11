@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -505,9 +505,14 @@ export default function Integrations() {
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [showAddModal, setShowAddModal] = useState(false);
 
-  // Fetch integrations from database
-  const { data: integrations = [], isLoading } = useQuery<Integration[]>({
+  // Fetch integrations from database with aggressive caching
+  const { data: integrations = [], isLoading } = useQuery({
     queryKey: ['/api/integrations'],
+    queryFn: () => apiRequest('/api/integrations') as Promise<Integration[]>,
+    staleTime: 10 * 60 * 1000, // Data stays fresh for 10 minutes
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: false, // Don't refetch on component mount if data exists
+    refetchOnReconnect: false, // Don't refetch on network reconnect
   });
 
   // Create integration mutation
@@ -675,7 +680,7 @@ export default function Integrations() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = useCallback((status: string) => {
     switch (status) {
       case 'connected':
         return <Badge className="status-connected px-3 py-1 text-xs font-medium"><CheckCircle className="h-3 w-3 mr-1" />Connected</Badge>;
@@ -686,7 +691,7 @@ export default function Integrations() {
       default:
         return <Badge className="bg-gray-100 text-gray-700 border border-gray-200 px-3 py-1 text-xs font-medium"><AlertTriangle className="h-3 w-3 mr-1" />Disconnected</Badge>;
     }
-  };
+  }, []);
 
   const renderField = (field: IntegrationField, value: any, onChange: (value: any) => void) => {
     switch (field.type) {
@@ -745,62 +750,17 @@ export default function Integrations() {
       </div>
 
       <div className="grid-responsive">
-        {integrations.map((integration) => {
+        {integrations.map((integration: Integration) => {
           const template = integrationTemplates[integration.type];
           return (
-            <Card key={integration.id} className="card hover:shadow-xl transition-all duration-300 slide-up group">
-              <CardHeader className="pb-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
-                      {template?.icon}
-                    </div>
-                    <div className="space-y-1">
-                      <CardTitle className="text-xl font-semibold group-hover:text-blue-600 transition-colors">
-                        {integration.name}
-                      </CardTitle>
-                      <CardDescription className="text-base text-muted-foreground leading-relaxed">
-                        {integration.description}
-                      </CardDescription>
-                    </div>
-                  </div>
-                  {getStatusBadge(integration.status)}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                <div className="text-sm text-muted-foreground space-y-2 bg-gray-50 p-4 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">Created:</span>
-                    <span>{new Date(integration.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  {integration.lastUsedAt && (
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">Last used:</span>
-                      <span>{new Date(integration.lastUsedAt).toLocaleDateString()}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex space-x-3">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => handleConfigureIntegration(integration)}
-                    className="flex-1 font-medium hover:bg-blue-50 hover:border-blue-200 transition-colors"
-                  >
-                    <Settings className="h-4 w-4 mr-2" />
-                    Configure
-                  </Button>
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={() => deleteIntegrationMutation.mutate(integration.id)}
-                    className="hover:bg-red-600 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <IntegrationCard 
+              key={integration.id}
+              integration={integration}
+              template={template}
+              getStatusBadge={getStatusBadge}
+              handleConfigureIntegration={handleConfigureIntegration}
+              deleteIntegrationMutation={deleteIntegrationMutation}
+            />
           );
         })}
       </div>
