@@ -434,17 +434,19 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Dashboard Content */}
-      <div className="flex-1 p-6">
-        <DashboardBuilder
-          tiles={tiles}
-          onTilesChange={handleTilesChange}
-          isEditMode={isEditMode}
-          onEditTile={handleEditTile}
-          onRemoveTile={handleRemoveTile}
-          onDuplicateTile={handleDuplicateTile}
-          onRefreshTile={handleRefreshTile}
-        />
+      {/* Enhanced Dashboard Content */}
+      <div className="flex-1 p-8 bg-gradient-to-br from-gray-50/50 to-blue-50/30">
+        <div className="bg-white/60 backdrop-blur-sm rounded-3xl border border-white/20 shadow-lg p-6">
+          <DashboardBuilder
+            tiles={tiles}
+            onTilesChange={handleTilesChange}
+            isEditMode={isEditMode}
+            onEditTile={handleEditTile}
+            onRemoveTile={handleRemoveTile}
+            onDuplicateTile={handleDuplicateTile}
+            onRefreshTile={handleRefreshTile}
+          />
+        </div>
       </div>
 
       {/* Edit Dialog */}

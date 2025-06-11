@@ -91,7 +91,11 @@ class RedisConnectionManager {
   }
 
   getAllConnections(): RedisConnection[] {
-    return Array.from(this.connections.values());
+    const result: RedisConnection[] = [];
+    this.connections.forEach(connection => {
+      result.push(connection);
+    });
+    return result;
   }
 
   async removeConnection(connectionId: string): Promise<boolean> {
@@ -101,11 +105,15 @@ class RedisConnectionManager {
       this.connections.delete(connectionId);
       
       // Remove associated queues
-      for (const [queueId, queue] of this.queues.entries()) {
+      const queuesToRemove: string[] = [];
+      this.queues.forEach((queue, queueId) => {
         if (queue.connectionId === connectionId) {
-          this.queues.delete(queueId);
+          queuesToRemove.push(queueId);
         }
-      }
+      });
+      queuesToRemove.forEach(queueId => {
+        this.queues.delete(queueId);
+      });
       
       return true;
     }
@@ -121,7 +129,11 @@ class RedisConnectionManager {
   }
 
   getAllQueues(): Array<{ id: string; config: QueueConfig }> {
-    return Array.from(this.queues.entries()).map(([id, config]) => ({ id, config }));
+    const result: Array<{ id: string; config: QueueConfig }> = [];
+    this.queues.forEach((config, id) => {
+      result.push({ id, config });
+    });
+    return result;
   }
 
   async addJob(queueId: string, jobData: any, options?: {
@@ -240,7 +252,12 @@ class RedisConnectionManager {
   }
 
   async cleanup(): Promise<void> {
-    for (const connection of this.connections.values()) {
+    const connections: RedisConnection[] = [];
+    this.connections.forEach(connection => {
+      connections.push(connection);
+    });
+    
+    for (const connection of connections) {
       if (connection.connected) {
         await connection.client.quit();
       }
