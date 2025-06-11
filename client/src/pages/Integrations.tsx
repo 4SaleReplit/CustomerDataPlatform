@@ -678,13 +678,13 @@ export default function Integrations() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'connected':
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Connected</Badge>;
+        return <Badge className="status-connected px-3 py-1 text-xs font-medium"><CheckCircle className="h-3 w-3 mr-1" />Connected</Badge>;
       case 'error':
-        return <Badge className="bg-red-100 text-red-800"><XCircle className="h-3 w-3 mr-1" />Error</Badge>;
+        return <Badge className="status-error px-3 py-1 text-xs font-medium"><XCircle className="h-3 w-3 mr-1" />Error</Badge>;
       case 'testing':
-        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="h-3 w-3 mr-1" />Testing</Badge>;
+        return <Badge className="status-warning px-3 py-1 text-xs font-medium"><Clock className="h-3 w-3 mr-1" />Testing</Badge>;
       default:
-        return <Badge className="bg-gray-100 text-gray-800"><AlertTriangle className="h-3 w-3 mr-1" />Disconnected</Badge>;
+        return <Badge className="bg-gray-100 text-gray-700 border border-gray-200 px-3 py-1 text-xs font-medium"><AlertTriangle className="h-3 w-3 mr-1" />Disconnected</Badge>;
     }
   };
 
@@ -816,19 +816,25 @@ export default function Integrations() {
           </DialogHeader>
 
           {!selectedTemplate ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
               {Object.entries(integrationTemplates).map(([key, template]) => (
                 <Card 
                   key={key}
-                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  className="card cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-300 border-2 hover:border-blue-200 group"
                   onClick={() => handleTemplateSelect(key)}
                 >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center space-x-3">
-                      {template.icon}
-                      <div>
-                        <CardTitle className="text-base">{template.name}</CardTitle>
-                        <CardDescription className="text-sm">{template.description}</CardDescription>
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 group-hover:border-blue-200 transition-colors">
+                        {template.icon}
+                      </div>
+                      <div className="space-y-1">
+                        <CardTitle className="text-lg font-semibold group-hover:text-blue-600 transition-colors">
+                          {template.name}
+                        </CardTitle>
+                        <CardDescription className="text-sm text-muted-foreground leading-relaxed">
+                          {template.description}
+                        </CardDescription>
                       </div>
                     </div>
                   </CardHeader>
@@ -836,71 +842,86 @@ export default function Integrations() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
               {/* Configuration Form */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Configuration</h3>
-                {integrationTemplates[selectedTemplate].fields.map((field) => (
-                  <div key={field.key} className="space-y-2">
-                    <Label htmlFor={field.key}>
-                      {field.label}
-                      {field.required && <span className="text-red-500">*</span>}
-                    </Label>
-                    {renderField(field, formData[field.key], (value) => 
-                      setFormData(prev => ({ ...prev, [field.key]: value }))
-                    )}
-                  </div>
-                ))}
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-semibold tracking-tight">Configuration</h3>
+                  <p className="text-muted-foreground">Enter your credentials to connect {integrationTemplates[selectedTemplate].name}</p>
+                </div>
                 
+                <div className="space-y-5">
+                  {integrationTemplates[selectedTemplate].fields.map((field) => (
+                    <div key={field.key} className="space-y-3">
+                      <Label htmlFor={field.key} className="text-sm font-medium text-foreground">
+                        {field.label}
+                        {field.required && <span className="text-red-500 ml-1">*</span>}
+                      </Label>
+                      <div className="relative">
+                        {renderField(field, formData[field.key], (value) => 
+                          setFormData(prev => ({ ...prev, [field.key]: value }))
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Documentation Panel */}
-              <div className="bg-gray-50 p-4 rounded-lg space-y-4 flex flex-col">
-                <div>
-                  <h4 className="font-semibold flex items-center mb-2">
-                    <BookOpen className="h-4 w-4 mr-2" />
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 p-6 rounded-2xl space-y-6 flex flex-col h-fit">
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold flex items-center text-blue-900">
+                    <BookOpen className="h-5 w-5 mr-3 text-blue-600" />
                     Setup Guide
                   </h4>
-                  <p className="text-sm font-medium mb-2">{integrationTemplates[selectedTemplate].setupGuide.title}</p>
-                  <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
-                    {integrationTemplates[selectedTemplate].setupGuide.steps.map((step, index) => (
-                      <li key={index}>{step}</li>
-                    ))}
-                  </ol>
+                  <div className="bg-white p-4 rounded-xl border border-blue-100">
+                    <p className="text-sm font-medium mb-3 text-gray-800">{integrationTemplates[selectedTemplate].setupGuide.title}</p>
+                    <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside leading-relaxed">
+                      {integrationTemplates[selectedTemplate].setupGuide.steps.map((step, index) => (
+                        <li key={index} className="pl-2">{step}</li>
+                      ))}
+                    </ol>
+                  </div>
                 </div>
 
-                <div>
-                  <h4 className="font-semibold flex items-center mb-2">
-                    <Shield className="h-4 w-4 mr-2" />
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold flex items-center text-blue-900">
+                    <Shield className="h-5 w-5 mr-3 text-green-600" />
                     Required Permissions
                   </h4>
-                  <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
-                    {integrationTemplates[selectedTemplate].permissions.required.map((permission, index) => (
-                      <li key={index}>{permission}</li>
-                    ))}
-                  </ul>
-                  <p className="text-xs text-gray-500 mt-2">{integrationTemplates[selectedTemplate].permissions.documentation}</p>
+                  <div className="bg-white p-4 rounded-xl border border-blue-100">
+                    <ul className="text-sm text-gray-700 space-y-2 list-disc list-inside leading-relaxed">
+                      {integrationTemplates[selectedTemplate].permissions.required.map((permission, index) => (
+                        <li key={index} className="pl-2">{permission}</li>
+                      ))}
+                    </ul>
+                    <p className="text-xs text-gray-600 mt-3 p-2 bg-gray-50 rounded-lg border">
+                      {integrationTemplates[selectedTemplate].permissions.documentation}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="flex-1">
-                  <h4 className="font-semibold flex items-center mb-2">
-                    <Target className="h-4 w-4 mr-2" />
+                <div className="flex-1 space-y-4">
+                  <h4 className="text-lg font-semibold flex items-center text-blue-900">
+                    <Target className="h-5 w-5 mr-3 text-purple-600" />
                     Use Cases
                   </h4>
-                  <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
-                    {integrationTemplates[selectedTemplate].useCases.map((useCase, index) => (
-                      <li key={index}>{useCase}</li>
-                    ))}
-                  </ul>
+                  <div className="bg-white p-4 rounded-xl border border-blue-100">
+                    <ul className="text-sm text-gray-700 space-y-2 list-disc list-inside leading-relaxed">
+                      {integrationTemplates[selectedTemplate].useCases.map((useCase, index) => (
+                        <li key={index} className="pl-2">{useCase}</li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex space-x-2 mt-6 pt-4 border-t border-gray-200">
+                <div className="flex space-x-3 pt-6 border-t border-blue-200">
                   <Button 
                     onClick={() => handleTestNewIntegration(selectedTemplate)} 
                     variant="outline" 
                     disabled={isTestingConnection}
-                    className="flex-1"
+                    className="flex-1 font-medium border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all"
                   >
                     {isTestingConnection ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -909,10 +930,10 @@ export default function Integrations() {
                     )}
                     Test Connection
                   </Button>
-                  <Button onClick={handleSaveIntegration} className="flex-1">
+                  <Button onClick={handleSaveIntegration} className="flex-1 btn-primary font-medium">
                     Save Configuration
                   </Button>
-                  <Button variant="outline" onClick={() => setSelectedTemplate('')}>
+                  <Button variant="outline" onClick={() => setSelectedTemplate('')} className="font-medium">
                     Back
                   </Button>
                 </div>
