@@ -21,7 +21,24 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { SiGoogleanalytics, SiFirebase, SiClickhouse, SiFacebook, SiGoogle, SiSnowflake } from 'react-icons/si';
+import { 
+  SiGoogleanalytics, 
+  SiFirebase, 
+  SiClickhouse, 
+  SiFacebook, 
+  SiGoogle, 
+  SiSnowflake,
+  SiAmplitude,
+  SiMixpanel,
+  SiIntercom,
+  SiSalesforce,
+  SiHubspot,
+  SiZendesk,
+  SiTwilio,
+  SiSegment,
+  SiClevertap,
+  SiBraze
+} from 'react-icons/si';
 import { TrendingUp, Database, Target, BarChart3, Users, Smartphone, Cloud, MessageSquare, Info, FileText, Shield } from 'lucide-react';
 
 interface Integration {
@@ -1068,30 +1085,30 @@ export default function Integrations() {
 
       {/* Configuration Modal */}
       <Dialog open={isConfigModalOpen} onOpenChange={setIsConfigModalOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden p-0">
+        <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0">
           {selectedIntegration && (
             <>
-              <DialogHeader className="p-6 pb-4 border-b">
+              <DialogHeader className="p-4 pb-3 border-b flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className={`p-3 rounded-lg ${selectedIntegration.color}`}>
+                  <div className="p-2 rounded-lg bg-white border">
                     {selectedIntegration.icon}
                   </div>
                   <div>
-                    <DialogTitle className="text-xl font-semibold">
+                    <DialogTitle className="text-lg font-semibold">
                       {selectedIntegration.name} Configuration
                     </DialogTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-sm text-muted-foreground">
                       {selectedIntegration.description}
                     </p>
                   </div>
                 </div>
               </DialogHeader>
 
-              <div className="flex h-[calc(90vh-140px)]">
+              <div className="flex flex-1 min-h-0">
                 {/* Left Column - Configuration Form */}
-                <div className="flex-1 p-6 border-r overflow-y-auto">
-                  <div className="space-y-4">
-                    <div className="space-y-3">
+                <div className="flex-1 p-4 border-r overflow-y-auto">
+                  <div className="space-y-3">
+                    <div className="space-y-2">
                       {integrationTemplates[selectedIntegration.type as keyof typeof integrationTemplates]?.fields.map((field) => (
                         <div key={field.key} className="space-y-1.5">
                           <Label htmlFor={`modal-${field.key}`} className="text-sm font-medium">
@@ -1184,8 +1201,8 @@ export default function Integrations() {
                 </div>
 
                 {/* Right Column - Documentation */}
-                <div className="w-80 p-6 bg-gray-50 dark:bg-gray-900/50 overflow-y-auto">
-                  <div className="space-y-6">
+                <div className="w-80 p-4 bg-gray-50 dark:bg-gray-900/50 overflow-y-auto">
+                  <div className="space-y-4">
                     <div>
                       <div className="flex items-center gap-2 mb-3">
                         <Info className="h-4 w-4 text-blue-500" />
@@ -1230,7 +1247,7 @@ export default function Integrations() {
               </div>
 
               {/* Footer Actions */}
-              <div className="flex items-center justify-between p-6 border-t bg-gray-50 dark:bg-gray-900/50">
+              <div className="flex items-center justify-between p-4 border-t bg-gray-50 dark:bg-gray-900/50 mt-auto flex-shrink-0">
                 <Button variant="outline" onClick={() => setIsConfigModalOpen(false)}>
                   Cancel
                 </Button>
