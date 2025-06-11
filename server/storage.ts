@@ -139,12 +139,23 @@ export class DatabaseStorage implements IStorage {
     return member || undefined;
   }
 
+  async getTeamMembers(): Promise<Team[]> {
+    return await db.select().from(team).orderBy(team.createdAt);
+  }
+
   async createTeamMember(insertTeam: InsertTeam): Promise<Team> {
-    const [member] = await db
+    const [teamMember] = await db
       .insert(team)
       .values(insertTeam)
       .returning();
-    return member;
+    return teamMember;
+  }
+
+  async deleteTeamMember(id: string): Promise<boolean> {
+    const result = await db
+      .delete(team)
+      .where(eq(team.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   async getDashboardTiles(dashboardId?: string): Promise<DashboardTileInstance[]> {

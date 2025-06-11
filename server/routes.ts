@@ -1753,6 +1753,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team management routes
+  app.get("/api/team", async (req, res) => {
+    try {
+      const teamMembers = await storage.getTeamMembers();
+      res.json(teamMembers);
+    } catch (error) {
+      console.error("Get team members error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get team members" 
+      });
+    }
+  });
+
+  app.delete("/api/team/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteTeamMember(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Team member not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete team member error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to delete team member" 
+      });
+    }
+  });
+
+  // Team invitation endpoint with SendGrid email
+  app.post("/api/team/invite", async (req, res) => {
+    try {
+      const { email, firstName, lastName, role, message } = req.body;
+      
+      if (!email || !firstName || !lastName || !role) {
+        return res.status(400).json({ 
+          error: "Missing required fields: email, firstName, lastName, role" 
+        });
+      }
+
+      // Check if user already exists
+      const existingMember = await storage.getTeamMemberByEmail(email);
+      if (existingMember) {
+        return res.status(400).json({ 
+          error: "A team member with this email already exists" 
+        });
+      }
+
+      // Generate invitation token
+      const crypto = require('crypto');
+      const invitationToken = crypto.randomBytes(32).toString('hex');
+      const invitationUrl = `${req.headers.origin || 'http://localhost:5000'}/register?token=${invitationToken}&email=${encodeURIComponent(email)}`;
+
+      // Send email invitation using SendGrid
+      if (process.env.SENDGRID_API_KEY) {
+        const sgMail = require('@sendgrid/mail');
+        sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+        const emailContent = {
+          to: email,
+          from: 'noreply@yourcompany.com', // Replace with your verified sender
+          subject: `You're invited to join our team!`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #333;">Welcome to Our Team!</h2>
+              <p>Hi ${firstName},</p>
+              <p>You've been invited to join our marketing platform as a <strong>${role}</strong>.</p>
+              ${message ? `<p style="font-style: italic; color: #666;">"${message}"</p>` : ''}
+              <div style="margin: 30px 0;">
+                <a href="${invitationUrl}" 
+                   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                          color: white; 
+                          padding: 12px 24px; 
+                          text-decoration: none; 
+                          border-radius: 6px; 
+                          display: inline-block;">
+                  Accept Invitation
+                </a>
+              </div>
+              <p style="color: #666; font-size: 14px;">
+                This invitation will expire in 7 days. If you didn't expect this invitation, you can safely ignore this email.
+              </p>
+              <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+              <p style="color: #999; font-size: 12px;">
+                If the button doesn't work, copy and paste this link: ${invitationUrl}
+              </p>
+            </div>
+          `
+        };
+
+        try {
+          await sgMail.send(emailContent);
+        } catch (emailError) {
+          console.error("SendGrid email error:", emailError);
+          return res.status(500).json({ 
+            error: "Failed to send invitation email. Please check SendGrid configuration." 
+          });
+        }
+      }
+
+      // Store invitation in database as pending team member
+      const pendingMember = await storage.createTeamMember({
+        email,
+        firstName,
+        lastName,
+        role,
+        status: 'pending',
+        passwordHash: invitationToken, // Temporary use of token as placeholder
+      });
+
+      res.status(201).json({ 
+        success: true, 
+        message: "Invitation sent successfully",
+        member: pendingMember
+      });
+    } catch (error) {
+      console.error("Send invitation error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to send invitation" 
+      });
+    }
+  });
+
   // Role management routes
   app.get("/api/roles", async (req, res) => {
     try {
