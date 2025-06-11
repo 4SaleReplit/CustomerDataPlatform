@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { SiGoogleanalytics, SiFirebase, SiClickhouse, SiFacebook, SiGoogle, SiSnowflake } from 'react-icons/si';
 import { TrendingUp, Database, Target, BarChart3, Users, Smartphone, Cloud, MessageSquare, Info, FileText, Shield } from 'lucide-react';
@@ -43,7 +44,29 @@ interface Integration {
   };
 }
 
-const integrationTemplates = {
+interface IntegrationField {
+  key: string;
+  label: string;
+  type: string;
+  required: boolean;
+  placeholder?: string;
+  options?: string[];
+}
+
+interface IntegrationTemplate {
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  color: string;
+  fields: IntegrationField[];
+  permissions?: {
+    required: string[];
+    documentation: string;
+    useCases: string[];
+  };
+}
+
+const integrationTemplates: Record<string, IntegrationTemplate> = {
   braze: {
     name: 'Braze',
     description: 'Customer engagement platform for marketing automation',
@@ -529,9 +552,9 @@ export default function Integrations() {
       }
 
       // Update both selected integration and integrations list
-      const updatedIntegration = {
+      const updatedIntegration: Integration = {
         ...selectedIntegration,
-        status: testResult ? 'connected' : 'error' as const,
+        status: (testResult ? 'connected' : 'error') as Integration['status'],
         metadata: testResult ? metadata : undefined,
         lastTested: new Date().toISOString()
       };
@@ -550,9 +573,9 @@ export default function Integrations() {
       });
 
     } catch (error) {
-      const updatedIntegration = {
+      const updatedIntegration: Integration = {
         ...selectedIntegration,
-        status: 'error' as const
+        status: 'error' as Integration['status']
       };
       
       setSelectedIntegration(updatedIntegration);
@@ -1032,6 +1055,208 @@ export default function Integrations() {
           );
         })}
       </div>
+
+      {/* Configuration Modal */}
+      <Dialog open={isConfigModalOpen} onOpenChange={setIsConfigModalOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden p-0">
+          {selectedIntegration && (
+            <>
+              <DialogHeader className="p-6 pb-4 border-b">
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-lg ${selectedIntegration.color}`}>
+                    {selectedIntegration.icon}
+                  </div>
+                  <div>
+                    <DialogTitle className="text-xl font-semibold">
+                      {selectedIntegration.name} Configuration
+                    </DialogTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {selectedIntegration.description}
+                    </p>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="flex h-[calc(90vh-140px)]">
+                {/* Left Column - Configuration Form */}
+                <div className="flex-1 p-6 border-r overflow-y-auto">
+                  <div className="space-y-4">
+                    <div className="space-y-3">
+                      {integrationTemplates[selectedIntegration.type as keyof typeof integrationTemplates]?.fields.map((field) => (
+                        <div key={field.key} className="space-y-1.5">
+                          <Label htmlFor={`modal-${field.key}`} className="text-sm font-medium">
+                            {field.label}
+                            {field.required && <span className="text-red-500 ml-1">*</span>}
+                          </Label>
+                          {field.type === 'select' ? (
+                            <Select
+                              value={selectedIntegration.credentials[field.key] || ''}
+                              onValueChange={(value) => handleModalCredentialChange(field.key, value)}
+                            >
+                              <SelectTrigger id={`modal-${field.key}`}>
+                                <SelectValue placeholder={`Select ${field.label}`} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {field.options?.map((option) => (
+                                  <SelectItem key={option} value={option}>
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : field.type === 'textarea' ? (
+                            <Textarea
+                              id={`modal-${field.key}`}
+                              value={selectedIntegration.credentials[field.key] || ''}
+                              onChange={(e) => handleModalCredentialChange(field.key, e.target.value)}
+                              placeholder={field.placeholder}
+                              rows={3}
+                            />
+                          ) : (
+                            <div className="relative">
+                              <Input
+                                id={`modal-${field.key}`}
+                                type={field.type === 'password' && !showPasswords[`${selectedIntegration.id}-${field.key}`] ? 'password' : 'text'}
+                                value={selectedIntegration.credentials[field.key] || ''}
+                                onChange={(e) => handleModalCredentialChange(field.key, e.target.value)}
+                                placeholder={field.placeholder}
+                                className="pr-10"
+                              />
+                              {field.type === 'password' && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                  onClick={() => togglePasswordVisibility(selectedIntegration.id, field.key)}
+                                >
+                                  {showPasswords[`${selectedIntegration.id}-${field.key}`] ? (
+                                    <EyeOff className="h-4 w-4" />
+                                  ) : (
+                                    <Eye className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Connection Status */}
+                    {selectedIntegration.status === 'connected' && selectedIntegration.metadata && (
+                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mt-6">
+                        <div className="flex items-center gap-2 text-sm font-medium text-green-800 dark:text-green-200 mb-2">
+                          <CheckCircle className="h-4 w-4" />
+                          Connection Successful
+                        </div>
+                        <div className="text-xs text-green-700 dark:text-green-300 space-y-1">
+                          <div><strong>Account:</strong> {selectedIntegration.metadata.accountInfo}</div>
+                          <div><strong>Available Data:</strong> {selectedIntegration.metadata.dataAvailable?.join(', ')}</div>
+                          <div><strong>Records:</strong> {selectedIntegration.metadata.recordCount?.toLocaleString()}</div>
+                          <div><strong>API Version:</strong> {selectedIntegration.metadata.version}</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedIntegration.status === 'error' && (
+                      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mt-6">
+                        <div className="flex items-center gap-2 text-sm font-medium text-red-800 dark:text-red-200">
+                          <AlertCircle className="h-4 w-4" />
+                          Connection Failed
+                        </div>
+                        <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                          Please check your credentials and try again.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right Column - Documentation */}
+                <div className="w-80 p-6 bg-gray-50 dark:bg-gray-900/50 overflow-y-auto">
+                  <div className="space-y-6">
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Info className="h-4 w-4 text-blue-500" />
+                        <h3 className="font-medium text-sm">Setup Guide</h3>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {integrationTemplates[selectedIntegration.type as keyof typeof integrationTemplates]?.permissions?.documentation}
+                      </p>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Shield className="h-4 w-4 text-orange-500" />
+                        <h3 className="font-medium text-sm">Required Permissions</h3>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {integrationTemplates[selectedIntegration.type as keyof typeof integrationTemplates]?.permissions?.required.map((permission: string, idx: number) => (
+                          <li key={idx} className="flex items-start gap-2 text-xs">
+                            <div className="w-1.5 h-1.5 rounded-full bg-orange-400 mt-1.5 flex-shrink-0" />
+                            {permission}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <FileText className="h-4 w-4 text-purple-500" />
+                        <h3 className="font-medium text-sm">Use Cases</h3>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {integrationTemplates[selectedIntegration.type as keyof typeof integrationTemplates]?.permissions?.useCases.map((useCase: string, idx: number) => (
+                          <li key={idx} className="flex items-start gap-2 text-xs">
+                            <div className="w-1.5 h-1.5 rounded-full bg-purple-400 mt-1.5 flex-shrink-0" />
+                            {useCase}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="flex items-center justify-between p-6 border-t bg-gray-50 dark:bg-gray-900/50">
+                <Button variant="outline" onClick={() => setIsConfigModalOpen(false)}>
+                  Cancel
+                </Button>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={handleModalTestConnection}
+                    disabled={isTestingConnection}
+                    className="min-w-[120px]"
+                  >
+                    {isTestingConnection ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Testing...
+                      </>
+                    ) : (
+                      <>
+                        <TestTube className="h-4 w-4 mr-2" />
+                        Test Connection
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleModalSave}
+                    disabled={isTestingConnection}
+                    className="min-w-[120px]"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Configuration
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
