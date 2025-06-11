@@ -17,7 +17,6 @@ export const team = pgTable("team", {
   firstName: varchar("first_name", { length: 100 }).notNull(),
   lastName: varchar("last_name", { length: 100 }).notNull(),
   role: text("role").notNull().default('analyst'),
-  status: text("status").notNull().default('active'),
   permissions: jsonb("permissions").default('{}'),
   temporaryPassword: varchar("temporary_password", { length: 255 }),
   mustChangePassword: boolean("must_change_password").default(true),

@@ -1844,7 +1844,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName,
         lastName,
         role,
-        status: 'active',
         passwordHash,
         temporaryPassword: tempPassword,
         mustChangePassword: true

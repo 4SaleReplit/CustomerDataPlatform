@@ -425,8 +425,7 @@ export default function AdminNew() {
                                 firstName: member.firstName,
                                 lastName: member.lastName,
                                 email: member.email,
-                                role: member.role,
-                                status: member.status
+                                role: member.role
                               });
                               setShowEditModal(true);
                             }}>
@@ -573,8 +572,7 @@ export default function AdminNew() {
                   firstName: editUserData.firstName,
                   lastName: editUserData.lastName,
                   email: editUserData.email,
-                  role: editUserData.role,
-                  status: editUserData.status
+                  role: editUserData.role
                 }
               });
             }}>
@@ -633,22 +631,7 @@ export default function AdminNew() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label htmlFor="editStatus">Status</Label>
-                  <Select 
-                    value={editUserData.status} 
-                    onValueChange={(value) => setEditUserData({...editUserData, status: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+
               </div>
               <div className="flex justify-end space-x-2 mt-6">
                 <Button
