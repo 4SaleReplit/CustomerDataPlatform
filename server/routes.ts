@@ -833,6 +833,445 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Facebook Ads test endpoint
+  app.post("/api/integrations/facebookAds/test", async (req, res) => {
+    try {
+      const { accessToken, appId, appSecret, adAccountId, apiVersion } = req.body;
+      
+      if (!accessToken || !appId || !appSecret || !adAccountId) {
+        return res.status(400).json({ 
+          error: "Missing required fields: accessToken, appId, appSecret, adAccountId" 
+        });
+      }
+
+      // Test Facebook Ads API connection
+      const testUrl = `https://graph.facebook.com/${apiVersion || 'v20.0'}/me/adaccounts?access_token=${accessToken}`;
+      const response = await fetch(testUrl);
+      const success = response.ok;
+      
+      if (success) {
+        res.json({ success: true, message: "Facebook Ads connection successful" });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          error: "Facebook Ads connection failed. Check your access token and permissions." 
+        });
+      }
+    } catch (error) {
+      console.error("Facebook Ads test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Internal server error during Facebook Ads connection test" 
+      });
+    }
+  });
+
+  // Google Ads test endpoint
+  app.post("/api/integrations/googleAds/test", async (req, res) => {
+    try {
+      const { clientId, clientSecret, refreshToken, customerId, developerToken } = req.body;
+      
+      if (!clientId || !clientSecret || !refreshToken || !customerId || !developerToken) {
+        return res.status(400).json({ 
+          error: "Missing required fields: clientId, clientSecret, refreshToken, customerId, developerToken" 
+        });
+      }
+
+      // Test Google Ads API connection by refreshing token
+      const tokenUrl = 'https://oauth2.googleapis.com/token';
+      const tokenResponse = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: clientId,
+          client_secret: clientSecret,
+          refresh_token: refreshToken,
+          grant_type: 'refresh_token'
+        })
+      });
+      
+      const success = tokenResponse.ok;
+      
+      if (success) {
+        res.json({ success: true, message: "Google Ads connection successful" });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          error: "Google Ads connection failed. Check your OAuth credentials." 
+        });
+      }
+    } catch (error) {
+      console.error("Google Ads test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Internal server error during Google Ads connection test" 
+      });
+    }
+  });
+
+  // Snowflake test endpoint
+  app.post("/api/integrations/snowflake/test", async (req, res) => {
+    try {
+      const { account, username, password, warehouse, database, schema } = req.body;
+      
+      if (!account || !username || !password || !warehouse || !database) {
+        return res.status(400).json({ 
+          error: "Missing required fields: account, username, password, warehouse, database" 
+        });
+      }
+
+      // Test Snowflake connection using existing service
+      const testResult = await snowflakeService.executeQuery('SELECT 1 as test');
+      
+      if (testResult.success) {
+        res.json({ success: true, message: "Snowflake connection successful" });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          error: "Snowflake connection failed. Check your credentials and network access." 
+        });
+      }
+    } catch (error) {
+      console.error("Snowflake test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Internal server error during Snowflake connection test" 
+      });
+    }
+  });
+
+  // CleverTap test endpoint
+  app.post("/api/integrations/clevertap/test", async (req, res) => {
+    try {
+      const { accountId, passcode, region } = req.body;
+      
+      if (!accountId || !passcode || !region) {
+        return res.status(400).json({ 
+          error: "Missing required fields: accountId, passcode, region" 
+        });
+      }
+
+      // Test CleverTap API connection
+      const baseUrl = `https://${region}.api.clevertap.com`;
+      const testUrl = `${baseUrl}/1/accounts/${accountId}/profiles.json?limit=1`;
+      
+      const response = await fetch(testUrl, {
+        headers: {
+          'X-CleverTap-Account-Id': accountId,
+          'X-CleverTap-Passcode': passcode,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const success = response.ok;
+      
+      if (success) {
+        res.json({ success: true, message: "CleverTap connection successful" });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          error: "CleverTap connection failed. Check your account ID, passcode, and region." 
+        });
+      }
+    } catch (error) {
+      console.error("CleverTap test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Internal server error during CleverTap connection test" 
+      });
+    }
+  });
+
+  // Mixpanel test endpoint
+  app.post("/api/integrations/mixpanel/test", async (req, res) => {
+    try {
+      const { projectId, serviceAccountUsername, serviceAccountSecret } = req.body;
+      
+      if (!projectId || !serviceAccountUsername || !serviceAccountSecret) {
+        return res.status(400).json({ 
+          error: "Missing required fields: projectId, serviceAccountUsername, serviceAccountSecret" 
+        });
+      }
+
+      // Test Mixpanel API connection
+      const testUrl = `https://mixpanel.com/api/2.0/engage/?project_id=${projectId}`;
+      const auth = Buffer.from(`${serviceAccountUsername}:${serviceAccountSecret}`).toString('base64');
+      
+      const response = await fetch(testUrl, {
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const success = response.ok;
+      
+      if (success) {
+        res.json({ success: true, message: "Mixpanel connection successful" });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          error: "Mixpanel connection failed. Check your service account credentials." 
+        });
+      }
+    } catch (error) {
+      console.error("Mixpanel test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Internal server error during Mixpanel connection test" 
+      });
+    }
+  });
+
+  // Segment test endpoint
+  app.post("/api/integrations/segment/test", async (req, res) => {
+    try {
+      const { writeKey, accessToken, workspaceSlug } = req.body;
+      
+      if (!writeKey || !accessToken || !workspaceSlug) {
+        return res.status(400).json({ 
+          error: "Missing required fields: writeKey, accessToken, workspaceSlug" 
+        });
+      }
+
+      // Test Segment API connection
+      const testUrl = `https://api.segmentapis.com/workspaces/${workspaceSlug}/sources`;
+      
+      const response = await fetch(testUrl, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const success = response.ok;
+      
+      if (success) {
+        res.json({ success: true, message: "Segment connection successful" });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          error: "Segment connection failed. Check your access token and workspace slug." 
+        });
+      }
+    } catch (error) {
+      console.error("Segment test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Internal server error during Segment connection test" 
+      });
+    }
+  });
+
+  // Intercom test endpoint
+  app.post("/api/integrations/intercom/test", async (req, res) => {
+    try {
+      const { accessToken, apiVersion } = req.body;
+      
+      if (!accessToken) {
+        return res.status(400).json({ 
+          error: "Missing required field: accessToken" 
+        });
+      }
+
+      // Test Intercom API connection
+      const testUrl = 'https://api.intercom.io/me';
+      
+      const response = await fetch(testUrl, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': `application/json`,
+          'Intercom-Version': apiVersion || '2.11'
+        }
+      });
+      
+      const success = response.ok;
+      
+      if (success) {
+        res.json({ success: true, message: "Intercom connection successful" });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          error: "Intercom connection failed. Check your access token." 
+        });
+      }
+    } catch (error) {
+      console.error("Intercom test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Internal server error during Intercom connection test" 
+      });
+    }
+  });
+
+  // Salesforce test endpoint
+  app.post("/api/integrations/salesforce/test", async (req, res) => {
+    try {
+      const { instanceUrl, clientId, clientSecret, username, password, securityToken } = req.body;
+      
+      if (!instanceUrl || !clientId || !clientSecret || !username || !password || !securityToken) {
+        return res.status(400).json({ 
+          error: "Missing required fields: instanceUrl, clientId, clientSecret, username, password, securityToken" 
+        });
+      }
+
+      // Test Salesforce OAuth connection
+      const tokenUrl = `${instanceUrl}/services/oauth2/token`;
+      
+      const response = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'password',
+          client_id: clientId,
+          client_secret: clientSecret,
+          username: username,
+          password: password + securityToken
+        })
+      });
+      
+      const success = response.ok;
+      
+      if (success) {
+        res.json({ success: true, message: "Salesforce connection successful" });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          error: "Salesforce connection failed. Check your credentials and security settings." 
+        });
+      }
+    } catch (error) {
+      console.error("Salesforce test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Internal server error during Salesforce connection test" 
+      });
+    }
+  });
+
+  // HubSpot test endpoint
+  app.post("/api/integrations/hubspot/test", async (req, res) => {
+    try {
+      const { accessToken, portalId } = req.body;
+      
+      if (!accessToken || !portalId) {
+        return res.status(400).json({ 
+          error: "Missing required fields: accessToken, portalId" 
+        });
+      }
+
+      // Test HubSpot API connection
+      const testUrl = 'https://api.hubapi.com/contacts/v1/lists/all/contacts/all';
+      
+      const response = await fetch(testUrl, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const success = response.ok;
+      
+      if (success) {
+        res.json({ success: true, message: "HubSpot connection successful" });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          error: "HubSpot connection failed. Check your access token and permissions." 
+        });
+      }
+    } catch (error) {
+      console.error("HubSpot test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Internal server error during HubSpot connection test" 
+      });
+    }
+  });
+
+  // Zendesk test endpoint
+  app.post("/api/integrations/zendesk/test", async (req, res) => {
+    try {
+      const { subdomain, email, apiToken } = req.body;
+      
+      if (!subdomain || !email || !apiToken) {
+        return res.status(400).json({ 
+          error: "Missing required fields: subdomain, email, apiToken" 
+        });
+      }
+
+      // Test Zendesk API connection
+      const testUrl = `https://${subdomain}.zendesk.com/api/v2/users/me.json`;
+      const auth = Buffer.from(`${email}/token:${apiToken}`).toString('base64');
+      
+      const response = await fetch(testUrl, {
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const success = response.ok;
+      
+      if (success) {
+        res.json({ success: true, message: "Zendesk connection successful" });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          error: "Zendesk connection failed. Check your subdomain, email, and API token." 
+        });
+      }
+    } catch (error) {
+      console.error("Zendesk test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Internal server error during Zendesk connection test" 
+      });
+    }
+  });
+
+  // Twilio test endpoint
+  app.post("/api/integrations/twilio/test", async (req, res) => {
+    try {
+      const { accountSid, authToken } = req.body;
+      
+      if (!accountSid || !authToken) {
+        return res.status(400).json({ 
+          error: "Missing required fields: accountSid, authToken" 
+        });
+      }
+
+      // Test Twilio API connection
+      const testUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}.json`;
+      const auth = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+      
+      const response = await fetch(testUrl, {
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const success = response.ok;
+      
+      if (success) {
+        res.json({ success: true, message: "Twilio connection successful" });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          error: "Twilio connection failed. Check your Account SID and Auth Token." 
+        });
+      }
+    } catch (error) {
+      console.error("Twilio test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Internal server error during Twilio connection test" 
+      });
+    }
+  });
+
+  // Generic test endpoint for other integrations
   app.post("/api/integrations/:type/test", async (req, res) => {
     try {
       const { type } = req.params;

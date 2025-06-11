@@ -20,8 +20,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { SiGoogleanalytics, SiFirebase, SiClickhouse } from 'react-icons/si';
-import { TrendingUp, Database, Target, BarChart3 } from 'lucide-react';
+import { SiGoogleanalytics, SiFirebase, SiClickhouse, SiFacebook, SiGoogle, SiSnowflake } from 'react-icons/si';
+import { TrendingUp, Database, Target, BarChart3, Users, Smartphone, Cloud, MessageSquare } from 'lucide-react';
 
 interface Integration {
   id: string;
@@ -115,6 +115,141 @@ const integrationTemplates = {
       { key: 'username', label: 'Username', type: 'text', required: true },
       { key: 'password', label: 'Password', type: 'password', required: true },
       { key: 'database', label: 'Database', type: 'text', required: true }
+    ]
+  },
+  facebookAds: {
+    name: 'Facebook Ads',
+    description: 'Facebook advertising platform for campaign and audience data',
+    icon: <SiFacebook className="h-5 w-5" />,
+    color: 'bg-blue-600',
+    fields: [
+      { key: 'accessToken', label: 'Access Token', type: 'password', required: true },
+      { key: 'appId', label: 'App ID', type: 'text', required: true },
+      { key: 'appSecret', label: 'App Secret', type: 'password', required: true },
+      { key: 'adAccountId', label: 'Ad Account ID', type: 'text', required: true, placeholder: 'act_XXXXXXXX' },
+      { key: 'apiVersion', label: 'API Version', type: 'select', required: true, options: ['v18.0', 'v19.0', 'v20.0'] }
+    ]
+  },
+  googleAds: {
+    name: 'Google Ads',
+    description: 'Google advertising platform for campaign performance and audience insights',
+    icon: <SiGoogle className="h-5 w-5" />,
+    color: 'bg-red-500',
+    fields: [
+      { key: 'clientId', label: 'Client ID', type: 'text', required: true },
+      { key: 'clientSecret', label: 'Client Secret', type: 'password', required: true },
+      { key: 'refreshToken', label: 'Refresh Token', type: 'password', required: true },
+      { key: 'customerId', label: 'Customer ID', type: 'text', required: true, placeholder: 'XXX-XXX-XXXX' },
+      { key: 'developerToken', label: 'Developer Token', type: 'password', required: true }
+    ]
+  },
+  snowflake: {
+    name: 'Snowflake',
+    description: 'Cloud data warehouse for analytics and data storage',
+    icon: <SiSnowflake className="h-5 w-5" />,
+    color: 'bg-cyan-500',
+    fields: [
+      { key: 'account', label: 'Account', type: 'text', required: true, placeholder: 'your-account.snowflakecomputing.com' },
+      { key: 'username', label: 'Username', type: 'text', required: true },
+      { key: 'password', label: 'Password', type: 'password', required: true },
+      { key: 'warehouse', label: 'Warehouse', type: 'text', required: true },
+      { key: 'database', label: 'Database', type: 'text', required: true },
+      { key: 'schema', label: 'Schema', type: 'text', required: true, placeholder: 'PUBLIC' },
+      { key: 'role', label: 'Role', type: 'text', required: false }
+    ]
+  },
+  clevertap: {
+    name: 'CleverTap',
+    description: 'Customer engagement and analytics platform',
+    icon: <Users className="h-5 w-5" />,
+    color: 'bg-teal-500',
+    fields: [
+      { key: 'accountId', label: 'Account ID', type: 'text', required: true },
+      { key: 'passcode', label: 'Passcode', type: 'password', required: true },
+      { key: 'region', label: 'Region', type: 'select', required: true, options: ['us1', 'eu1', 'aps3', 'mec1'] },
+      { key: 'apiKey', label: 'API Key', type: 'password', required: false }
+    ]
+  },
+  mixpanel: {
+    name: 'Mixpanel',
+    description: 'Product analytics for user behavior tracking',
+    icon: <BarChart3 className="h-5 w-5" />,
+    color: 'bg-purple-600',
+    fields: [
+      { key: 'projectId', label: 'Project ID', type: 'text', required: true },
+      { key: 'serviceAccountUsername', label: 'Service Account Username', type: 'text', required: true },
+      { key: 'serviceAccountSecret', label: 'Service Account Secret', type: 'password', required: true },
+      { key: 'projectToken', label: 'Project Token', type: 'password', required: false }
+    ]
+  },
+  segment: {
+    name: 'Segment',
+    description: 'Customer data platform for unified data collection',
+    icon: <Cloud className="h-5 w-5" />,
+    color: 'bg-green-600',
+    fields: [
+      { key: 'writeKey', label: 'Write Key', type: 'password', required: true },
+      { key: 'accessToken', label: 'Access Token', type: 'password', required: true },
+      { key: 'workspaceSlug', label: 'Workspace Slug', type: 'text', required: true },
+      { key: 'sourceId', label: 'Source ID', type: 'text', required: false }
+    ]
+  },
+  intercom: {
+    name: 'Intercom',
+    description: 'Customer messaging and support platform',
+    icon: <MessageSquare className="h-5 w-5" />,
+    color: 'bg-blue-500',
+    fields: [
+      { key: 'accessToken', label: 'Access Token', type: 'password', required: true },
+      { key: 'appId', label: 'App ID', type: 'text', required: false },
+      { key: 'apiVersion', label: 'API Version', type: 'select', required: true, options: ['2.10', '2.11'] }
+    ]
+  },
+  salesforce: {
+    name: 'Salesforce',
+    description: 'CRM platform for customer relationship management',
+    icon: <Database className="h-5 w-5" />,
+    color: 'bg-blue-700',
+    fields: [
+      { key: 'instanceUrl', label: 'Instance URL', type: 'url', required: true, placeholder: 'https://your-instance.salesforce.com' },
+      { key: 'clientId', label: 'Client ID', type: 'text', required: true },
+      { key: 'clientSecret', label: 'Client Secret', type: 'password', required: true },
+      { key: 'username', label: 'Username', type: 'text', required: true },
+      { key: 'password', label: 'Password', type: 'password', required: true },
+      { key: 'securityToken', label: 'Security Token', type: 'password', required: true }
+    ]
+  },
+  hubspot: {
+    name: 'HubSpot',
+    description: 'Marketing, sales, and service platform',
+    icon: <Target className="h-5 w-5" />,
+    color: 'bg-orange-600',
+    fields: [
+      { key: 'accessToken', label: 'Access Token', type: 'password', required: true },
+      { key: 'portalId', label: 'Portal ID', type: 'text', required: true },
+      { key: 'apiKey', label: 'API Key (Legacy)', type: 'password', required: false }
+    ]
+  },
+  zendesk: {
+    name: 'Zendesk',
+    description: 'Customer service and support platform',
+    icon: <MessageSquare className="h-5 w-5" />,
+    color: 'bg-green-700',
+    fields: [
+      { key: 'subdomain', label: 'Subdomain', type: 'text', required: true, placeholder: 'your-company' },
+      { key: 'email', label: 'Email', type: 'email', required: true },
+      { key: 'apiToken', label: 'API Token', type: 'password', required: true }
+    ]
+  },
+  twilio: {
+    name: 'Twilio',
+    description: 'Communications platform for SMS, voice, and messaging',
+    icon: <Smartphone className="h-5 w-5" />,
+    color: 'bg-red-600',
+    fields: [
+      { key: 'accountSid', label: 'Account SID', type: 'text', required: true },
+      { key: 'authToken', label: 'Auth Token', type: 'password', required: true },
+      { key: 'phoneNumber', label: 'Phone Number', type: 'text', required: false, placeholder: '+1234567890' }
     ]
   }
 };
