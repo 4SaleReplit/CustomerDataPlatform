@@ -4,6 +4,7 @@ import {
   dashboardTileInstances,
   cohorts,
   segments,
+  integrations,
   type User, 
   type InsertUser, 
   type Team, 
@@ -19,7 +20,9 @@ import {
   type Campaign,
   type InsertCampaign,
   campaignJobs,
-  type CampaignJob
+  type CampaignJob,
+  type Integration,
+  type InsertIntegration
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, or } from "drizzle-orm";
@@ -62,6 +65,15 @@ export interface IStorage {
   updateCampaign(id: string, updates: Partial<InsertCampaign>): Promise<Campaign | undefined>;
   deleteCampaign(id: string): Promise<boolean>;
   getCampaignJobs(campaignId: string): Promise<CampaignJob[]>;
+  
+  // Integration management
+  getIntegrations(): Promise<Integration[]>;
+  getIntegration(id: string): Promise<Integration | undefined>;
+  getIntegrationByType(type: string): Promise<Integration | undefined>;
+  createIntegration(integration: InsertIntegration): Promise<Integration>;
+  updateIntegration(id: string, updates: Partial<InsertIntegration>): Promise<Integration | undefined>;
+  deleteIntegration(id: string): Promise<boolean>;
+  updateIntegrationLastUsed(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {

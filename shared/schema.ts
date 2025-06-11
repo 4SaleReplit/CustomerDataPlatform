@@ -149,6 +149,20 @@ export const campaignJobs = pgTable("campaign_jobs", {
   processedAt: timestamp("processed_at", { withTimezone: true })
 });
 
+// Integrations table for platform connections
+export const integrations = pgTable("integrations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: varchar("type", { length: 100 }).notNull(), // braze, amplitude, facebook, google, etc
+  description: text("description").notNull(),
+  status: text("status").notNull().default("disconnected"), // connected, disconnected, testing, error
+  credentials: jsonb("credentials").notNull().default('{}'),
+  metadata: jsonb("metadata").default('{}'), // account info, data available, etc
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -206,6 +220,12 @@ export const insertCampaignJobSchema = createInsertSchema(campaignJobs).omit({
   processedAt: true,
 });
 
+export const insertIntegrationSchema = createInsertSchema(integrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Type exports
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -224,3 +244,5 @@ export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
 export type Campaign = typeof campaigns.$inferSelect;
 export type InsertCampaignJob = z.infer<typeof insertCampaignJobSchema>;
 export type CampaignJob = typeof campaignJobs.$inferSelect;
+export type InsertIntegration = z.infer<typeof insertIntegrationSchema>;
+export type Integration = typeof integrations.$inferSelect;
