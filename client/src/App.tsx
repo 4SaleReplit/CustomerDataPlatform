@@ -22,7 +22,7 @@ import CampaignEdit from "./pages/CampaignEdit";
 import Promotions from "./pages/Promotions";
 import Calendar from "./pages/Calendar";
 import ActivityLog from "./pages/ActivityLog";
-import Admin from "./pages/Admin";
+import Admin from "./pages/AdminNew";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import NotFound from "./pages/NotFound";

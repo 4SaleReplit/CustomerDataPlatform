@@ -1,0 +1,473 @@
+import React, { useState } from 'react';
+import { Plus, Eye, Edit, Trash2, UserPlus, Shield, Key, Copy, MoreHorizontal, Mail, Send, Crown, Users, Settings, Lock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
+import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import RoleManagement from './RoleManagement';
+
+interface TeamMember {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  status: string;
+  lastLoginAt?: string;
+  createdAt: string;
+}
+
+interface InvitationData {
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  message?: string;
+}
+
+interface Role {
+  id: string;
+  name: string;
+  displayName: string;
+  description?: string;
+  color: string;
+  isSystemRole: boolean;
+  isActive: boolean;
+  hierarchyLevel: number;
+  canManageRoles: boolean;
+  maxTeamMembers?: number;
+  allowedFeatures: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export default function AdminNew() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [selectedUser, setSelectedUser] = useState<TeamMember | null>(null);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [invitationData, setInvitationData] = useState<InvitationData>({
+    email: '',
+    firstName: '',
+    lastName: '',
+    role: 'viewer',
+    message: ''
+  });
+
+  // Fetch team members
+  const { data: teamMembers = [], isLoading: membersLoading } = useQuery({
+    queryKey: ['/api/team'],
+    queryFn: () => apiRequest('/api/team') as Promise<TeamMember[]>,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false
+  });
+
+  // Fetch roles for invitation dropdown
+  const { data: roles = [], isLoading: rolesLoading } = useQuery({
+    queryKey: ['/api/roles'],
+    queryFn: () => apiRequest('/api/roles') as Promise<Role[]>,
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false
+  });
+
+  // Send invitation mutation
+  const sendInvitationMutation = useMutation({
+    mutationFn: (data: InvitationData) => apiRequest('/api/team/invite', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { 'Content-Type': 'application/json' }
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team'] });
+      setShowInviteModal(false);
+      setInvitationData({
+        email: '',
+        firstName: '',
+        lastName: '',
+        role: 'viewer',
+        message: ''
+      });
+      toast({
+        title: "Invitation Sent",
+        description: "Team member invitation has been sent successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send invitation",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete team member mutation
+  const deleteTeamMemberMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/team/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team'] });
+      toast({
+        title: "Team Member Removed",
+        description: "The team member has been removed successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove team member",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSendInvitation = (e: React.FormEvent) => {
+    e.preventDefault();
+    sendInvitationMutation.mutate(invitationData);
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <Badge className="bg-green-100 text-green-800 border-green-200">Active</Badge>;
+      case 'pending':
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Pending</Badge>;
+      case 'inactive':
+        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">Inactive</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const getRoleIcon = (role: string) => {
+    if (role.includes('admin') || role.includes('Administrator')) return <Crown className="h-4 w-4 text-yellow-500" />;
+    if (role.includes('manager') || role.includes('Manager')) return <Shield className="h-4 w-4 text-blue-500" />;
+    return <Users className="h-4 w-4 text-gray-500" />;
+  };
+
+  return (
+    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-gradient-to-br from-gray-50 to-white min-h-screen">
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+            Admin Dashboard
+          </h1>
+          <p className="text-lg text-muted-foreground">
+            Manage team members, roles, and system settings
+          </p>
+        </div>
+        
+        <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
+          <DialogTrigger asChild>
+            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Invite Team Member
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Send Team Invitation
+              </DialogTitle>
+              <DialogDescription>
+                Send an email invitation to add a new team member to your organization.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSendInvitation} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    value={invitationData.firstName}
+                    onChange={(e) => setInvitationData({...invitationData, firstName: e.target.value})}
+                    placeholder="John"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    value={invitationData.lastName}
+                    onChange={(e) => setInvitationData({...invitationData, lastName: e.target.value})}
+                    placeholder="Doe"
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={invitationData.email}
+                  onChange={(e) => setInvitationData({...invitationData, email: e.target.value})}
+                  placeholder="john.doe@company.com"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="role">Role</Label>
+                <Select 
+                  value={invitationData.role} 
+                  onValueChange={(value) => setInvitationData({...invitationData, role: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roles.filter(role => role.isActive).map((role) => (
+                      <SelectItem key={role.id} value={role.name}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: role.color }}
+                          />
+                          {role.displayName}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="message">Personal Message (Optional)</Label>
+                <Textarea
+                  id="message"
+                  value={invitationData.message}
+                  onChange={(e) => setInvitationData({...invitationData, message: e.target.value})}
+                  placeholder="Welcome to our team! We're excited to have you join us."
+                  rows={3}
+                />
+              </div>
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => setShowInviteModal(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={sendInvitationMutation.isPending}>
+                  {sendInvitationMutation.isPending ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Send Invitation
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <Tabs defaultValue="team" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="team">Team Members</TabsTrigger>
+          <TabsTrigger value="roles">Role Management</TabsTrigger>
+          <TabsTrigger value="system">System Settings</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="team" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Team Members
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {membersLoading ? (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center space-x-4 p-4 border rounded-lg animate-pulse">
+                      <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : teamMembers.length === 0 ? (
+                <div className="text-center py-12">
+                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No team members yet</h3>
+                  <p className="text-gray-500 mb-6">Get started by inviting your first team member.</p>
+                  <Button onClick={() => setShowInviteModal(true)}>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Invite Team Member
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {teamMembers.map((member) => (
+                    <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg hover:shadow-md transition-shadow">
+                      <div className="flex items-center space-x-4">
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-semibold">
+                          {member.firstName.charAt(0)}{member.lastName.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium">{member.firstName} {member.lastName}</h3>
+                            {getRoleIcon(member.role)}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{member.email}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            {getStatusBadge(member.status)}
+                            <span className="text-xs text-muted-foreground">
+                              {member.role}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {member.lastLoginAt && (
+                          <span className="text-xs text-muted-foreground">
+                            Last login: {new Date(member.lastLoginAt).toLocaleDateString()}
+                          </span>
+                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setSelectedUser(member)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => deleteTeamMemberMutation.mutate(member.id)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remove
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="roles" className="space-y-6">
+          <RoleManagement />
+        </TabsContent>
+
+        <TabsContent value="system" className="space-y-6">
+          <div className="grid gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  System Configuration
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium">Email Notifications</h4>
+                    <p className="text-sm text-muted-foreground">Send system notifications via email</p>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium">Auto-sync Cohorts</h4>
+                    <p className="text-sm text-muted-foreground">Automatically sync cohorts to external platforms</p>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium">Data Retention</h4>
+                    <p className="text-sm text-muted-foreground">Keep analytics data for 12 months</p>
+                  </div>
+                  <Select defaultValue="12">
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="3">3 months</SelectItem>
+                      <SelectItem value="6">6 months</SelectItem>
+                      <SelectItem value="12">12 months</SelectItem>
+                      <SelectItem value="24">24 months</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="security" className="space-y-6">
+          <div className="grid gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Lock className="h-5 w-5" />
+                  Security Settings
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium">Two-Factor Authentication</h4>
+                    <p className="text-sm text-muted-foreground">Require 2FA for all admin accounts</p>
+                  </div>
+                  <Switch />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium">Session Timeout</h4>
+                    <p className="text-sm text-muted-foreground">Automatically log out inactive users</p>
+                  </div>
+                  <Select defaultValue="8">
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 hour</SelectItem>
+                      <SelectItem value="4">4 hours</SelectItem>
+                      <SelectItem value="8">8 hours</SelectItem>
+                      <SelectItem value="24">24 hours</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium">IP Restrictions</h4>
+                    <p className="text-sm text-muted-foreground">Limit access to specific IP addresses</p>
+                  </div>
+                  <Switch />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

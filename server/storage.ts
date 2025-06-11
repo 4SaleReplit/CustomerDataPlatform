@@ -43,9 +43,11 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   
   // Team management
+  getTeamMembers(): Promise<Team[]>;
   getTeamMember(id: string): Promise<Team | undefined>;
   getTeamMemberByEmail(email: string): Promise<Team | undefined>;
   createTeamMember(member: InsertTeam): Promise<Team>;
+  deleteTeamMember(id: string): Promise<boolean>;
   
   // Dashboard tile management
   getDashboardTiles(dashboardId?: string): Promise<DashboardTileInstance[]>;
@@ -416,9 +418,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteRole(id: string): Promise<boolean> {
+    // Check if role is system role first
+    const [role] = await db.select().from(roles).where(eq(roles.id, id));
+    if (role?.isSystemRole) {
+      throw new Error("Cannot delete system roles");
+    }
+    
     const result = await db
       .delete(roles)
-      .where(eq(roles.id, id));
+      .where(and(eq(roles.id, id), eq(roles.isSystemRole, false)));
     return result.rowCount !== null && result.rowCount > 0;
   }
 
