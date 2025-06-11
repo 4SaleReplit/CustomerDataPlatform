@@ -65,6 +65,7 @@ export default function AdminNew() {
     role: 'viewer',
     message: ''
   });
+  const [createdPassword, setCreatedPassword] = useState<string | null>(null);
 
   // Fetch team members
   const { data: teamMembers = [], isLoading: membersLoading } = useQuery({
@@ -82,15 +83,57 @@ export default function AdminNew() {
     refetchOnWindowFocus: false
   });
 
-  // Send invitation mutation
-  const sendInvitationMutation = useMutation({
-    mutationFn: (data: InvitationData) => apiRequest('/api/team/invite', {
+  // Create team member mutation
+  const createTeamMemberMutation = useMutation({
+    mutationFn: (data: InvitationData) => apiRequest('/api/team/create', {
       method: 'POST',
       body: JSON.stringify(data),
       headers: { 'Content-Type': 'application/json' }
     }),
-    onSuccess: () => {
+    onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/team'] });
+      setCreatedPassword(response.member.temporaryPassword);
+      toast({
+        title: "Team member created",
+        description: "New team member has been created with a temporary password.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to create team member",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Reset password mutation
+  const resetPasswordMutation = useMutation({
+    mutationFn: (memberId: string) => apiRequest(`/api/team/${memberId}/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    }),
+    onSuccess: (response: any) => {
+      setCreatedPassword(response.temporaryPassword);
+      setSelectedUser(null);
+      toast({
+        title: "Password reset",
+        description: "A new temporary password has been generated.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to reset password",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Send invitation mutation (keep for backward compatibility)
+  const sendInvitationMutation = useMutation({
+    mutationFn: (data: InvitationData) => createTeamMemberMutation.mutateAsync(data),
+    onSuccess: () => {
       setShowInviteModal(false);
       setInvitationData({
         email: '',

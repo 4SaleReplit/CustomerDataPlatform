@@ -48,6 +48,8 @@ export interface IStorage {
   getTeamMemberByEmail(email: string): Promise<Team | undefined>;
   createTeamMember(member: InsertTeam): Promise<Team>;
   deleteTeamMember(id: string): Promise<boolean>;
+  updateTeamMemberPassword(id: string, passwordHash: string): Promise<boolean>;
+  resetTeamMemberPassword(id: string): Promise<{ password: string; success: boolean }>;
   
   // Dashboard tile management
   getDashboardTiles(dashboardId?: string): Promise<DashboardTileInstance[]>;
@@ -156,6 +158,40 @@ export class DatabaseStorage implements IStorage {
       .delete(team)
       .where(eq(team.id, id));
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async updateTeamMemberPassword(id: string, passwordHash: string): Promise<boolean> {
+    const result = await db
+      .update(team)
+      .set({ 
+        passwordHash, 
+        mustChangePassword: false,
+        temporaryPassword: null,
+        updatedAt: new Date()
+      })
+      .where(eq(team.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async resetTeamMemberPassword(id: string): Promise<{ password: string; success: boolean }> {
+    // Generate secure temporary password
+    const crypto = await import('crypto');
+    const tempPassword = crypto.randomBytes(8).toString('base64').slice(0, 12) + '@1';
+    const bcrypt = await import('bcrypt');
+    const passwordHash = await bcrypt.hash(tempPassword, 12);
+
+    const result = await db
+      .update(team)
+      .set({ 
+        passwordHash,
+        temporaryPassword: tempPassword,
+        mustChangePassword: true,
+        updatedAt: new Date()
+      })
+      .where(eq(team.id, id));
+
+    const success = result.rowCount !== null && result.rowCount > 0;
+    return { password: tempPassword, success };
   }
 
   async getDashboardTiles(dashboardId?: string): Promise<DashboardTileInstance[]> {

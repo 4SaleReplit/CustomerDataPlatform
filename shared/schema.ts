@@ -19,6 +19,8 @@ export const team = pgTable("team", {
   role: text("role").notNull().default('analyst'),
   status: text("status").notNull().default('active'),
   permissions: jsonb("permissions").default('{}'),
+  temporaryPassword: varchar("temporary_password", { length: 255 }),
+  mustChangePassword: boolean("must_change_password").default(true),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   failedLoginAttempts: integer("failed_login_attempts").default(0),
   lockedUntil: timestamp("locked_until", { withTimezone: true }),

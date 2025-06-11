@@ -1782,10 +1782,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Team invitation endpoint with SendGrid email
-  app.post("/api/team/invite", async (req, res) => {
+  // Create team member with password (super admin only)
+  app.post("/api/team/create", async (req, res) => {
     try {
-      const { email, firstName, lastName, role, message } = req.body;
+      const { email, firstName, lastName, role } = req.body;
       
       if (!email || !firstName || !lastName || !role) {
         return res.status(400).json({ 
@@ -1801,69 +1801,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Generate invitation token
+      // Generate secure temporary password
       const crypto = await import('crypto');
-      const invitationToken = crypto.randomBytes(32).toString('hex');
-      const invitationUrl = `${req.headers.origin || 'http://localhost:5000'}/register?token=${invitationToken}&email=${encodeURIComponent(email)}`;
+      const tempPassword = crypto.randomBytes(8).toString('base64').slice(0, 12) + '@1';
+      const bcrypt = await import('bcrypt');
+      const passwordHash = await bcrypt.hash(tempPassword, 12);
 
-      // Send email invitation using Braze (with fallback)
-      let emailSent = false;
-      try {
-        const invitationData = {
-          email,
-          firstName,
-          lastName,
-          role,
-          invitationUrl,
-          message
-        };
-
-        const emailResult = await BrazeModule.brazeService.sendTeamInvitation(invitationData);
-        
-        if (emailResult.success) {
-          console.log("Team invitation email sent successfully via Braze");
-          emailSent = true;
-        } else {
-          console.error("Braze invitation error:", emailResult.error);
-        }
-
-      } catch (emailError) {
-        console.error("Braze email invitation error:", emailError);
-      }
-
-      // If email fails, log the invitation details for manual delivery
-      if (!emailSent) {
-        console.log("=".repeat(80));
-        console.log("EMAIL DELIVERY FAILED - MANUAL INVITATION REQUIRED");
-        console.log("=".repeat(80));
-        console.log(`Invite: ${firstName} ${lastName} <${email}>`);
-        console.log(`Role: ${role}`);
-        console.log(`Invitation URL: ${invitationUrl}`);
-        if (message) {
-          console.log(`Message: "${message}"`);
-        }
-        console.log("=".repeat(80));
-      }
-
-      // Store invitation in database as pending team member
-      const pendingMember = await storage.createTeamMember({
+      // Create team member with temporary password
+      const newMember = await storage.createTeamMember({
         email,
         firstName,
         lastName,
         role,
-        status: 'pending',
-        passwordHash: invitationToken, // Temporary use of token as placeholder
+        status: 'active',
+        passwordHash,
+        temporaryPassword: tempPassword,
+        mustChangePassword: true
       });
+
+      console.log("=".repeat(80));
+      console.log("NEW TEAM MEMBER CREATED - MANUAL PASSWORD DELIVERY REQUIRED");
+      console.log("=".repeat(80));
+      console.log(`Name: ${firstName} ${lastName}`);
+      console.log(`Email: ${email}`);
+      console.log(`Role: ${role}`);
+      console.log(`Temporary Password: ${tempPassword}`);
+      console.log(`Login URL: ${req.headers.origin || 'http://localhost:5000'}/login`);
+      console.log("User must change password on first login");
+      console.log("=".repeat(80));
 
       res.status(201).json({ 
         success: true, 
-        message: "Invitation sent successfully",
-        member: pendingMember
+        message: "Team member created successfully",
+        member: {
+          ...newMember,
+          temporaryPassword: tempPassword // Include password in response for admin
+        }
       });
     } catch (error) {
-      console.error("Send invitation error:", error);
+      console.error("Create team member error:", error);
       res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Failed to send invitation" 
+        error: error instanceof Error ? error.message : "Failed to create team member" 
+      });
+    }
+  });
+
+  // Reset team member password (admin only)
+  app.post("/api/team/:id/reset-password", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Check if team member exists
+      const teamMember = await storage.getTeamMember(id);
+      if (!teamMember) {
+        return res.status(404).json({ error: "Team member not found" });
+      }
+
+      // Reset password
+      const resetResult = await storage.resetTeamMemberPassword(id);
+      
+      if (!resetResult.success) {
+        return res.status(500).json({ error: "Failed to reset password" });
+      }
+
+      console.log("=".repeat(80));
+      console.log("PASSWORD RESET - MANUAL DELIVERY REQUIRED");
+      console.log("=".repeat(80));
+      console.log(`Name: ${teamMember.firstName} ${teamMember.lastName}`);
+      console.log(`Email: ${teamMember.email}`);
+      console.log(`New Temporary Password: ${resetResult.password}`);
+      console.log(`Login URL: ${req.headers.origin || 'http://localhost:5000'}/login`);
+      console.log("User must change password on next login");
+      console.log("=".repeat(80));
+
+      res.json({ 
+        success: true, 
+        message: "Password reset successfully",
+        temporaryPassword: resetResult.password
+      });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to reset password" 
       });
     }
   });
