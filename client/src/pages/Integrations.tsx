@@ -28,16 +28,12 @@ import {
   SiFacebook, 
   SiGoogle, 
   SiSnowflake,
-  SiAmplitude,
   SiMixpanel,
   SiIntercom,
   SiSalesforce,
   SiHubspot,
   SiZendesk,
-  SiTwilio,
-  SiSegment,
-  SiClevertap,
-  SiBraze
+  SiTwilio
 } from 'react-icons/si';
 import { TrendingUp, Database, Target, BarChart3, Users, Smartphone, Cloud, MessageSquare, Info, FileText, Shield } from 'lucide-react';
 
@@ -87,7 +83,7 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
   braze: {
     name: 'Braze',
     description: 'Customer engagement platform for marketing automation',
-    icon: <Target className="h-5 w-5" />,
+    icon: <div className="h-6 w-6 bg-gradient-to-r from-orange-500 to-red-500 rounded flex items-center justify-center text-white font-bold text-xs">B</div>,
     color: 'bg-purple-500',
     fields: [
       { key: 'apiKey', label: 'API Key', type: 'password', required: true },
@@ -118,7 +114,7 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
   amplitude: {
     name: 'Amplitude',
     description: 'Product analytics platform for user behavior tracking',
-    icon: <TrendingUp className="h-5 w-5" />,
+    icon: <div className="h-6 w-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded flex items-center justify-center text-white font-bold text-xs">A</div>,
     color: 'bg-blue-500',
     fields: [
       { key: 'apiKey', label: 'API Key', type: 'password', required: true },
@@ -148,7 +144,7 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
   firebase: {
     name: 'Firebase',
     description: 'Google Firebase for authentication and analytics',
-    icon: <SiFirebase className="h-5 w-5" />,
+    icon: <SiFirebase className="h-6 w-6 text-orange-500" />,
     color: 'bg-orange-500',
     fields: [
       { key: 'apiKey', label: 'API Key', type: 'password', required: true },
@@ -160,7 +156,7 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
   googleAnalytics: {
     name: 'Google Analytics',
     description: 'Web analytics service for tracking website performance',
-    icon: <SiGoogleanalytics className="h-5 w-5" />,
+    icon: <SiGoogleanalytics className="h-6 w-6 text-orange-500" />,
     color: 'bg-green-500',
     fields: [
       { key: 'measurementId', label: 'Measurement ID', type: 'text', required: true, placeholder: 'G-XXXXXXXXXX' },
