@@ -364,26 +364,29 @@ function Dashboard() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
-      {/* Header */}
-      <div className="border-b bg-card">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div>
-            <h1 className="text-2xl font-semibold">Dashboard</h1>
-            <p className="text-muted-foreground">
-              Real-time analytics and insights
+    <div className="flex flex-col h-full bg-background fade-in">
+      {/* Enhanced Header */}
+      <div className="border-b bg-gradient-to-r from-white to-blue-50/30 backdrop-blur-sm">
+        <div className="page-header flex items-center justify-between px-8 py-6">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-gray-900 to-blue-700 bg-clip-text text-transparent">
+              Dashboard
+            </h1>
+            <p className="text-xl text-muted-foreground">
+              Real-time analytics and business intelligence
             </p>
           </div>
           
-          <div className="flex items-center gap-3">
-            <Badge variant="outline" className="hidden sm:flex">
-              {tiles.length} tiles
+          <div className="flex items-center gap-4">
+            <Badge variant="outline" className="hidden sm:flex px-4 py-2 text-sm font-medium border-blue-200 text-blue-700 bg-blue-50">
+              {tiles.length} active tiles
             </Badge>
             <Button
               variant="outline"
-              size="sm"
+              size="default"
               onClick={handleGlobalRefresh}
               disabled={isLoading}
+              className="px-6 py-3 font-medium border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               {isLoading ? 'Refreshing...' : 'Refresh All'}
@@ -391,8 +394,9 @@ function Dashboard() {
             {isEditMode && (
               <Button
                 variant="outline"
-                size="sm"
+                size="default"
                 onClick={handleSaveLayout}
+                className="px-6 py-3 font-medium border-green-200 hover:bg-green-50 hover:border-green-300 transition-all"
               >
                 <Save className="h-4 w-4 mr-2" />
                 Save Layout
@@ -400,8 +404,9 @@ function Dashboard() {
             )}
             <Button
               variant={isEditMode ? "default" : "outline"}
-              size="sm"
+              size="default"
               onClick={handleToggleEditMode}
+              className={isEditMode ? "btn-primary px-6 py-3 font-medium" : "px-6 py-3 font-medium hover:bg-gray-50 transition-all"}
             >
               {isEditMode ? (
                 <>
@@ -418,12 +423,14 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Time Filters */}
-        <div className="px-6 pb-4">
-          <TimeFilter 
-            filters={timeFilters} 
-            onFiltersChange={handleTimeFiltersChange} 
-          />
+        {/* Enhanced Time Filters */}
+        <div className="px-8 pb-6">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-100 p-4">
+            <TimeFilter 
+              filters={timeFilters} 
+              onFiltersChange={handleTimeFiltersChange} 
+            />
+          </div>
         </div>
       </div>
 
