@@ -28,6 +28,51 @@ export const team = pgTable("team", {
   createdBy: uuid("created_by")
 });
 
+// Roles and permissions management
+export const roles = pgTable("roles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 100 }).unique().notNull(),
+  displayName: varchar("display_name", { length: 100 }).notNull(),
+  description: text("description"),
+  color: varchar("color", { length: 7 }).default('#3B82F6'),
+  isSystemRole: boolean("is_system_role").default(false),
+  isActive: boolean("is_active").default(true),
+  permissions: jsonb("permissions").notNull().default('{}'),
+  hierarchyLevel: integer("hierarchy_level").default(0),
+  canManageRoles: boolean("can_manage_roles").default(false),
+  maxTeamMembers: integer("max_team_members"),
+  allowedFeatures: jsonb("allowed_features").default('[]'),
+  restrictions: jsonb("restrictions").default('{}'),
+  createdBy: uuid("created_by").references(() => team.id, { onDelete: 'set null' }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
+export const permissions = pgTable("permissions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 100 }).unique().notNull(),
+  displayName: varchar("display_name", { length: 100 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 50 }).notNull(),
+  resource: varchar("resource", { length: 50 }).notNull(),
+  action: varchar("action", { length: 50 }).notNull(),
+  isSystemPermission: boolean("is_system_permission").default(false),
+  requiresElevation: boolean("requires_elevation").default(false),
+  dependencies: jsonb("dependencies").default('[]'),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
+export const rolePermissions = pgTable("role_permissions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  roleId: uuid("role_id").references(() => roles.id, { onDelete: 'cascade' }).notNull(),
+  permissionId: uuid("permission_id").references(() => permissions.id, { onDelete: 'cascade' }).notNull(),
+  granted: boolean("granted").default(true),
+  conditions: jsonb("conditions").default('{}'),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  grantedBy: uuid("granted_by").references(() => team.id, { onDelete: 'set null' }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
 // Dashboard configurations
 export const dashboardConfigurations = pgTable("dashboard_configurations", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -246,3 +291,35 @@ export type InsertCampaignJob = z.infer<typeof insertCampaignJobSchema>;
 export type CampaignJob = typeof campaignJobs.$inferSelect;
 export type InsertIntegration = z.infer<typeof insertIntegrationSchema>;
 export type Integration = typeof integrations.$inferSelect;
+
+// Role and permission schemas
+export const insertRoleSchema = createInsertSchema(roles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateRoleSchema = createInsertSchema(roles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
+export const insertPermissionSchema = createInsertSchema(permissions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRolePermissionSchema = createInsertSchema(rolePermissions).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Role and permission types
+export type InsertRole = z.infer<typeof insertRoleSchema>;
+export type UpdateRole = z.infer<typeof updateRoleSchema>;
+export type Role = typeof roles.$inferSelect;
+export type InsertPermission = z.infer<typeof insertPermissionSchema>;
+export type Permission = typeof permissions.$inferSelect;
+export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
+export type RolePermission = typeof rolePermissions.$inferSelect;

@@ -5,6 +5,9 @@ import {
   cohorts,
   segments,
   integrations,
+  roles,
+  permissions,
+  rolePermissions,
   type User, 
   type InsertUser, 
   type Team, 
@@ -22,7 +25,14 @@ import {
   campaignJobs,
   type CampaignJob,
   type Integration,
-  type InsertIntegration
+  type InsertIntegration,
+  type Role,
+  type InsertRole,
+  type UpdateRole,
+  type Permission,
+  type InsertPermission,
+  type RolePermission,
+  type InsertRolePermission
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, or } from "drizzle-orm";
@@ -74,6 +84,28 @@ export interface IStorage {
   updateIntegration(id: string, updates: Partial<InsertIntegration>): Promise<Integration | undefined>;
   deleteIntegration(id: string): Promise<boolean>;
   updateIntegrationLastUsed(id: string): Promise<void>;
+  
+  // Role management
+  getRoles(): Promise<Role[]>;
+  getRole(id: string): Promise<Role | undefined>;
+  getRoleByName(name: string): Promise<Role | undefined>;
+  createRole(role: InsertRole): Promise<Role>;
+  updateRole(id: string, updates: UpdateRole): Promise<Role | undefined>;
+  deleteRole(id: string): Promise<boolean>;
+  
+  // Permission management
+  getPermissions(): Promise<Permission[]>;
+  getPermission(id: string): Promise<Permission | undefined>;
+  getPermissionsByCategory(category: string): Promise<Permission[]>;
+  createPermission(permission: InsertPermission): Promise<Permission>;
+  deletePermission(id: string): Promise<boolean>;
+  
+  // Role-Permission management
+  getRolePermissions(roleId: string): Promise<RolePermission[]>;
+  assignPermissionToRole(rolePermission: InsertRolePermission): Promise<RolePermission>;
+  removePermissionFromRole(roleId: string, permissionId: string): Promise<boolean>;
+  getUserPermissions(userId: string): Promise<Permission[]>;
+  checkUserPermission(userId: string, resource: string, action: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
