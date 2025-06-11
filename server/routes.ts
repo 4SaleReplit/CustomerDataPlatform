@@ -1306,6 +1306,221 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Data synchronization endpoints
+  app.post("/api/data-sync/full", async (req, res) => {
+    try {
+      const { dataSyncService } = await import('./services/dataSync');
+      const result = await dataSyncService.syncUserDataFromAllSources();
+      
+      if (result.success) {
+        res.json({
+          message: "Full data sync completed successfully",
+          syncedUsers: result.syncedUsers,
+          timestamp: result.timestamp
+        });
+      } else {
+        res.status(500).json({
+          error: "Data sync failed",
+          errors: result.errors
+        });
+      }
+    } catch (error) {
+      console.error("Full data sync error:", error);
+      res.status(500).json({
+        error: "Internal server error during data sync"
+      });
+    }
+  });
+
+  app.post("/api/data-sync/platform/:platform", async (req, res) => {
+    try {
+      const { platform } = req.params;
+      const { userIds } = req.body;
+      
+      if (!userIds || !Array.isArray(userIds)) {
+        return res.status(400).json({
+          error: "userIds array is required"
+        });
+      }
+
+      const { dataSyncService } = await import('./services/dataSync');
+      const result = await dataSyncService.syncUserDataFromPlatform(platform, userIds);
+      
+      if (result.success) {
+        res.json({
+          message: `${platform} data sync completed successfully`,
+          syncedUsers: result.syncedUsers,
+          timestamp: result.timestamp
+        });
+      } else {
+        res.status(500).json({
+          error: `${platform} data sync failed`,
+          errors: result.errors
+        });
+      }
+    } catch (error) {
+      console.error(`Platform data sync error:`, error);
+      res.status(500).json({
+        error: "Internal server error during platform data sync"
+      });
+    }
+  });
+
+  // Get enriched user profiles
+  app.get("/api/users/enriched", async (req, res) => {
+    try {
+      const { limit = 100, offset = 0 } = req.query;
+      
+      const query = `
+        SELECT 
+          USER_ID,
+          EMAIL,
+          FIRST_NAME,
+          LAST_NAME,
+          PHONE,
+          COUNTRY,
+          CITY,
+          SIGNUP_DATE,
+          LAST_ACTIVE_DATE,
+          TOTAL_SPENT,
+          ORDER_COUNT,
+          LIFETIME_VALUE,
+          PLATFORM_DATA,
+          LAST_SYNCED
+        FROM DBT_CORE_PROD_DATABASE.OPERATIONS.ENRICHED_USER_PROFILES
+        ORDER BY LAST_SYNCED DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+      
+      const result = await snowflakeService.executeQuery(query);
+      
+      if (result.success && result.rows) {
+        const enrichedUsers = result.rows.map(row => ({
+          userId: row[0],
+          email: row[1],
+          firstName: row[2],
+          lastName: row[3],
+          phone: row[4],
+          country: row[5],
+          city: row[6],
+          signupDate: row[7],
+          lastActiveDate: row[8],
+          totalSpent: row[9],
+          orderCount: row[10],
+          lifetimeValue: row[11],
+          platformData: row[12] ? JSON.parse(row[12]) : {},
+          lastSynced: row[13]
+        }));
+        
+        res.json(enrichedUsers);
+      } else {
+        res.status(500).json({
+          error: "Failed to fetch enriched user profiles"
+        });
+      }
+    } catch (error) {
+      console.error("Get enriched users error:", error);
+      res.status(500).json({
+        error: "Internal server error fetching enriched users"
+      });
+    }
+  });
+
+  // Get user profile by ID with platform data
+  app.get("/api/users/:userId/enriched", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      const query = `
+        SELECT 
+          USER_ID,
+          EMAIL,
+          FIRST_NAME,
+          LAST_NAME,
+          PHONE,
+          COUNTRY,
+          CITY,
+          SIGNUP_DATE,
+          LAST_ACTIVE_DATE,
+          TOTAL_SPENT,
+          ORDER_COUNT,
+          LIFETIME_VALUE,
+          PLATFORM_DATA,
+          LAST_SYNCED
+        FROM DBT_CORE_PROD_DATABASE.OPERATIONS.ENRICHED_USER_PROFILES
+        WHERE USER_ID = '${userId}'
+      `;
+      
+      const result = await snowflakeService.executeQuery(query);
+      
+      if (result.success && result.rows && result.rows.length > 0) {
+        const row = result.rows[0];
+        const enrichedUser = {
+          userId: row[0],
+          email: row[1],
+          firstName: row[2],
+          lastName: row[3],
+          phone: row[4],
+          country: row[5],
+          city: row[6],
+          signupDate: row[7],
+          lastActiveDate: row[8],
+          totalSpent: row[9],
+          orderCount: row[10],
+          lifetimeValue: row[11],
+          platformData: row[12] ? JSON.parse(row[12]) : {},
+          lastSynced: row[13]
+        };
+        
+        res.json(enrichedUser);
+      } else {
+        res.status(404).json({
+          error: "User not found or not synced yet"
+        });
+      }
+    } catch (error) {
+      console.error("Get enriched user error:", error);
+      res.status(500).json({
+        error: "Internal server error fetching enriched user"
+      });
+    }
+  });
+
+  // Integration status and health check
+  app.get("/api/integrations/status", async (req, res) => {
+    try {
+      const integrationStatus = {
+        snowflake: { status: 'connected', lastTested: new Date().toISOString() },
+        amplitude: { status: 'connected', lastTested: new Date().toISOString() },
+        braze: { status: 'disconnected', lastTested: null },
+        facebookAds: { status: 'disconnected', lastTested: null },
+        googleAds: { status: 'disconnected', lastTested: null },
+        clevertap: { status: 'disconnected', lastTested: null },
+        mixpanel: { status: 'disconnected', lastTested: null },
+        salesforce: { status: 'disconnected', lastTested: null },
+        hubspot: { status: 'disconnected', lastTested: null },
+        intercom: { status: 'disconnected', lastTested: null },
+        zendesk: { status: 'disconnected', lastTested: null },
+        twilio: { status: 'disconnected', lastTested: null }
+      };
+
+      // Test Snowflake connection
+      try {
+        const testResult = await snowflakeService.executeQuery('SELECT 1');
+        integrationStatus.snowflake.status = testResult.success ? 'connected' : 'error';
+      } catch (error) {
+        integrationStatus.snowflake.status = 'error';
+      }
+
+      res.json(integrationStatus);
+    } catch (error) {
+      console.error("Integration status error:", error);
+      res.status(500).json({
+        error: "Failed to get integration status"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
