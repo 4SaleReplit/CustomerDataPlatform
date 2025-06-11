@@ -646,7 +646,10 @@ export default function Integrations() {
       // Test connection using the integration test endpoints
       const response = await apiRequest(`/api/integrations/${templateKey}/test`, {
         method: 'POST',
-        body: formData
+        body: JSON.stringify(formData),
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
       if (response.success) {
@@ -836,31 +839,10 @@ export default function Integrations() {
                   </div>
                 ))}
                 
-                <div className="flex space-x-2 pt-4">
-                  <Button 
-                    onClick={() => handleTestNewIntegration(selectedTemplate)} 
-                    variant="outline" 
-                    disabled={isTestingConnection}
-                    className="flex-1"
-                  >
-                    {isTestingConnection ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                    )}
-                    Test Connection
-                  </Button>
-                  <Button onClick={handleSaveIntegration} className="flex-1">
-                    Save Configuration
-                  </Button>
-                  <Button variant="outline" onClick={() => setSelectedTemplate('')}>
-                    Back
-                  </Button>
-                </div>
               </div>
 
               {/* Documentation Panel */}
-              <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg space-y-4 flex flex-col">
                 <div>
                   <h4 className="font-semibold flex items-center mb-2">
                     <BookOpen className="h-4 w-4 mr-2" />
@@ -887,7 +869,7 @@ export default function Integrations() {
                   <p className="text-xs text-gray-500 mt-2">{integrationTemplates[selectedTemplate].permissions.documentation}</p>
                 </div>
 
-                <div>
+                <div className="flex-1">
                   <h4 className="font-semibold flex items-center mb-2">
                     <Target className="h-4 w-4 mr-2" />
                     Use Cases
@@ -897,6 +879,29 @@ export default function Integrations() {
                       <li key={index}>{useCase}</li>
                     ))}
                   </ul>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex space-x-2 mt-6 pt-4 border-t border-gray-200">
+                  <Button 
+                    onClick={() => handleTestNewIntegration(selectedTemplate)} 
+                    variant="outline" 
+                    disabled={isTestingConnection}
+                    className="flex-1"
+                  >
+                    {isTestingConnection ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                    )}
+                    Test Connection
+                  </Button>
+                  <Button onClick={handleSaveIntegration} className="flex-1">
+                    Save Configuration
+                  </Button>
+                  <Button variant="outline" onClick={() => setSelectedTemplate('')}>
+                    Back
+                  </Button>
                 </div>
               </div>
             </div>
