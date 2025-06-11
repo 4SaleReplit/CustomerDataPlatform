@@ -73,28 +73,37 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
-    // For demo purposes, accept any credentials
-    const newUser = {
-      id: 'platform_user_' + username + '_' + Date.now(),
-      username,
-      email: `${username}@company.com`,
-      role: username === 'admin' ? 'administrator' : 'user',
-      createdAt: new Date().toISOString()
-    };
-    
-    setUser(newUser);
-    localStorage.setItem('platform_user', JSON.stringify(newUser));
-    
-    // Identify user in Amplitude
-    identifyUser(newUser.id, {
-      username: newUser.username,
-      email: newUser.email,
-      role: newUser.role,
-      platform: 'CDP',
-      login_method: 'username_password'
-    });
-    
-    return true;
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+        localStorage.setItem('platform_user', JSON.stringify(userData));
+        
+        // Identify user in Amplitude
+        identifyUser(userData.id, {
+          username: userData.username,
+          email: userData.email,
+          role: userData.role,
+          platform: 'CDP',
+          login_method: 'username_password'
+        });
+        
+        return true;
+      } else {
+        return false;
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
+    }
   };
 
   const logout = () => {

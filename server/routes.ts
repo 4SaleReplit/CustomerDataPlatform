@@ -8,8 +8,55 @@ import {
   insertTeamSchema, insertDashboardTileInstanceSchema, insertCohortSchema, insertSegmentSchema,
   insertRoleSchema, updateRoleSchema, insertPermissionSchema, insertRolePermissionSchema 
 } from "@shared/schema";
+import bcrypt from "bcrypt";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Authentication routes
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password are required" });
+      }
+
+      // Check if it's a team member login
+      const teamMember = await storage.getTeamMemberByEmail(username);
+      if (teamMember) {
+        const isValid = await bcrypt.compare(password, teamMember.passwordHash);
+        if (isValid) {
+          // Remove sensitive data before sending response
+          const { passwordHash, tempPassword, ...userResponse } = teamMember;
+          return res.json({
+            id: userResponse.id,
+            username: userResponse.email,
+            email: userResponse.email,
+            role: userResponse.role,
+            firstName: userResponse.firstName,
+            lastName: userResponse.lastName,
+            tempPassword: tempPassword
+          });
+        }
+      }
+
+      // Check regular users table
+      const user = await storage.getUserByUsername(username);
+      if (user && user.password === password) {
+        return res.json({
+          id: user.id.toString(),
+          username: user.username,
+          email: user.username + '@company.com',
+          role: user.username === 'admin' ? 'administrator' : 'user'
+        });
+      }
+
+      res.status(401).json({ error: "Invalid credentials" });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+
   // Database connection test
   app.get("/api/db/test", async (req, res) => {
     try {

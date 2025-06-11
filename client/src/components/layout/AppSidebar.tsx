@@ -11,7 +11,8 @@ import {
   Database,
   FileText,
   Cable,
-  Shield
+  Shield,
+  LogOut
 } from 'lucide-react';
 import { trackBusinessEvent } from '@/lib/amplitude';
 import { useUser } from '@/contexts/UserContext';
@@ -28,6 +29,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { Button } from '@/components/ui/button';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: BarChart3 },
@@ -48,13 +50,23 @@ export function AppSidebar() {
   
   // Safely get user context
   let user = null;
+  let logout = null;
   try {
     const userContext = useUser();
     user = userContext?.user;
+    logout = userContext?.logout;
   } catch (error) {
     // User context not available, continue without user info
     console.warn('User context not available in sidebar');
   }
+
+  const handleLogout = () => {
+    if (logout) {
+      logout();
+      // Redirect to login page
+      window.location.href = '/login';
+    }
+  };
 
   return (
     <Sidebar collapsible="icon" className="border-r">
@@ -128,7 +140,7 @@ export function AppSidebar() {
       
       <SidebarFooter>
         {user && (
-          <div className="mx-2 mb-2">
+          <div className="mx-2 mb-2 space-y-2">
             <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200 shadow-sm">
               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md">
                 <span className="text-white font-semibold text-sm">
@@ -146,6 +158,15 @@ export function AppSidebar() {
                 </div>
               )}
             </div>
+            <Button 
+              onClick={handleLogout}
+              variant="outline" 
+              size="sm" 
+              className={`w-full flex items-center gap-2 ${isCollapsed ? 'px-2' : 'px-3'}`}
+            >
+              <LogOut className="h-4 w-4" />
+              {!isCollapsed && <span>Logout</span>}
+            </Button>
           </div>
         )}
       </SidebarFooter>
