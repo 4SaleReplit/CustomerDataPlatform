@@ -1603,6 +1603,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Redis queue management endpoints
+  app.get("/api/redis/connections", async (req, res) => {
+    try {
+      const { redisManager } = await import('./services/redisManager');
+      const connections = redisManager.getAllConnections();
+      res.json(connections);
+    } catch (error) {
+      console.error("Get Redis connections error:", error);
+      res.status(500).json({ error: "Failed to fetch Redis connections" });
+    }
+  });
+
+  app.post("/api/redis/connections", async (req, res) => {
+    try {
+      const { id, name, host, port, password, db } = req.body;
+      
+      if (!id || !name || !host || !port) {
+        return res.status(400).json({ 
+          error: "Missing required fields: id, name, host, port" 
+        });
+      }
+
+      const { redisManager } = await import('./services/redisManager');
+      const connection = await redisManager.createConnection({
+        id, name, host: String(host), port: Number(port), password, db: Number(db) || 0
+      });
+      
+      res.status(201).json(connection);
+    } catch (error) {
+      console.error("Create Redis connection error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to create Redis connection" 
+      });
+    }
+  });
+
+  app.post("/api/redis/test", async (req, res) => {
+    try {
+      const { host, port, password, db } = req.body;
+      
+      if (!host || !port) {
+        return res.status(400).json({ 
+          error: "Missing required fields: host, port" 
+        });
+      }
+
+      const { redisManager } = await import('./services/redisManager');
+      const testResult = await redisManager.testConnection({
+        host: String(host), 
+        port: Number(port), 
+        password, 
+        db: Number(db) || 0
+      });
+      
+      res.json(testResult);
+    } catch (error) {
+      console.error("Test Redis connection error:", error);
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to test Redis connection" 
+      });
+    }
+  });
+
+  app.delete("/api/redis/connections/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { redisManager } = await import('./services/redisManager');
+      const removed = await redisManager.removeConnection(id);
+      
+      if (removed) {
+        res.json({ message: "Redis connection removed successfully" });
+      } else {
+        res.status(404).json({ error: "Redis connection not found" });
+      }
+    } catch (error) {
+      console.error("Delete Redis connection error:", error);
+      res.status(500).json({ error: "Failed to remove Redis connection" });
+    }
+  });
+
+  app.get("/api/redis/queues", async (req, res) => {
+    try {
+      const { redisManager } = await import('./services/redisManager');
+      const queues = redisManager.getAllQueues();
+      res.json(queues);
+    } catch (error) {
+      console.error("Get Redis queues error:", error);
+      res.status(500).json({ error: "Failed to fetch Redis queues" });
+    }
+  });
+
+  app.post("/api/redis/queues", async (req, res) => {
+    try {
+      const { id, connectionId, queueName, priority, retryAttempts, retryDelay } = req.body;
+      
+      if (!id || !connectionId || !queueName) {
+        return res.status(400).json({ 
+          error: "Missing required fields: id, connectionId, queueName" 
+        });
+      }
+
+      const { redisManager } = await import('./services/redisManager');
+      redisManager.createQueue(id, {
+        connectionId, queueName, priority, retryAttempts, retryDelay
+      });
+      
+      res.status(201).json({ message: "Queue created successfully" });
+    } catch (error) {
+      console.error("Create Redis queue error:", error);
+      res.status(500).json({ error: "Failed to create Redis queue" });
+    }
+  });
+
+  app.post("/api/redis/queues/:id/jobs", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { data, options } = req.body;
+      
+      const { redisManager } = await import('./services/redisManager');
+      await redisManager.addJob(id, data, options);
+      
+      res.json({ message: "Job added to queue successfully" });
+    } catch (error) {
+      console.error("Add job to queue error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to add job to queue" 
+      });
+    }
+  });
+
+  app.get("/api/redis/queues/:id/stats", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const { redisManager } = await import('./services/redisManager');
+      const stats = await redisManager.getQueueStats(id);
+      
+      res.json(stats);
+    } catch (error) {
+      console.error("Get queue stats error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get queue stats" 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

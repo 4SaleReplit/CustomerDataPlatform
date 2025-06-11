@@ -58,21 +58,26 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r">
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-4">
-          <Database className="h-8 w-8 text-blue-500 flex-shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-6">
+          <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
+            <Database className="h-6 w-6 text-white flex-shrink-0" />
+          </div>
           {!isCollapsed && (
-            <span className="text-xl font-bold">CDP</span>
+            <div className="space-y-1">
+              <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-gray-900 to-blue-700 bg-clip-text text-transparent">CDP</span>
+              <p className="text-xs text-muted-foreground font-medium">Analytics Platform</p>
+            </div>
           )}
         </div>
       </SidebarHeader>
       
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>
+          <SidebarGroupLabel className={isCollapsed ? "sr-only" : "text-xs font-semibold text-muted-foreground uppercase tracking-wider"}>
             Navigation
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1">
               {navigation.map((item) => {
                 const isActive = location === item.href || 
                   (item.href !== '/' && location.startsWith(item.href));
@@ -83,14 +88,33 @@ export function AppSidebar() {
                       asChild 
                       isActive={isActive}
                       tooltip={isCollapsed ? item.name : undefined}
+                      className={`
+                        group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
+                        hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 
+                        hover:border-blue-200 hover:shadow-sm
+                        ${isActive ? 
+                          'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg border-blue-300' : 
+                          'text-gray-700 hover:text-blue-700'
+                        }
+                      `}
                     >
                       <Link
                         href={item.href}
-                        className="flex items-center gap-3"
+                        className="flex items-center gap-3 w-full"
                         onClick={() => trackBusinessEvent.navigationItemClicked(item.name)}
                       >
-                        <item.icon className="h-5 w-5 flex-shrink-0" />
-                        {!isCollapsed && <span>{item.name}</span>}
+                        <div className={`
+                          flex items-center justify-center w-8 h-8 rounded-lg transition-colors
+                          ${isActive ? 
+                            'bg-white/20' : 
+                            'group-hover:bg-blue-100'
+                          }
+                        `}>
+                          <item.icon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-current'}`} />
+                        </div>
+                        {!isCollapsed && (
+                          <span className="font-medium text-sm tracking-tight">{item.name}</span>
+                        )}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -103,18 +127,20 @@ export function AppSidebar() {
       
       <SidebarFooter>
         {user && (
-          <div className="px-3 py-2 border-t">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                {user.username.charAt(0).toUpperCase()}
+          <div className="mx-2 mb-2">
+            <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200 shadow-sm">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md">
+                <span className="text-white font-semibold text-sm">
+                  {user.username.charAt(0).toUpperCase()}
+                </span>
               </div>
               {!isCollapsed && (
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
+                  <p className="text-sm font-semibold text-gray-900 truncate tracking-tight">
                     {user.username}
                   </p>
-                  <p className="text-xs text-gray-500 truncate">
-                    {user.role}
+                  <p className="text-xs text-muted-foreground truncate font-medium">
+                    {user.role === 'administrator' ? 'Administrator' : 'User'}
                   </p>
                 </div>
               )}
