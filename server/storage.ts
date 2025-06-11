@@ -35,7 +35,7 @@ import {
   type InsertRolePermission
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, or } from "drizzle-orm";
+import { eq, or, and, desc } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -381,6 +381,123 @@ export class DatabaseStorage implements IStorage {
       .update(integrations)
       .set({ lastUsedAt: new Date(), updatedAt: new Date() })
       .where(eq(integrations.id, id));
+  }
+
+  // Role management methods
+  async getRoles(): Promise<Role[]> {
+    return await db.select().from(roles).orderBy(desc(roles.hierarchyLevel), roles.name);
+  }
+
+  async getRole(id: string): Promise<Role | undefined> {
+    const [role] = await db.select().from(roles).where(eq(roles.id, id));
+    return role || undefined;
+  }
+
+  async getRoleByName(name: string): Promise<Role | undefined> {
+    const [role] = await db.select().from(roles).where(eq(roles.name, name));
+    return role || undefined;
+  }
+
+  async createRole(insertRole: InsertRole): Promise<Role> {
+    const [role] = await db
+      .insert(roles)
+      .values(insertRole)
+      .returning();
+    return role;
+  }
+
+  async updateRole(id: string, updates: UpdateRole): Promise<Role | undefined> {
+    const [updatedRole] = await db
+      .update(roles)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(roles.id, id))
+      .returning();
+    return updatedRole || undefined;
+  }
+
+  async deleteRole(id: string): Promise<boolean> {
+    const result = await db
+      .delete(roles)
+      .where(eq(roles.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Permission management methods
+  async getPermissions(): Promise<Permission[]> {
+    return await db.select().from(permissions).orderBy(permissions.category, permissions.name);
+  }
+
+  async getPermission(id: string): Promise<Permission | undefined> {
+    const [permission] = await db.select().from(permissions).where(eq(permissions.id, id));
+    return permission || undefined;
+  }
+
+  async getPermissionsByCategory(category: string): Promise<Permission[]> {
+    return await db.select().from(permissions).where(eq(permissions.category, category));
+  }
+
+  async createPermission(insertPermission: InsertPermission): Promise<Permission> {
+    const [permission] = await db
+      .insert(permissions)
+      .values(insertPermission)
+      .returning();
+    return permission;
+  }
+
+  async deletePermission(id: string): Promise<boolean> {
+    const result = await db
+      .delete(permissions)
+      .where(eq(permissions.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Role-Permission management methods
+  async getRolePermissions(roleId: string): Promise<RolePermission[]> {
+    return await db.select().from(rolePermissions).where(eq(rolePermissions.roleId, roleId));
+  }
+
+  async assignPermissionToRole(rolePermission: InsertRolePermission): Promise<RolePermission> {
+    const [assignment] = await db
+      .insert(rolePermissions)
+      .values(rolePermission)
+      .returning();
+    return assignment;
+  }
+
+  async removePermissionFromRole(roleId: string, permissionId: string): Promise<boolean> {
+    const result = await db
+      .delete(rolePermissions)
+      .where(
+        and(
+          eq(rolePermissions.roleId, roleId),
+          eq(rolePermissions.permissionId, permissionId)
+        )
+      );
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getUserPermissions(userId: string): Promise<Permission[]> {
+    // Get user's role first
+    const [teamMember] = await db.select().from(team).where(eq(team.id, userId));
+    if (!teamMember) return [];
+
+    // Get role by name (assuming role field contains role name)
+    const [userRole] = await db.select().from(roles).where(eq(roles.name, teamMember.role));
+    if (!userRole) return [];
+
+    // Get all permissions for this role
+    const rolePermissionList = await db
+      .select({ permission: permissions })
+      .from(rolePermissions)
+      .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
+      .where(eq(rolePermissions.roleId, userRole.id));
+
+    return rolePermissionList.map(rp => rp.permission);
+  }
+
+  async checkUserPermission(userId: string, resource: string, action: string): Promise<boolean> {
+    const userPermissions = await this.getUserPermissions(userId);
+    return userPermissions.some(p => p.resource === resource && p.action === action);
   }
 }
 

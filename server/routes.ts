@@ -3,7 +3,10 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertIntegrationSchema, type InsertIntegration } from "@shared/schema";
 import { snowflakeService } from "./services/snowflake";
-import { insertTeamSchema, insertDashboardTileInstanceSchema, insertCohortSchema, insertSegmentSchema } from "@shared/schema";
+import { 
+  insertTeamSchema, insertDashboardTileInstanceSchema, insertCohortSchema, insertSegmentSchema,
+  insertRoleSchema, updateRoleSchema, insertPermissionSchema, insertRolePermissionSchema 
+} from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Database connection test
@@ -1746,6 +1749,190 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Get queue stats error:", error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : "Failed to get queue stats" 
+      });
+    }
+  });
+
+  // Role management routes
+  app.get("/api/roles", async (req, res) => {
+    try {
+      const roles = await storage.getRoles();
+      res.json(roles);
+    } catch (error) {
+      console.error("Get roles error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get roles" 
+      });
+    }
+  });
+
+  app.get("/api/roles/:id", async (req, res) => {
+    try {
+      const role = await storage.getRole(req.params.id);
+      if (!role) {
+        return res.status(404).json({ error: "Role not found" });
+      }
+      res.json(role);
+    } catch (error) {
+      console.error("Get role error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get role" 
+      });
+    }
+  });
+
+  app.post("/api/roles", async (req, res) => {
+    try {
+      const validatedData = insertRoleSchema.parse(req.body);
+      const role = await storage.createRole(validatedData);
+      res.status(201).json(role);
+    } catch (error) {
+      console.error("Create role error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to create role" 
+      });
+    }
+  });
+
+  app.put("/api/roles/:id", async (req, res) => {
+    try {
+      const validatedData = updateRoleSchema.parse(req.body);
+      const updatedRole = await storage.updateRole(req.params.id, validatedData);
+      if (!updatedRole) {
+        return res.status(404).json({ error: "Role not found" });
+      }
+      res.json(updatedRole);
+    } catch (error) {
+      console.error("Update role error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to update role" 
+      });
+    }
+  });
+
+  app.delete("/api/roles/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteRole(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Role not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete role error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to delete role" 
+      });
+    }
+  });
+
+  // Permission management routes
+  app.get("/api/permissions", async (req, res) => {
+    try {
+      const permissions = await storage.getPermissions();
+      res.json(permissions);
+    } catch (error) {
+      console.error("Get permissions error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get permissions" 
+      });
+    }
+  });
+
+  app.get("/api/permissions/category/:category", async (req, res) => {
+    try {
+      const permissions = await storage.getPermissionsByCategory(req.params.category);
+      res.json(permissions);
+    } catch (error) {
+      console.error("Get permissions by category error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get permissions" 
+      });
+    }
+  });
+
+  app.post("/api/permissions", async (req, res) => {
+    try {
+      const validatedData = insertPermissionSchema.parse(req.body);
+      const permission = await storage.createPermission(validatedData);
+      res.status(201).json(permission);
+    } catch (error) {
+      console.error("Create permission error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to create permission" 
+      });
+    }
+  });
+
+  // Role-Permission assignment routes
+  app.get("/api/roles/:id/permissions", async (req, res) => {
+    try {
+      const rolePermissions = await storage.getRolePermissions(req.params.id);
+      res.json(rolePermissions);
+    } catch (error) {
+      console.error("Get role permissions error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get role permissions" 
+      });
+    }
+  });
+
+  app.post("/api/roles/:id/permissions", async (req, res) => {
+    try {
+      const validatedData = insertRolePermissionSchema.parse({
+        ...req.body,
+        roleId: req.params.id
+      });
+      const assignment = await storage.assignPermissionToRole(validatedData);
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error("Assign permission error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to assign permission" 
+      });
+    }
+  });
+
+  app.delete("/api/roles/:roleId/permissions/:permissionId", async (req, res) => {
+    try {
+      const removed = await storage.removePermissionFromRole(req.params.roleId, req.params.permissionId);
+      if (!removed) {
+        return res.status(404).json({ error: "Permission assignment not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Remove permission error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to remove permission" 
+      });
+    }
+  });
+
+  // User permission checking routes
+  app.get("/api/users/:id/permissions", async (req, res) => {
+    try {
+      const permissions = await storage.getUserPermissions(req.params.id);
+      res.json(permissions);
+    } catch (error) {
+      console.error("Get user permissions error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get user permissions" 
+      });
+    }
+  });
+
+  app.get("/api/users/:id/permissions/check", async (req, res) => {
+    try {
+      const { resource, action } = req.query as { resource: string; action: string };
+      if (!resource || !action) {
+        return res.status(400).json({ error: "Resource and action parameters required" });
+      }
+      
+      const hasPermission = await storage.checkUserPermission(req.params.id, resource, action);
+      res.json({ hasPermission });
+    } catch (error) {
+      console.error("Check user permission error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to check user permission" 
       });
     }
   });
