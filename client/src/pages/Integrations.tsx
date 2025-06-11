@@ -495,6 +495,69 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
   }
 };
 
+// Memoized integration card component for performance optimization
+const IntegrationCard = memo(({ integration, template, getStatusBadge, handleConfigureIntegration, deleteIntegrationMutation }: {
+  integration: Integration;
+  template: IntegrationTemplate;
+  getStatusBadge: (status: string) => React.ReactNode;
+  handleConfigureIntegration: (integration: Integration) => void;
+  deleteIntegrationMutation: any;
+}) => (
+  <Card className="card hover:shadow-xl transition-all duration-300 slide-up group">
+    <CardHeader className="pb-4">
+      <div className="flex items-start justify-between">
+        <div className="flex items-center space-x-4">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
+            {template?.icon}
+          </div>
+          <div className="space-y-1">
+            <CardTitle className="text-xl font-semibold group-hover:text-blue-600 transition-colors">
+              {integration.name}
+            </CardTitle>
+            <CardDescription className="text-base text-muted-foreground leading-relaxed">
+              {integration.description}
+            </CardDescription>
+          </div>
+        </div>
+        {getStatusBadge(integration.status)}
+      </div>
+    </CardHeader>
+    <CardContent className="space-y-5">
+      <div className="text-sm text-muted-foreground space-y-2 bg-gray-50 p-4 rounded-lg">
+        <div className="flex items-center justify-between">
+          <span className="font-medium">Created:</span>
+          <span>{new Date(integration.createdAt).toLocaleDateString()}</span>
+        </div>
+        {integration.lastUsedAt && (
+          <div className="flex items-center justify-between">
+            <span className="font-medium">Last used:</span>
+            <span>{new Date(integration.lastUsedAt).toLocaleDateString()}</span>
+          </div>
+        )}
+      </div>
+      <div className="flex space-x-3">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => handleConfigureIntegration(integration)}
+          className="flex-1 font-medium hover:bg-blue-50 hover:border-blue-200 transition-colors"
+        >
+          <Settings className="h-4 w-4 mr-2" />
+          Configure
+        </Button>
+        <Button 
+          variant="destructive" 
+          size="sm"
+          onClick={() => deleteIntegrationMutation.mutate(integration.id)}
+          className="hover:bg-red-600 transition-colors"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    </CardContent>
+  </Card>
+));
+
 export default function Integrations() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -753,14 +816,59 @@ export default function Integrations() {
         {integrations.map((integration: Integration) => {
           const template = integrationTemplates[integration.type];
           return (
-            <IntegrationCard 
-              key={integration.id}
-              integration={integration}
-              template={template}
-              getStatusBadge={getStatusBadge}
-              handleConfigureIntegration={handleConfigureIntegration}
-              deleteIntegrationMutation={deleteIntegrationMutation}
-            />
+            <Card key={integration.id} className="card hover:shadow-xl transition-all duration-300 slide-up group">
+              <CardHeader className="pb-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
+                      {template?.icon}
+                    </div>
+                    <div className="space-y-1">
+                      <CardTitle className="text-xl font-semibold group-hover:text-blue-600 transition-colors">
+                        {integration.name}
+                      </CardTitle>
+                      <CardDescription className="text-base text-muted-foreground leading-relaxed">
+                        {integration.description}
+                      </CardDescription>
+                    </div>
+                  </div>
+                  {getStatusBadge(integration.status)}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="text-sm text-muted-foreground space-y-2 bg-gray-50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">Created:</span>
+                    <span>{new Date(integration.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  {integration.lastUsedAt && (
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Last used:</span>
+                      <span>{new Date(integration.lastUsedAt).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex space-x-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleConfigureIntegration(integration)}
+                    className="flex-1 font-medium hover:bg-blue-50 hover:border-blue-200 transition-colors"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Configure
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={() => deleteIntegrationMutation.mutate(integration.id)}
+                    className="hover:bg-red-600 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           );
         })}
       </div>
