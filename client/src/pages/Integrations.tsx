@@ -21,7 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { SiGoogleanalytics, SiFirebase, SiClickhouse, SiFacebook, SiGoogle, SiSnowflake } from 'react-icons/si';
-import { TrendingUp, Database, Target, BarChart3, Users, Smartphone, Cloud, MessageSquare } from 'lucide-react';
+import { TrendingUp, Database, Target, BarChart3, Users, Smartphone, Cloud, MessageSquare, Info, FileText, Shield } from 'lucide-react';
 
 interface Integration {
   id: string;
@@ -368,6 +368,9 @@ export default function Integrations() {
   const { toast } = useToast();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+  const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
 
   // Initialize with existing integrations based on environment variables
   useEffect(() => {
@@ -443,11 +446,11 @@ export default function Integrations() {
   };
 
   const handleEdit = (integrationId: string) => {
-    setIntegrations(prev => prev.map(integration => 
-      integration.id === integrationId 
-        ? { ...integration, isEditing: true }
-        : integration
-    ));
+    const integration = integrations.find(i => i.id === integrationId);
+    if (integration) {
+      setSelectedIntegration(integration);
+      setIsConfigModalOpen(true);
+    }
   };
 
   const handleCancel = (integrationId: string) => {
@@ -499,6 +502,71 @@ export default function Integrations() {
         description: "Failed to save integration configuration",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleModalTestConnection = async () => {
+    if (!selectedIntegration) return;
+    
+    setIsTestingConnection(true);
+    
+    try {
+      let testResult = false;
+      let metadata = {};
+
+      // Call appropriate test endpoint based on integration type
+      const response = await fetch(`/api/integrations/${selectedIntegration.type}/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(selectedIntegration.credentials)
+      });
+      
+      testResult = response.ok;
+      
+      if (testResult) {
+        // Fetch metadata after successful connection
+        metadata = await fetchConnectionMetadata(selectedIntegration.type, selectedIntegration.credentials);
+      }
+
+      // Update both selected integration and integrations list
+      const updatedIntegration = {
+        ...selectedIntegration,
+        status: testResult ? 'connected' : 'error' as const,
+        metadata: testResult ? metadata : undefined,
+        lastTested: new Date().toISOString()
+      };
+      
+      setSelectedIntegration(updatedIntegration);
+      setIntegrations(prev => prev.map(i => 
+        i.id === selectedIntegration.id ? updatedIntegration : i
+      ));
+
+      toast({
+        title: testResult ? "Connection Successful" : "Connection Failed",
+        description: testResult 
+          ? `Successfully connected to ${selectedIntegration.name}` 
+          : `Failed to connect to ${selectedIntegration.name}. Please check your credentials.`,
+        variant: testResult ? "default" : "destructive"
+      });
+
+    } catch (error) {
+      const updatedIntegration = {
+        ...selectedIntegration,
+        status: 'error' as const
+      };
+      
+      setSelectedIntegration(updatedIntegration);
+      setIntegrations(prev => prev.map(i => 
+        i.id === selectedIntegration.id ? updatedIntegration : i
+      ));
+
+      toast({
+        title: "Connection Test Failed",
+        description: `Error testing connection to ${selectedIntegration.name}`,
+        variant: "destructive"
+      });
+    } finally {
+      setIsTestingConnection(false);
     }
   };
 
@@ -632,6 +700,58 @@ export default function Integrations() {
           }
         : integration
     ));
+  };
+
+  const handleModalCredentialChange = (field: string, value: string) => {
+    if (!selectedIntegration) return;
+    
+    const updatedIntegration = {
+      ...selectedIntegration,
+      credentials: { ...selectedIntegration.credentials, [field]: value }
+    };
+    
+    setSelectedIntegration(updatedIntegration);
+    setIntegrations(prev => prev.map(i => 
+      i.id === selectedIntegration.id ? updatedIntegration : i
+    ));
+  };
+
+  const handleModalSave = async () => {
+    if (!selectedIntegration) return;
+
+    try {
+      // Validate required fields
+      const template = integrationTemplates[selectedIntegration.type as keyof typeof integrationTemplates];
+      const requiredFields = template.fields.filter(field => field.required);
+      
+      for (const field of requiredFields) {
+        if (!selectedIntegration.credentials[field.key]) {
+          toast({
+            title: "Validation Error",
+            description: `${field.label} is required`,
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+
+      // Test connection automatically after save
+      await handleModalTestConnection();
+      
+      toast({
+        title: "Integration Saved",
+        description: `${selectedIntegration.name} configuration has been saved.`
+      });
+
+      setIsConfigModalOpen(false);
+
+    } catch (error) {
+      toast({
+        title: "Save Failed",
+        description: "Failed to save integration configuration",
+        variant: "destructive"
+      });
+    }
   };
 
   const togglePasswordVisibility = (integrationId: string, field: string) => {
