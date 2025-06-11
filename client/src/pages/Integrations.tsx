@@ -732,56 +732,69 @@ export default function Integrations() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Integrations</h1>
-          <p className="text-gray-600 mt-1">Connect and manage your data sources and marketing platforms</p>
+    <div className="p-8 space-y-8 fade-in">
+      <div className="page-header flex justify-between items-start">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-bold tracking-tight">Integrations</h1>
+          <p className="text-xl text-muted-foreground">Connect and manage your data sources and marketing platforms</p>
         </div>
-        <Button onClick={handleAddIntegration}>
+        <Button onClick={handleAddIntegration} className="btn-primary px-6 py-3 text-sm font-medium">
           <Plus className="h-4 w-4 mr-2" />
           Add Integration
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid-responsive">
         {integrations.map((integration) => {
           const template = integrationTemplates[integration.type];
           return (
-            <Card key={integration.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    {template?.icon}
-                    <div>
-                      <CardTitle className="text-lg">{integration.name}</CardTitle>
-                      <CardDescription className="text-sm">{integration.description}</CardDescription>
+            <Card key={integration.id} className="card hover:shadow-xl transition-all duration-300 slide-up group">
+              <CardHeader className="pb-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
+                      {template?.icon}
+                    </div>
+                    <div className="space-y-1">
+                      <CardTitle className="text-xl font-semibold group-hover:text-blue-600 transition-colors">
+                        {integration.name}
+                      </CardTitle>
+                      <CardDescription className="text-base text-muted-foreground leading-relaxed">
+                        {integration.description}
+                      </CardDescription>
                     </div>
                   </div>
                   {getStatusBadge(integration.status)}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-sm text-gray-600 space-y-1">
-                  <div>Created: {new Date(integration.createdAt).toLocaleDateString()}</div>
+              <CardContent className="space-y-5">
+                <div className="text-sm text-muted-foreground space-y-2 bg-gray-50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">Created:</span>
+                    <span>{new Date(integration.createdAt).toLocaleDateString()}</span>
+                  </div>
                   {integration.lastUsedAt && (
-                    <div>Last used: {new Date(integration.lastUsedAt).toLocaleDateString()}</div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Last used:</span>
+                      <span>{new Date(integration.lastUsedAt).toLocaleDateString()}</span>
+                    </div>
                   )}
                 </div>
-                <div className="flex space-x-2">
+                <div className="flex space-x-3">
                   <Button 
                     variant="outline" 
                     size="sm" 
                     onClick={() => handleConfigureIntegration(integration)}
-                    className="flex-1"
+                    className="flex-1 font-medium hover:bg-blue-50 hover:border-blue-200 transition-colors"
                   >
-                    <Settings className="h-4 w-4 mr-1" />
+                    <Settings className="h-4 w-4 mr-2" />
                     Configure
                   </Button>
                   <Button 
                     variant="destructive" 
                     size="sm"
                     onClick={() => deleteIntegrationMutation.mutate(integration.id)}
+                    className="hover:bg-red-600 transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -794,10 +807,10 @@ export default function Integrations() {
 
       {/* Add Integration Modal */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add New Integration</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="modal-enhanced max-w-5xl max-h-[95vh] overflow-y-auto">
+          <DialogHeader className="modal-header space-y-3">
+            <DialogTitle className="text-2xl font-bold tracking-tight">Add New Integration</DialogTitle>
+            <DialogDescription className="text-lg text-muted-foreground">
               Choose a platform to integrate with your customer data platform
             </DialogDescription>
           </DialogHeader>
