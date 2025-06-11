@@ -58,6 +58,8 @@ export default function AdminNew() {
   const queryClient = useQueryClient();
   const [selectedUser, setSelectedUser] = useState<TeamMember | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editUserData, setEditUserData] = useState<any>(null);
   const [invitationData, setInvitationData] = useState<InvitationData>({
     email: '',
     firstName: '',
@@ -107,6 +109,31 @@ export default function AdminNew() {
     }
   });
 
+  // Edit team member mutation
+  const editTeamMemberMutation = useMutation({
+    mutationFn: (data: { id: string; updates: any }) => apiRequest(`/api/team/${data.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data.updates),
+      headers: { 'Content-Type': 'application/json' }
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team'] });
+      setShowEditModal(false);
+      setEditUserData(null);
+      toast({
+        title: "Team member updated",
+        description: "Team member details have been updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update team member",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Reset password mutation
   const resetPasswordMutation = useMutation({
     mutationFn: (memberId: string) => apiRequest(`/api/team/${memberId}/reset-password`, {
@@ -115,7 +142,6 @@ export default function AdminNew() {
     }),
     onSuccess: (response: any) => {
       setCreatedPassword(response.temporaryPassword);
-      setSelectedUser(null);
       toast({
         title: "Password reset",
         description: "A new temporary password has been generated.",
@@ -393,7 +419,17 @@ export default function AdminNew() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setSelectedUser(member)}>
+                            <DropdownMenuItem onClick={() => {
+                              setEditUserData({
+                                id: member.id,
+                                firstName: member.firstName,
+                                lastName: member.lastName,
+                                email: member.email,
+                                role: member.role,
+                                status: member.status
+                              });
+                              setShowEditModal(true);
+                            }}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
@@ -518,6 +554,161 @@ export default function AdminNew() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Edit User Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Team Member</DialogTitle>
+            <DialogDescription>
+              Update team member information and role assignments.
+            </DialogDescription>
+          </DialogHeader>
+          {editUserData && (
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              editTeamMemberMutation.mutate({
+                id: editUserData.id,
+                updates: {
+                  firstName: editUserData.firstName,
+                  lastName: editUserData.lastName,
+                  email: editUserData.email,
+                  role: editUserData.role,
+                  status: editUserData.status
+                }
+              });
+            }}>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="editFirstName">First Name</Label>
+                    <Input
+                      id="editFirstName"
+                      value={editUserData.firstName}
+                      onChange={(e) => setEditUserData({...editUserData, firstName: e.target.value})}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="editLastName">Last Name</Label>
+                    <Input
+                      id="editLastName"
+                      value={editUserData.lastName}
+                      onChange={(e) => setEditUserData({...editUserData, lastName: e.target.value})}
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="editEmail">Email Address</Label>
+                  <Input
+                    id="editEmail"
+                    type="email"
+                    value={editUserData.email}
+                    onChange={(e) => setEditUserData({...editUserData, email: e.target.value})}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editRole">Role</Label>
+                  <Select 
+                    value={editUserData.role} 
+                    onValueChange={(value) => setEditUserData({...editUserData, role: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.filter(role => role.isActive).map((role) => (
+                        <SelectItem key={role.id} value={role.name}>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: role.color }}
+                            />
+                            {role.displayName}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="editStatus">Status</Label>
+                  <Select 
+                    value={editUserData.status} 
+                    onValueChange={(value) => setEditUserData({...editUserData, status: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-end space-x-2 mt-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowEditModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={editTeamMemberMutation.isPending}
+                >
+                  {editTeamMemberMutation.isPending ? "Updating..." : "Update"}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Display Modal */}
+      <Dialog open={!!createdPassword} onOpenChange={() => setCreatedPassword(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="h-5 w-5" />
+              Temporary Password Generated
+            </DialogTitle>
+            <DialogDescription>
+              Share this temporary password securely with the team member. They must change it on first login.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-muted rounded-lg border-2 border-dashed">
+              <div className="flex items-center justify-between">
+                <code className="text-lg font-mono font-bold">{createdPassword}</code>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(createdPassword || '');
+                    toast({
+                      title: "Copied!",
+                      description: "Password copied to clipboard",
+                    });
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="text-sm text-muted-foreground space-y-2">
+              <p>• This password will expire after first use</p>
+              <p>• User must change password immediately upon login</p>
+              <p>• Send this password through a secure channel</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1782,6 +1782,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update team member (admin only)
+  app.patch("/api/team/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      // Check if team member exists
+      const teamMember = await storage.getTeamMember(id);
+      if (!teamMember) {
+        return res.status(404).json({ error: "Team member not found" });
+      }
+
+      // Update team member
+      const updatedMember = await storage.updateTeamMember(id, updates);
+      
+      if (!updatedMember) {
+        return res.status(500).json({ error: "Failed to update team member" });
+      }
+
+      res.json({ 
+        success: true, 
+        member: updatedMember
+      });
+    } catch (error) {
+      console.error("Update team member error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to update team member" 
+      });
+    }
+  });
+
   // Create team member with password (super admin only)
   app.post("/api/team/create", async (req, res) => {
     try {

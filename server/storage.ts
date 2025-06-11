@@ -48,6 +48,7 @@ export interface IStorage {
   getTeamMemberByEmail(email: string): Promise<Team | undefined>;
   createTeamMember(member: InsertTeam): Promise<Team>;
   deleteTeamMember(id: string): Promise<boolean>;
+  updateTeamMember(id: string, updates: Partial<InsertTeam>): Promise<Team | undefined>;
   updateTeamMemberPassword(id: string, passwordHash: string): Promise<boolean>;
   resetTeamMemberPassword(id: string): Promise<{ password: string; success: boolean }>;
   
@@ -158,6 +159,18 @@ export class DatabaseStorage implements IStorage {
       .delete(team)
       .where(eq(team.id, id));
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async updateTeamMember(id: string, updates: Partial<InsertTeam>): Promise<Team | undefined> {
+    const [updatedMember] = await db
+      .update(team)
+      .set({ 
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(team.id, id))
+      .returning();
+    return updatedMember || undefined;
   }
 
   async updateTeamMemberPassword(id: string, passwordHash: string): Promise<boolean> {
