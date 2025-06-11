@@ -1801,55 +1801,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Generate invitation token
-      const crypto = require('crypto');
+      const crypto = await import('crypto');
       const invitationToken = crypto.randomBytes(32).toString('hex');
       const invitationUrl = `${req.headers.origin || 'http://localhost:5000'}/register?token=${invitationToken}&email=${encodeURIComponent(email)}`;
 
-      // Send email invitation using SendGrid
-      if (process.env.SENDGRID_API_KEY) {
-        const sgMail = require('@sendgrid/mail');
-        sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-
-        const emailContent = {
-          to: email,
-          from: 'noreply@yourcompany.com', // Replace with your verified sender
-          subject: `You're invited to join our team!`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #333;">Welcome to Our Team!</h2>
-              <p>Hi ${firstName},</p>
-              <p>You've been invited to join our marketing platform as a <strong>${role}</strong>.</p>
-              ${message ? `<p style="font-style: italic; color: #666;">"${message}"</p>` : ''}
-              <div style="margin: 30px 0;">
-                <a href="${invitationUrl}" 
-                   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                          color: white; 
-                          padding: 12px 24px; 
-                          text-decoration: none; 
-                          border-radius: 6px; 
-                          display: inline-block;">
-                  Accept Invitation
-                </a>
-              </div>
-              <p style="color: #666; font-size: 14px;">
-                This invitation will expire in 7 days. If you didn't expect this invitation, you can safely ignore this email.
-              </p>
-              <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-              <p style="color: #999; font-size: 12px;">
-                If the button doesn't work, copy and paste this link: ${invitationUrl}
-              </p>
-            </div>
-          `
+      // Send email invitation using Braze
+      try {
+        const { brazeService } = await import('../services/braze.js');
+        
+        const invitationData = {
+          email,
+          firstName,
+          lastName,
+          role,
+          invitationUrl,
+          message
         };
 
-        try {
-          await sgMail.send(emailContent);
-        } catch (emailError) {
-          console.error("SendGrid email error:", emailError);
-          return res.status(500).json({ 
-            error: "Failed to send invitation email. Please check SendGrid configuration." 
-          });
+        const emailResult = await brazeService.sendTeamInvitation(invitationData);
+        
+        if (!emailResult.success) {
+          console.error("Braze invitation error:", emailResult.error);
+          // Continue with user creation even if email fails
+        } else {
+          console.log("Team invitation email sent successfully via Braze");
         }
+
+      } catch (emailError) {
+        console.error("Braze email invitation error:", emailError);
+        // Continue with user creation even if email fails
       }
 
       // Store invitation in database as pending team member

@@ -28,6 +28,20 @@ interface BrazeSegmentPayload {
   }>;
 }
 
+interface BrazeInvitationData {
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  invitationUrl: string;
+  message?: string;
+}
+
+interface BrazeCampaignTriggerResult {
+  success: boolean;
+  error?: string;
+}
+
 export class BrazeService {
   private apiKey: string;
   private instanceUrl: string;
