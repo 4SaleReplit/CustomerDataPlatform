@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertIntegrationSchema, type InsertIntegration } from "@shared/schema";
 import { snowflakeService } from "./services/snowflake";
+import { brazeService } from "./services/braze";
 import { 
   insertTeamSchema, insertDashboardTileInstanceSchema, insertCohortSchema, insertSegmentSchema,
   insertRoleSchema, updateRoleSchema, insertPermissionSchema, insertRolePermissionSchema 
@@ -1807,8 +1808,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Send email invitation using Braze
       try {
-        const { brazeService } = await import('../services/braze.js');
-        
         const invitationData = {
           email,
           firstName,

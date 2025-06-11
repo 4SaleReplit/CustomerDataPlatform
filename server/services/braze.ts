@@ -326,6 +326,120 @@ export class BrazeService {
       };
     }
   }
+
+  async sendTeamInvitation(invitationData: BrazeInvitationData): Promise<BrazeCampaignTriggerResult> {
+    try {
+      console.log(`Sending team invitation to ${invitationData.email}...`);
+
+      // First, create/update user with invitation attributes
+      const userAttributes = {
+        external_id: invitationData.email,
+        email: invitationData.email,
+        first_name: invitationData.firstName,
+        last_name: invitationData.lastName,
+        invitation_role: invitationData.role,
+        invitation_url: invitationData.invitationUrl,
+        invitation_message: invitationData.message || '',
+        invitation_status: 'pending',
+        invitation_sent_at: new Date().toISOString()
+      };
+
+      const trackResponse = await fetch(`${this.instanceUrl}/users/track`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          attributes: [userAttributes]
+        })
+      });
+
+      if (!trackResponse.ok) {
+        const errorText = await trackResponse.text();
+        console.error("Braze user track error:", trackResponse.status, errorText);
+        return { 
+          success: false, 
+          error: `Failed to create user in Braze: ${trackResponse.status} - ${errorText}` 
+        };
+      }
+
+      // Send immediate email using Braze messaging endpoint
+      const messageResponse = await fetch(`${this.instanceUrl}/messages/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          external_user_ids: [invitationData.email],
+          messages: {
+            email: {
+              app_id: process.env.BRAZE_APP_ID || "your-app-id",
+              subject: "You're invited to join our team!",
+              from: "Team Platform <noreply@yourcompany.com>",
+              body: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <h2 style="color: #333; margin-bottom: 20px;">Welcome to Our Team!</h2>
+                  <p style="font-size: 16px; line-height: 1.5;">Hi ${invitationData.firstName},</p>
+                  <p style="font-size: 16px; line-height: 1.5;">
+                    You've been invited to join our marketing platform as a <strong>${invitationData.role}</strong>.
+                  </p>
+                  ${invitationData.message ? `
+                    <div style="background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0;">
+                      <p style="margin: 0; font-style: italic; color: #666;">"${invitationData.message}"</p>
+                    </div>
+                  ` : ''}
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${invitationData.invitationUrl}" 
+                       style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                              color: white; 
+                              padding: 14px 28px; 
+                              text-decoration: none; 
+                              border-radius: 6px; 
+                              display: inline-block;
+                              font-weight: bold;
+                              font-size: 16px;">
+                      Accept Invitation
+                    </a>
+                  </div>
+                  <p style="color: #666; font-size: 14px; line-height: 1.4;">
+                    This invitation will expire in 7 days. If you didn't expect this invitation, 
+                    you can safely ignore this email.
+                  </p>
+                  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+                  <p style="color: #999; font-size: 12px; line-height: 1.4;">
+                    If the button doesn't work, copy and paste this link:<br>
+                    <a href="${invitationData.invitationUrl}" style="color: #667eea;">${invitationData.invitationUrl}</a>
+                  </p>
+                </div>
+              `
+            }
+          }
+        })
+      });
+
+      if (!messageResponse.ok) {
+        const errorText = await messageResponse.text();
+        console.error("Braze message send error:", messageResponse.status, errorText);
+        return { 
+          success: false, 
+          error: `Failed to send invitation email: ${messageResponse.status} - ${errorText}` 
+        };
+      }
+
+      const messageResult = await messageResponse.json();
+      console.log("Team invitation sent successfully:", messageResult);
+
+      return { success: true };
+    } catch (error) {
+      console.error("Team invitation error:", error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : "Unknown error occurred" 
+      };
+    }
+  }
 }
 
 export const brazeService = new BrazeService();
