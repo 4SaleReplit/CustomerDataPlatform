@@ -27,6 +27,7 @@ import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import NotFound from "./pages/NotFound";
 import Integrations from "./pages/Integrations";
+import RoleManagement from "./pages/RoleManagement";
 
 const AppRouter = () => {
   const [location] = useLocation();
@@ -65,6 +66,7 @@ const AppRouter = () => {
         <Route path="/activity-log" component={ActivityLog} />
         <Route path="/integrations" component={Integrations} />
         <Route path="/admin" component={Admin} />
+        <Route path="/roles" component={RoleManagement} />
         
         {/* Catch-all route */}
         <Route component={NotFound} />

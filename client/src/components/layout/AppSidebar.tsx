@@ -10,7 +10,8 @@ import {
   Settings,
   Database,
   FileText,
-  Cable
+  Cable,
+  Shield
 } from 'lucide-react';
 import { trackBusinessEvent } from '@/lib/amplitude';
 import { useUser } from '@/contexts/UserContext';
@@ -37,6 +38,7 @@ const navigation = [
   { name: 'Campaign Calendar', href: '/calendar', icon: Calendar },
   { name: 'Activity Log', href: '/activity-log', icon: FileText },
   { name: 'Integrations', href: '/integrations', icon: Cable },
+  { name: 'Role Management', href: '/roles', icon: Shield },
   { name: 'Admin', href: '/admin', icon: Settings },
 ];
 
