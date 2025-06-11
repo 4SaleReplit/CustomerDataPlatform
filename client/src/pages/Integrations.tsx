@@ -637,6 +637,41 @@ export default function Integrations() {
     }
   };
 
+  const handleTestNewIntegration = async (templateKey: string) => {
+    if (!templateKey || !formData) return;
+
+    setIsTestingConnection(true);
+    
+    try {
+      // Test connection using the integration test endpoints
+      const response = await apiRequest(`/api/integrations/${templateKey}/test`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.success) {
+        toast({
+          title: "Connection successful",
+          description: "Your credentials are working correctly."
+        });
+      } else {
+        toast({
+          title: "Connection failed",
+          description: response.error || "Please check your credentials.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Connection test failed",
+        description: "Unable to test connection. Please check your credentials.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsTestingConnection(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'connected':
@@ -802,6 +837,19 @@ export default function Integrations() {
                 ))}
                 
                 <div className="flex space-x-2 pt-4">
+                  <Button 
+                    onClick={() => handleTestNewIntegration(selectedTemplate)} 
+                    variant="outline" 
+                    disabled={isTestingConnection}
+                    className="flex-1"
+                  >
+                    {isTestingConnection ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                    )}
+                    Test Connection
+                  </Button>
                   <Button onClick={handleSaveIntegration} className="flex-1">
                     Save Configuration
                   </Button>
