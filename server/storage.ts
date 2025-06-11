@@ -305,6 +305,51 @@ export class DatabaseStorage implements IStorage {
   async getCampaignJobs(campaignId: string): Promise<CampaignJob[]> {
     return await db.select().from(campaignJobs).where(eq(campaignJobs.campaignId, campaignId));
   }
+
+  // Integration management methods
+  async getIntegrations(): Promise<Integration[]> {
+    const allIntegrations = await db.select().from(integrations);
+    return allIntegrations;
+  }
+
+  async getIntegration(id: string): Promise<Integration | undefined> {
+    const [integration] = await db.select().from(integrations).where(eq(integrations.id, id));
+    return integration || undefined;
+  }
+
+  async getIntegrationByType(type: string): Promise<Integration | undefined> {
+    const [integration] = await db.select().from(integrations).where(eq(integrations.type, type));
+    return integration || undefined;
+  }
+
+  async createIntegration(insertIntegration: InsertIntegration): Promise<Integration> {
+    const [integration] = await db
+      .insert(integrations)
+      .values(insertIntegration)
+      .returning();
+    return integration;
+  }
+
+  async updateIntegration(id: string, updates: Partial<InsertIntegration>): Promise<Integration | undefined> {
+    const [integration] = await db
+      .update(integrations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(integrations.id, id))
+      .returning();
+    return integration || undefined;
+  }
+
+  async deleteIntegration(id: string): Promise<boolean> {
+    const result = await db.delete(integrations).where(eq(integrations.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async updateIntegrationLastUsed(id: string): Promise<void> {
+    await db
+      .update(integrations)
+      .set({ lastUsedAt: new Date(), updatedAt: new Date() })
+      .where(eq(integrations.id, id));
+  }
 }
 
 export const storage = new DatabaseStorage();

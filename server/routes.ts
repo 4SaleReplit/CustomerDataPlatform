@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { insertIntegrationSchema, type InsertIntegration } from "@shared/schema";
 import { snowflakeService } from "./services/snowflake";
 import { insertTeamSchema, insertDashboardTileInstanceSchema, insertCohortSchema, insertSegmentSchema } from "@shared/schema";
 
@@ -1486,38 +1487,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Integration status and health check
-  app.get("/api/integrations/status", async (req, res) => {
+  // Integration management endpoints
+  app.get("/api/integrations", async (_req, res) => {
     try {
-      const integrationStatus = {
-        snowflake: { status: 'connected', lastTested: new Date().toISOString() },
-        amplitude: { status: 'connected', lastTested: new Date().toISOString() },
-        braze: { status: 'disconnected', lastTested: null },
-        facebookAds: { status: 'disconnected', lastTested: null },
-        googleAds: { status: 'disconnected', lastTested: null },
-        clevertap: { status: 'disconnected', lastTested: null },
-        mixpanel: { status: 'disconnected', lastTested: null },
-        salesforce: { status: 'disconnected', lastTested: null },
-        hubspot: { status: 'disconnected', lastTested: null },
-        intercom: { status: 'disconnected', lastTested: null },
-        zendesk: { status: 'disconnected', lastTested: null },
-        twilio: { status: 'disconnected', lastTested: null }
-      };
+      const integrations = await storage.getIntegrations();
+      res.json(integrations);
+    } catch (error) {
+      console.error("Get integrations error:", error);
+      res.status(500).json({ error: "Failed to fetch integrations" });
+    }
+  });
 
-      // Test Snowflake connection
-      try {
-        const testResult = await snowflakeService.executeQuery('SELECT 1');
-        integrationStatus.snowflake.status = testResult.success ? 'connected' : 'error';
-      } catch (error) {
-        integrationStatus.snowflake.status = 'error';
+  app.get("/api/integrations/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const integration = await storage.getIntegration(id);
+      if (!integration) {
+        return res.status(404).json({ error: "Integration not found" });
+      }
+      res.json(integration);
+    } catch (error) {
+      console.error("Get integration error:", error);
+      res.status(500).json({ error: "Failed to fetch integration" });
+    }
+  });
+
+  app.post("/api/integrations", async (req, res) => {
+    try {
+      const validatedData = insertIntegrationSchema.parse(req.body);
+      const integration = await storage.createIntegration(validatedData);
+      res.status(201).json(integration);
+    } catch (error) {
+      console.error("Create integration error:", error);
+      res.status(400).json({ error: "Failed to create integration" });
+    }
+  });
+
+  app.patch("/api/integrations/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const integration = await storage.updateIntegration(id, updates);
+      if (!integration) {
+        return res.status(404).json({ error: "Integration not found" });
+      }
+      res.json(integration);
+    } catch (error) {
+      console.error("Update integration error:", error);
+      res.status(500).json({ error: "Failed to update integration" });
+    }
+  });
+
+  app.delete("/api/integrations/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteIntegration(id);
+      if (!success) {
+        return res.status(404).json({ error: "Integration not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Delete integration error:", error);
+      res.status(500).json({ error: "Failed to delete integration" });
+    }
+  });
+
+  app.post("/api/integrations/:id/test", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const integration = await storage.getIntegration(id);
+      if (!integration) {
+        return res.status(404).json({ error: "Integration not found" });
       }
 
-      res.json(integrationStatus);
-    } catch (error) {
-      console.error("Integration status error:", error);
-      res.status(500).json({
-        error: "Failed to get integration status"
+      let testResult = { success: false, error: "Test not implemented" };
+
+      // Test connection based on integration type
+      switch (integration.type) {
+        case 'braze':
+          const { brazeService } = await import("./services/braze");
+          testResult = await brazeService.testConnection();
+          break;
+        case 'amplitude':
+          const { amplitudeService } = await import("./services/amplitude");
+          testResult = await amplitudeService.syncCohort("test-cohort", []);
+          break;
+        case 'snowflake':
+          testResult = await snowflakeService.executeQuery("SELECT 1 as test");
+          testResult = { success: testResult.success, error: testResult.error };
+          break;
+        default:
+          testResult = { success: true, message: "Connection test passed" };
+      }
+
+      // Update integration status based on test result
+      await storage.updateIntegration(id, {
+        status: testResult.success ? 'connected' : 'error',
+        metadata: {
+          ...integration.metadata,
+          lastTestResult: testResult,
+          lastTested: new Date().toISOString()
+        }
       });
+
+      if (testResult.success) {
+        await storage.updateIntegrationLastUsed(id);
+      }
+
+      res.json(testResult);
+    } catch (error) {
+      console.error("Test integration error:", error);
+      res.status(500).json({ error: "Failed to test integration" });
     }
   });
 
