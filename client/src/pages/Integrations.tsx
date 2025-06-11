@@ -202,7 +202,7 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
   facebookAds: {
     name: 'Facebook Ads',
     description: 'Facebook advertising platform for campaign and audience data',
-    icon: <SiFacebook className="h-5 w-5" />,
+    icon: <SiFacebook className="h-6 w-6 text-blue-600" />,
     color: 'bg-blue-600',
     fields: [
       { key: 'accessToken', label: 'Access Token', type: 'password', required: true },
@@ -259,7 +259,7 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
   snowflake: {
     name: 'Snowflake',
     description: 'Cloud data warehouse for analytics and data storage',
-    icon: <SiSnowflake className="h-5 w-5" />,
+    icon: <SiSnowflake className="h-6 w-6 text-blue-500" />,
     color: 'bg-cyan-500',
     fields: [
       { key: 'account', label: 'Account', type: 'text', required: true, placeholder: 'your-account.snowflakecomputing.com' },
@@ -274,7 +274,7 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
   clevertap: {
     name: 'CleverTap',
     description: 'Customer engagement and analytics platform',
-    icon: <Users className="h-5 w-5" />,
+    icon: <div className="h-6 w-6 bg-gradient-to-r from-blue-500 to-teal-500 rounded flex items-center justify-center text-white font-bold text-xs">CT</div>,
     color: 'bg-teal-500',
     fields: [
       { key: 'accountId', label: 'Account ID', type: 'text', required: true },
@@ -302,7 +302,7 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
   mixpanel: {
     name: 'Mixpanel',
     description: 'Product analytics for user behavior tracking',
-    icon: <BarChart3 className="h-5 w-5" />,
+    icon: <SiMixpanel className="h-6 w-6 text-purple-600" />,
     color: 'bg-purple-600',
     fields: [
       { key: 'projectId', label: 'Project ID', type: 'text', required: true },
