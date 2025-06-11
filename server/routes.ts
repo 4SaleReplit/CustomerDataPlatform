@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertIntegrationSchema, type InsertIntegration } from "@shared/schema";
 import { snowflakeService } from "./services/snowflake";
-import { brazeService } from "./services/braze";
+import * as BrazeModule from "./services/braze";
 import { 
   insertTeamSchema, insertDashboardTileInstanceSchema, insertCohortSchema, insertSegmentSchema,
   insertRoleSchema, updateRoleSchema, insertPermissionSchema, insertRolePermissionSchema 
@@ -1806,7 +1806,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const invitationToken = crypto.randomBytes(32).toString('hex');
       const invitationUrl = `${req.headers.origin || 'http://localhost:5000'}/register?token=${invitationToken}&email=${encodeURIComponent(email)}`;
 
-      // Send email invitation using Braze
+      // Send email invitation using Braze (with fallback)
+      let emailSent = false;
       try {
         const invitationData = {
           email,
@@ -1817,18 +1818,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message
         };
 
-        const emailResult = await brazeService.sendTeamInvitation(invitationData);
+        const emailResult = await BrazeModule.brazeService.sendTeamInvitation(invitationData);
         
-        if (!emailResult.success) {
-          console.error("Braze invitation error:", emailResult.error);
-          // Continue with user creation even if email fails
-        } else {
+        if (emailResult.success) {
           console.log("Team invitation email sent successfully via Braze");
+          emailSent = true;
+        } else {
+          console.error("Braze invitation error:", emailResult.error);
         }
 
       } catch (emailError) {
         console.error("Braze email invitation error:", emailError);
-        // Continue with user creation even if email fails
+      }
+
+      // If email fails, log the invitation details for manual delivery
+      if (!emailSent) {
+        console.log("=".repeat(80));
+        console.log("EMAIL DELIVERY FAILED - MANUAL INVITATION REQUIRED");
+        console.log("=".repeat(80));
+        console.log(`Invite: ${firstName} ${lastName} <${email}>`);
+        console.log(`Role: ${role}`);
+        console.log(`Invitation URL: ${invitationUrl}`);
+        if (message) {
+          console.log(`Message: "${message}"`);
+        }
+        console.log("=".repeat(80));
       }
 
       // Store invitation in database as pending team member

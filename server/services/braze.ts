@@ -364,79 +364,104 @@ export class BrazeService {
         };
       }
 
-      // Send immediate email using Braze messaging endpoint
-      const messageResponse = await fetch(`${this.instanceUrl}/messages/send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
-        },
-        body: JSON.stringify({
-          external_user_ids: [invitationData.email],
-          messages: {
-            email: {
-              app_id: process.env.BRAZE_APP_ID || "your-app-id",
-              subject: "You're invited to join our team!",
-              from: "Team Platform <noreply@yourcompany.com>",
-              body: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                  <h2 style="color: #333; margin-bottom: 20px;">Welcome to Our Team!</h2>
-                  <p style="font-size: 16px; line-height: 1.5;">Hi ${invitationData.firstName},</p>
-                  <p style="font-size: 16px; line-height: 1.5;">
-                    You've been invited to join our marketing platform as a <strong>${invitationData.role}</strong>.
-                  </p>
-                  ${invitationData.message ? `
-                    <div style="background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0;">
-                      <p style="margin: 0; font-style: italic; color: #666;">"${invitationData.message}"</p>
-                    </div>
-                  ` : ''}
-                  <div style="text-align: center; margin: 30px 0;">
-                    <a href="${invitationData.invitationUrl}" 
-                       style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                              color: white; 
-                              padding: 14px 28px; 
-                              text-decoration: none; 
-                              border-radius: 6px; 
-                              display: inline-block;
-                              font-weight: bold;
-                              font-size: 16px;">
-                      Accept Invitation
-                    </a>
-                  </div>
-                  <p style="color: #666; font-size: 14px; line-height: 1.4;">
-                    This invitation will expire in 7 days. If you didn't expect this invitation, 
-                    you can safely ignore this email.
-                  </p>
-                  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                  <p style="color: #999; font-size: 12px; line-height: 1.4;">
-                    If the button doesn't work, copy and paste this link:<br>
-                    <a href="${invitationData.invitationUrl}" style="color: #667eea;">${invitationData.invitationUrl}</a>
-                  </p>
-                </div>
-              `
-            }
-          }
-        })
-      });
+      // Check for verified sender domains first
+      const emailSenderOptions = [
+        "noreply@4sale.tech",
+        "team@4sale.tech", 
+        "notifications@4sale.tech",
+        "noreply@example.com" // fallback
+      ];
 
-      if (!messageResponse.ok) {
-        const errorText = await messageResponse.text();
-        console.error("Braze message send error:", messageResponse.status, errorText);
-        return { 
-          success: false, 
-          error: `Failed to send invitation email: ${messageResponse.status} - ${errorText}` 
-        };
+      let emailSent = false;
+      let lastError = '';
+
+      for (const sender of emailSenderOptions) {
+        try {
+          // Send immediate email using Braze messaging endpoint
+          const messageResponse = await fetch(`${this.instanceUrl}/messages/send`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.apiKey}`
+            },
+            body: JSON.stringify({
+              external_user_ids: [invitationData.email],
+              messages: {
+                email: {
+                  app_id: process.env.BRAZE_APP_ID || "your-app-id",
+                  subject: "You're invited to join our team!",
+                  from: `Team Platform <${sender}>`,
+                  body: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                      <h2 style="color: #333; margin-bottom: 20px;">Welcome to Our Team!</h2>
+                      <p style="font-size: 16px; line-height: 1.5;">Hi ${invitationData.firstName},</p>
+                      <p style="font-size: 16px; line-height: 1.5;">
+                        You've been invited to join our marketing platform as a <strong>${invitationData.role}</strong>.
+                      </p>
+                      ${invitationData.message ? `
+                        <div style="background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0;">
+                          <p style="margin: 0; font-style: italic; color: #666;">"${invitationData.message}"</p>
+                        </div>
+                      ` : ''}
+                      <div style="text-align: center; margin: 30px 0;">
+                        <a href="${invitationData.invitationUrl}" 
+                           style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                  color: white; 
+                                  padding: 14px 28px; 
+                                  text-decoration: none; 
+                                  border-radius: 6px; 
+                                  display: inline-block;
+                                  font-weight: bold;
+                                  font-size: 16px;">
+                          Accept Invitation
+                        </a>
+                      </div>
+                      <p style="color: #666; font-size: 14px; line-height: 1.4;">
+                        This invitation will expire in 7 days. If you didn't expect this invitation, 
+                        you can safely ignore this email.
+                      </p>
+                      <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+                      <p style="color: #999; font-size: 12px; line-height: 1.4;">
+                        If the button doesn't work, copy and paste this link:<br>
+                        <a href="${invitationData.invitationUrl}" style="color: #667eea;">${invitationData.invitationUrl}</a>
+                      </p>
+                    </div>
+                  `
+                }
+              }
+            })
+          });
+
+          if (messageResponse.ok) {
+            const messageResult = await messageResponse.json();
+            console.log(`Team invitation sent successfully via ${sender}:`, messageResult);
+            emailSent = true;
+            break;
+          } else {
+            const errorText = await messageResponse.text();
+            lastError = `${sender}: ${messageResponse.status} - ${errorText}`;
+            console.warn(`Failed to send via ${sender}:`, lastError);
+          }
+        } catch (senderError) {
+          lastError = `${sender}: ${senderError instanceof Error ? senderError.message : 'Unknown error'}`;
+          console.warn(`Error with sender ${sender}:`, lastError);
+        }
       }
 
-      const messageResult = await messageResponse.json();
-      console.log("Team invitation sent successfully:", messageResult);
+      if (!emailSent) {
+        console.error("All email senders failed. Last error:", lastError);
+        return { 
+          success: false, 
+          error: `Failed to send invitation email. Please verify your Braze sender domains. Last error: ${lastError}` 
+        };
+      }
 
       return { success: true };
     } catch (error) {
       console.error("Team invitation error:", error);
       return { 
-        success: false, 
-        error: error instanceof Error ? error.message : "Unknown error occurred" 
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error occurred"
       };
     }
   }
