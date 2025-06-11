@@ -25,16 +25,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (teamMember) {
         const isValid = await bcrypt.compare(password, teamMember.passwordHash);
         if (isValid) {
-          // Remove sensitive data before sending response
-          const { passwordHash, tempPassword, ...userResponse } = teamMember;
           return res.json({
-            id: userResponse.id,
-            username: userResponse.email,
-            email: userResponse.email,
-            role: userResponse.role,
-            firstName: userResponse.firstName,
-            lastName: userResponse.lastName,
-            tempPassword: tempPassword
+            id: teamMember.id,
+            username: teamMember.email,
+            email: teamMember.email,
+            role: teamMember.role,
+            firstName: teamMember.firstName,
+            lastName: teamMember.lastName,
+            tempPassword: teamMember.temporaryPassword,
+            mustChangePassword: teamMember.mustChangePassword
           });
         }
       }
