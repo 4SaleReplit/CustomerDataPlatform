@@ -5,7 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Router, Route, Switch, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { Layout } from "./components/layout/Layout";
-import { UserProvider } from "./contexts/UserContext";
+import { UserProvider, useUser } from "./contexts/UserContext";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import UserProfile from "./pages/UserProfile";
@@ -31,7 +31,24 @@ import RoleManagement from "./pages/RoleManagement";
 
 const AppRouter = () => {
   const [location] = useLocation();
+  const { isAuthenticated } = useUser();
   const isAuthRoute = location === '/login' || location === '/register';
+
+  // If not authenticated and not on auth route, redirect to login
+  if (!isAuthenticated && !isAuthRoute) {
+    return (
+      <Switch>
+        <Route path="/login" component={Login} />
+        <Route component={() => { window.location.href = '/login'; return null; }} />
+      </Switch>
+    );
+  }
+
+  // If authenticated and on auth route, redirect to dashboard
+  if (isAuthenticated && isAuthRoute) {
+    window.location.href = '/';
+    return null;
+  }
 
   if (isAuthRoute) {
     return (
