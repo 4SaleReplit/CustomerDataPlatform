@@ -308,7 +308,12 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
       { key: 'accessToken', label: 'Access Token', type: 'password', required: true },
       { key: 'workspaceSlug', label: 'Workspace Slug', type: 'text', required: true },
       { key: 'sourceId', label: 'Source ID', type: 'text', required: false }
-    ]
+    ],
+    permissions: {
+      required: ['Workspace Owner', 'Source Admin', 'Tracking API Access'],
+      documentation: 'Get credentials from Segment Workspace Settings → Access Management → Create API token with source permissions',
+      useCases: ['Collect user behavior data', 'Sync customer profiles across platforms', 'Track conversion events']
+    }
   },
   intercom: {
     name: 'Intercom',
@@ -319,7 +324,12 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
       { key: 'accessToken', label: 'Access Token', type: 'password', required: true },
       { key: 'appId', label: 'App ID', type: 'text', required: false },
       { key: 'apiVersion', label: 'API Version', type: 'select', required: true, options: ['2.10', '2.11'] }
-    ]
+    ],
+    permissions: {
+      required: ['Read users', 'Read conversations', 'Read admin', 'Export data'],
+      documentation: 'Create access token in Intercom Developer Hub → Your Apps → Authentication → Access Token with required scopes',
+      useCases: ['Access customer conversation history', 'Export user profiles and segments', 'Track support engagement metrics']
+    }
   },
   salesforce: {
     name: 'Salesforce',
