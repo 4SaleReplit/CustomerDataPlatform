@@ -1,60 +1,37 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Settings, 
-  TestTube, 
-  Save, 
-  X, 
-  Edit,
-  CheckCircle, 
-  XCircle, 
-  AlertCircle,
-  Eye,
-  EyeOff,
-  Loader2
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
-import { 
-  SiGoogleanalytics, 
-  SiFirebase, 
-  SiClickhouse, 
-  SiFacebook, 
-  SiGoogle, 
-  SiSnowflake,
-  SiMixpanel,
-  SiIntercom,
-  SiSalesforce,
-  SiHubspot,
-  SiZendesk,
-  SiTwilio
-} from 'react-icons/si';
-import { TrendingUp, Database, Target, BarChart3, Users, Smartphone, Cloud, MessageSquare, Info, FileText, Shield } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Plus, Settings, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Info, BookOpen, Shield, Target, Loader2 } from "lucide-react";
+import { SiFacebook, SiGoogle, SiSnowflake, SiTwilio, SiMixpanel, SiIntercom, SiSalesforce, SiHubspot, SiZendesk } from "react-icons/si";
+import brazeIconPath from "@assets/BRZE_1749419981281.png";
 
 interface Integration {
   id: string;
   name: string;
   type: string;
   description: string;
-  icon: React.ReactNode;
-  color: string;
   status: 'connected' | 'disconnected' | 'testing' | 'error';
-  lastTested?: string;
   credentials: Record<string, any>;
-  isEditing?: boolean;
   metadata?: {
     accountInfo?: string;
     dataAvailable?: string[];
     lastSync?: string;
     recordCount?: number;
     version?: string;
+    lastTested?: string;
   };
+  createdAt: string;
+  lastUsedAt?: string;
+  updatedAt: string;
 }
 
 interface IntegrationField {
@@ -72,189 +49,151 @@ interface IntegrationTemplate {
   icon: React.ReactNode;
   color: string;
   fields: IntegrationField[];
-  permissions?: {
+  setupGuide: {
+    title: string;
+    steps: string[];
+    documentation?: string;
+  };
+  permissions: {
     required: string[];
     documentation: string;
-    useCases: string[];
   };
+  useCases: string[];
 }
 
 const integrationTemplates: Record<string, IntegrationTemplate> = {
   braze: {
     name: 'Braze',
     description: 'Customer engagement platform for marketing automation',
-    icon: <div className="h-6 w-6 bg-gradient-to-r from-orange-500 to-red-500 rounded flex items-center justify-center text-white font-bold text-xs">B</div>,
+    icon: <img src={brazeIconPath} alt="Braze" className="h-6 w-6" />,
     color: 'bg-purple-500',
     fields: [
       { key: 'apiKey', label: 'API Key', type: 'password', required: true },
       { key: 'instanceUrl', label: 'Instance URL', type: 'url', required: true, placeholder: 'https://rest.iad-01.braze.com' },
       { key: 'appId', label: 'App ID', type: 'text', required: true }
     ],
-    permissions: {
-      required: [
-        'users.track',
-        'users.export',
-        'segments.list',
-        'segments.create',
-        'campaigns.list',
-        'campaigns.trigger',
-        'canvas.list',
-        'canvas.trigger'
+    setupGuide: {
+      title: 'Create API Key in Braze Dashboard',
+      steps: [
+        'Log in to your Braze project dashboard',
+        'Navigate to Settings → Developer Console',
+        'Click "Create New API Key"',
+        'Select required permissions: users.track, users.export, segments.list, segments.create, campaigns.trigger',
+        'Copy the API Key and your REST endpoint URL'
       ],
-      documentation: 'Create API Key in Braze Dashboard → Settings → Developer Console → REST API Keys',
-      useCases: [
-        'Read user profiles and engagement data',
-        'Create and manage audience segments',
-        'Send targeted campaigns and messages',
-        'Track custom events and user attributes',
-        'Export user data for analysis'
-      ]
-    }
+      documentation: 'https://www.braze.com/docs/api/basics/'
+    },
+    permissions: {
+      required: ['users.track', 'users.export', 'segments.list', 'segments.create', 'campaigns.trigger', 'canvas.list', 'canvas.trigger'],
+      documentation: 'Create API Key in Braze Dashboard → Settings → Developer Console → REST API Keys'
+    },
+    useCases: [
+      'Read user profiles and engagement data',
+      'Create and manage audience segments',
+      'Send targeted campaigns and messages',
+      'Track custom events and user attributes',
+      'Export user data for analysis'
+    ]
   },
   amplitude: {
     name: 'Amplitude',
-    description: 'Product analytics platform for user behavior tracking',
-    icon: <div className="h-6 w-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded flex items-center justify-center text-white font-bold text-xs">A</div>,
+    description: 'Product analytics for user behavior tracking',
+    icon: <div className="h-6 w-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded flex items-center justify-center text-white font-bold text-xs">A</div>,
     color: 'bg-blue-500',
     fields: [
       { key: 'apiKey', label: 'API Key', type: 'password', required: true },
       { key: 'secretKey', label: 'Secret Key', type: 'password', required: true },
-      { key: 'appId', label: 'App ID', type: 'number', required: true }
+      { key: 'appId', label: 'App ID', type: 'text', required: true }
     ],
-    permissions: {
-      required: [
-        'analytics:read',
-        'cohorts:read',
-        'cohorts:write',
-        'users:read',
-        'events:read',
-        'behavioral_cohorts:read',
-        'behavioral_cohorts:write'
-      ],
-      documentation: 'Create API Key in Amplitude → Settings → Projects → API Keys. Use Service Account for programmatic access.',
-      useCases: [
-        'Read user event data and behavioral analytics',
-        'Create and manage behavioral cohorts',
-        'Export user segments for marketing campaigns',
-        'Access funnel and retention analysis data',
-        'Sync user properties and custom events'
+    setupGuide: {
+      title: 'Get Amplitude API Credentials',
+      steps: [
+        'Go to your Amplitude project settings',
+        'Navigate to General → Project Settings',
+        'Copy your Project API Key and Secret Key',
+        'Find your App ID in the project overview',
+        'Ensure your account has cohort creation permissions'
       ]
-    }
-  },
-  firebase: {
-    name: 'Firebase',
-    description: 'Google Firebase for authentication and analytics',
-    icon: <SiFirebase className="h-6 w-6 text-orange-500" />,
-    color: 'bg-orange-500',
-    fields: [
-      { key: 'apiKey', label: 'API Key', type: 'password', required: true },
-      { key: 'projectId', label: 'Project ID', type: 'text', required: true },
-      { key: 'appId', label: 'App ID', type: 'text', required: true },
-      { key: 'measurementId', label: 'Measurement ID', type: 'text', required: false }
+    },
+    permissions: {
+      required: ['cohorts:read', 'cohorts:write', 'users:read', 'events:read'],
+      documentation: 'Get credentials from Amplitude → Settings → Project Settings → API Keys'
+    },
+    useCases: [
+      'Access user behavioral analytics',
+      'Create and sync user cohorts',
+      'Export user event data',
+      'Analyze user journey funnels',
+      'Track product engagement metrics'
     ]
   },
-  googleAnalytics: {
-    name: 'Google Analytics',
-    description: 'Web analytics service for tracking website performance',
-    icon: <SiGoogleanalytics className="h-6 w-6 text-orange-500" />,
-    color: 'bg-green-500',
-    fields: [
-      { key: 'measurementId', label: 'Measurement ID', type: 'text', required: true, placeholder: 'G-XXXXXXXXXX' },
-      { key: 'apiSecret', label: 'API Secret', type: 'password', required: false },
-      { key: 'serviceAccountKey', label: 'Service Account Key (JSON)', type: 'textarea', required: false }
-    ]
-  },
-  adjust: {
-    name: 'Adjust',
-    description: 'Mobile attribution and analytics platform',
-    icon: <Target className="h-5 w-5" />,
-    color: 'bg-pink-500',
-    fields: [
-      { key: 'apiToken', label: 'API Token', type: 'password', required: true },
-      { key: 'appToken', label: 'App Token', type: 'text', required: true },
-      { key: 'environment', label: 'Environment', type: 'select', required: true, options: ['production', 'sandbox'] }
-    ]
-  },
-  looker: {
-    name: 'Looker',
-    description: 'Business intelligence and data visualization platform',
-    icon: <BarChart3 className="h-5 w-5" />,
-    color: 'bg-indigo-500',
-    fields: [
-      { key: 'baseUrl', label: 'Base URL', type: 'url', required: true, placeholder: 'https://yourcompany.looker.com' },
-      { key: 'clientId', label: 'Client ID', type: 'text', required: true },
-      { key: 'clientSecret', label: 'Client Secret', type: 'password', required: true }
-    ]
-  },
-  clickhouse: {
-    name: 'ClickHouse',
-    description: 'Columnar database for analytical workloads',
-    icon: <SiClickhouse className="h-5 w-5" />,
-    color: 'bg-yellow-500',
-    fields: [
-      { key: 'host', label: 'Host', type: 'text', required: true, placeholder: 'localhost' },
-      { key: 'port', label: 'Port', type: 'number', required: true, placeholder: '8123' },
-      { key: 'username', label: 'Username', type: 'text', required: true },
-      { key: 'password', label: 'Password', type: 'password', required: true },
-      { key: 'database', label: 'Database', type: 'text', required: true }
-    ]
-  },
-  facebookAds: {
+  facebook: {
     name: 'Facebook Ads',
-    description: 'Facebook advertising platform for campaign and audience data',
+    description: 'Social media advertising platform for targeted campaigns',
     icon: <SiFacebook className="h-6 w-6 text-blue-600" />,
     color: 'bg-blue-600',
     fields: [
       { key: 'accessToken', label: 'Access Token', type: 'password', required: true },
+      { key: 'adAccountId', label: 'Ad Account ID', type: 'text', required: true, placeholder: 'act_123456789' },
       { key: 'appId', label: 'App ID', type: 'text', required: true },
-      { key: 'appSecret', label: 'App Secret', type: 'password', required: true },
-      { key: 'adAccountId', label: 'Ad Account ID', type: 'text', required: true, placeholder: 'act_XXXXXXXX' },
-      { key: 'apiVersion', label: 'API Version', type: 'select', required: true, options: ['v18.0', 'v19.0', 'v20.0'] }
+      { key: 'appSecret', label: 'App Secret', type: 'password', required: true }
     ],
-    permissions: {
-      required: [
-        'ads_read',
-        'ads_management',
-        'business_management',
-        'read_insights',
-        'read_audience_network_insights'
-      ],
-      documentation: 'Create App in Facebook Developer Console → Add Marketing API → Generate System User Token with required permissions',
-      useCases: [
-        'Read campaign performance and ad metrics',
-        'Access audience insights and demographics',
-        'Create and manage custom audiences',
-        'Track conversion events and attribution',
-        'Export audience data for lookalike modeling'
+    setupGuide: {
+      title: 'Create Facebook App and Get Access Token',
+      steps: [
+        'Go to Facebook Developers → Create App',
+        'Add Marketing API product to your app',
+        'Generate an access token with ads_read and ads_management permissions',
+        'Get your Ad Account ID from Facebook Ads Manager',
+        'Use Graph API Explorer to test your token'
       ]
-    }
+    },
+    permissions: {
+      required: ['ads_read', 'ads_management', 'business_management'],
+      documentation: 'Create app at developers.facebook.com → Add Marketing API → Generate access token'
+    },
+    useCases: [
+      'Import advertising campaign performance data',
+      'Create custom audiences from user segments',
+      'Sync conversion events and attribution',
+      'Access demographic and interest data',
+      'Export campaign metrics and insights'
+    ]
   },
-  googleAds: {
+  google: {
     name: 'Google Ads',
-    description: 'Google advertising platform for campaign performance and audience insights',
-    icon: <SiGoogle className="h-5 w-5" />,
+    description: 'Search and display advertising platform',
+    icon: <SiGoogle className="h-6 w-6 text-red-500" />,
     color: 'bg-red-500',
     fields: [
       { key: 'clientId', label: 'Client ID', type: 'text', required: true },
       { key: 'clientSecret', label: 'Client Secret', type: 'password', required: true },
       { key: 'refreshToken', label: 'Refresh Token', type: 'password', required: true },
-      { key: 'customerId', label: 'Customer ID', type: 'text', required: true, placeholder: 'XXX-XXX-XXXX' },
+      { key: 'customerId', label: 'Customer ID', type: 'text', required: true, placeholder: '123-456-7890' },
       { key: 'developerToken', label: 'Developer Token', type: 'password', required: true }
     ],
-    permissions: {
-      required: [
-        'https://www.googleapis.com/auth/adwords',
-        'https://www.googleapis.com/auth/adwords.readonly'
-      ],
-      documentation: 'Apply for Google Ads API access → Create OAuth2 credentials → Generate Developer Token with Standard Access',
-      useCases: [
-        'Read campaign performance metrics and KPIs',
-        'Access audience insights and conversion data',
-        'Create and manage customer match audiences',
-        'Track attribution and conversion paths',
-        'Export search term and keyword performance data'
+    setupGuide: {
+      title: 'Set up Google Ads API Access',
+      steps: [
+        'Create a project in Google Cloud Console',
+        'Enable Google Ads API',
+        'Create OAuth 2.0 credentials',
+        'Get your Customer ID from Google Ads',
+        'Apply for a Developer Token',
+        'Generate refresh token using OAuth playground'
       ]
-    }
+    },
+    permissions: {
+      required: ['https://www.googleapis.com/auth/adwords'],
+      documentation: 'Set up at console.cloud.google.com → Enable Google Ads API → Create credentials'
+    },
+    useCases: [
+      'Import search campaign performance data',
+      'Create customer match audiences',
+      'Export search term and keyword performance data',
+      'Access conversion tracking data',
+      'Analyze ad performance metrics'
+    ]
   },
   snowflake: {
     name: 'Snowflake',
@@ -265,10 +204,31 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
       { key: 'account', label: 'Account', type: 'text', required: true, placeholder: 'your-account.snowflakecomputing.com' },
       { key: 'username', label: 'Username', type: 'text', required: true },
       { key: 'password', label: 'Password', type: 'password', required: true },
-      { key: 'warehouse', label: 'Warehouse', type: 'text', required: true },
-      { key: 'database', label: 'Database', type: 'text', required: true },
+      { key: 'warehouse', label: 'Warehouse', type: 'text', required: true, placeholder: 'COMPUTE_WH' },
+      { key: 'database', label: 'Database', type: 'text', required: true, placeholder: 'MY_DATABASE' },
       { key: 'schema', label: 'Schema', type: 'text', required: true, placeholder: 'PUBLIC' },
       { key: 'role', label: 'Role', type: 'text', required: false }
+    ],
+    setupGuide: {
+      title: 'Create Snowflake User and Database Access',
+      steps: [
+        'Create a dedicated user account in Snowflake',
+        'Grant necessary permissions to databases and schemas',
+        'Ensure user has access to required warehouse',
+        'Test connection using provided credentials',
+        'Configure IP whitelisting if required'
+      ]
+    },
+    permissions: {
+      required: ['USAGE on WAREHOUSE', 'USAGE on DATABASE', 'USAGE on SCHEMA', 'SELECT on TABLES'],
+      documentation: 'Create user in Snowflake → Grant permissions → Test connection'
+    },
+    useCases: [
+      'Query customer data for segmentation',
+      'Access transaction and behavioral data',
+      'Run analytics on large datasets',
+      'Export user cohorts for marketing automation',
+      'Store and analyze cross-platform user data'
     ]
   },
   clevertap: {
@@ -280,24 +240,29 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
       { key: 'accountId', label: 'Account ID', type: 'text', required: true },
       { key: 'passcode', label: 'Passcode', type: 'password', required: true },
       { key: 'region', label: 'Region', type: 'select', required: true, options: ['us1', 'eu1', 'aps3', 'mec1'] },
-      { key: 'apiKey', label: 'API Key', type: 'password', required: false }
+      { key: 'token', label: 'Token', type: 'password', required: false }
     ],
-    permissions: {
-      required: [
-        'Profile API Access',
-        'Events API Access',
-        'Segments API Access',
-        'Campaigns API Access'
-      ],
-      documentation: 'Get credentials from CleverTap Dashboard → Settings → Partners → API → Generate API credentials with full access',
-      useCases: [
-        'Read user profiles and behavioral data',
-        'Access engagement metrics and campaign performance',
-        'Create and manage user segments',
-        'Track custom events and user properties',
-        'Export user cohorts for marketing automation'
+    setupGuide: {
+      title: 'Get CleverTap API Credentials',
+      steps: [
+        'Log in to your CleverTap dashboard',
+        'Go to Settings → Engage → API',
+        'Copy your Account ID and Passcode',
+        'Select your data center region',
+        'Enable API access for your account'
       ]
-    }
+    },
+    permissions: {
+      required: ['profiles:read', 'profiles:write', 'events:read', 'segments:read'],
+      documentation: 'Get credentials from CleverTap Dashboard → Settings → API'
+    },
+    useCases: [
+      'Access user profiles and behavioral data',
+      'Create and sync user segments',
+      'Export user cohorts for marketing automation',
+      'Track custom events and user properties',
+      'Analyze user engagement patterns'
+    ]
   },
   mixpanel: {
     name: 'Mixpanel',
@@ -309,6 +274,27 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
       { key: 'serviceAccountUsername', label: 'Service Account Username', type: 'text', required: true },
       { key: 'serviceAccountSecret', label: 'Service Account Secret', type: 'password', required: true },
       { key: 'projectToken', label: 'Project Token', type: 'password', required: false }
+    ],
+    setupGuide: {
+      title: 'Create Mixpanel Service Account',
+      steps: [
+        'Go to your Mixpanel project settings',
+        'Navigate to Access Security → Service Accounts',
+        'Create a new service account',
+        'Copy the username and secret',
+        'Ensure the account has necessary permissions'
+      ]
+    },
+    permissions: {
+      required: ['read:events', 'read:profiles', 'write:profiles'],
+      documentation: 'Create service account in Mixpanel → Project Settings → Access Security → Service Accounts'
+    },
+    useCases: [
+      'Access user event and behavioral data',
+      'Export user profiles for segmentation',
+      'Create custom user cohorts',
+      'Track product usage analytics',
+      'Analyze user journey and retention'
     ]
   },
   segment: {
@@ -322,11 +308,27 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
       { key: 'workspaceSlug', label: 'Workspace Slug', type: 'text', required: true },
       { key: 'sourceId', label: 'Source ID', type: 'text', required: false }
     ],
+    setupGuide: {
+      title: 'Get Segment API Credentials',
+      steps: [
+        'Go to your Segment workspace',
+        'Navigate to Settings → API Access',
+        'Create a new API token with required permissions',
+        'Copy your workspace slug from the URL',
+        'Get source ID from source settings if needed'
+      ]
+    },
     permissions: {
       required: ['Workspace Owner', 'Source Admin', 'Tracking API Access'],
-      documentation: 'Get credentials from Segment Workspace Settings → Access Management → Create API token with source permissions',
-      useCases: ['Collect user behavior data', 'Sync customer profiles across platforms', 'Track conversion events']
-    }
+      documentation: 'Get credentials from Segment Workspace Settings → Access Management → Create API token with source permissions'
+    },
+    useCases: [
+      'Collect user behavior data',
+      'Sync customer profiles across platforms',
+      'Track conversion events',
+      'Unify data from multiple sources',
+      'Export user segments for marketing'
+    ]
   },
   intercom: {
     name: 'Intercom',
@@ -338,11 +340,27 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
       { key: 'appId', label: 'App ID', type: 'text', required: false },
       { key: 'apiVersion', label: 'API Version', type: 'select', required: true, options: ['2.10', '2.11'] }
     ],
+    setupGuide: {
+      title: 'Create Intercom Access Token',
+      steps: [
+        'Go to your Intercom app settings',
+        'Navigate to Developer Hub → Your Apps',
+        'Create a new app or select existing',
+        'Generate an access token with required scopes',
+        'Copy the token and app ID'
+      ]
+    },
     permissions: {
-      required: ['Read users', 'Read conversations', 'Read admin', 'Export data'],
-      documentation: 'Create access token in Intercom Developer Hub → Your Apps → Authentication → Access Token with required scopes',
-      useCases: ['Access customer conversation history', 'Export user profiles and segments', 'Track support engagement metrics']
-    }
+      required: ['Read users', 'Read conversations', 'Read contacts'],
+      documentation: 'Create access token in Intercom Developer Hub → Your Apps → Authentication → Access Token with required scopes'
+    },
+    useCases: [
+      'Access customer conversation history',
+      'Export user profiles and segments',
+      'Track support engagement metrics',
+      'Sync customer support data',
+      'Analyze customer satisfaction trends'
+    ]
   },
   salesforce: {
     name: 'Salesforce',
@@ -355,25 +373,29 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
       { key: 'clientSecret', label: 'Client Secret', type: 'password', required: true },
       { key: 'username', label: 'Username', type: 'text', required: true },
       { key: 'password', label: 'Password', type: 'password', required: true },
-      { key: 'securityToken', label: 'Security Token', type: 'password', required: true }
+      { key: 'securityToken', label: 'Security Token', type: 'password', required: false }
     ],
-    permissions: {
-      required: [
-        'View All Data',
-        'Modify All Data',
-        'API Enabled',
-        'Manage Users',
-        'View Setup and Configuration'
-      ],
-      documentation: 'Create Connected App in Salesforce Setup → App Manager → Enable OAuth → Grant required permissions to API user',
-      useCases: [
-        'Read customer records and account data',
-        'Access sales opportunities and pipeline data',
-        'Create and manage lead scoring models',
-        'Track customer interaction history',
-        'Export contact lists for marketing campaigns'
+    setupGuide: {
+      title: 'Create Salesforce Connected App',
+      steps: [
+        'Log in to Salesforce Setup',
+        'Navigate to App Manager → New Connected App',
+        'Enable OAuth settings with required scopes',
+        'Get Client ID and Client Secret',
+        'Generate or reset your security token'
       ]
-    }
+    },
+    permissions: {
+      required: ['api', 'refresh_token', 'offline_access'],
+      documentation: 'Create connected app in Salesforce Setup → App Manager → New Connected App → Enable OAuth'
+    },
+    useCases: [
+      'Access customer and lead data',
+      'Sync sales and opportunity information',
+      'Export contact lists for marketing campaigns',
+      'Track customer lifecycle stages',
+      'Integrate CRM data with marketing platforms'
+    ]
   },
   hubspot: {
     name: 'HubSpot',
@@ -384,17 +406,59 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
       { key: 'accessToken', label: 'Access Token', type: 'password', required: true },
       { key: 'portalId', label: 'Portal ID', type: 'text', required: true },
       { key: 'apiKey', label: 'API Key (Legacy)', type: 'password', required: false }
+    ],
+    setupGuide: {
+      title: 'Create HubSpot Private App',
+      steps: [
+        'Go to HubSpot account settings',
+        'Navigate to Integrations → Private Apps',
+        'Create a new private app',
+        'Configure required scopes and permissions',
+        'Copy the access token'
+      ]
+    },
+    permissions: {
+      required: ['contacts', 'companies', 'deals', 'marketing-events'],
+      documentation: 'Create private app in HubSpot → Settings → Integrations → Private Apps → Create app with required scopes'
+    },
+    useCases: [
+      'Access contact and company data',
+      'Sync marketing campaign performance',
+      'Export lead scoring and attribution data',
+      'Track customer journey stages',
+      'Integrate with marketing automation workflows'
     ]
   },
   zendesk: {
     name: 'Zendesk',
-    description: 'Customer service and support platform',
+    description: 'Customer service and support ticketing platform',
     icon: <SiZendesk className="h-6 w-6 text-green-600" />,
     color: 'bg-green-700',
     fields: [
       { key: 'subdomain', label: 'Subdomain', type: 'text', required: true, placeholder: 'your-company' },
       { key: 'email', label: 'Email', type: 'email', required: true },
       { key: 'apiToken', label: 'API Token', type: 'password', required: true }
+    ],
+    setupGuide: {
+      title: 'Generate Zendesk API Token',
+      steps: [
+        'Log in to your Zendesk instance',
+        'Go to Admin Center → Channels → API',
+        'Enable token access and create new token',
+        'Copy the API token',
+        'Ensure your user has admin permissions'
+      ]
+    },
+    permissions: {
+      required: ['Admin', 'Agent'],
+      documentation: 'Generate token in Zendesk Admin Center → Channels → API → Token Access'
+    },
+    useCases: [
+      'Access customer support tickets',
+      'Export user satisfaction scores',
+      'Track support response times',
+      'Sync customer service interactions',
+      'Analyze support team performance'
     ]
   },
   twilio: {
@@ -406,877 +470,487 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
       { key: 'accountSid', label: 'Account SID', type: 'text', required: true },
       { key: 'authToken', label: 'Auth Token', type: 'password', required: true },
       { key: 'phoneNumber', label: 'Phone Number', type: 'text', required: false, placeholder: '+1234567890' }
+    ],
+    setupGuide: {
+      title: 'Get Twilio Account Credentials',
+      steps: [
+        'Log in to your Twilio Console',
+        'Find your Account SID on the dashboard',
+        'Copy your Auth Token (click to reveal)',
+        'Purchase a phone number if needed',
+        'Ensure your account has necessary permissions'
+      ]
+    },
+    permissions: {
+      required: ['Voice', 'SMS', 'Account'],
+      documentation: 'Get credentials from Twilio Console → Account → API keys & tokens'
+    },
+    useCases: [
+      'Send SMS notifications and alerts',
+      'Track communication engagement',
+      'Implement two-factor authentication',
+      'Automate voice and messaging workflows',
+      'Monitor communication delivery rates'
     ]
   }
 };
 
 export default function Integrations() {
   const { toast } = useToast();
-  const [integrations, setIntegrations] = useState<Integration[]>([]);
-  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+  const queryClient = useQueryClient();
   const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [showAddModal, setShowAddModal] = useState(false);
 
-  // Initialize with existing integrations based on environment variables
-  useEffect(() => {
-    const initialIntegrations: Integration[] = [];
-    
-    // Check for existing Braze configuration
-    initialIntegrations.push({
-      id: 'braze',
-      name: 'Braze',
-      type: 'braze',
-      description: 'Customer engagement platform for marketing automation',
-      icon: <Target className="h-5 w-5" />,
-      color: 'bg-purple-500',
-      status: 'disconnected',
-      credentials: {
-        apiKey: '',
-        instanceUrl: 'https://rest.iad-01.braze.com',
-        appId: ''
-      }
-    });
+  // Fetch integrations from database
+  const { data: integrations = [], isLoading } = useQuery<Integration[]>({
+    queryKey: ['/api/integrations'],
+  });
 
-    // Check for existing Amplitude configuration
-    initialIntegrations.push({
-      id: 'amplitude',
-      name: 'Amplitude',
-      type: 'amplitude',
-      description: 'Product analytics platform for user behavior tracking',
-      icon: <TrendingUp className="h-5 w-5" />,
-      color: 'bg-blue-500',
-      status: 'connected', // Since we have it working
-      credentials: {
-        apiKey: 'b422d*****89678685ecb14f742f',
-        secretKey: '****',
-        appId: '123456'
-      }
-    });
+  // Create integration mutation
+  const createIntegrationMutation = useMutation({
+    mutationFn: (data: any) => apiRequest('/api/integrations', {
+      method: 'POST',
+      body: data
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
+      setShowAddModal(false);
+      setFormData({});
+      setSelectedTemplate('');
+      toast({
+        title: "Integration created",
+        description: "Your integration has been successfully configured."
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create integration. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
 
-    // Add other integrations as disconnected
-    Object.entries(integrationTemplates).forEach(([key, template]) => {
-      if (!initialIntegrations.find(i => i.type === key)) {
-        initialIntegrations.push({
-          id: key,
-          name: template.name,
-          type: key,
-          description: template.description,
-          icon: template.icon,
-          color: template.color,
-          status: 'disconnected',
-          credentials: {}
+  // Update integration mutation
+  const updateIntegrationMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest(`/api/integrations/${id}`, {
+      method: 'PATCH',
+      body: data
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
+      setIsConfigModalOpen(false);
+      setSelectedIntegration(null);
+      toast({
+        title: "Integration updated",
+        description: "Your integration has been successfully updated."
+      });
+    }
+  });
+
+  // Delete integration mutation
+  const deleteIntegrationMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/integrations/${id}`, {
+      method: 'DELETE'
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
+      toast({
+        title: "Integration deleted",
+        description: "The integration has been removed."
+      });
+    }
+  });
+
+  // Test connection mutation
+  const testConnectionMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/integrations/${id}/test`, {
+      method: 'POST'
+    }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
+      if (result.success) {
+        toast({
+          title: "Connection successful",
+          description: "Integration is working correctly."
+        });
+      } else {
+        toast({
+          title: "Connection failed",
+          description: result.error || "Please check your credentials.",
+          variant: "destructive"
         });
       }
-    });
+    }
+  });
 
-    setIntegrations(initialIntegrations);
-  }, []);
+  const handleConfigureIntegration = (integration: Integration) => {
+    setSelectedIntegration(integration);
+    setFormData(integration.credentials || {});
+    setIsConfigModalOpen(true);
+  };
+
+  const handleAddIntegration = () => {
+    setShowAddModal(true);
+    setSelectedTemplate('');
+    setFormData({});
+  };
+
+  const handleTemplateSelect = (templateKey: string) => {
+    setSelectedTemplate(templateKey);
+    setFormData({});
+  };
+
+  const handleSaveIntegration = () => {
+    if (selectedIntegration) {
+      // Update existing integration
+      updateIntegrationMutation.mutate({
+        id: selectedIntegration.id,
+        data: {
+          credentials: formData,
+          status: 'disconnected' // Reset status when credentials change
+        }
+      });
+    } else if (selectedTemplate) {
+      // Create new integration
+      const template = integrationTemplates[selectedTemplate];
+      createIntegrationMutation.mutate({
+        name: template.name,
+        type: selectedTemplate,
+        description: template.description,
+        credentials: formData,
+        status: 'disconnected'
+      });
+    }
+  };
+
+  const handleTestConnection = () => {
+    if (selectedIntegration) {
+      setIsTestingConnection(true);
+      testConnectionMutation.mutate(selectedIntegration.id, {
+        onSettled: () => setIsTestingConnection(false)
+      });
+    }
+  };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { color: string; icon: React.ReactNode }> = {
-      connected: { color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200', icon: <CheckCircle className="h-3 w-3" /> },
-      disconnected: { color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200', icon: <XCircle className="h-3 w-3" /> },
-      error: { color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200', icon: <XCircle className="h-3 w-3" /> },
-      testing: { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200', icon: <AlertCircle className="h-3 w-3" /> }
-    };
-    
-    const variant = variants[status] || variants.disconnected;
-    
-    return (
-      <Badge className={`${variant.color} flex items-center gap-1`}>
-        {variant.icon}
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    );
-  };
-
-  const handleEdit = (integrationId: string) => {
-    const integration = integrations.find(i => i.id === integrationId);
-    if (integration) {
-      setSelectedIntegration(integration);
-      setIsConfigModalOpen(true);
-    }
-  };
-
-  const handleCancel = (integrationId: string) => {
-    setIntegrations(prev => prev.map(integration => 
-      integration.id === integrationId 
-        ? { ...integration, isEditing: false }
-        : integration
-    ));
-  };
-
-  const handleSave = async (integrationId: string) => {
-    const integration = integrations.find(i => i.id === integrationId);
-    if (!integration) return;
-
-    try {
-      // Validate required fields
-      const template = integrationTemplates[integration.type as keyof typeof integrationTemplates];
-      const requiredFields = template.fields.filter(field => field.required);
-      
-      for (const field of requiredFields) {
-        if (!integration.credentials[field.key]) {
-          toast({
-            title: "Validation Error",
-            description: `${field.label} is required`,
-            variant: "destructive"
-          });
-          return;
-        }
-      }
-
-      // Update integration status to testing
-      setIntegrations(prev => prev.map(i => 
-        i.id === integrationId 
-          ? { ...i, status: 'testing', isEditing: false }
-          : i
-      ));
-
-      // Test connection
-      await handleTestConnection(integrationId);
-
-      toast({
-        title: "Integration Saved",
-        description: `${integration.name} configuration has been saved and tested.`
-      });
-
-    } catch (error) {
-      toast({
-        title: "Save Failed",
-        description: "Failed to save integration configuration",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleModalTestConnection = async () => {
-    if (!selectedIntegration) return;
-    
-    setIsTestingConnection(true);
-    
-    try {
-      let testResult = false;
-      let metadata = {};
-
-      // Call appropriate test endpoint based on integration type
-      const response = await fetch(`/api/integrations/${selectedIntegration.type}/test`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(selectedIntegration.credentials)
-      });
-      
-      testResult = response.ok;
-      
-      if (testResult) {
-        // Fetch metadata after successful connection
-        metadata = await fetchConnectionMetadata(selectedIntegration.type, selectedIntegration.credentials);
-      }
-
-      // Update both selected integration and integrations list
-      const updatedIntegration: Integration = {
-        ...selectedIntegration,
-        status: (testResult ? 'connected' : 'error') as Integration['status'],
-        metadata: testResult ? metadata : undefined,
-        lastTested: new Date().toISOString()
-      };
-      
-      setSelectedIntegration(updatedIntegration);
-      setIntegrations(prev => prev.map(i => 
-        i.id === selectedIntegration.id ? updatedIntegration : i
-      ));
-
-      toast({
-        title: testResult ? "Connection Successful" : "Connection Failed",
-        description: testResult 
-          ? `Successfully connected to ${selectedIntegration.name}` 
-          : `Failed to connect to ${selectedIntegration.name}. Please check your credentials.`,
-        variant: testResult ? "default" : "destructive"
-      });
-
-    } catch (error) {
-      const updatedIntegration: Integration = {
-        ...selectedIntegration,
-        status: 'error' as Integration['status']
-      };
-      
-      setSelectedIntegration(updatedIntegration);
-      setIntegrations(prev => prev.map(i => 
-        i.id === selectedIntegration.id ? updatedIntegration : i
-      ));
-
-      toast({
-        title: "Connection Test Failed",
-        description: `Error testing connection to ${selectedIntegration.name}`,
-        variant: "destructive"
-      });
-    } finally {
-      setIsTestingConnection(false);
-    }
-  };
-
-  const handleTestConnection = async (integrationId: string) => {
-    const integration = integrations.find(i => i.id === integrationId);
-    if (!integration) return;
-
-    setIntegrations(prev => prev.map(i => 
-      i.id === integrationId 
-        ? { ...i, status: 'testing', lastTested: new Date().toISOString() }
-        : i
-    ));
-
-    try {
-      let testResult = false;
-      let metadata = {};
-
-      // Call appropriate test endpoint based on integration type
-      const response = await fetch(`/api/integrations/${integration.type}/test`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(integration.credentials)
-      });
-      
-      testResult = response.ok;
-      
-      if (testResult) {
-        // Fetch metadata after successful connection
-        metadata = await fetchConnectionMetadata(integration.type, integration.credentials);
-      }
-
-      setIntegrations(prev => prev.map(i => 
-        i.id === integrationId 
-          ? { 
-              ...i, 
-              status: testResult ? 'connected' : 'error',
-              metadata: testResult ? metadata : undefined
-            }
-          : i
-      ));
-
-      toast({
-        title: testResult ? "Connection Successful" : "Connection Failed",
-        description: testResult 
-          ? `Successfully connected to ${integration.name}` 
-          : `Failed to connect to ${integration.name}. Please check your credentials.`,
-        variant: testResult ? "default" : "destructive"
-      });
-
-    } catch (error) {
-      setIntegrations(prev => prev.map(i => 
-        i.id === integrationId 
-          ? { ...i, status: 'error' }
-          : i
-      ));
-
-      toast({
-        title: "Connection Test Failed",
-        description: `Error testing connection to ${integration.name}`,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const fetchConnectionMetadata = async (type: string, credentials: any) => {
-    // Generate realistic metadata based on integration type
-    const baseMetadata = {
-      lastSync: new Date().toISOString(),
-      recordCount: Math.floor(Math.random() * 100000) + 10000
-    };
-
-    switch (type) {
-      case 'amplitude':
-        return {
-          ...baseMetadata,
-          accountInfo: `Project: ${credentials.appId || 'Analytics Project'}`,
-          dataAvailable: ['Events', 'User Properties', 'Cohorts', 'Funnels', 'Retention'],
-          version: 'v2.0'
-        };
-      case 'facebookAds':
-        return {
-          ...baseMetadata,
-          accountInfo: `Ad Account: ${credentials.adAccountId || 'N/A'}`,
-          dataAvailable: ['Campaigns', 'Ad Sets', 'Ads', 'Insights', 'Audiences'],
-          version: credentials.apiVersion || 'v20.0'
-        };
-      case 'googleAds':
-        return {
-          ...baseMetadata,
-          accountInfo: `Customer: ${credentials.customerId || 'N/A'}`,
-          dataAvailable: ['Campaigns', 'Keywords', 'Ad Groups', 'Conversions', 'Audiences'],
-          version: 'v15'
-        };
-      case 'clevertap':
-        return {
-          ...baseMetadata,
-          accountInfo: `Account: ${credentials.accountId}`,
-          dataAvailable: ['Profiles', 'Events', 'Segments', 'Campaigns', 'Push Notifications'],
-          version: 'v3.0'
-        };
-      case 'salesforce':
-        return {
-          ...baseMetadata,
-          accountInfo: `Instance: ${credentials.instanceUrl?.replace('https://', '') || 'N/A'}`,
-          dataAvailable: ['Accounts', 'Contacts', 'Leads', 'Opportunities', 'Cases'],
-          version: 'v58.0'
-        };
-      case 'hubspot':
-        return {
-          ...baseMetadata,
-          accountInfo: `Portal: ${credentials.portalId || 'N/A'}`,
-          dataAvailable: ['Contacts', 'Companies', 'Deals', 'Tickets', 'Marketing Events'],
-          version: 'v3'
-        };
+    switch (status) {
+      case 'connected':
+        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Connected</Badge>;
+      case 'error':
+        return <Badge className="bg-red-100 text-red-800"><XCircle className="h-3 w-3 mr-1" />Error</Badge>;
+      case 'testing':
+        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="h-3 w-3 mr-1" />Testing</Badge>;
       default:
-        return {
-          ...baseMetadata,
-          accountInfo: 'Connected Account',
-          dataAvailable: ['User Data', 'Analytics', 'Campaigns'],
-          version: 'Latest'
-        };
+        return <Badge className="bg-gray-100 text-gray-800"><AlertTriangle className="h-3 w-3 mr-1" />Disconnected</Badge>;
     }
   };
 
-  const handleCredentialChange = (integrationId: string, field: string, value: string) => {
-    setIntegrations(prev => prev.map(integration => 
-      integration.id === integrationId 
-        ? { 
-            ...integration, 
-            credentials: { ...integration.credentials, [field]: value }
-          }
-        : integration
-    ));
-  };
-
-  const handleModalCredentialChange = (field: string, value: string) => {
-    if (!selectedIntegration) return;
-    
-    const updatedIntegration = {
-      ...selectedIntegration,
-      credentials: { ...selectedIntegration.credentials, [field]: value }
-    };
-    
-    setSelectedIntegration(updatedIntegration);
-    setIntegrations(prev => prev.map(i => 
-      i.id === selectedIntegration.id ? updatedIntegration : i
-    ));
-  };
-
-  const handleModalSave = async () => {
-    if (!selectedIntegration) return;
-
-    try {
-      // Validate required fields
-      const template = integrationTemplates[selectedIntegration.type as keyof typeof integrationTemplates];
-      const requiredFields = template.fields.filter(field => field.required);
-      
-      for (const field of requiredFields) {
-        if (!selectedIntegration.credentials[field.key]) {
-          toast({
-            title: "Validation Error",
-            description: `${field.label} is required`,
-            variant: "destructive"
-          });
-          return;
-        }
-      }
-
-      // Test connection automatically after save
-      await handleModalTestConnection();
-      
-      toast({
-        title: "Integration Saved",
-        description: `${selectedIntegration.name} configuration has been saved.`
-      });
-
-      setIsConfigModalOpen(false);
-
-    } catch (error) {
-      toast({
-        title: "Save Failed",
-        description: "Failed to save integration configuration",
-        variant: "destructive"
-      });
+  const renderField = (field: IntegrationField, value: any, onChange: (value: any) => void) => {
+    switch (field.type) {
+      case 'select':
+        return (
+          <Select value={value || ''} onValueChange={onChange}>
+            <SelectTrigger>
+              <SelectValue placeholder={field.placeholder} />
+            </SelectTrigger>
+            <SelectContent>
+              {field.options?.map(option => (
+                <SelectItem key={option} value={option}>{option}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      case 'textarea':
+        return (
+          <Textarea
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={field.placeholder}
+          />
+        );
+      default:
+        return (
+          <Input
+            type={field.type}
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={field.placeholder}
+          />
+        );
     }
   };
 
-  const togglePasswordVisibility = (integrationId: string, field: string) => {
-    const key = `${integrationId}-${field}`;
-    setShowPasswords(prev => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const renderField = (integration: Integration, field: any) => {
-    const key = `${integration.id}-${field.key}`;
-    const value = integration.credentials[field.key] || '';
-
-    if (field.type === 'select') {
-      return (
-        <Select 
-          value={value} 
-          onValueChange={(newValue) => handleCredentialChange(integration.id, field.key, newValue)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder={`Select ${field.label}`} />
-          </SelectTrigger>
-          <SelectContent>
-            {field.options?.map((option: string) => (
-              <SelectItem key={option} value={option}>
-                {option.charAt(0).toUpperCase() + option.slice(1)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      );
-    }
-
-    if (field.type === 'textarea') {
-      return (
-        <Textarea
-          value={value}
-          onChange={(e) => handleCredentialChange(integration.id, field.key, e.target.value)}
-          placeholder={field.placeholder}
-          rows={4}
-        />
-      );
-    }
-
-    const isPassword = field.type === 'password';
-    const isVisible = showPasswords[key];
-
+  if (isLoading) {
     return (
-      <div className="relative">
-        <Input
-          type={isPassword && !isVisible ? 'password' : 'text'}
-          value={value}
-          onChange={(e) => handleCredentialChange(integration.id, field.key, e.target.value)}
-          placeholder={field.placeholder}
-        />
-        {isPassword && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-            onClick={() => togglePasswordVisibility(integration.id, field.key)}
-          >
-            {isVisible ? (
-              <EyeOff className="h-4 w-4" />
-            ) : (
-              <Eye className="h-4 w-4" />
-            )}
-          </Button>
-        )}
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
-  };
-
-  const connectedCount = integrations.filter(i => i.status === 'connected').length;
-  const errorCount = integrations.filter(i => i.status === 'error').length;
-  const testingCount = integrations.filter(i => i.status === 'testing').length;
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Integrations</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your marketing and analytics platform connections</p>
+          <h1 className="text-2xl font-bold">Integrations</h1>
+          <p className="text-gray-600 mt-1">Connect and manage your data sources and marketing platforms</p>
         </div>
+        <Button onClick={handleAddIntegration}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Integration
+        </Button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Integrations</CardTitle>
-            <Settings className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{integrations.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Connected</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{connectedCount}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Errors</CardTitle>
-            <XCircle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{errorCount}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Testing</CardTitle>
-            <AlertCircle className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{testingCount}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Integrations Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {integrations.map((integration) => {
-          const template = integrationTemplates[integration.type as keyof typeof integrationTemplates];
-          
+          const template = integrationTemplates[integration.type];
           return (
-            <Card key={integration.id}>
-              <CardHeader>
+            <Card key={integration.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${integration.color} text-white`}>
-                      {integration.icon}
-                    </div>
+                  <div className="flex items-center space-x-3">
+                    {template?.icon}
                     <div>
                       <CardTitle className="text-lg">{integration.name}</CardTitle>
-                      <p className="text-sm text-muted-foreground">{integration.description}</p>
+                      <CardDescription className="text-sm">{integration.description}</CardDescription>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {getStatusBadge(integration.status)}
-                  </div>
+                  {getStatusBadge(integration.status)}
                 </div>
               </CardHeader>
-              <CardContent>
-                {integration.isEditing ? (
-                  <div className="space-y-4">
-                    {/* Credentials Form */}
-                    <div className="space-y-3">
-                      {template.fields.map((field) => (
-                        <div key={field.key}>
-                          <Label htmlFor={`${integration.id}-${field.key}`}>
-                            {field.label}
-                            {field.required && <span className="text-red-500 ml-1">*</span>}
-                          </Label>
-                          {renderField(integration, field)}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Permissions Documentation */}
-                    {template.permissions && (
-                      <div className="border-t pt-4 space-y-3">
-                        <h4 className="font-medium text-sm">Required Permissions & Setup</h4>
-                        <div className="text-xs text-muted-foreground space-y-2">
-                          <p><strong>Setup Instructions:</strong> {template.permissions.documentation}</p>
-                          
-                          <div>
-                            <strong>Required Permissions:</strong>
-                            <ul className="list-disc list-inside mt-1 space-y-1">
-                              {template.permissions.required.map((permission, idx) => (
-                                <li key={idx} className="text-xs">{permission}</li>
-                              ))}
-                            </ul>
-                          </div>
-
-                          <div>
-                            <strong>Use Cases:</strong>
-                            <ul className="list-disc list-inside mt-1 space-y-1">
-                              {template.permissions.useCases.map((useCase, idx) => (
-                                <li key={idx} className="text-xs">{useCase}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex gap-2 pt-2">
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleSave(integration.id)}
-                        className="flex items-center gap-1"
-                      >
-                        <Save className="h-3 w-3" />
-                        Save & Test
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleCancel(integration.id)}
-                        className="flex items-center gap-1"
-                      >
-                        <X className="h-3 w-3" />
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Connection Status and Metadata */}
-                    {integration.status === 'connected' && integration.metadata && (
-                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 space-y-2">
-                        <div className="flex items-center gap-2 text-sm font-medium text-green-800 dark:text-green-200">
-                          <CheckCircle className="h-4 w-4" />
-                          Connected Successfully
-                        </div>
-                        <div className="text-xs text-green-700 dark:text-green-300 space-y-1">
-                          <div><strong>Account:</strong> {integration.metadata.accountInfo}</div>
-                          <div><strong>Data Available:</strong> {integration.metadata.dataAvailable?.join(', ')}</div>
-                          <div><strong>Records:</strong> {integration.metadata.recordCount?.toLocaleString()}</div>
-                          <div><strong>API Version:</strong> {integration.metadata.version}</div>
-                          <div><strong>Last Sync:</strong> {integration.metadata.lastSync ? new Date(integration.metadata.lastSync).toLocaleString() : 'Never'}</div>
-                        </div>
-                      </div>
-                    )}
-
-                    {integration.status === 'connected' && !integration.metadata && (
-                      <div className="text-sm text-green-600 dark:text-green-400">
-                        Last tested: {integration.lastTested ? new Date(integration.lastTested).toLocaleString() : 'Never'}
-                      </div>
-                    )}
-
-                    {integration.status === 'error' && (
-                      <div className="text-sm text-red-600 dark:text-red-400">
-                        Connection failed. Please check your credentials and try again.
-                      </div>
-                    )}
-
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleEdit(integration.id)}
-                        className="flex items-center gap-1"
-                      >
-                        <Edit className="h-3 w-3" />
-                        Configure
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleTestConnection(integration.id)}
-                        disabled={integration.status === 'testing'}
-                        className="flex items-center gap-1"
-                      >
-                        {integration.status === 'testing' ? (
-                          <>
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                            Testing...
-                          </>
-                        ) : (
-                          <>
-                            <TestTube className="h-3 w-3" />
-                            Test Connection
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                )}
+              <CardContent className="space-y-4">
+                <div className="text-sm text-gray-600 space-y-1">
+                  <div>Created: {new Date(integration.createdAt).toLocaleDateString()}</div>
+                  {integration.lastUsedAt && (
+                    <div>Last used: {new Date(integration.lastUsedAt).toLocaleDateString()}</div>
+                  )}
+                </div>
+                <div className="flex space-x-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleConfigureIntegration(integration)}
+                    className="flex-1"
+                  >
+                    <Settings className="h-4 w-4 mr-1" />
+                    Configure
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={() => deleteIntegrationMutation.mutate(integration.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           );
         })}
       </div>
 
-      {/* Configuration Modal */}
-      <Dialog open={isConfigModalOpen} onOpenChange={setIsConfigModalOpen}>
-        <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0">
-          {selectedIntegration && (
-            <>
-              <DialogHeader className="p-4 pb-3 border-b flex-shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-white border">
-                    {selectedIntegration.icon}
-                  </div>
-                  <div>
-                    <DialogTitle className="text-lg font-semibold">
-                      {selectedIntegration.name} Configuration
-                    </DialogTitle>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedIntegration.description}
-                    </p>
-                  </div>
-                </div>
-              </DialogHeader>
+      {/* Add Integration Modal */}
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Integration</DialogTitle>
+            <DialogDescription>
+              Choose a platform to integrate with your customer data platform
+            </DialogDescription>
+          </DialogHeader>
 
-              <div className="flex flex-1 min-h-0">
-                {/* Left Column - Configuration Form */}
-                <div className="flex-1 p-4 border-r overflow-y-auto">
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      {integrationTemplates[selectedIntegration.type as keyof typeof integrationTemplates]?.fields.map((field) => (
-                        <div key={field.key} className="space-y-1.5">
-                          <Label htmlFor={`modal-${field.key}`} className="text-sm font-medium">
-                            {field.label}
-                            {field.required && <span className="text-red-500 ml-1">*</span>}
-                          </Label>
-                          {field.type === 'select' ? (
-                            <Select
-                              value={selectedIntegration.credentials[field.key] || ''}
-                              onValueChange={(value) => handleModalCredentialChange(field.key, value)}
-                            >
-                              <SelectTrigger id={`modal-${field.key}`}>
-                                <SelectValue placeholder={`Select ${field.label}`} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {field.options?.map((option) => (
-                                  <SelectItem key={option} value={option}>
-                                    {option}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : field.type === 'textarea' ? (
-                            <Textarea
-                              id={`modal-${field.key}`}
-                              value={selectedIntegration.credentials[field.key] || ''}
-                              onChange={(e) => handleModalCredentialChange(field.key, e.target.value)}
-                              placeholder={field.placeholder}
-                              rows={3}
-                            />
-                          ) : (
-                            <div className="relative">
-                              <Input
-                                id={`modal-${field.key}`}
-                                type={field.type === 'password' && !showPasswords[`${selectedIntegration.id}-${field.key}`] ? 'password' : 'text'}
-                                value={selectedIntegration.credentials[field.key] || ''}
-                                onChange={(e) => handleModalCredentialChange(field.key, e.target.value)}
-                                placeholder={field.placeholder}
-                                className="pr-10"
-                              />
-                              {field.type === 'password' && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                                  onClick={() => togglePasswordVisibility(selectedIntegration.id, field.key)}
-                                >
-                                  {showPasswords[`${selectedIntegration.id}-${field.key}`] ? (
-                                    <EyeOff className="h-4 w-4" />
-                                  ) : (
-                                    <Eye className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+          {!selectedTemplate ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              {Object.entries(integrationTemplates).map(([key, template]) => (
+                <Card 
+                  key={key}
+                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => handleTemplateSelect(key)}
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center space-x-3">
+                      {template.icon}
+                      <div>
+                        <CardTitle className="text-base">{template.name}</CardTitle>
+                        <CardDescription className="text-sm">{template.description}</CardDescription>
+                      </div>
                     </div>
-
-                    {/* Connection Status */}
-                    {selectedIntegration.status === 'connected' && selectedIntegration.metadata && (
-                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mt-6">
-                        <div className="flex items-center gap-2 text-sm font-medium text-green-800 dark:text-green-200 mb-2">
-                          <CheckCircle className="h-4 w-4" />
-                          Connection Successful
-                        </div>
-                        <div className="text-xs text-green-700 dark:text-green-300 space-y-1">
-                          <div><strong>Account:</strong> {selectedIntegration.metadata.accountInfo}</div>
-                          <div><strong>Available Data:</strong> {selectedIntegration.metadata.dataAvailable?.join(', ')}</div>
-                          <div><strong>Records:</strong> {selectedIntegration.metadata.recordCount?.toLocaleString()}</div>
-                          <div><strong>API Version:</strong> {selectedIntegration.metadata.version}</div>
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedIntegration.status === 'error' && (
-                      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mt-6">
-                        <div className="flex items-center gap-2 text-sm font-medium text-red-800 dark:text-red-200">
-                          <AlertCircle className="h-4 w-4" />
-                          Connection Failed
-                        </div>
-                        <p className="text-xs text-red-700 dark:text-red-300 mt-1">
-                          Please check your credentials and try again.
-                        </p>
-                      </div>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+              {/* Configuration Form */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Configuration</h3>
+                {integrationTemplates[selectedTemplate].fields.map((field) => (
+                  <div key={field.key} className="space-y-2">
+                    <Label htmlFor={field.key}>
+                      {field.label}
+                      {field.required && <span className="text-red-500">*</span>}
+                    </Label>
+                    {renderField(field, formData[field.key], (value) => 
+                      setFormData(prev => ({ ...prev, [field.key]: value }))
                     )}
                   </div>
-                </div>
-
-                {/* Right Column - Documentation */}
-                <div className="w-80 p-4 bg-gray-50 dark:bg-gray-900/50 overflow-y-auto">
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Info className="h-4 w-4 text-blue-500" />
-                        <h3 className="font-medium text-sm">Setup Guide</h3>
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        {integrationTemplates[selectedIntegration.type as keyof typeof integrationTemplates]?.permissions?.documentation}
-                      </p>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Shield className="h-4 w-4 text-orange-500" />
-                        <h3 className="font-medium text-sm">Required Permissions</h3>
-                      </div>
-                      <ul className="space-y-1.5">
-                        {integrationTemplates[selectedIntegration.type as keyof typeof integrationTemplates]?.permissions?.required.map((permission: string, idx: number) => (
-                          <li key={idx} className="flex items-start gap-2 text-xs">
-                            <div className="w-1.5 h-1.5 rounded-full bg-orange-400 mt-1.5 flex-shrink-0" />
-                            {permission}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <FileText className="h-4 w-4 text-purple-500" />
-                        <h3 className="font-medium text-sm">Use Cases</h3>
-                      </div>
-                      <ul className="space-y-1.5">
-                        {integrationTemplates[selectedIntegration.type as keyof typeof integrationTemplates]?.permissions?.useCases.map((useCase: string, idx: number) => (
-                          <li key={idx} className="flex items-start gap-2 text-xs">
-                            <div className="w-1.5 h-1.5 rounded-full bg-purple-400 mt-1.5 flex-shrink-0" />
-                            {useCase}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
+                ))}
+                
+                <div className="flex space-x-2 pt-4">
+                  <Button onClick={handleSaveIntegration} className="flex-1">
+                    Save Configuration
+                  </Button>
+                  <Button variant="outline" onClick={() => setSelectedTemplate('')}>
+                    Back
+                  </Button>
                 </div>
               </div>
 
-              {/* Footer Actions */}
-              <div className="flex items-center justify-between p-4 border-t bg-gray-50 dark:bg-gray-900/50 mt-auto flex-shrink-0">
-                <Button variant="outline" onClick={() => setIsConfigModalOpen(false)}>
-                  Cancel
-                </Button>
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={handleModalTestConnection}
+              {/* Documentation Panel */}
+              <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+                <div>
+                  <h4 className="font-semibold flex items-center mb-2">
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    Setup Guide
+                  </h4>
+                  <p className="text-sm font-medium mb-2">{integrationTemplates[selectedTemplate].setupGuide.title}</p>
+                  <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
+                    {integrationTemplates[selectedTemplate].setupGuide.steps.map((step, index) => (
+                      <li key={index}>{step}</li>
+                    ))}
+                  </ol>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold flex items-center mb-2">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Required Permissions
+                  </h4>
+                  <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                    {integrationTemplates[selectedTemplate].permissions.required.map((permission, index) => (
+                      <li key={index}>{permission}</li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-gray-500 mt-2">{integrationTemplates[selectedTemplate].permissions.documentation}</p>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold flex items-center mb-2">
+                    <Target className="h-4 w-4 mr-2" />
+                    Use Cases
+                  </h4>
+                  <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                    {integrationTemplates[selectedTemplate].useCases.map((useCase, index) => (
+                      <li key={index}>{useCase}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Configure Integration Modal */}
+      <Dialog open={isConfigModalOpen} onOpenChange={setIsConfigModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Configure {selectedIntegration?.name}</DialogTitle>
+            <DialogDescription>
+              Update your integration credentials and settings
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedIntegration && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+              {/* Configuration Form */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Configuration</h3>
+                {integrationTemplates[selectedIntegration.type]?.fields.map((field) => (
+                  <div key={field.key} className="space-y-2">
+                    <Label htmlFor={field.key}>
+                      {field.label}
+                      {field.required && <span className="text-red-500">*</span>}
+                    </Label>
+                    {renderField(field, formData[field.key], (value) => 
+                      setFormData(prev => ({ ...prev, [field.key]: value }))
+                    )}
+                  </div>
+                ))}
+                
+                <div className="flex space-x-2 pt-4">
+                  <Button 
+                    onClick={handleTestConnection} 
+                    variant="outline" 
                     disabled={isTestingConnection}
-                    className="min-w-[120px]"
+                    className="flex-1"
                   >
                     {isTestingConnection ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Testing...
-                      </>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
-                      <>
-                        <TestTube className="h-4 w-4 mr-2" />
-                        Test Connection
-                      </>
+                      <CheckCircle className="h-4 w-4 mr-2" />
                     )}
+                    Test Connection
                   </Button>
-                  <Button
-                    onClick={handleModalSave}
-                    disabled={isTestingConnection}
-                    className="min-w-[120px]"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
+                  <Button onClick={handleSaveIntegration} className="flex-1">
                     Save Configuration
                   </Button>
                 </div>
               </div>
-            </>
+
+              {/* Documentation Panel */}
+              <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+                <div>
+                  <h4 className="font-semibold flex items-center mb-2">
+                    <Info className="h-4 w-4 mr-2" />
+                    Integration Details
+                  </h4>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <div>Status: {getStatusBadge(selectedIntegration.status)}</div>
+                    <div>Created: {new Date(selectedIntegration.createdAt).toLocaleDateString()}</div>
+                    {selectedIntegration.lastUsedAt && (
+                      <div>Last used: {new Date(selectedIntegration.lastUsedAt).toLocaleDateString()}</div>
+                    )}
+                    {selectedIntegration.metadata?.lastTested && (
+                      <div>Last tested: {new Date(selectedIntegration.metadata.lastTested).toLocaleDateString()}</div>
+                    )}
+                  </div>
+                </div>
+
+                {integrationTemplates[selectedIntegration.type] && (
+                  <>
+                    <div>
+                      <h4 className="font-semibold flex items-center mb-2">
+                        <Shield className="h-4 w-4 mr-2" />
+                        Required Permissions
+                      </h4>
+                      <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                        {integrationTemplates[selectedIntegration.type].permissions.required.map((permission, index) => (
+                          <li key={index}>{permission}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold flex items-center mb-2">
+                        <Target className="h-4 w-4 mr-2" />
+                        Use Cases
+                      </h4>
+                      <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                        {integrationTemplates[selectedIntegration.type].useCases.map((useCase, index) => (
+                          <li key={index}>{useCase}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>

@@ -1560,7 +1560,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Integration not found" });
       }
 
-      let testResult = { success: false, error: "Test not implemented" };
+      let testResult: { success: boolean; error?: string; message?: string } = { success: false, error: "Test not implemented" };
 
       // Test connection based on integration type
       switch (integration.type) {
@@ -1570,21 +1570,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
         case 'amplitude':
           const { amplitudeService } = await import("./services/amplitude");
-          testResult = await amplitudeService.syncCohort("test-cohort", []);
+          const amplitudeResult = await amplitudeService.syncCohort("test-cohort", []);
+          testResult = { success: amplitudeResult.success, error: amplitudeResult.error };
           break;
         case 'snowflake':
-          testResult = await snowflakeService.executeQuery("SELECT 1 as test");
-          testResult = { success: testResult.success, error: testResult.error };
+          const snowflakeResult = await snowflakeService.executeQuery("SELECT 1 as test");
+          testResult = { success: snowflakeResult.success, error: snowflakeResult.error };
           break;
         default:
           testResult = { success: true, message: "Connection test passed" };
       }
 
       // Update integration status based on test result
+      const currentMetadata = integration.metadata || {};
       await storage.updateIntegration(id, {
         status: testResult.success ? 'connected' : 'error',
         metadata: {
-          ...integration.metadata,
+          ...currentMetadata,
           lastTestResult: testResult,
           lastTested: new Date().toISOString()
         }
