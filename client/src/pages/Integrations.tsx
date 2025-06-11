@@ -314,7 +314,7 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
   segment: {
     name: 'Segment',
     description: 'Customer data platform for unified data collection',
-    icon: <Cloud className="h-5 w-5" />,
+    icon: <div className="h-6 w-6 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white font-bold text-xs">S</div>,
     color: 'bg-green-600',
     fields: [
       { key: 'writeKey', label: 'Write Key', type: 'password', required: true },
@@ -331,7 +331,7 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
   intercom: {
     name: 'Intercom',
     description: 'Customer messaging and support platform',
-    icon: <MessageSquare className="h-5 w-5" />,
+    icon: <SiIntercom className="h-6 w-6 text-blue-600" />,
     color: 'bg-blue-500',
     fields: [
       { key: 'accessToken', label: 'Access Token', type: 'password', required: true },
@@ -347,7 +347,7 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
   salesforce: {
     name: 'Salesforce',
     description: 'CRM platform for customer relationship management',
-    icon: <Database className="h-5 w-5" />,
+    icon: <SiSalesforce className="h-6 w-6 text-blue-600" />,
     color: 'bg-blue-700',
     fields: [
       { key: 'instanceUrl', label: 'Instance URL', type: 'url', required: true, placeholder: 'https://your-instance.salesforce.com' },
@@ -378,7 +378,7 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
   hubspot: {
     name: 'HubSpot',
     description: 'Marketing, sales, and service platform',
-    icon: <Target className="h-5 w-5" />,
+    icon: <SiHubspot className="h-6 w-6 text-orange-600" />,
     color: 'bg-orange-600',
     fields: [
       { key: 'accessToken', label: 'Access Token', type: 'password', required: true },
@@ -389,7 +389,7 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
   zendesk: {
     name: 'Zendesk',
     description: 'Customer service and support platform',
-    icon: <MessageSquare className="h-5 w-5" />,
+    icon: <SiZendesk className="h-6 w-6 text-green-600" />,
     color: 'bg-green-700',
     fields: [
       { key: 'subdomain', label: 'Subdomain', type: 'text', required: true, placeholder: 'your-company' },
@@ -400,7 +400,7 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
   twilio: {
     name: 'Twilio',
     description: 'Communications platform for SMS, voice, and messaging',
-    icon: <Smartphone className="h-5 w-5" />,
+    icon: <SiTwilio className="h-6 w-6 text-red-600" />,
     color: 'bg-red-600',
     fields: [
       { key: 'accountSid', label: 'Account SID', type: 'text', required: true },
