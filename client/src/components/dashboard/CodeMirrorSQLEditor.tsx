@@ -824,6 +824,30 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
       if (onExecute) {
         onExecute();
       }
+    } else if (e.key === 'Enter') {
+      // Handle Enter key for line breaks
+      e.preventDefault();
+      
+      // Insert a newline character
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        
+        // Insert a newline text node
+        const newline = document.createTextNode('\n');
+        range.insertNode(newline);
+        
+        // Position cursor after the newline
+        range.setStartAfter(newline);
+        range.setEndAfter(newline);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        // Trigger input event to update state and line numbers
+        const inputEvent = new Event('input', { bubbles: true });
+        editorRef.current?.dispatchEvent(inputEvent);
+      }
     } else if (e.key === ' ') {
       // Apply highlighting when space is pressed (word completion)
       setTimeout(() => {
