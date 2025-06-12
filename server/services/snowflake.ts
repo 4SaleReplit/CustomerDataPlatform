@@ -1,4 +1,4 @@
-import fetch, { Response } from 'node-fetch';
+import snowflake from 'snowflake-sdk';
 
 interface SnowflakeConfig {
   account: string;
@@ -23,78 +23,124 @@ interface QueryResult {
 
 export class SnowflakeService {
   private config: SnowflakeConfig;
+  private connection: any = null;
 
   constructor(config: SnowflakeConfig) {
     this.config = config;
   }
 
+  private async connect(): Promise<any> {
+    if (this.connection) {
+      return this.connection;
+    }
+
+    return new Promise((resolve, reject) => {
+      this.connection = snowflake.createConnection({
+        account: this.config.account,
+        username: this.config.username,
+        password: this.config.password,
+        warehouse: this.config.warehouse,
+        database: this.config.database,
+        schema: this.config.schema
+      });
+
+      this.connection.connect((err: any, conn: any) => {
+        if (err) {
+          console.error('Snowflake connection failed:', err);
+          reject(err);
+        } else {
+          console.log('Snowflake connection successful');
+          resolve(conn);
+        }
+      });
+    });
+  }
+
   async executeQuery(query: string): Promise<QueryResult> {
     try {
-      // Use basic authentication like the Python connector
-      const credentials = Buffer.from(`${this.config.username}:${this.config.password}`).toString('base64');
-      
-      // Try different Snowflake API endpoints until we find one that works
-      const endpoints = [
-        `https://${this.config.account}.snowflakecomputing.com/api/statements/`,
-        `https://${this.config.account}.snowflakecomputing.com/api/v1/statements/`,
-        `https://${this.config.account}.snowflakecomputing.com/statements/`,
-        `https://${this.config.account}.snowflakecomputing.com/sql/`
-      ];
+      const conn = await this.connect();
 
-      for (const endpoint of endpoints) {
-        try {
-          const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Basic ${credentials}`,
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'User-Agent': 'NodeJS-Snowflake-Connector/1.0'
-            },
-            body: JSON.stringify({
-              sql: query,
-              warehouse: this.config.warehouse,
-              database: this.config.database,
-              schema: this.config.schema
-            })
-          });
+      return new Promise((resolve) => {
+        conn.execute({
+          sqlText: query,
+          complete: (err: any, stmt: any, rows: any) => {
+            if (err) {
+              console.error('Snowflake query error:', err);
+              
+              // Handle network policy errors
+              if (err.message && (err.message.includes('Network policy') || err.code === '390432')) {
+                resolve({
+                  columns: [],
+                  rows: [],
+                  success: false,
+                  error: "Snowflake Network Policy Error: IP address needs to be whitelisted in your Snowflake network policy."
+                });
+                return;
+              }
+              
+              resolve({
+                columns: [],
+                rows: [],
+                success: false,
+                error: err.message || "Query execution failed"
+              });
+              return;
+            }
 
-          if (response.ok) {
-            const result = await response.json() as any;
-            
-            if (result.data || result.rows) {
-              return {
-                columns: result.columns || [],
-                rows: result.data || result.rows || [],
+            try {
+              // Extract column metadata from statement
+              const columns: ColumnMetadata[] = stmt.getColumns().map((col: any) => ({
+                name: col.getName(),
+                type: col.getType()
+              }));
+
+              // Convert rows to proper array format
+              const rowData = rows.map((row: any) => {
+                return columns.map(col => row[col.name]);
+              });
+
+              console.log(`Snowflake query successful: ${rows.length} rows returned`);
+
+              resolve({
+                columns,
+                rows: rowData,
                 success: true
-              };
+              });
+            } catch (processError) {
+              console.error('Error processing Snowflake results:', processError);
+              resolve({
+                columns: [],
+                rows: [],
+                success: false,
+                error: "Error processing query results"
+              });
             }
           }
-        } catch (error) {
-          // Continue to next endpoint
-          continue;
-        }
-      }
-
-      // If all endpoints fail, fall back to mock data that demonstrates the connection works
-      // This simulates what your Python connector would return
-      console.log('Snowflake: Using fallback demonstration data');
-      
-      return {
-        columns: [
-          { name: 'TEST_CONNECTION', type: 'NUMBER' }
-        ],
-        rows: [['1']],
-        success: true
-      };
+        });
+      });
 
     } catch (error) {
+      console.error('Snowflake connection error:', error);
       return {
         columns: [],
         rows: [],
         success: false,
         error: error instanceof Error ? error.message : "Connection error"
       };
+    }
+  }
+
+  async disconnect(): Promise<void> {
+    if (this.connection) {
+      return new Promise((resolve) => {
+        this.connection.destroy((err: any) => {
+          if (err) {
+            console.error('Error disconnecting from Snowflake:', err);
+          }
+          this.connection = null;
+          resolve();
+        });
+      });
     }
   }
 }
