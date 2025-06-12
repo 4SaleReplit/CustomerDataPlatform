@@ -89,8 +89,8 @@ export class SnowflakeService {
       // Get authentication tokens
       const { sessionToken, masterToken } = await this.authenticate();
       
-      // Use Snowflake's query execution endpoint
-      const queryUrl = `https://${this.config.account}.snowflakecomputing.com/queries/v1/query-request`;
+      // Use the correct Snowflake SQL API v2 endpoint
+      const sqlUrl = `https://${this.config.account}.snowflakecomputing.com/api/v2/statements`;
       
       const headers = {
         "Authorization": `Snowflake Token="${sessionToken}"`,
@@ -100,15 +100,15 @@ export class SnowflakeService {
       };
 
       const payload = {
-        sqlText: query,
+        statement: query,
         warehouse: this.config.warehouse,
         database: this.config.database,
         schema: this.config.schema,
-        sequenceId: Date.now(),
-        querySubmissionTime: Date.now()
+        timeout: 60,
+        role: "PUBLIC"
       };
 
-      const response = await fetch(queryUrl, {
+      const response = await fetch(sqlUrl, {
         method: 'POST',
         headers,
         body: JSON.stringify(payload)
@@ -138,45 +138,70 @@ export class SnowflakeService {
 
       const result = await response.json() as any;
       
-      // Check if query was successful
-      if (!result.success) {
-        return {
-          columns: [],
-          rows: [],
-          success: false,
-          error: result.message || "Query execution failed"
-        };
-      }
-
-      // Extract results from the response
-      if (result.data && result.data.resultSet) {
-        const resultSet = result.data.resultSet;
-        const metaData = resultSet.metaData || [];
+      // Handle asynchronous query response
+      if (result.statementHandle || result.statementStatusUrl) {
+        // Poll for results
+        const statusUrl = result.statementStatusUrl || `${sqlUrl}/${result.statementHandle}`;
         
+        let attempts = 0;
+        const maxAttempts = 30;
+        
+        while (attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          const statusResponse = await fetch(statusUrl, {
+            method: 'GET',
+            headers: {
+              "Authorization": `Snowflake Token="${sessionToken}"`,
+              "Accept": "application/json"
+            }
+          });
+          
+          if (!statusResponse.ok) {
+            break;
+          }
+          
+          const statusResult = await statusResponse.json() as any;
+          
+          if (statusResult.resultSet) {
+            const metaData = statusResult.resultSet.resultSetMetaData?.rowType || [];
+            return {
+              columns: metaData.map((col: any) => ({
+                name: col.name,
+                type: col.type
+              })),
+              rows: statusResult.resultSet.data || [],
+              success: true
+            };
+          }
+          
+          if (!statusResult.statementStatusUrl) {
+            break;
+          }
+          
+          attempts++;
+        }
+      }
+      
+      // Handle synchronous response
+      if (result.resultSet) {
+        const metaData = result.resultSet.resultSetMetaData?.rowType || [];
         return {
           columns: metaData.map((col: any) => ({
             name: col.name,
-            type: col.typeName || col.type
+            type: col.type
           })),
-          rows: resultSet.data || [],
+          rows: result.resultSet.data || [],
           success: true
-        };
-      } else if (result.data && result.data.rowset) {
-        // Handle different response format
-        const rowset = result.data.rowset;
-        return {
-          columns: rowset[0] ? Object.keys(rowset[0]).map(key => ({ name: key, type: 'VARCHAR' })) : [],
-          rows: rowset.map((row: any) => Object.values(row)),
-          success: true
-        };
-      } else {
-        return {
-          columns: [],
-          rows: [],
-          success: true,
-          error: "Query executed successfully but no result set returned"
         };
       }
+
+      return {
+        columns: [],
+        rows: [],
+        success: false,
+        error: "Query executed but no results returned"
+      };
 
     } catch (error) {
       return {
@@ -194,10 +219,10 @@ import { config } from "dotenv";
 config();
 
 export const snowflakeService = new SnowflakeService({
-  account: process.env.SNOWFLAKE_ACCOUNT || "q84sale",
+  account: "q84sale",
   username: "CDP_USER",
   password: "P0PmCtwMKOIFi6F",
-  warehouse: process.env.SNOWFLAKE_WAREHOUSE || "COMPUTE_WH", 
-  database: process.env.SNOWFLAKE_DATABASE || "DBT_CORE_PROD_DATABASE",
-  schema: process.env.SNOWFLAKE_SCHEMA || "OPERATIONS"
+  warehouse: "LOOKER",
+  database: "DBT_CORE_PROD_DATABASE",
+  schema: "USER_SEGMENTATION_PROJECT_V4"
 });
