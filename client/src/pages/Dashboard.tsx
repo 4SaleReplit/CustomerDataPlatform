@@ -147,6 +147,7 @@ function Dashboard() {
       if (data && Array.isArray(data) && data.length > 0) {
         const convertedTiles = data.map((dbTile: any) => ({
           id: dbTile.tileId,
+          databaseId: dbTile.id, // Store the database ID for API calls
           type: dbTile.type,
           title: dbTile.title,
           x: dbTile.x,

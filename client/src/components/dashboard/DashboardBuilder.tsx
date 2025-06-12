@@ -11,6 +11,7 @@ import { SimpleDashboardGrid } from './SimpleDashboardGrid';
 
 export interface DashboardTile {
   id: string;
+  databaseId?: string; // Database ID for API calls
   type: 'metric' | 'chart' | 'table' | 'funnel' | 'gauge';
   title: string;
   x: number;
