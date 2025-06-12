@@ -261,18 +261,34 @@ export default function RoleManagement() {
 
   // Create role mutation
   const createRoleMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('/api/roles', {
-      method: 'POST',
-      body: JSON.stringify(data),
-      headers: { 'Content-Type': 'application/json' }
-    }),
+    mutationFn: async ({ selectedPermissions, ...data }: any) => {
+      // First create the role
+      const newRole = await apiRequest('/api/roles', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      // Then assign permissions to the new role
+      if (selectedPermissions && selectedPermissions.length > 0) {
+        for (const permissionId of selectedPermissions) {
+          await apiRequest(`/api/roles/${newRole.id}/permissions`, {
+            method: 'POST',
+            body: JSON.stringify({ permissionId }),
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+      }
+
+      return newRole;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/roles'] });
       setShowCreateModal(false);
       resetForm();
       toast({
         title: "Role Created",
-        description: "The new role has been created successfully.",
+        description: "The new role and its permissions have been created successfully.",
       });
     },
     onError: (error: any) => {
@@ -286,11 +302,40 @@ export default function RoleManagement() {
 
   // Update role mutation
   const updateRoleMutation = useMutation({
-    mutationFn: ({ id, ...data }: any) => apiRequest(`/api/roles/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-      headers: { 'Content-Type': 'application/json' }
-    }),
+    mutationFn: async ({ id, selectedPermissions, ...data }: any) => {
+      // First update the role basic info
+      const updatedRole = await apiRequest(`/api/roles/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      // Get current permissions for this role
+      const currentPermissions = await apiRequest(`/api/roles/${id}/permissions`);
+      const currentPermissionIds = currentPermissions.map((rp: any) => rp.permissionId);
+
+      // Calculate permissions to add and remove
+      const permissionsToAdd = selectedPermissions.filter((pid: string) => !currentPermissionIds.includes(pid));
+      const permissionsToRemove = currentPermissionIds.filter((pid: string) => !selectedPermissions.includes(pid));
+
+      // Remove permissions that are no longer selected
+      for (const permissionId of permissionsToRemove) {
+        await apiRequest(`/api/roles/${id}/permissions/${permissionId}`, {
+          method: 'DELETE'
+        });
+      }
+
+      // Add new permissions
+      for (const permissionId of permissionsToAdd) {
+        await apiRequest(`/api/roles/${id}/permissions`, {
+          method: 'POST',
+          body: JSON.stringify({ permissionId }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      return updatedRole;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/roles'] });
       setShowEditModal(false);
@@ -298,7 +343,7 @@ export default function RoleManagement() {
       resetForm();
       toast({
         title: "Role Updated",
-        description: "The role has been updated successfully.",
+        description: "The role and its permissions have been updated successfully.",
       });
     },
     onError: (error: any) => {
@@ -380,8 +425,23 @@ export default function RoleManagement() {
     }
   };
 
-  const startEdit = (role: Role) => {
+  const startEdit = async (role: Role) => {
     setSelectedRole(role);
+    
+    // Fetch existing permissions for this role
+    let existingPermissions: string[] = [];
+    try {
+      const rolePermissions = await apiRequest(`/api/roles/${role.id}/permissions`);
+      existingPermissions = rolePermissions.map((rp: any) => rp.permissionId);
+    } catch (error) {
+      console.error("Failed to load role permissions:", error);
+      toast({
+        title: "Warning",
+        description: "Failed to load existing permissions for this role",
+        variant: "destructive",
+      });
+    }
+    
     setFormData({
       name: role.name,
       displayName: role.displayName,
@@ -391,7 +451,7 @@ export default function RoleManagement() {
       canManageRoles: role.canManageRoles,
       maxTeamMembers: role.maxTeamMembers,
       isActive: role.isActive,
-      selectedPermissions: [], // Would need to fetch from role-permissions junction
+      selectedPermissions: existingPermissions,
       allowedFeatures: role.allowedFeatures,
       restrictions: {
         ipWhitelist: (role.restrictions as any)?.ipWhitelist || [],
