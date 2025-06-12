@@ -65,6 +65,8 @@ interface SlideElement {
   style: {
     fontSize?: number;
     fontWeight?: string;
+    fontFamily?: string;
+    fontStyle?: string;
     textAlign?: 'left' | 'center' | 'right';
     color?: string;
     backgroundColor?: string;
@@ -578,59 +580,219 @@ export function ReportBuilder() {
 
   const parseSlideXML = (slideXml: string, slideNumber: number): Slide => {
     const elements: SlideElement[] = [];
-    
-    // Parse text elements
-    const textMatches = slideXml.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) || [];
-    textMatches.forEach((match, index) => {
-      const text = match.replace(/<[^>]*>/g, '');
-      if (text.trim()) {
-        elements.push({
-          id: `text-${slideNumber}-${index}`,
-          type: 'text',
-          x: 60 + (index * 20),
-          y: 60 + (index * 40),
-          width: 400,
-          height: 50,
-          content: text,
-          style: {
-            fontSize: 16,
-            fontWeight: 'normal',
-            textAlign: 'left',
-            color: '#000000',
-            backgroundColor: 'transparent'
-          }
-        });
-      }
-    });
+    let elementCounter = 0;
 
-    // Parse shape elements (simplified)
-    const shapeMatches = slideXml.match(/<p:sp[^>]*>/g) || [];
-    shapeMatches.forEach((match, index) => {
-      if (index < 3) { // Limit to prevent too many shapes
+    // Helper function to convert EMU (English Metric Units) to pixels
+    const emuToPixels = (emu: string | number): number => {
+      const emuValue = typeof emu === 'string' ? parseInt(emu) : emu;
+      return Math.round(emuValue / 9525); // 1 pixel = 9525 EMUs
+    };
+
+    // Helper function to extract color from XML
+    const extractColor = (xml: string): string => {
+      // Look for RGB values
+      const rgbMatch = xml.match(/val="([0-9A-Fa-f]{6})"/);
+      if (rgbMatch) {
+        return `#${rgbMatch[1]}`;
+      }
+      
+      // Look for scheme colors and convert to approximate values
+      const schemeColors: { [key: string]: string } = {
+        'dk1': '#000000',
+        'lt1': '#ffffff',
+        'dk2': '#1f497d',
+        'lt2': '#eeece1',
+        'accent1': '#4f81bd',
+        'accent2': '#f79646',
+        'accent3': '#9cbb58',
+        'accent4': '#8064a2',
+        'accent5': '#4bacc6',
+        'accent6': '#f24693'
+      };
+      
+      for (const [scheme, color] of Object.entries(schemeColors)) {
+        if (xml.includes(`val="${scheme}"`)) {
+          return color;
+        }
+      }
+      
+      return '#000000'; // Default to black
+    };
+
+    // Helper function to extract font information
+    const extractFontInfo = (xml: string) => {
+      const fontMatch = xml.match(/<a:latin[^>]*typeface="([^"]*)"/);
+      const sizeMatch = xml.match(/<a:sz[^>]*val="(\d+)"/);
+      const boldMatch = xml.includes('<a:b val="1"') || xml.includes('<a:b/>');
+      const italicMatch = xml.includes('<a:i val="1"') || xml.includes('<a:i/>');
+      
+      return {
+        fontFamily: fontMatch ? fontMatch[1] : 'Arial',
+        fontSize: sizeMatch ? Math.round(parseInt(sizeMatch[1]) / 100) : 16,
+        fontWeight: boldMatch ? 'bold' : 'normal',
+        fontStyle: italicMatch ? 'italic' : 'normal'
+      };
+    };
+
+    // Parse shapes with proper positioning and styling
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(slideXml, 'text/xml');
+    
+    // Get all shape elements
+    const shapes = xmlDoc.getElementsByTagName('p:sp');
+    
+    for (let i = 0; i < shapes.length; i++) {
+      const shape = shapes[i];
+      elementCounter++;
+      
+      // Extract positioning from xfrm (transform)
+      const xfrm = shape.getElementsByTagName('a:xfrm')[0];
+      let x = 60, y = 60, width = 200, height = 100;
+      
+      if (xfrm) {
+        const off = xfrm.getElementsByTagName('a:off')[0];
+        const ext = xfrm.getElementsByTagName('a:ext')[0];
+        
+        if (off) {
+          x = emuToPixels(off.getAttribute('x') || '0');
+          y = emuToPixels(off.getAttribute('y') || '0');
+        }
+        
+        if (ext) {
+          width = emuToPixels(ext.getAttribute('cx') || '1905000');
+          height = emuToPixels(ext.getAttribute('cy') || '952500');
+        }
+      }
+      
+      // Extract text content
+      const textElements = shape.getElementsByTagName('a:t');
+      let textContent = '';
+      let textStyle = {
+        fontSize: 16,
+        fontWeight: 'normal' as const,
+        textAlign: 'left' as 'left' | 'center' | 'right',
+        color: '#000000',
+        backgroundColor: 'transparent',
+        fontFamily: 'Arial',
+        fontStyle: 'normal'
+      };
+      
+      for (let j = 0; j < textElements.length; j++) {
+        const textElement = textElements[j];
+        textContent += textElement.textContent || '';
+        
+        // Extract text formatting
+        const parentRun = textElement.closest('a:r');
+        if (parentRun) {
+          const rPr = parentRun.getElementsByTagName('a:rPr')[0];
+          if (rPr) {
+            const fontInfo = extractFontInfo(rPr.outerHTML);
+            textStyle.fontSize = fontInfo.fontSize;
+            textStyle.fontWeight = fontInfo.fontWeight as any;
+            textStyle.fontFamily = fontInfo.fontFamily;
+            
+            // Extract text color
+            const solidFill = rPr.getElementsByTagName('a:solidFill')[0];
+            if (solidFill) {
+              textStyle.color = extractColor(solidFill.outerHTML);
+            }
+          }
+        }
+      }
+      
+      // Extract shape fill color
+      let backgroundColor = 'transparent';
+      const spPr = shape.getElementsByTagName('p:spPr')[0];
+      if (spPr) {
+        const solidFill = spPr.getElementsByTagName('a:solidFill')[0];
+        if (solidFill) {
+          backgroundColor = extractColor(solidFill.outerHTML);
+        }
+        
+        const gradFill = spPr.getElementsByTagName('a:gradFill')[0];
+        if (gradFill) {
+          // For gradients, use the first color as background
+          const firstStop = gradFill.getElementsByTagName('a:gs')[0];
+          if (firstStop) {
+            backgroundColor = extractColor(firstStop.outerHTML);
+          }
+        }
+      }
+      
+      // Extract text alignment
+      const algn = shape.querySelector('a:pPr a:algn');
+      if (algn) {
+        const algnVal = algn.getAttribute('val');
+        if (algnVal === 'ctr') textStyle.textAlign = 'center';
+        else if (algnVal === 'r') textStyle.textAlign = 'right';
+        else textStyle.textAlign = 'left';
+      }
+      
+      // Determine element type and create appropriate element
+      if (textContent.trim()) {
+        // Text element
         elements.push({
-          id: `shape-${slideNumber}-${index}`,
-          type: 'shape',
-          x: 100 + (index * 50),
-          y: 200 + (index * 30),
-          width: 100,
-          height: 100,
-          content: { shape: 'rectangle' },
+          id: `text-${slideNumber}-${elementCounter}`,
+          type: 'text',
+          x: Math.max(0, x),
+          y: Math.max(0, y),
+          width: Math.max(50, width),
+          height: Math.max(20, height),
+          content: textContent.trim(),
+          style: {
+            ...textStyle,
+            backgroundColor: backgroundColor !== 'transparent' ? backgroundColor : 'transparent'
+          }
+        });
+      } else {
+        // Check if it's a rectangle, circle, or other shape
+        const prstGeom = spPr?.getElementsByTagName('a:prstGeom')[0];
+        const shapeType = prstGeom?.getAttribute('prst') || 'rect';
+        
+        let elementType: 'shape' | 'image' = 'shape';
+        let shapeContent: any = { shape: 'rectangle' };
+        
+        // Map PowerPoint shape types to our shape types
+        if (shapeType === 'ellipse' || shapeType === 'circle') {
+          shapeContent = { shape: 'circle' };
+        } else if (shapeType.includes('rect')) {
+          shapeContent = { shape: 'rectangle' };
+        }
+        
+        elements.push({
+          id: `shape-${slideNumber}-${elementCounter}`,
+          type: elementType,
+          x: Math.max(0, x),
+          y: Math.max(0, y),
+          width: Math.max(50, width),
+          height: Math.max(50, height),
+          content: shapeContent,
           style: {
             fontSize: 16,
             fontWeight: 'normal',
             textAlign: 'left',
             color: '#000000',
-            backgroundColor: 'transparent'
+            backgroundColor: backgroundColor
           }
         });
       }
-    });
+    }
+
+    // Extract slide background
+    let slideBackground = '#ffffff';
+    const bgElement = xmlDoc.getElementsByTagName('p:bg')[0];
+    if (bgElement) {
+      const solidFill = bgElement.getElementsByTagName('a:solidFill')[0];
+      if (solidFill) {
+        slideBackground = extractColor(solidFill.outerHTML);
+      }
+    }
 
     return {
       id: `slide-${slideNumber}`,
       name: `Slide ${slideNumber}`,
       elements,
-      backgroundColor: '#ffffff'
+      backgroundColor: slideBackground
     };
   };
 
@@ -1086,7 +1248,20 @@ export function ReportBuilder() {
         onDoubleClick={() => handleElementDoubleClick(element.id)}
       >
         {element.type === 'text' && (
-          <div style={{ width: '100%', height: '100%' }}>
+          <div 
+            style={{ 
+              width: '100%', 
+              height: '100%',
+              fontFamily: (element.style as any).fontFamily || 'Arial',
+              fontStyle: (element.style as any).fontStyle || 'normal',
+              whiteSpace: 'pre-wrap',
+              wordWrap: 'break-word',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: element.style.textAlign === 'center' ? 'center' : element.style.textAlign === 'right' ? 'flex-end' : 'flex-start'
+            }}
+          >
             {typeof element.content === 'string' ? element.content : 'Text Element'}
           </div>
         )}
