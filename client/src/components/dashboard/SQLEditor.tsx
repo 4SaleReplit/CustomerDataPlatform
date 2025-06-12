@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { ColoredSQLEditor } from './ColoredSQLEditor';
+import { CleanSQLEditor } from './CleanSQLEditor';
 import { 
   Play, 
   Save, 
@@ -287,13 +286,13 @@ export function SQLEditor({ onCreateVisualization }: SQLEditorProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-md bg-white dark:bg-gray-950 min-h-32">
-            <ColoredSQLEditor
+          <div className="border rounded-md bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 min-h-32">
+            <CleanSQLEditor
               value={query}
               onChange={setQuery}
               onExecute={executeQuery}
               placeholder="Enter your SQL query here... (Ctrl+Enter to execute)"
-              className="w-full h-32"
+              className="min-h-32"
             />
           </div>
           <div className="flex items-center justify-between mt-2 text-sm text-muted-foreground">
