@@ -12,16 +12,16 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
   const editorRef = useRef<HTMLDivElement>(null);
   const [isFocused, setIsFocused] = useState(false);
 
-  // SQL token types and their colors
+  // Solarized Dark color scheme - exact specification
   const tokenColors = {
-    keyword: '#859900',
-    function: '#268BD2', 
-    datatype: '#B58900',
-    string: '#2AA198',
-    number: '#D33682',
-    operator: '#839496',
-    comment: '#586E75',
-    default: '#839496'
+    keyword: '#859900',    // Green - Keywords (SELECT, FROM, etc.)
+    function: '#268BD2',   // Blue - Functions (SUM(), AVG(), etc.)
+    datatype: '#B58900',   // Yellow - Data Types (INT, VARCHAR, etc.)
+    string: '#2AA198',     // Cyan - Strings
+    number: '#D33682',     // Orange - Numeric Values
+    operator: '#839496',   // Light Gray - Operators (+, -, =, etc.)
+    comment: '#586E75',    // Dark Gray - Comments
+    default: '#839496'     // Light Gray - Default Text
   };
 
   // SQL patterns
@@ -35,35 +35,84 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
     comments: /--.*$/gm
   };
 
-  // Tokenize and colorize text
+  // Tokenize and colorize text with proper Solarized Dark colors
   const colorizeText = useCallback((text: string): string => {
     if (!text) return '';
     
-    // Start with escaped HTML
+    // Start with escaped HTML and preserve line breaks
     let html = text
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/\n/g, '<br>');
 
-    // Apply syntax highlighting
+    // Apply syntax highlighting in order of precedence to avoid conflicts
+    // 1. Comments first (to avoid highlighting keywords inside comments)
     html = html.replace(sqlPatterns.comments, `<span style="color: ${tokenColors.comment}; font-style: italic;">$&</span>`);
+    
+    // 2. Strings (to avoid highlighting keywords inside strings)
     html = html.replace(sqlPatterns.strings, `<span style="color: ${tokenColors.string};">$&</span>`);
+    
+    // 3. Keywords (SELECT, FROM, etc.) - Green #859900
     html = html.replace(sqlPatterns.keywords, `<span style="color: ${tokenColors.keyword}; font-weight: 600;">$&</span>`);
+    
+    // 4. Functions (SUM(), AVG(), etc.) - Blue #268BD2
     html = html.replace(sqlPatterns.functions, `<span style="color: ${tokenColors.function}; font-weight: 500;">$&</span>`);
+    
+    // 5. Data types (INT, VARCHAR, etc.) - Yellow #B58900
     html = html.replace(sqlPatterns.datatypes, `<span style="color: ${tokenColors.datatype}; font-weight: 500;">$&</span>`);
+    
+    // 6. Numeric values - Orange #D33682
     html = html.replace(sqlPatterns.numbers, `<span style="color: ${tokenColors.number};">$&</span>`);
+    
+    // 7. Operators (+, -, =, etc.) - Light Gray #839496
     html = html.replace(sqlPatterns.operators, `<span style="color: ${tokenColors.operator};">$&</span>`);
 
     return html;
-  }, []);
+  }, [tokenColors]);
 
-  // Handle contenteditable input
+  // Handle contenteditable input with real-time highlighting
   const handleInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement;
     const text = target.textContent || '';
     onChange(text);
-  }, [onChange]);
+    
+    // Use a timeout to apply highlighting after the input event
+    setTimeout(() => {
+      if (target && text) {
+        const selection = window.getSelection();
+        let cursorPosition = 0;
+        
+        // Get cursor position
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          cursorPosition = range.startOffset;
+        }
+        
+        // Apply syntax highlighting
+        const colorized = colorizeText(text);
+        target.innerHTML = colorized;
+        
+        // Restore cursor position
+        if (selection && target.firstChild) {
+          try {
+            const range = document.createRange();
+            range.setStart(target.firstChild, Math.min(cursorPosition, target.textContent?.length || 0));
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          } catch (error) {
+            // Place cursor at end if restoration fails
+            const range = document.createRange();
+            range.selectNodeContents(target);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+        }
+      }
+    }, 0);
+  }, [onChange, colorizeText]);
 
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -78,13 +127,19 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
     }
   }, [onExecute]);
 
-  // Update content when value changes
+  // Update content when value changes from external source
   useEffect(() => {
     if (editorRef.current && document.activeElement !== editorRef.current) {
-      const colorized = colorizeText(value);
-      editorRef.current.innerHTML = colorized || `<span style="color: ${tokenColors.comment}; font-style: italic;">${placeholder || ''}</span>`;
+      if (value) {
+        const colorized = colorizeText(value);
+        editorRef.current.innerHTML = colorized;
+      } else if (placeholder) {
+        editorRef.current.innerHTML = `<span style="color: ${tokenColors.comment}; font-style: italic;">${placeholder}</span>`;
+      } else {
+        editorRef.current.innerHTML = '';
+      }
     }
-  }, [value, colorizeText, placeholder]);
+  }, [value, colorizeText, placeholder, tokenColors.comment]);
 
   // Handle focus/blur for placeholder
   const handleFocus = useCallback(() => {
