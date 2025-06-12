@@ -1,5 +1,3 @@
-import snowflake from 'snowflake-sdk';
-
 interface SnowflakeConfig {
   account: string;
   username: string;
@@ -23,124 +21,126 @@ interface QueryResult {
 
 export class SnowflakeService {
   private config: SnowflakeConfig;
-  private connection: any = null;
 
   constructor(config: SnowflakeConfig) {
     this.config = config;
   }
 
-  private async connect(): Promise<any> {
-    if (this.connection) {
-      return this.connection;
-    }
-
-    return new Promise((resolve, reject) => {
-      this.connection = snowflake.createConnection({
-        account: this.config.account,
-        username: this.config.username,
-        password: this.config.password,
-        warehouse: this.config.warehouse,
-        database: this.config.database,
-        schema: this.config.schema
-      });
-
-      this.connection.connect((err: any, conn: any) => {
-        if (err) {
-          console.error('Snowflake connection failed:', err);
-          reject(err);
-        } else {
-          console.log('Snowflake connection successful');
-          resolve(conn);
-        }
-      });
-    });
-  }
-
   async executeQuery(query: string): Promise<QueryResult> {
     try {
-      const conn = await this.connect();
+      // Dynamic import with proper CommonJS handling
+      const snowflakeModule = await eval('import("snowflake-sdk")');
+      const snowflake = snowflakeModule.default || snowflakeModule;
 
       return new Promise((resolve) => {
-        conn.execute({
-          sqlText: query,
-          complete: (err: any, stmt: any, rows: any) => {
-            if (err) {
-              console.error('Snowflake query error:', err);
-              
-              // Handle network policy errors
-              if (err.message && (err.message.includes('Network policy') || err.code === '390432')) {
+        const connection = snowflake.createConnection({
+          account: this.config.account,
+          username: this.config.username,
+          password: this.config.password,
+          warehouse: this.config.warehouse,
+          database: this.config.database,
+          schema: this.config.schema,
+          application: 'NodeJS_CDP_Platform'
+        });
+
+        connection.connect((err: any) => {
+          if (err) {
+            console.error('Snowflake connection failed:', err);
+            
+            if (err.message && (err.message.includes('Network policy') || err.code === '390432')) {
+              resolve({
+                columns: [],
+                rows: [],
+                success: false,
+                error: "Snowflake Network Policy Error: IP address needs to be whitelisted in your Snowflake network policy."
+              });
+              return;
+            }
+            
+            resolve({
+              columns: [],
+              rows: [],
+              success: false,
+              error: err.message || "Connection failed"
+            });
+            return;
+          }
+
+          console.log('Snowflake connection successful');
+
+          connection.execute({
+            sqlText: query,
+            complete: (queryErr: any, stmt: any, rows: any) => {
+              // Clean up connection
+              connection.destroy((destroyErr: any) => {
+                if (destroyErr) {
+                  console.error('Error closing Snowflake connection:', destroyErr);
+                }
+              });
+
+              if (queryErr) {
+                console.error('Snowflake query error:', queryErr);
+                
+                if (queryErr.message && (queryErr.message.includes('Network policy') || queryErr.code === '390432')) {
+                  resolve({
+                    columns: [],
+                    rows: [],
+                    success: false,
+                    error: "Snowflake Network Policy Error: IP address needs to be whitelisted in your Snowflake network policy."
+                  });
+                  return;
+                }
+                
                 resolve({
                   columns: [],
                   rows: [],
                   success: false,
-                  error: "Snowflake Network Policy Error: IP address needs to be whitelisted in your Snowflake network policy."
+                  error: queryErr.message || "Query execution failed"
                 });
                 return;
               }
-              
-              resolve({
-                columns: [],
-                rows: [],
-                success: false,
-                error: err.message || "Query execution failed"
-              });
-              return;
+
+              try {
+                // Extract column metadata from statement
+                const columns: ColumnMetadata[] = stmt.getColumns().map((col: any) => ({
+                  name: col.getName(),
+                  type: col.getType()
+                }));
+
+                // Convert rows to proper array format
+                const rowData = rows.map((row: any) => {
+                  return columns.map((col: any) => row[col.name]);
+                });
+
+                console.log(`Snowflake query successful: ${rows.length} rows returned`);
+
+                resolve({
+                  columns,
+                  rows: rowData,
+                  success: true
+                });
+              } catch (processError) {
+                console.error('Error processing Snowflake results:', processError);
+                resolve({
+                  columns: [],
+                  rows: [],
+                  success: false,
+                  error: "Error processing query results"
+                });
+              }
             }
-
-            try {
-              // Extract column metadata from statement
-              const columns: ColumnMetadata[] = stmt.getColumns().map((col: any) => ({
-                name: col.getName(),
-                type: col.getType()
-              }));
-
-              // Convert rows to proper array format
-              const rowData = rows.map((row: any) => {
-                return columns.map(col => row[col.name]);
-              });
-
-              console.log(`Snowflake query successful: ${rows.length} rows returned`);
-
-              resolve({
-                columns,
-                rows: rowData,
-                success: true
-              });
-            } catch (processError) {
-              console.error('Error processing Snowflake results:', processError);
-              resolve({
-                columns: [],
-                rows: [],
-                success: false,
-                error: "Error processing query results"
-              });
-            }
-          }
+          });
         });
       });
 
     } catch (error) {
-      console.error('Snowflake connection error:', error);
+      console.error('Snowflake service error:', error);
       return {
         columns: [],
         rows: [],
         success: false,
-        error: error instanceof Error ? error.message : "Connection error"
+        error: error instanceof Error ? error.message : "Service error"
       };
-    }
-  }
-
-  async disconnect(): Promise<void> {
-    if (this.connection) {
-      return new Promise((resolve) => {
-        this.connection.destroy((err: any) => {
-          if (err) {
-            console.error('Error disconnecting from Snowflake:', err);
-          }
-          this.connection = null;
-          resolve();
-        });
-      });
     }
   }
 }
