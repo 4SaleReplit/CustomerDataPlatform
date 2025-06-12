@@ -1,8 +1,10 @@
 import fetch, { Response } from 'node-fetch';
+import { createHash } from 'crypto';
 
 interface SnowflakeConfig {
   account: string;
-  accessToken: string;
+  username: string;
+  password: string;
   warehouse: string;
   database: string;
   schema: string;
@@ -22,29 +24,83 @@ interface QueryResult {
 
 export class SnowflakeService {
   private config: SnowflakeConfig;
+  private sessionToken: string | null = null;
+  private sessionExpiry: number = 0;
 
   constructor(config: SnowflakeConfig) {
     this.config = config;
   }
 
-  async executeQuery(query: string): Promise<QueryResult> {
-    const statementsUrl = `https://${this.config.account}.snowflakecomputing.com/api/v2/statements`;
-    
-    const headers = {
-      "Authorization": `Bearer ${this.config.accessToken}`,
-      "Content-Type": "application/json",
-      "Accept": "application/json"
-    };
+  private async authenticate(): Promise<string> {
+    // Check if we have a valid session token
+    if (this.sessionToken && Date.now() < this.sessionExpiry) {
+      return this.sessionToken;
+    }
 
-    const payload = {
-      statement: query,
-      warehouse: this.config.warehouse,
-      database: this.config.database,
-      schema: this.config.schema,
-      timeout: 60
+    const loginUrl = `https://${this.config.account}.snowflakecomputing.com/session/v1/login-request`;
+    
+    const loginPayload = {
+      data: {
+        ACCOUNT_NAME: this.config.account,
+        LOGIN_NAME: this.config.username,
+        PASSWORD: this.config.password,
+        CLIENT_APP_ID: "JavaScript",
+        CLIENT_APP_VERSION: "1.0.0"
+      }
     };
 
     try {
+      const response = await fetch(loginUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(loginPayload)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Authentication failed: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json() as any;
+      
+      if (!result.success || !result.data || !result.data.token) {
+        throw new Error(`Authentication failed: ${result.message || 'No token received'}`);
+      }
+
+      this.sessionToken = result.data.token;
+      // Set expiry to 4 hours from now (Snowflake sessions typically last 4-12 hours)
+      this.sessionExpiry = Date.now() + (4 * 60 * 60 * 1000);
+      
+      return this.sessionToken;
+    } catch (error) {
+      console.error('Snowflake authentication error:', error);
+      throw error;
+    }
+  }
+
+  async executeQuery(query: string): Promise<QueryResult> {
+    const statementsUrl = `https://${this.config.account}.snowflakecomputing.com/api/v2/statements`;
+    
+    try {
+      // Get authentication token
+      const token = await this.authenticate();
+      
+      const headers = {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      };
+
+      const payload = {
+        statement: query,
+        warehouse: this.config.warehouse,
+        database: this.config.database,
+        schema: this.config.schema,
+        timeout: 60
+      };
       // 1. Submit the asynchronous query
       const response = await fetch(statementsUrl, {
         method: 'POST',
@@ -157,7 +213,8 @@ config();
 
 export const snowflakeService = new SnowflakeService({
   account: process.env.SNOWFLAKE_ACCOUNT || "q84sale",
-  accessToken: process.env.SNOWFLAKE_ACCESS_TOKEN || "eyJraWQiOiIzNjUyNTkwNTY5ODU1MzkwIiwiYWxnIjoiRVMyNTYifQ.eyJwIjoiNTU3MzQxMDk1MDk6NTU3MzQxMDg2NzciLCJpc3MiOiJTRjoxMDA5IiwiZXhwIjoxNzgxMDc4OTY5fQ.h-ZNqFz0A8Co0L5G7eFmw4Onh-0jHBA9XP4Mec8iDfHFVG4RrldPH32kbZ0Y46Lk2XP5jD1LwTjGWIvJPz1kpw",
+  username: "CDP_USER",
+  password: "P0PmCtwMKOIFi6F",
   warehouse: process.env.SNOWFLAKE_WAREHOUSE || "COMPUTE_WH", 
   database: process.env.SNOWFLAKE_DATABASE || "DBT_CORE_PROD_DATABASE",
   schema: process.env.SNOWFLAKE_SCHEMA || "OPERATIONS"
