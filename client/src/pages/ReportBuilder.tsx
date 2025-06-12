@@ -540,6 +540,79 @@ export function ReportBuilder() {
     openDesigner(wbrReport.id);
   };
 
+  // Image parsing function
+  const parseImageFile = async (file: File): Promise<Slide[]> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const imageUrl = e.target?.result as string;
+          
+          // Create a new image element to get dimensions
+          const img = new Image();
+          img.onload = () => {
+            // Calculate dimensions to fit in canvas (800x600) while maintaining aspect ratio
+            const maxWidth = 700;
+            const maxHeight = 500;
+            const aspectRatio = img.width / img.height;
+            
+            let imageWidth = img.width;
+            let imageHeight = img.height;
+            
+            if (imageWidth > maxWidth) {
+              imageWidth = maxWidth;
+              imageHeight = imageWidth / aspectRatio;
+            }
+            
+            if (imageHeight > maxHeight) {
+              imageHeight = maxHeight;
+              imageWidth = imageHeight * aspectRatio;
+            }
+            
+            // Center the image on the canvas
+            const x = (800 - imageWidth) / 2;
+            const y = (600 - imageHeight) / 2;
+            
+            const slide: Slide = {
+              id: 'slide-1',
+              name: `Image Slide`,
+              elements: [
+                {
+                  id: `image-${Date.now()}`,
+                  type: 'image',
+                  x: Math.round(x),
+                  y: Math.round(y),
+                  width: Math.round(imageWidth),
+                  height: Math.round(imageHeight),
+                  content: imageUrl,
+                  style: {
+                    fontSize: 16,
+                    fontWeight: 'normal',
+                    textAlign: 'center',
+                    color: '#000000',
+                    backgroundColor: 'transparent',
+                    fontFamily: 'Arial'
+                  }
+                }
+              ],
+              backgroundColor: '#ffffff'
+            };
+            
+            resolve([slide]);
+          };
+          
+          img.onerror = () => reject(new Error("Failed to load image"));
+          img.src = imageUrl;
+        } catch (error) {
+          reject(new Error(`Failed to process image: ${error instanceof Error ? error.message : 'Unknown error'}`));
+        }
+      };
+      
+      reader.onerror = () => reject(new Error("Failed to read image file"));
+      reader.readAsDataURL(file);
+    });
+  };
+
   // PDF parsing function
   const parsePDFFile = async (file: File): Promise<Slide[]> => {
     return new Promise((resolve, reject) => {
@@ -1074,8 +1147,8 @@ export function ReportBuilder() {
     if (!file) return;
 
     const fileExtension = file.name.toLowerCase().split('.').pop();
-    if (!fileExtension || !['pptx', 'pdf'].includes(fileExtension)) {
-      alert('Please select a valid PowerPoint (.pptx) or PDF (.pdf) file');
+    if (!fileExtension || !['pptx', 'pdf', 'png', 'jpg', 'jpeg'].includes(fileExtension)) {
+      alert('Please select a valid PowerPoint (.pptx), PDF (.pdf), or image (.png, .jpg, .jpeg) file');
       return;
     }
 
@@ -1087,6 +1160,8 @@ export function ReportBuilder() {
         slides = await parsePPTXFile(file);
       } else if (fileExtension === 'pdf') {
         slides = await parsePDFFile(file);
+      } else if (['png', 'jpg', 'jpeg'].includes(fileExtension)) {
+        slides = await parseImageFile(file);
       }
       
       const uploadedReport: Report = {
@@ -1774,13 +1849,13 @@ export function ReportBuilder() {
             
             <div className="space-y-4">
               <div className="text-sm text-gray-600">
-                Upload a PowerPoint (.pptx) or PDF (.pdf) file to convert it into an editable presentation in the design studio.
+                Upload PowerPoint (.pptx), PDF (.pdf), or image files (.png, .jpg) to convert them into editable presentations in the design studio.
               </div>
               
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                 <input
                   type="file"
-                  accept=".pptx,.pdf"
+                  accept=".pptx,.pdf,.png,.jpg,.jpeg"
                   onChange={handleFileUpload}
                   disabled={isUploading}
                   className="hidden"
