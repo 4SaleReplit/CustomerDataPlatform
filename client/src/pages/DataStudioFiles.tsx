@@ -114,10 +114,10 @@ export function DataStudioFiles() {
     if (folder) {
       breadcrumbs.push({ name: folder.name, id: folder.id });
       // Add parent breadcrumbs if nested
-      let parent = folder.parentId ? folders.find(f => f.id === folder.parentId) : null;
+      let parent = folder.parentId ? folders.find(f => f.id === folder.parentId) : undefined;
       while (parent) {
         breadcrumbs.unshift({ name: parent.name, id: parent.id });
-        parent = parent.parentId ? folders.find(f => f.id === parent.parentId) : null;
+        parent = parent.parentId ? folders.find(f => f.id === parent.parentId) : undefined;
       }
     }
   }

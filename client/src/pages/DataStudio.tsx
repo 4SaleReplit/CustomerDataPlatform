@@ -7,32 +7,46 @@ import { Database, BarChart3, FileText, Activity, ArrowRight } from 'lucide-reac
 export function DataStudio() {
   const features = [
     {
+      title: 'Dashboards',
+      description: 'Create and manage interactive dashboards with multiple visualization tiles',
+      icon: BarChart3,
+      href: '/data-studio/dashboards',
+      color: 'bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400'
+    },
+    {
+      title: 'Explores',
+      description: 'Build data visualizations and custom metrics with advanced analytics',
+      icon: Activity,
+      href: '/data-studio/explores',
+      color: 'bg-green-50 text-green-600 dark:bg-green-950 dark:text-green-400'
+    },
+    {
       title: 'SQL Editor',
       description: 'Advanced SQL editor with syntax highlighting, autocomplete, and query execution',
       icon: Database,
       href: '/data-studio/sql',
-      color: 'bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400'
+      color: 'bg-purple-50 text-purple-600 dark:bg-purple-950 dark:text-purple-400'
     },
     {
       title: 'File System',
       description: 'Organize dashboards and tiles in folders with team collaboration features',
       icon: FileText,
       href: '/data-studio/files',
-      color: 'bg-green-50 text-green-600 dark:bg-green-950 dark:text-green-400'
+      color: 'bg-orange-50 text-orange-600 dark:bg-orange-950 dark:text-orange-400'
     },
     {
       title: 'Lineage',
       description: 'Track data lineage and dependencies across your data pipeline',
       icon: Activity,
       href: '/data-studio/lineage',
-      color: 'bg-purple-50 text-purple-600 dark:bg-purple-950 dark:text-purple-400'
+      color: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400'
     },
     {
       title: 'Data Explorer',
       description: 'Browse databases, tables, and columns with detailed schema information',
-      icon: BarChart3,
+      icon: Database,
       href: '/data-studio/explorer',
-      color: 'bg-orange-50 text-orange-600 dark:bg-orange-950 dark:text-orange-400'
+      color: 'bg-teal-50 text-teal-600 dark:bg-teal-950 dark:text-teal-400'
     }
   ];
 
@@ -45,7 +59,7 @@ export function DataStudio() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {features.map((feature) => {
           const Icon = feature.icon;
           return (
