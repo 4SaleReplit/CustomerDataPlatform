@@ -56,6 +56,7 @@ const AppRouter = () => {
       <Switch>
         {/* Main App Routes */}
         <Route path="/" component={Dashboard} />
+        <Route path="/data-studio" component={DataStudio} />
         <Route path="/users" component={Users} />
         <Route path="/users/:userId" component={UserProfile} />
         <Route path="/cohorts" component={Cohorts} />
