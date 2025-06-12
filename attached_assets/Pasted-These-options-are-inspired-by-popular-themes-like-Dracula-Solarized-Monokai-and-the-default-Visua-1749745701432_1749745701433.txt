@@ -1,0 +1,44 @@
+These options are inspired by popular themes like Dracula, Solarized, Monokai, and the default Visual Studio Code themes, giving you a broad palette to choose from.
+
+🎨 General & Foundational Elements
+These are the core components of your editor's look and feel.
+
+Element	Recommended Colors	Hex Code Examples	Notes
+Background	Dark Grays, Deep Blues, Off-Whites	#1E1E1E, #282A36, #002B36, #FDF6E3	The foundation of your theme. Choose a color that is easy on your eyes for long periods.
+Default Text/Foreground	Light Grays, Soft Whites, Dark Grays	#F8F8F2, #D4D4D4, #839496, #333333	This color should have a good contrast ratio with your background.
+Selection Background	Muted Blues, Grays	#44475A, #335577	The color of the text you have highlighted with your cursor.
+Current Line Highlight	Slightly lighter/darker than the background	#44475A, #F0F0F0	A subtle highlight for the line your cursor is currently on.
+📝 Comments
+Comments are crucial for documenting your code, and their color should be distinct but not distracting.
+
+Element	Recommended Colors	Hex Code Examples	Notes
+Single-line (--) & Multi-line (/* ... */) Comments	Greens, Grays, Violets	#6272A4, #6A9955, #93A1A1, #75715E	Often italicized to further differentiate them from active code.
+🔑 Keywords
+Keywords are the building blocks of your SQL statements. They should stand out.
+
+Element	Recommended Colors	Hex Code Examples	Notes
+Primary Keywords (SELECT, FROM, WHERE, GROUP BY, ORDER BY, HAVING, JOIN, AS, ON, WITH)	Bright Blues, Pinks, Purples, Oranges	#BD93F9, #FF79C6, #569CD6, #FD971F	These are the most common and should be easily scannable.
+DML Keywords (INSERT, UPDATE, DELETE, MERGE)	Yellows, Bright Oranges	#F1FA8C, #FFB86C, #FD971F	Actions that modify data. Giving them a distinct "action" color can be helpful.
+DDL Keywords (CREATE, ALTER, DROP, TRUNCATE)	Oranges, Reds	#FFB86C, #FF5555, #F92672	These powerful commands change the structure of your database; a strong color is appropriate.
+Transaction Control (COMMIT, ROLLBACK, BEGIN, TRANSACTION)	Teals, Cyans	#8BE9FD, #4EC9B0	Relates to the state and integrity of the database.
+Clause & Other Keywords (DISTINCT, LIMIT, QUALIFY, OVER, CASE, WHEN, THEN, ELSE, END)	Cyans, Purples	#8BE9FD, #BD93F9	These are important but often secondary to the primary keywords.
+🔠 Data & Literals
+These are the actual data values within your queries.
+
+Element	Recommended Colors	Hex Code Examples	Notes
+Strings (e.g., 'hello world')	Greens, Oranges, Yellows	#50FA7B, #CE9178, #E6DB74	Should be clearly distinguishable from keywords and comments.
+Numeric Values (e.g., 123, 45.67)	Light Greens, Light Blues, Purples	#B5CEA8, #BD93F9, #66D9EF	Consistent coloring helps in quickly identifying numerical data.
+Boolean Values (TRUE, FALSE)	Oranges, Purples	#FFB86C, #BD93F9	Often share a color with other constants or numeric values.
+NULL	Grays, Reds	#6272A4, #FF5555	NULL is a special case and should ideally have a unique, noticeable color.
+⚙️ Functions & Types
+These define the logic and structure of your data.
+
+Element	Recommended Colors	Hex Code Examples	Notes
+Built-in Functions (SUM, COUNT, AVG, TO_CHAR, IFF, etc.)	Yellows, Light Blues, Greens	#F1FA8C, #DCDCAA, #A6E22E	Makes your business logic pop.
+Data Types (VARCHAR, NUMBER, BOOLEAN, TIMESTAMP, ARRAY, OBJECT, etc.)	Cyans, Teals	#8BE9FD, #4EC9B0, #66D9EF	Important for understanding table structures and casting operations.
+➕ Operators & Punctuation
+These are the grammatical glue of your SQL.
+
+Element	Recommended Colors	Hex Code Examples	Notes
+Operators (=, !=, >, <, +, -, *, /, AND, OR, LIKE)	Pinks, Reds, Whites/Grays	#FF79C6, #FF5555, #F8F8F2	Can be vibrant to stand out or neutral to blend in, depending on your preference.
+Parentheses, Commas, Semicolons ((), ,, ;)	Default Text Color	#F8F8F2, #D4D4D4	Usually best to keep these neutral to avoid visual clutter.
