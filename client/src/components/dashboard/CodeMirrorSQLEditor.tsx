@@ -11,6 +11,31 @@ interface CodeMirrorSQLEditorProps {
 export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, onExecute }: CodeMirrorSQLEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [isFocused, setIsFocused] = useState(false);
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const [autocompletePosition, setAutocompletePosition] = useState({ top: 0, left: 0 });
+  const [currentWord, setCurrentWord] = useState('');
+  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
+  const [selectedSuggestion, setSelectedSuggestion] = useState(0);
+
+  // Complete SQL keywords for autocomplete
+  const sqlKeywords = [
+    // Primary keywords
+    'SELECT', 'FROM', 'WHERE', 'GROUP', 'BY', 'ORDER', 'HAVING', 'JOIN', 'INNER', 'LEFT', 'RIGHT', 'OUTER', 'FULL', 'ON', 'AS', 'AND', 'OR', 'NOT', 'IN', 'EXISTS', 'LIKE', 'BETWEEN', 'IS', 'UNION', 'ALL', 'WITH', 'RECURSIVE', 'OVER', 'PARTITION', 'WINDOW', 'USING', 'NATURAL', 'CROSS',
+    // DML keywords
+    'INSERT', 'INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE', 'MERGE',
+    // DDL keywords
+    'CREATE', 'ALTER', 'DROP', 'TRUNCATE', 'TABLE', 'INDEX', 'VIEW', 'DATABASE', 'SCHEMA', 'PROCEDURE', 'FUNCTION',
+    // Transaction control
+    'COMMIT', 'ROLLBACK', 'BEGIN', 'TRANSACTION', 'SAVEPOINT',
+    // Clause keywords
+    'DISTINCT', 'LIMIT', 'OFFSET', 'QUALIFY', 'CASE', 'WHEN', 'THEN', 'ELSE', 'END', 'NULL', 'ASC', 'DESC', 'NULLS', 'FIRST', 'LAST',
+    // Functions
+    'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'UPPER', 'LOWER', 'LENGTH', 'SUBSTRING', 'TRIM', 'COALESCE', 'ISNULL', 'IFNULL', 'IFF', 'CAST', 'CONVERT', 'DATEPART', 'YEAR', 'MONTH', 'DAY', 'NOW', 'CURRENT_TIMESTAMP', 'CURRENT_DATE', 'CURRENT_TIME', 'EXTRACT', 'CONCAT', 'REPLACE', 'ROUND', 'FLOOR', 'CEIL', 'ABS', 'POWER', 'SQRT', 'LOG', 'EXP', 'SIGN', 'RAND', 'ROW_NUMBER', 'RANK', 'DENSE_RANK', 'LAG', 'LEAD', 'FIRST_VALUE', 'LAST_VALUE', 'NTILE', 'PERCENTILE_CONT', 'PERCENTILE_DISC', 'APPROX_COUNT_DISTINCT', 'TO_CHAR', 'TO_DATE', 'TO_NUMBER', 'SPLIT', 'ARRAY_AGG', 'OBJECT_CONSTRUCT', 'PARSE_JSON', 'GET', 'GET_PATH', 'FLATTEN',
+    // Data types
+    'VARCHAR', 'CHAR', 'STRING', 'TEXT', 'NUMBER', 'INTEGER', 'INT', 'BIGINT', 'SMALLINT', 'TINYINT', 'DECIMAL', 'NUMERIC', 'FLOAT', 'REAL', 'DOUBLE', 'MONEY', 'SMALLMONEY', 'BIT', 'BOOLEAN', 'BOOL', 'DATE', 'TIME', 'DATETIME', 'DATETIME2', 'TIMESTAMP', 'TIMESTAMPTZ', 'TIMESTAMPLTZ', 'TIMESTAMPNTZ', 'BINARY', 'VARBINARY', 'ARRAY', 'OBJECT', 'VARIANT', 'GEOGRAPHY', 'GEOMETRY', 'JSON', 'XML', 'UUID', 'SERIAL', 'AUTOINCREMENT',
+    // Boolean values
+    'TRUE', 'FALSE'
+  ];
 
   // Comprehensive SQL syntax highlighting color scheme
   const tokenColors = {
@@ -273,15 +298,172 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
     return colorizedLines.join('<br>');
   }, [tokenColors]);
 
-  // Handle contenteditable input - simple approach without real-time highlighting
+  // Get current word being typed for autocomplete
+  const getCurrentWord = useCallback((element: HTMLDivElement): { word: string; startPos: number; endPos: number } => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return { word: '', startPos: 0, endPos: 0 };
+    
+    const range = selection.getRangeAt(0);
+    const text = element.textContent || '';
+    const cursorPos = range.startOffset;
+    
+    // Find word boundaries
+    let startPos = cursorPos;
+    let endPos = cursorPos;
+    
+    // Go backwards to find start of word
+    while (startPos > 0 && /[a-zA-Z_]/.test(text[startPos - 1])) {
+      startPos--;
+    }
+    
+    // Go forwards to find end of word
+    while (endPos < text.length && /[a-zA-Z_]/.test(text[endPos])) {
+      endPos++;
+    }
+    
+    return {
+      word: text.substring(startPos, endPos),
+      startPos,
+      endPos
+    };
+  }, []);
+
+  // Update autocomplete suggestions
+  const updateAutocomplete = useCallback((word: string, element: HTMLDivElement) => {
+    if (word.length === 0) {
+      setShowAutocomplete(false);
+      return;
+    }
+    
+    const filtered = sqlKeywords.filter(keyword => 
+      keyword.toLowerCase().startsWith(word.toLowerCase())
+    );
+    
+    if (filtered.length > 0) {
+      setFilteredSuggestions(filtered);
+      setSelectedSuggestion(0);
+      setCurrentWord(word);
+      
+      // Calculate position for dropdown
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        const editorRect = element.getBoundingClientRect();
+        
+        setAutocompletePosition({
+          top: rect.bottom - editorRect.top + 5,
+          left: rect.left - editorRect.left
+        });
+      }
+      
+      setShowAutocomplete(true);
+    } else {
+      setShowAutocomplete(false);
+    }
+  }, [sqlKeywords]);
+
+  // Apply syntax highlighting to a word
+  const highlightCurrentWord = useCallback((element: HTMLDivElement) => {
+    const text = element.textContent || '';
+    const colorized = colorizeText(text);
+    
+    // Save cursor position
+    const selection = window.getSelection();
+    const cursorPos = selection?.rangeCount ? selection.getRangeAt(0).startOffset : 0;
+    
+    element.innerHTML = colorized;
+    
+    // Restore cursor position
+    if (selection && element.firstChild) {
+      try {
+        const range = document.createRange();
+        const textNode = element.firstChild;
+        range.setStart(textNode, Math.min(cursorPos, textNode.textContent?.length || 0));
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      } catch (error) {
+        // Place cursor at end if restoration fails
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    }
+  }, [colorizeText]);
+
+  // Handle contenteditable input with real-time highlighting and autocomplete
   const handleInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement;
     const text = target.textContent || '';
     onChange(text);
-  }, [onChange]);
+    
+    // Get current word for autocomplete
+    const { word } = getCurrentWord(target);
+    updateAutocomplete(word, target);
+  }, [onChange, getCurrentWord, updateAutocomplete]);
 
-  // Handle keyboard shortcuts
+  // Insert suggestion at current position
+  const insertSuggestion = useCallback((suggestion: string) => {
+    if (!editorRef.current) return;
+    
+    const { word, startPos, endPos } = getCurrentWord(editorRef.current);
+    const text = editorRef.current.textContent || '';
+    const newText = text.substring(0, startPos) + suggestion + text.substring(endPos);
+    
+    // Update the text content
+    editorRef.current.textContent = newText;
+    onChange(newText);
+    
+    // Position cursor after the inserted suggestion
+    const selection = window.getSelection();
+    if (selection && editorRef.current.firstChild) {
+      const range = document.createRange();
+      const newCursorPos = startPos + suggestion.length;
+      range.setStart(editorRef.current.firstChild, Math.min(newCursorPos, newText.length));
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+    
+    setShowAutocomplete(false);
+    
+    // Apply highlighting after insertion
+    setTimeout(() => {
+      if (editorRef.current) {
+        highlightCurrentWord(editorRef.current);
+      }
+    }, 0);
+  }, [getCurrentWord, onChange, highlightCurrentWord]);
+
+  // Handle keyboard shortcuts and autocomplete navigation
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Handle autocomplete navigation
+    if (showAutocomplete) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedSuggestion(prev => Math.min(prev + 1, filteredSuggestions.length - 1));
+        return;
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedSuggestion(prev => Math.max(prev - 1, 0));
+        return;
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        if (filteredSuggestions[selectedSuggestion]) {
+          insertSuggestion(filteredSuggestions[selectedSuggestion]);
+        }
+        return;
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowAutocomplete(false);
+        return;
+      }
+    }
+    
+    // Handle regular editor shortcuts
     if (e.key === 'Tab') {
       e.preventDefault();
       document.execCommand('insertText', false, '  ');
@@ -290,8 +472,15 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
       if (onExecute) {
         onExecute();
       }
+    } else if (e.key === ' ') {
+      // Apply highlighting when space is pressed (word completion)
+      setTimeout(() => {
+        if (editorRef.current) {
+          highlightCurrentWord(editorRef.current);
+        }
+      }, 0);
     }
-  }, [onExecute]);
+  }, [showAutocomplete, filteredSuggestions, selectedSuggestion, insertSuggestion, onExecute, highlightCurrentWord]);
 
   // Update content when value changes from external source
   useEffect(() => {
@@ -368,6 +557,40 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
         .codemirror-sql-editor:focus {
           outline: none;
         }
+        
+        .autocomplete-dropdown {
+          position: absolute;
+          background: #1a1a1a;
+          border: 1px solid #444;
+          border-radius: 4px;
+          max-height: 200px;
+          overflow-y: auto;
+          z-index: 1000;
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+          font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Menlo', 'Consolas', monospace;
+          font-size: 12px;
+        }
+        
+        .autocomplete-item {
+          padding: 8px 12px;
+          cursor: pointer;
+          color: #d4d4d4;
+          border-bottom: 1px solid #333;
+        }
+        
+        .autocomplete-item:last-child {
+          border-bottom: none;
+        }
+        
+        .autocomplete-item:hover,
+        .autocomplete-item.selected {
+          background: #264f78;
+          color: #ffffff;
+        }
+        
+        .autocomplete-item.selected {
+          background: #0e639c;
+        }
       `}</style>
       
       <div
@@ -382,6 +605,28 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
         data-placeholder={placeholder}
         spellCheck={false}
       />
+      
+      {/* Autocomplete dropdown */}
+      {showAutocomplete && (
+        <div 
+          className="autocomplete-dropdown"
+          style={{
+            top: autocompletePosition.top,
+            left: autocompletePosition.left
+          }}
+        >
+          {filteredSuggestions.map((suggestion, index) => (
+            <div
+              key={suggestion}
+              className={`autocomplete-item ${index === selectedSuggestion ? 'selected' : ''}`}
+              onClick={() => insertSuggestion(suggestion)}
+              onMouseEnter={() => setSelectedSuggestion(index)}
+            >
+              {suggestion}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
