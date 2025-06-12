@@ -288,7 +288,7 @@ export function SQLEditor({ onCreateVisualization }: SQLEditorProps) {
         </CardHeader>
         <CardContent>
           <div className="border rounded-md bg-white dark:bg-gray-950 min-h-32">
-            <SimpleSQLEditor
+            <ColoredSQLEditor
               value={query}
               onChange={setQuery}
               onExecute={executeQuery}
