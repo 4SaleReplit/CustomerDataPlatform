@@ -47,7 +47,8 @@ import {
   Edit3,
   Play,
   Palette,
-  FileText
+  FileText,
+  Database
 } from 'lucide-react';
 import { CodeMirrorSQLEditor } from '@/components/dashboard/CodeMirrorSQLEditor';
 
@@ -181,6 +182,10 @@ export function ReportBuilder() {
   const [previewMode, setPreviewMode] = useState(false);
   const [showSQLEditor, setShowSQLEditor] = useState(false);
   const [currentQuery, setCurrentQuery] = useState('');
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeHandle, setResizeHandle] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const currentSlide = currentReport?.slides[currentSlideIndex];
@@ -402,13 +407,109 @@ export function ReportBuilder() {
     }
   };
 
+  const handleMouseDown = (e: React.MouseEvent, elementId: string, action: 'drag' | 'resize', handle?: string) => {
+    e.stopPropagation();
+    setSelectedElement(elementId);
+
+    const element = currentSlide?.elements.find(el => el.id === elementId);
+    if (!element) return;
+
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const offsetX = e.clientX - rect.left - (element.x * zoom / 100);
+    const offsetY = e.clientY - rect.top - (element.y * zoom / 100);
+
+    setDragOffset({ x: offsetX, y: offsetY });
+
+    if (action === 'drag') {
+      setIsDragging(true);
+    } else if (action === 'resize') {
+      setIsResizing(true);
+      setResizeHandle(handle || null);
+    }
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const mouseX = (e.clientX - rect.left) * (100 / zoom);
+      const mouseY = (e.clientY - rect.top) * (100 / zoom);
+
+      if (action === 'drag' && isDragging) {
+        const newX = Math.max(0, Math.min(1000 - element.width, mouseX - (dragOffset.x * 100 / zoom)));
+        const newY = Math.max(0, Math.min(700 - element.height, mouseY - (dragOffset.y * 100 / zoom)));
+        
+        updateElement(elementId, { x: newX, y: newY });
+      } else if (action === 'resize' && isResizing) {
+        let newWidth = element.width;
+        let newHeight = element.height;
+        let newX = element.x;
+        let newY = element.y;
+
+        switch (handle) {
+          case 'se': // bottom-right
+            newWidth = Math.max(50, mouseX - element.x);
+            newHeight = Math.max(30, mouseY - element.y);
+            break;
+          case 'sw': // bottom-left
+            newWidth = Math.max(50, element.x + element.width - mouseX);
+            newHeight = Math.max(30, mouseY - element.y);
+            newX = Math.max(0, mouseX);
+            break;
+          case 'ne': // top-right
+            newWidth = Math.max(50, mouseX - element.x);
+            newHeight = Math.max(30, element.y + element.height - mouseY);
+            newY = Math.max(0, mouseY);
+            break;
+          case 'nw': // top-left
+            newWidth = Math.max(50, element.x + element.width - mouseX);
+            newHeight = Math.max(30, element.y + element.height - mouseY);
+            newX = Math.max(0, mouseX);
+            newY = Math.max(0, mouseY);
+            break;
+        }
+
+        updateElement(elementId, { 
+          x: newX, 
+          y: newY, 
+          width: Math.min(newWidth, 1000 - newX), 
+          height: Math.min(newHeight, 700 - newY) 
+        });
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      setIsResizing(false);
+      setResizeHandle(null);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleElementDoubleClick = (elementId: string) => {
+    const element = currentSlide?.elements.find(el => el.id === elementId);
+    if (!element) return;
+
+    if (element.type === 'chart' || element.type === 'table' || element.type === 'metric') {
+      // Open SQL editor for data elements
+      const content = element.content as any;
+      setCurrentQuery(content.query || '');
+      setShowSQLEditor(true);
+    }
+  };
+
   const renderElement = (element: SlideElement) => {
     const isSelected = selectedElement === element.id;
     
     return (
       <div
         key={element.id}
-        className={`absolute cursor-pointer border-2 ${isSelected ? 'border-blue-500' : 'border-transparent'} hover:border-blue-300`}
+        className={`absolute select-none group ${isSelected ? 'border-2 border-blue-500' : 'border-2 border-transparent hover:border-blue-300'}`}
         style={{
           left: element.x * (zoom / 100),
           top: element.y * (zoom / 100),
@@ -423,12 +524,15 @@ export function ReportBuilder() {
           alignItems: 'center',
           justifyContent: element.style.textAlign === 'center' ? 'center' : element.style.textAlign === 'right' ? 'flex-end' : 'flex-start',
           padding: '8px',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          cursor: isDragging ? 'grabbing' : 'grab'
         }}
+        onMouseDown={(e) => handleMouseDown(e, element.id, 'drag')}
         onClick={(e) => {
           e.stopPropagation();
           setSelectedElement(element.id);
         }}
+        onDoubleClick={() => handleElementDoubleClick(element.id)}
       >
         {element.type === 'text' && (
           <div style={{ width: '100%', height: '100%' }}>
@@ -459,6 +563,47 @@ export function ReportBuilder() {
               backgroundColor: element.style.backgroundColor || 'transparent'
             }}
           />
+        )}
+
+        {/* Resize handles for selected elements */}
+        {isSelected && !previewMode && (
+          <>
+            {/* Corner handles */}
+            <div
+              className="absolute w-3 h-3 bg-blue-500 border border-white rounded-sm cursor-nw-resize"
+              style={{ top: -6, left: -6 }}
+              onMouseDown={(e) => handleMouseDown(e, element.id, 'resize', 'nw')}
+            />
+            <div
+              className="absolute w-3 h-3 bg-blue-500 border border-white rounded-sm cursor-ne-resize"
+              style={{ top: -6, right: -6 }}
+              onMouseDown={(e) => handleMouseDown(e, element.id, 'resize', 'ne')}
+            />
+            <div
+              className="absolute w-3 h-3 bg-blue-500 border border-white rounded-sm cursor-sw-resize"
+              style={{ bottom: -6, left: -6 }}
+              onMouseDown={(e) => handleMouseDown(e, element.id, 'resize', 'sw')}
+            />
+            <div
+              className="absolute w-3 h-3 bg-blue-500 border border-white rounded-sm cursor-se-resize"
+              style={{ bottom: -6, right: -6 }}
+              onMouseDown={(e) => handleMouseDown(e, element.id, 'resize', 'se')}
+            />
+
+            {/* Data element indicator */}
+            {(element.type === 'chart' || element.type === 'table' || element.type === 'metric') && (
+              <div
+                className="absolute top-1 right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-green-600 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleElementDoubleClick(element.id);
+                }}
+                title="Double-click to edit query"
+              >
+                <Database className="w-3 h-3 text-white" />
+              </div>
+            )}
+          </>
         )}
       </div>
     );
@@ -1383,10 +1528,41 @@ export function ReportBuilder() {
               value={currentQuery}
               onChange={setCurrentQuery}
               onExecute={() => {
-                console.log('Executing query:', currentQuery);
+                // Save query back to selected element
+                if (selectedElement && currentReport) {
+                  const element = currentSlide?.elements.find(el => el.id === selectedElement);
+                  if (element && (element.type === 'chart' || element.type === 'table' || element.type === 'metric')) {
+                    const updatedContent = {
+                      ...element.content,
+                      query: currentQuery
+                    };
+                    updateElement(selectedElement, { content: updatedContent });
+                  }
+                }
                 setShowSQLEditor(false);
               }}
             />
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setShowSQLEditor(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => {
+              // Save query back to selected element
+              if (selectedElement && currentReport) {
+                const element = currentSlide?.elements.find(el => el.id === selectedElement);
+                if (element && (element.type === 'chart' || element.type === 'table' || element.type === 'metric')) {
+                  const updatedContent = {
+                    ...element.content,
+                    query: currentQuery
+                  };
+                  updateElement(selectedElement, { content: updatedContent });
+                }
+              }
+              setShowSQLEditor(false);
+            }}>
+              Save Query
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
