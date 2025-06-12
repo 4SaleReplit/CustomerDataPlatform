@@ -574,8 +574,8 @@ export function ReportBuilder() {
             const y = (600 - imageHeight) / 2;
             
             const slide: Slide = {
-              id: 'slide-1',
-              name: `Image Slide`,
+              id: `slide-${Date.now()}`,
+              name: `${file.name.replace(/\.[^/.]+$/, '')}`,
               elements: [
                 {
                   id: `image-${Date.now()}`,
@@ -1646,6 +1646,24 @@ export function ReportBuilder() {
             }}>
               {typeof element.content === 'string' ? element.content : 'Text Element'}
             </div>
+          </div>
+        )}
+        {element.type === 'image' && (
+          <div className="w-full h-full relative overflow-hidden rounded border">
+            <img 
+              src={element.content as string}
+              alt="Uploaded image"
+              className="w-full h-full object-contain"
+              style={{
+                borderRadius: '4px'
+              }}
+            />
+            {/* Image indicator */}
+            {!isSelected && (
+              <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-medium shadow">
+                IMG
+              </div>
+            )}
           </div>
         )}
         {element.type === 'chart' && (
