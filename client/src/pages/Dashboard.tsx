@@ -16,33 +16,86 @@ const initialTiles: DashboardTile[] = [
   {
     id: 'tile-1749407882806',
     type: 'metric',
-    title: 'User count',
+    title: 'Total Users',
     x: 0,
     y: 0,
-    width: 4,
-    height: 2,
+    width: 3,
+    height: 3,
     icon: 'users',
     dataSource: {
-      query: 'SELECT COUNT(*) as value FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4;',
-      table: 'DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4',
-      aggregation: 'count'
+      query: 'SELECT COUNT(DISTINCT USER_ID) as value FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE USER_ID IS NOT NULL',
+      table: 'DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4'
     },
     refreshConfig: {
       autoRefresh: false,
-      refreshOnLoad: false
+      refreshOnLoad: true
+    }
+  },
+  {
+    id: 'total-credits-metric',
+    type: 'metric',
+    title: 'Total Credits',
+    x: 3,
+    y: 0,
+    width: 3,
+    height: 3,
+    icon: 'credit-card',
+    dataSource: {
+      query: 'SELECT SUM(TOTAL_CREDITS_SPENT) as value FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE TOTAL_CREDITS_SPENT IS NOT NULL',
+      table: 'DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4'
+    },
+    refreshConfig: {
+      autoRefresh: false,
+      refreshOnLoad: true
     }
   },
   {
     id: 'listings-metric',
     type: 'metric',
     title: 'Total Listings',
-    x: 3,
-    y: 3,
+    x: 6,
+    y: 0,
     width: 3,
-    height: 2,
+    height: 3,
     icon: 'list',
     dataSource: {
       query: 'SELECT SUM(TOTAL_LISTINGS_COUNT) as value FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE TOTAL_LISTINGS_COUNT IS NOT NULL',
+      table: 'DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4'
+    },
+    refreshConfig: {
+      autoRefresh: false,
+      refreshOnLoad: true
+    }
+  },
+  {
+    id: 'lifecycle-stages',
+    type: 'pie',
+    title: 'User Lifecycle Stages',
+    x: 9,
+    y: 0,
+    width: 3,
+    height: 3,
+    icon: 'pie-chart',
+    dataSource: {
+      query: 'SELECT LIFECYCLE_STAGE as name, COUNT(*) as value FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE LIFECYCLE_STAGE IS NOT NULL GROUP BY LIFECYCLE_STAGE ORDER BY value DESC',
+      table: 'DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4'
+    },
+    refreshConfig: {
+      autoRefresh: false,
+      refreshOnLoad: true
+    }
+  },
+  {
+    id: 'tile-1749408515094',
+    type: 'bar',
+    title: 'Top Countries by User Count',
+    x: 0,
+    y: 3,
+    width: 6,
+    height: 4,
+    icon: 'bar-chart',
+    dataSource: {
+      query: 'SELECT COUNTRY as name, COUNT(DISTINCT USER_ID) as value FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE COUNTRY IS NOT NULL GROUP BY COUNTRY ORDER BY value DESC LIMIT 10',
       table: 'DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4'
     },
     refreshConfig: {
@@ -54,9 +107,9 @@ const initialTiles: DashboardTile[] = [
     id: 'full-data-table',
     type: 'table',
     title: 'Complete User Segmentation Dataset',
-    x: 0,
-    y: 5,
-    width: 12,
+    x: 6,
+    y: 3,
+    width: 6,
     height: 4,
     icon: 'database',
     dataSource: {
@@ -65,62 +118,7 @@ const initialTiles: DashboardTile[] = [
     },
     refreshConfig: {
       autoRefresh: false,
-      refreshOnLoad: true
-    }
-  },
-  {
-    id: 'tile-1749408515094',
-    type: 'metric',
-    title: 'Total Listings (Copy)',
-    x: 4,
-    y: 3,
-    width: 3,
-    height: 2,
-    icon: 'list',
-    dataSource: {
-      query: 'SELECT SUM(TOTAL_LISTINGS_COUNT) as value FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE TOTAL_LISTINGS_COUNT IS NOT NULL',
-      table: 'DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4'
-    },
-    refreshConfig: {
-      autoRefresh: false,
-      lastRefreshed: new Date('2025-06-08T18:48:35.094Z'),
-      refreshOnLoad: true
-    }
-  },
-  {
-    id: 'lifecycle-stages',
-    type: 'table',
-    title: 'Customer Lifecycle Distribution',
-    x: 6,
-    y: 3,
-    width: 6,
-    height: 2,
-    icon: 'pie-chart',
-    dataSource: {
-      query: 'SELECT USER_TYPE, COUNT(*) as count FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE USER_TYPE IS NOT NULL GROUP BY USER_TYPE ORDER BY count DESC',
-      table: 'DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4'
-    },
-    refreshConfig: {
-      autoRefresh: false,
-      refreshOnLoad: true
-    }
-  },
-  {
-    id: 'total-credits-metric',
-    type: 'metric',
-    title: 'Total Credits Spent',
-    x: 0,
-    y: 3,
-    width: 3,
-    height: 2,
-    icon: 'dollar-sign',
-    dataSource: {
-      query: 'SELECT SUM(CREDITS_SPENT) as value FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE CREDITS_SPENT IS NOT NULL',
-      table: 'DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4'
-    },
-    refreshConfig: {
-      autoRefresh: false,
-      refreshOnLoad: true
+      refreshOnLoad: false
     }
   }
 ];
@@ -145,140 +143,69 @@ function Dashboard() {
   const loadTiles = useCallback(async () => {
     if (isLoaded) return; // Don't reload if already loaded
     
-    setIsLoading(true);
     try {
-      const data = await apiRequest('/api/dashboard/tiles');
-      if (data && Array.isArray(data) && data.length > 0) {
-        const convertedTiles = data.map((dbTile: any) => ({
-          id: dbTile.tileId,
-          databaseId: dbTile.id, // Store the database ID for API calls
-          type: dbTile.type,
-          title: dbTile.title,
-          x: dbTile.x,
-          y: dbTile.y,
-          width: dbTile.width,
-          height: dbTile.height,
-          icon: dbTile.icon,
-          dataSource: dbTile.dataSource,
-          refreshConfig: dbTile.refreshConfig
+      const response = await apiRequest('/api/dashboard/tiles');
+      console.log('Loaded tiles from database:', response);
+      
+      if (response && Array.isArray(response)) {
+        // Map database tiles to frontend format
+        const mappedTiles = response.map((dbTile: any) => ({
+          ...dbTile,
+          id: dbTile.id, // Use the tile ID from database
+          databaseId: dbTile.id // Store the database ID for reference
         }));
-        console.log('Loaded tiles from database:', convertedTiles);
-        setTiles(convertedTiles);
+        setTiles(mappedTiles);
       }
+      setIsLoaded(true);
     } catch (error) {
       console.error('Failed to load tiles:', error);
-    } finally {
+      // Use initial tiles as fallback
+      setTiles(initialTiles);
       setIsLoaded(true);
-      setIsLoading(false);
     }
   }, [isLoaded]);
 
-  // Save tiles to database
-  const saveTiles = async (tilesToSave: DashboardTile[]) => {
-    try {
-      const tileInstances = tilesToSave.map(tile => ({
-        tileId: tile.id,
-        dashboardId: null,
-        type: tile.type,
-        title: tile.title,
-        x: tile.x,
-        y: tile.y,
-        width: tile.width,
-        height: tile.height,
-        icon: tile.icon,
-        dataSource: tile.dataSource,
-        refreshConfig: tile.refreshConfig
-      }));
-
-      console.log('Saving layout with tiles:', tilesToSave.map(t => ({ id: t.id, x: t.x, y: t.y, width: t.width, height: t.height })));
-
-      const response = await apiRequest('/api/dashboard/save-layout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tiles: tileInstances }),
-      });
-
-      console.log('Layout saved successfully');
-      return response;
-    } catch (error) {
-      console.error('Failed to save layout:', error);
-      throw error;
-    }
-  };
-
-  // Load tiles on component mount and track page view
+  // Load tiles on component mount
   useEffect(() => {
-    trackBusinessEvent.pageViewed('dashboard');
     loadTiles();
+  }, [loadTiles]);
+
+  // Track page view when component mounts
+  useEffect(() => {
+    trackBusinessEvent('Page Viewed', {
+      page_name: 'dashboard'
+    });
   }, []);
 
-  // Handle manual save
-  const handleSaveLayout = async () => {
-    console.log('Manual save triggered with tiles:', tiles.map(t => ({ id: t.id, x: t.x, y: t.y, width: t.width, height: t.height })));
-    
-    try {
-      const savedData = await saveTiles(tiles);
-      console.log('Save response data:', savedData);
-      
-      // Convert saved data back to tile format and update state immediately
-      if (savedData && Array.isArray(savedData)) {
-        const updatedTiles = savedData.map((dbTile: any) => ({
-          id: dbTile.tileId,
-          type: dbTile.type,
-          title: dbTile.title,
-          x: dbTile.x,
-          y: dbTile.y,
-          width: dbTile.width,
-          height: dbTile.height,
-          icon: dbTile.icon,
-          dataSource: dbTile.dataSource,
-          refreshConfig: dbTile.refreshConfig
-        }));
-        
-        console.log('Immediately updating state with saved positions:', updatedTiles.map(t => ({ id: t.id, x: t.x, y: t.y, width: t.width, height: t.height })));
-        setTiles(updatedTiles);
-      }
-      
-      setIsEditMode(false);
-      
-      toast({
-        title: "Dashboard Saved",
-        description: "Layout saved successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Save Failed",
-        description: "Failed to save layout",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Handle tile changes
-  const handleTilesChange = (newTiles: DashboardTile[]) => {
+  // Event handlers
+  const handleTilesChange = useCallback((newTiles: DashboardTile[]) => {
     setTiles(newTiles);
-  };
-
-  const handleToggleEditMode = () => {
-    setIsEditMode(!isEditMode);
-  };
+  }, []);
 
   const handleEditTile = (tile: DashboardTile) => {
     setEditingTile(tile);
   };
 
   const handleSaveEditedTile = (updatedTile: DashboardTile) => {
-    setTiles(prevTiles => 
-      prevTiles.map(tile => 
-        tile.id === updatedTile.id ? updatedTile : tile
-      )
-    );
+    setTiles(prev => prev.map(tile => 
+      tile.id === updatedTile.id ? updatedTile : tile
+    ));
     setEditingTile(null);
+    
+    toast({
+      title: "Tile Updated",
+      description: "Your tile configuration has been saved.",
+    });
   };
 
-  const handleRemoveTile = (tileId: string) => {
-    setTiles(prevTiles => prevTiles.filter(tile => tile.id !== tileId));
-  };
+  const handleRemoveTile = useCallback((tileId: string) => {
+    setTiles(prev => prev.filter(tile => tile.id !== tileId));
+    
+    toast({
+      title: "Tile Removed",
+      description: "The tile has been removed from your dashboard.",
+    });
+  }, [toast]);
 
   const handleDuplicateTile = (tile: DashboardTile) => {
     const newTile: DashboardTile = {
@@ -286,37 +213,73 @@ function Dashboard() {
       id: `${tile.id}-copy-${Date.now()}`,
       title: `${tile.title} (Copy)`,
       x: tile.x + 1,
-      y: tile.y + 1,
+      y: tile.y + 1
     };
-    setTiles(prevTiles => [...prevTiles, newTile]);
+    
+    setTiles(prev => [...prev, newTile]);
+    
+    toast({
+      title: "Tile Duplicated",
+      description: "A copy of the tile has been added to your dashboard.",
+    });
   };
 
-  const handleRefreshTile = (tileId: string) => {
+  const handleRefreshTile = useCallback(async (tileId: string) => {
     const tile = tiles.find(t => t.id === tileId);
-    if (tile) {
-      trackBusinessEvent.dashboardTileRefreshed(tileId, tile.type);
+    if (!tile) return;
+
+    // Invalidate and refetch the tile's data
+    await queryClient.invalidateQueries({
+      queryKey: ['/api/snowflake/query', tileId]
+    });
+    
+    toast({
+      title: "Tile Refreshed",
+      description: `${tile.title} has been refreshed with the latest data.`,
+    });
+  }, [tiles, toast]);
+
+  const handleToggleEditMode = () => {
+    setIsEditMode(prev => !prev);
+    
+    if (!isEditMode) {
+      toast({
+        title: "Edit Mode Enabled",
+        description: "You can now rearrange and modify your dashboard tiles.",
+      });
     }
-    console.log('Refreshing tile:', tileId);
   };
 
-  // Global refresh function - clears all caches and refreshes all tiles
-  const handleGlobalRefresh = async () => {
-    setIsLoading(true);
+  const handleSaveLayout = async () => {
     try {
-      // Track global dashboard refresh
-      trackBusinessEvent.dashboardGlobalRefresh(tiles.length);
-      
-      // Clear all Snowflake query caches and localStorage
-      queryClient.removeQueries({ queryKey: ['/api/snowflake/query'] });
-      
-      // Clear all cached tile data from localStorage
-      tiles.forEach(tile => {
-        localStorage.removeItem(`tile-${tile.id}-data`);
-        localStorage.removeItem(`tile-${tile.id}-lastRefresh`);
+      // Save layout to database
+      await apiRequest('/api/dashboard/layout', {
+        method: 'POST',
+        body: JSON.stringify({ tiles }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
       
-      // Force refresh all tiles by enabling queries temporarily
-      const refreshPromises = tiles.map(async (tile) => {
+      toast({
+        title: "Layout Saved",
+        description: "Your dashboard layout has been saved successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Save Failed",
+        description: "Failed to save dashboard layout",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleGlobalRefresh = async () => {
+    setIsLoading(true);
+    
+    try {
+      // Refresh all tiles by invalidating their queries
+      const refreshPromises = tiles.map(tile => {
         return queryClient.fetchQuery({
           queryKey: ['/api/snowflake/query', tile.id],
           queryFn: async () => {
@@ -357,18 +320,7 @@ function Dashboard() {
     setTimeFilters(newFilters);
   };
 
-  if (!isLoaded) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2" />
-          <p>Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Handler functions
+  // Handler functions for BI interface
   const handleCreateVisualization = (data: any, chartType: string) => {
     // Create a new tile from SQL editor visualization
     const newTile: DashboardTile = {
@@ -528,6 +480,17 @@ function Dashboard() {
         );
     }
   };
+
+  if (!isLoaded) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2" />
+          <p>Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-background fade-in">
