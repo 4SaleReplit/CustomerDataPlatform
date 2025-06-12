@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { SQLSyntaxHighlighter } from './SQLSyntaxHighlighter';
+import { ColoredSQLEditor } from './ColoredSQLEditor';
 import { 
   Play, 
   Save, 
@@ -288,7 +288,7 @@ export function SQLEditor({ onCreateVisualization }: SQLEditorProps) {
         </CardHeader>
         <CardContent>
           <div className="border rounded-md bg-white dark:bg-gray-950 min-h-32">
-            <SQLSyntaxHighlighter
+            <SimpleSQLEditor
               value={query}
               onChange={setQuery}
               onExecute={executeQuery}

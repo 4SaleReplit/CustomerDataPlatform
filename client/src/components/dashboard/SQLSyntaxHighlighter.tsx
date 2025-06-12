@@ -45,9 +45,12 @@ const SQL_PATTERNS = {
 };
 
 const applySyntaxHighlighting = (text: string): string => {
-  let highlightedText = text;
+  if (!text) return '';
   
-  // Apply highlighting patterns in order of precedence
+  let highlightedText = text;
+  const tokens: Array<{start: number; end: number; className: string}> = [];
+  
+  // Find all tokens and their positions
   const patterns = [
     SQL_PATTERNS.comments,
     SQL_PATTERNS.strings,
@@ -60,9 +63,32 @@ const applySyntaxHighlighting = (text: string): string => {
   ];
 
   patterns.forEach((pattern) => {
-    highlightedText = highlightedText.replace(pattern.pattern, (match) => {
-      return `<span class="${pattern.className}">${match}</span>`;
-    });
+    let match;
+    while ((match = pattern.pattern.exec(text)) !== null) {
+      tokens.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        className: pattern.className
+      });
+    }
+    pattern.pattern.lastIndex = 0; // Reset regex
+  });
+
+  // Sort tokens by start position and remove overlaps
+  tokens.sort((a, b) => a.start - b.start);
+  const nonOverlappingTokens = [];
+  for (const token of tokens) {
+    if (nonOverlappingTokens.length === 0 || token.start >= nonOverlappingTokens[nonOverlappingTokens.length - 1].end) {
+      nonOverlappingTokens.push(token);
+    }
+  }
+
+  // Apply highlighting from end to start to avoid position shifts
+  nonOverlappingTokens.reverse().forEach((token) => {
+    const before = highlightedText.substring(0, token.start);
+    const content = highlightedText.substring(token.start, token.end);
+    const after = highlightedText.substring(token.end);
+    highlightedText = before + `<span class="${token.className}">${content}</span>` + after;
   });
 
   return highlightedText;
@@ -135,8 +161,9 @@ export function SQLSyntaxHighlighter({ value, onChange, placeholder, className, 
           border: none;
           background: transparent;
           color: transparent;
-          overflow: hidden;
+          overflow: auto;
           z-index: 1;
+          box-sizing: border-box;
         }
         
         .sql-textarea {
@@ -157,6 +184,7 @@ export function SQLSyntaxHighlighter({ value, onChange, placeholder, className, 
           font-family: inherit;
           font-size: inherit;
           line-height: inherit;
+          box-sizing: border-box;
         }
         
         .sql-textarea::placeholder {
