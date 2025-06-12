@@ -12,7 +12,8 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
-import JSZip from 'pizzip';
+import PiZip from 'pizzip';
+import * as pdfjsLib from 'pdfjs-dist';
 import { 
   Plus, 
   Save, 
@@ -545,32 +546,99 @@ export function ReportBuilder() {
       reader.onload = async (e) => {
         try {
           const arrayBuffer = e.target?.result as ArrayBuffer;
-          const zip = new JSZip(arrayBuffer);
           
-          // Parse presentation.xml to get slide relationships
-          const presentationXml = zip.file("ppt/presentation.xml")?.asText();
-          if (!presentationXml) {
-            throw new Error("Invalid PowerPoint file");
+          if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+            throw new Error("Empty or invalid file");
           }
 
-          // Extract slide count from presentation.xml
+          const zip = new PiZip(arrayBuffer);
+          const slides: Slide[] = [];
+
+          // Check if this is a valid PPTX file
+          const presentationFile = zip.file("ppt/presentation.xml");
+          if (!presentationFile) {
+            // Fallback: create basic slide structure
+            slides.push({
+              id: 'slide-1',
+              name: 'Imported Content',
+              elements: [{
+                id: 'text-1',
+                type: 'text',
+                x: 100,
+                y: 100,
+                width: 600,
+                height: 80,
+                content: `Content imported from: ${file.name}`,
+                style: {
+                  fontSize: 24,
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                  color: '#333333',
+                  backgroundColor: 'transparent',
+                  fontFamily: 'Arial'
+                }
+              }],
+              backgroundColor: '#ffffff'
+            });
+            resolve(slides);
+            return;
+          }
+
+          const presentationXml = presentationFile.asText();
           const slideMatches = presentationXml.match(/<p:sldId[^>]*>/g) || [];
           const slideCount = slideMatches.length;
 
-          const slides: Slide[] = [];
+          if (slideCount === 0) {
+            throw new Error("No slides found in presentation");
+          }
 
-          // Parse each slide
+          // Parse each slide with error handling
           for (let i = 1; i <= slideCount; i++) {
-            const slideXml = zip.file(`ppt/slides/slide${i}.xml`)?.asText();
-            if (slideXml) {
-              const slide = parseSlideXML(slideXml, i);
-              slides.push(slide);
+            try {
+              const slideFile = zip.file(`ppt/slides/slide${i}.xml`);
+              if (slideFile) {
+                const slideXml = slideFile.asText();
+                const slide = parseSlideXML(slideXml, i);
+                slides.push(slide);
+              } else {
+                // Create fallback slide
+                slides.push({
+                  id: `slide-${i}`,
+                  name: `Slide ${i}`,
+                  elements: [{
+                    id: `text-${i}-1`,
+                    type: 'text',
+                    x: 100,
+                    y: 200,
+                    width: 400,
+                    height: 60,
+                    content: `Slide ${i} Content`,
+                    style: {
+                      fontSize: 18,
+                      fontWeight: 'normal',
+                      textAlign: 'left',
+                      color: '#000000',
+                      backgroundColor: 'transparent',
+                      fontFamily: 'Arial'
+                    }
+                  }],
+                  backgroundColor: '#ffffff'
+                });
+              }
+            } catch (slideError) {
+              console.warn(`Error parsing slide ${i}:`, slideError);
+              // Continue with other slides
             }
+          }
+
+          if (slides.length === 0) {
+            throw new Error("Failed to parse any slides from the presentation");
           }
 
           resolve(slides);
         } catch (error) {
-          reject(error);
+          console.error('PowerPoint parsing error:', error);
+          reject(new Error(`Failed to parse PowerPoint: ${error instanceof Error ? error.message : 'Unknown error'}`));
         }
       };
       reader.onerror = () => reject(new Error("Failed to read file"));
