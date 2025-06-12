@@ -996,20 +996,20 @@ export function ReportBuilder() {
 
     // Extract slide background
     let slideBackground = '#ffffff';
-      const bgElement = xmlDoc.getElementsByTagName('p:bg')[0];
-      if (bgElement) {
-        const solidFill = bgElement.getElementsByTagName('a:solidFill')[0];
-        if (solidFill) {
-          slideBackground = extractColor(solidFill.outerHTML);
-        }
+    const bgElement = xmlDoc.getElementsByTagName('p:bg')[0];
+    if (bgElement) {
+      const solidFill = bgElement.getElementsByTagName('a:solidFill')[0];
+      if (solidFill) {
+        slideBackground = extractColor(solidFill.outerHTML);
       }
+    }
 
-      return {
-        id: `slide-${slideNumber}`,
-        name: `Slide ${slideNumber}`,
-        elements,
-        backgroundColor: slideBackground
-      };
+    return {
+      id: `slide-${slideNumber}`,
+      name: `Slide ${slideNumber}`,
+      elements,
+      backgroundColor: slideBackground
+    };
     } catch (error) {
       // If XML parsing fails, create a fallback slide
       console.warn(`Error parsing slide ${slideNumber} XML:`, error);
