@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,33 +41,29 @@ import {
   MousePointer,
   Square,
   Circle,
-  Triangle,
-  Minus,
-  ChevronLeft,
-  ChevronRight,
+  Settings,
+  ArrowLeft,
+  Edit3,
   Play,
-  Pause,
-  Settings
+  Palette,
+  FileText
 } from 'lucide-react';
 import { CodeMirrorSQLEditor } from '@/components/dashboard/CodeMirrorSQLEditor';
 
 interface SlideElement {
   id: string;
-  type: 'text' | 'chart' | 'image' | 'table' | 'metric' | 'shape';
+  type: 'text' | 'chart' | 'table' | 'metric' | 'image' | 'shape';
   x: number;
   y: number;
   width: number;
   height: number;
   content: any;
   style: {
-    backgroundColor?: string;
-    color?: string;
     fontSize?: number;
     fontWeight?: string;
-    textAlign?: string;
-    borderRadius?: number;
-    border?: string;
-    padding?: number;
+    textAlign?: 'left' | 'center' | 'right';
+    color?: string;
+    backgroundColor?: string;
   };
 }
 
@@ -76,7 +72,6 @@ interface Slide {
   name: string;
   elements: SlideElement[];
   backgroundColor: string;
-  backgroundImage?: string;
 }
 
 interface Report {
@@ -89,80 +84,161 @@ interface Report {
     recipients: string[];
     autoRefresh: boolean;
   };
+  lastModified?: string;
+  status?: 'draft' | 'published' | 'scheduled';
 }
 
 export function ReportBuilder() {
-  const [report, setReport] = useState<Report>({
-    id: '1',
-    name: 'Weekly Executive Summary',
-    description: 'High-level KPIs and trends for leadership team',
-    slides: [
-      {
-        id: '1',
-        name: 'Title Slide',
-        elements: [
-          {
-            id: 'title-1',
-            type: 'text',
-            x: 100,
-            y: 200,
-            width: 600,
-            height: 80,
-            content: 'Weekly Executive Summary',
-            style: {
-              fontSize: 48,
-              fontWeight: 'bold',
-              textAlign: 'center',
-              color: '#1a1a1a',
-              backgroundColor: 'transparent'
+  const [view, setView] = useState<'list' | 'designer'>('list');
+  const [reports, setReports] = useState<Report[]>([
+    {
+      id: '1',
+      name: 'Weekly Executive Summary',
+      description: 'High-level KPIs and trends for leadership team',
+      lastModified: '2 hours ago',
+      status: 'published',
+      slides: [
+        {
+          id: '1',
+          name: 'Title Slide',
+          elements: [
+            {
+              id: 'title-1',
+              type: 'text',
+              x: 100,
+              y: 200,
+              width: 600,
+              height: 80,
+              content: 'Weekly Executive Summary',
+              style: {
+                fontSize: 48,
+                fontWeight: 'bold',
+                textAlign: 'center',
+                color: '#ffffff',
+                backgroundColor: 'transparent'
+              }
             }
-          },
-          {
-            id: 'subtitle-1',
-            type: 'text',
-            x: 100,
-            y: 300,
-            width: 600,
-            height: 40,
-            content: 'Key Performance Indicators & Business Insights',
-            style: {
-              fontSize: 24,
-              fontWeight: 'normal',
-              textAlign: 'center',
-              color: '#666666',
-              backgroundColor: 'transparent'
-            }
-          }
-        ],
-        backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+          ],
+          backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        }
+      ],
+      settings: {
+        schedule: 'weekly',
+        recipients: ['team@company.com'],
+        autoRefresh: true
       }
-    ],
-    settings: {
-      schedule: 'weekly',
-      recipients: [],
-      autoRefresh: true
+    },
+    {
+      id: '2',
+      name: 'Monthly Performance Report',
+      description: 'Comprehensive performance metrics and analysis',
+      lastModified: '1 day ago',
+      status: 'draft',
+      slides: [
+        {
+          id: '2',
+          name: 'Cover',
+          elements: [],
+          backgroundColor: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)'
+        }
+      ],
+      settings: {
+        schedule: 'monthly',
+        recipients: [],
+        autoRefresh: true
+      }
+    },
+    {
+      id: '3',
+      name: 'Sales Dashboard',
+      description: 'Real-time sales metrics and forecasting',
+      lastModified: '3 days ago',
+      status: 'scheduled',
+      slides: [
+        {
+          id: '3',
+          name: 'Dashboard',
+          elements: [],
+          backgroundColor: '#ffffff'
+        }
+      ],
+      settings: {
+        schedule: 'daily',
+        recipients: ['sales@company.com'],
+        autoRefresh: true
+      }
     }
-  });
+  ]);
 
+  const [currentReport, setCurrentReport] = useState<Report | null>(null);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
-  const [showElementEditor, setShowElementEditor] = useState(false);
   const [activeTab, setActiveTab] = useState('elements');
   const [zoom, setZoom] = useState(75);
   const [showGrid, setShowGrid] = useState(true);
   const [previewMode, setPreviewMode] = useState(false);
   const [showSQLEditor, setShowSQLEditor] = useState(false);
   const [currentQuery, setCurrentQuery] = useState('');
-  const [dragStart, setDragStart] = useState<{x: number, y: number} | null>(null);
-  const [isResizing, setIsResizing] = useState(false);
-  const [resizeHandle, setResizeHandle] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
-  const currentSlide = report.slides[currentSlideIndex];
+  const currentSlide = currentReport?.slides[currentSlideIndex];
+
+  const openDesigner = (reportId: string) => {
+    const report = reports.find(r => r.id === reportId);
+    if (report) {
+      setCurrentReport(report);
+      setView('designer');
+      setCurrentSlideIndex(0);
+      setSelectedElement(null);
+    }
+  };
+
+  const createNewReport = () => {
+    const newReport: Report = {
+      id: Date.now().toString(),
+      name: 'Untitled Report',
+      description: 'New presentation report',
+      lastModified: 'Just now',
+      status: 'draft',
+      slides: [
+        {
+          id: Date.now().toString(),
+          name: 'Title Slide',
+          elements: [],
+          backgroundColor: '#ffffff'
+        }
+      ],
+      settings: {
+        schedule: 'weekly',
+        recipients: [],
+        autoRefresh: true
+      }
+    };
+    setReports([newReport, ...reports]);
+    openDesigner(newReport.id);
+  };
+
+  const duplicateReport = (reportId: string) => {
+    const report = reports.find(r => r.id === reportId);
+    if (report) {
+      const newReport: Report = {
+        ...report,
+        id: Date.now().toString(),
+        name: `${report.name} Copy`,
+        lastModified: 'Just now',
+        status: 'draft'
+      };
+      setReports([newReport, ...reports]);
+    }
+  };
+
+  const deleteReport = (reportId: string) => {
+    setReports(reports.filter(r => r.id !== reportId));
+  };
 
   const elementTemplates = [
     { type: 'text', icon: Type, label: 'Heading', defaultContent: 'Your Heading Here', category: 'text' },
-    { type: 'text', icon: Type, label: 'Body Text', defaultContent: 'Add your body text here. This is where you can describe your insights and findings.', category: 'text' },
+    { type: 'text', icon: FileText, label: 'Body Text', defaultContent: 'Add your body text here. This is where you can describe your insights and findings.', category: 'text' },
     { type: 'chart', icon: BarChart3, label: 'Bar Chart', defaultContent: { chartType: 'bar', query: '', title: 'Chart Title' }, category: 'data' },
     { type: 'chart', icon: LineChart, label: 'Line Chart', defaultContent: { chartType: 'line', query: '', title: 'Trend Analysis' }, category: 'data' },
     { type: 'chart', icon: PieChart, label: 'Pie Chart', defaultContent: { chartType: 'pie', query: '', title: 'Distribution' }, category: 'data' },
@@ -188,7 +264,7 @@ export function ReportBuilder() {
       elements: [
         { type: 'text', content: 'Slide Title', x: 50, y: 50, width: 700, height: 60, style: { fontSize: 36, fontWeight: 'bold' } },
         { type: 'chart', content: { chartType: 'bar', title: 'Performance Data' }, x: 50, y: 150, width: 350, height: 300 },
-        { type: 'text', content: 'Key insights and analysis go here. Explain what the data shows and its implications.', x: 450, y: 150, width: 300, height: 300, style: { fontSize: 16, lineHeight: 1.6 } }
+        { type: 'text', content: 'Key insights and analysis go here.', x: 450, y: 150, width: 300, height: 300, style: { fontSize: 16 } }
       ]
     },
     {
@@ -199,15 +275,6 @@ export function ReportBuilder() {
         { type: 'metric', content: { label: 'Total Users', value: '156K', change: '+12%' }, x: 50, y: 150, width: 200, height: 120 },
         { type: 'metric', content: { label: 'Revenue', value: '$2.4M', change: '+8%' }, x: 300, y: 150, width: 200, height: 120 },
         { type: 'metric', content: { label: 'Conversion', value: '3.8%', change: '+0.3%' }, x: 550, y: 150, width: 200, height: 120 }
-      ]
-    },
-    {
-      name: 'Two Column',
-      thumbnail: '📋',
-      elements: [
-        { type: 'text', content: 'Section Title', x: 50, y: 50, width: 700, height: 60, style: { fontSize: 36, fontWeight: 'bold' } },
-        { type: 'text', content: 'Left Column Content', x: 50, y: 150, width: 325, height: 300, style: { fontSize: 16 } },
-        { type: 'text', content: 'Right Column Content', x: 425, y: 150, width: 325, height: 300, style: { fontSize: 16 } }
       ]
     }
   ];
@@ -225,106 +292,99 @@ export function ReportBuilder() {
   const predefinedQueries = [
     {
       name: 'Total Users',
-      query: 'SELECT COUNT(DISTINCT user_id) as total_users FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4',
+      query: 'SELECT COUNT(*) as value FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4',
       type: 'metric'
     },
     {
       name: 'Revenue Trend',
-      query: 'SELECT DATE_TRUNC(\'month\', created_at) as month, SUM(total_revenue) as revenue FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 GROUP BY month ORDER BY month',
-      type: 'line'
+      query: 'SELECT DATE_TRUNC(\'month\', created_at) as month, SUM(revenue) as total FROM revenue_table GROUP BY month ORDER BY month',
+      type: 'line_chart'
     },
     {
-      name: 'User Segments',
-      query: 'SELECT segment_tier, COUNT(*) as count FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 GROUP BY segment_tier',
-      type: 'pie'
-    },
-    {
-      name: 'Top Revenue Users',
-      query: 'SELECT user_id, email, total_revenue FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 ORDER BY total_revenue DESC LIMIT 10',
-      type: 'table'
+      name: 'User Distribution',
+      query: 'SELECT segment, COUNT(*) as count FROM user_segments GROUP BY segment',
+      type: 'pie_chart'
     }
   ];
 
   const addElement = (template: any) => {
+    if (!currentSlide || !currentReport) return;
+    
     const newElement: SlideElement = {
       id: Date.now().toString(),
       type: template.type,
-      x: 50,
-      y: 50,
-      width: template.type === 'text' ? 200 : template.type === 'metric' ? 150 : 300,
-      height: template.type === 'text' ? 50 : template.type === 'metric' ? 100 : 200,
+      x: 100,
+      y: 100,
+      width: template.type === 'text' ? 300 : 250,
+      height: template.type === 'text' ? 50 : 200,
       content: template.defaultContent,
       style: {
-        backgroundColor: template.type === 'text' ? 'transparent' : '#ffffff',
-        color: '#000000',
-        fontSize: template.type === 'text' ? 16 : 14,
-        fontWeight: template.type === 'text' ? 'normal' : 'normal',
+        fontSize: 16,
+        fontWeight: 'normal',
         textAlign: 'left',
-        borderRadius: 4,
-        border: template.type === 'shape' ? '2px solid #000000' : '1px solid #e5e7eb',
-        padding: 12
+        color: '#000000',
+        backgroundColor: 'transparent'
       }
     };
 
-    const updatedSlides = [...report.slides];
+    const updatedSlides = [...currentReport.slides];
     updatedSlides[currentSlideIndex].elements.push(newElement);
-    setReport({ ...report, slides: updatedSlides });
-    setSelectedElement(newElement.id);
+    const updatedReport = { ...currentReport, slides: updatedSlides };
+    setCurrentReport(updatedReport);
+    updateReportInList(updatedReport);
   };
 
   const addSlide = () => {
+    if (!currentReport) return;
+    
     const newSlide: Slide = {
       id: Date.now().toString(),
-      name: `Slide ${report.slides.length + 1}`,
+      name: `Slide ${currentReport.slides.length + 1}`,
       elements: [],
       backgroundColor: '#ffffff'
     };
-    setReport({ ...report, slides: [...report.slides, newSlide] });
-    setCurrentSlideIndex(report.slides.length);
+    const updatedReport = { 
+      ...currentReport, 
+      slides: [...currentReport.slides, newSlide] 
+    };
+    setCurrentReport(updatedReport);
+    updateReportInList(updatedReport);
+    setCurrentSlideIndex(currentReport.slides.length);
   };
 
-  const duplicateSlide = () => {
-    const slideToClone = { ...currentSlide };
-    slideToClone.id = Date.now().toString();
-    slideToClone.name = `${slideToClone.name} Copy`;
-    slideToClone.elements = slideToClone.elements.map(el => ({
-      ...el,
-      id: Date.now().toString() + Math.random()
-    }));
+  const deleteElement = (elementId: string) => {
+    if (!currentReport) return;
     
-    const updatedSlides = [...report.slides];
-    updatedSlides.splice(currentSlideIndex + 1, 0, slideToClone);
-    setReport({ ...report, slides: updatedSlides });
-    setCurrentSlideIndex(currentSlideIndex + 1);
-  };
-
-  const deleteSlide = () => {
-    if (report.slides.length > 1) {
-      const updatedSlides = report.slides.filter((_, index) => index !== currentSlideIndex);
-      setReport({ ...report, slides: updatedSlides });
-      setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1));
-    }
+    const updatedSlides = [...currentReport.slides];
+    updatedSlides[currentSlideIndex].elements = updatedSlides[currentSlideIndex].elements.filter(
+      el => el.id !== elementId
+    );
+    const updatedReport = { ...currentReport, slides: updatedSlides };
+    setCurrentReport(updatedReport);
+    updateReportInList(updatedReport);
+    setSelectedElement(null);
   };
 
   const updateElement = (elementId: string, updates: Partial<SlideElement>) => {
-    const updatedSlides = [...report.slides];
-    const elementIndex = updatedSlides[currentSlideIndex].elements.findIndex(el => el.id === elementId);
+    if (!currentReport) return;
+    
+    const updatedSlides = [...currentReport.slides];
+    const elementIndex = updatedSlides[currentSlideIndex].elements.findIndex(
+      el => el.id === elementId
+    );
     if (elementIndex !== -1) {
       updatedSlides[currentSlideIndex].elements[elementIndex] = {
         ...updatedSlides[currentSlideIndex].elements[elementIndex],
         ...updates
       };
-      setReport({ ...report, slides: updatedSlides });
+      const updatedReport = { ...currentReport, slides: updatedSlides };
+      setCurrentReport(updatedReport);
+      updateReportInList(updatedReport);
     }
   };
 
-  const deleteElement = (elementId: string) => {
-    const updatedSlides = [...report.slides];
-    updatedSlides[currentSlideIndex].elements = updatedSlides[currentSlideIndex].elements.filter(
-      el => el.id !== elementId
-    );
-    setReport({ ...report, slides: updatedSlides });
-    setSelectedElement(null);
+  const updateReportInList = (updatedReport: Report) => {
+    setReports(reports.map(r => r.id === updatedReport.id ? updatedReport : r));
   };
 
   const handleCanvasClick = (e: React.MouseEvent) => {
@@ -339,20 +399,22 @@ export function ReportBuilder() {
     return (
       <div
         key={element.id}
-        className={`absolute cursor-pointer transition-all ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+        className={`absolute cursor-pointer border-2 ${isSelected ? 'border-blue-500' : 'border-transparent'} hover:border-blue-300`}
         style={{
-          left: element.x,
-          top: element.y,
-          width: element.width,
-          height: element.height,
-          backgroundColor: element.style.backgroundColor,
+          left: element.x * (zoom / 100),
+          top: element.y * (zoom / 100),
+          width: element.width * (zoom / 100),
+          height: element.height * (zoom / 100),
+          fontSize: (element.style.fontSize || 16) * (zoom / 100),
           color: element.style.color,
-          fontSize: element.style.fontSize,
+          backgroundColor: element.style.backgroundColor,
+          textAlign: element.style.textAlign,
           fontWeight: element.style.fontWeight,
-          textAlign: element.style.textAlign as any,
-          borderRadius: element.style.borderRadius,
-          border: element.style.border,
-          padding: element.style.padding
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: element.style.textAlign === 'center' ? 'center' : element.style.textAlign === 'right' ? 'flex-end' : 'flex-start',
+          padding: '8px',
+          boxSizing: 'border-box'
         }}
         onClick={(e) => {
           e.stopPropagation();
@@ -360,65 +422,148 @@ export function ReportBuilder() {
         }}
       >
         {element.type === 'text' && (
-          <div className="w-full h-full flex items-center">
-            {element.content}
+          <div style={{ width: '100%', height: '100%' }}>
+            {typeof element.content === 'string' ? element.content : 'Text Element'}
           </div>
         )}
         {element.type === 'chart' && (
-          <div className="w-full h-full flex items-center justify-center bg-gray-50 rounded">
-            {element.content.chartType === 'bar' && <BarChart3 className="h-12 w-12 text-gray-400" />}
-            {element.content.chartType === 'line' && <LineChart className="h-12 w-12 text-gray-400" />}
-            {element.content.chartType === 'pie' && <PieChart className="h-12 w-12 text-gray-400" />}
-            <div className="ml-2 text-sm text-gray-500">
-              {element.content.chartType} Chart
-            </div>
-          </div>
-        )}
-        {element.type === 'table' && (
-          <div className="w-full h-full flex items-center justify-center bg-gray-50 rounded">
-            <Table className="h-12 w-12 text-gray-400" />
-            <div className="ml-2 text-sm text-gray-500">Data Table</div>
+          <div className="w-full h-full bg-gray-100 border rounded flex items-center justify-center text-gray-500">
+            <BarChart3 className="h-8 w-8" />
+            <span className="ml-2">Chart</span>
           </div>
         )}
         {element.type === 'metric' && (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-blue-50 rounded">
-            <div className="text-2xl font-bold text-blue-600">123.4K</div>
-            <div className="text-sm text-blue-500">{element.content.label}</div>
-          </div>
-        )}
-        {element.type === 'image' && (
-          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded">
-            <Image className="h-12 w-12 text-gray-400" />
+          <div className="w-full h-full bg-gradient-to-r from-blue-50 to-blue-100 border rounded p-4">
+            <div className="text-2xl font-bold text-blue-900">
+              {element.content?.value || '0'}
+            </div>
+            <div className="text-sm text-blue-600">
+              {element.content?.label || 'Metric'}
+            </div>
           </div>
         )}
         {element.type === 'shape' && (
           <div 
-            className="w-full h-full"
+            className="w-full h-full border-2 border-gray-400"
             style={{
-              backgroundColor: element.style.backgroundColor || 'transparent',
-              borderRadius: element.content.shape === 'circle' ? '50%' : element.style.borderRadius
+              borderRadius: element.content?.shape === 'circle' ? '50%' : '0',
+              backgroundColor: element.style.backgroundColor || 'transparent'
             }}
           />
-        )}
-        
-        {isSelected && (
-          <>
-            <div className="absolute -top-1 -left-1 w-2 h-2 bg-blue-500 rounded-full"></div>
-            <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"></div>
-            <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-blue-500 rounded-full"></div>
-            <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"></div>
-          </>
         )}
       </div>
     );
   };
 
+  if (view === 'list') {
+    return (
+      <div className="h-full bg-gray-50">
+        {/* Header */}
+        <div className="bg-white border-b p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Reports Builder</h1>
+              <p className="text-gray-600 mt-1">Create and manage presentation reports with live data</p>
+            </div>
+            <Button onClick={createNewReport} className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-4 w-4 mr-2" />
+              New Report
+            </Button>
+          </div>
+        </div>
+
+        {/* Reports Grid */}
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {reports.map((report) => (
+              <Card key={report.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">{report.name}</CardTitle>
+                      <p className="text-sm text-gray-600 mt-1">{report.description}</p>
+                    </div>
+                    <Badge 
+                      variant={report.status === 'published' ? 'default' : report.status === 'scheduled' ? 'secondary' : 'outline'}
+                      className="text-xs"
+                    >
+                      {report.status}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="aspect-video bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg mb-4 flex items-center justify-center">
+                    <div className="text-4xl opacity-50">📊</div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                    <span>{report.slides.length} slides</span>
+                    <span>{report.lastModified}</span>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={() => openDesigner(report.id)}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Edit3 className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => duplicateReport(report.id)}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => deleteReport(report.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            
+            {/* Create New Card */}
+            <Card 
+              className="border-dashed border-2 border-gray-300 hover:border-blue-500 cursor-pointer transition-colors"
+              onClick={createNewReport}
+            >
+              <CardContent className="flex flex-col items-center justify-center h-full min-h-[300px] text-gray-500">
+                <Plus className="h-12 w-12 mb-4" />
+                <h3 className="text-lg font-medium mb-2">Create New Report</h3>
+                <p className="text-sm text-center">Start building a new presentation report with data visualizations</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Designer View
   return (
     <div className="h-full flex bg-gray-50">
       {/* Left Sidebar - Design Panel */}
       <div className="w-80 border-r bg-white shadow-sm">
         <div className="p-4 border-b">
-          <h2 className="font-semibold text-lg">Design Panel</h2>
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setView('list')}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h2 className="font-semibold text-lg">Design Studio</h2>
+              <p className="text-sm text-gray-600">{currentReport?.name}</p>
+            </div>
+          </div>
         </div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
@@ -492,27 +637,6 @@ export function ReportBuilder() {
                   })}
                 </div>
               </div>
-
-              {/* Media */}
-              <div>
-                <h4 className="font-medium mb-3 text-sm uppercase tracking-wide">Media</h4>
-                <div className="grid grid-cols-2 gap-2">
-                  {elementTemplates.filter(t => t.category === 'media').map((template, index) => {
-                    const Icon = template.icon;
-                    return (
-                      <Button
-                        key={index}
-                        variant="outline"
-                        className="h-16 flex flex-col gap-1"
-                        onClick={() => addElement(template)}
-                      >
-                        <Icon className="h-5 w-5" />
-                        <span className="text-xs">{template.label}</span>
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
             </div>
           </TabsContent>
 
@@ -525,10 +649,11 @@ export function ReportBuilder() {
                     key={index} 
                     className="cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => {
+                      if (!currentReport) return;
                       const newSlide: Slide = {
                         id: Date.now().toString(),
                         name: template.name,
-                        elements: template.elements.map((el, i) => ({
+                        elements: template.elements.map((el: any, i: number) => ({
                           id: `${Date.now()}-${i}`,
                           type: el.type as any,
                           x: el.x,
@@ -540,8 +665,10 @@ export function ReportBuilder() {
                         })),
                         backgroundColor: '#ffffff'
                       };
-                      setReport({ ...report, slides: [...report.slides, newSlide] });
-                      setCurrentSlideIndex(report.slides.length);
+                      const updatedReport = { ...currentReport, slides: [...currentReport.slides, newSlide] };
+                      setCurrentReport(updatedReport);
+                      updateReportInList(updatedReport);
+                      setCurrentSlideIndex(currentReport.slides.length);
                     }}
                   >
                     <CardContent className="p-4">
@@ -566,9 +693,12 @@ export function ReportBuilder() {
                     className="aspect-video rounded-lg border-2 border-gray-200 cursor-pointer hover:border-blue-500 transition-colors"
                     style={{ background: bg.value }}
                     onClick={() => {
-                      const updatedSlides = [...report.slides];
+                      if (!currentReport) return;
+                      const updatedSlides = [...currentReport.slides];
                       updatedSlides[currentSlideIndex].backgroundColor = bg.value;
-                      setReport({ ...report, slides: updatedSlides });
+                      const updatedReport = { ...currentReport, slides: updatedSlides };
+                      setCurrentReport(updatedReport);
+                      updateReportInList(updatedReport);
                     }}
                   >
                     <div className="w-full h-full rounded-lg flex items-end p-2">
@@ -598,7 +728,7 @@ export function ReportBuilder() {
                     <CardContent className="p-3">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
-                          <Database className="h-4 w-4 text-blue-600" />
+                          <BarChart3 className="h-4 w-4 text-blue-600" />
                         </div>
                         <div>
                           <h5 className="font-medium text-sm">{query.name}</h5>
@@ -629,10 +759,10 @@ export function ReportBuilder() {
         <div className="border-b p-3 flex items-center justify-between bg-white shadow-sm">
           <div className="flex items-center gap-2">
             <div className="text-lg font-semibold text-gray-700">
-              {report.name}
+              {currentReport?.name}
             </div>
             <Badge variant="secondary" className="text-xs">
-              Slide {currentSlideIndex + 1} of {report.slides.length}
+              Slide {currentSlideIndex + 1} of {currentReport?.slides.length}
             </Badge>
           </div>
 
@@ -702,32 +832,12 @@ export function ReportBuilder() {
             style={{
               width: 1000 * (zoom / 100),
               height: 700 * (zoom / 100),
-              background: currentSlide.backgroundColor,
+              background: currentSlide?.backgroundColor || '#ffffff',
               backgroundImage: showGrid ? 'url("data:image/svg+xml,%3Csvg width="30" height="30" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="%23e5e7eb" fill-opacity="0.3"%3E%3Ccircle cx="1" cy="1" r="1"/%3E%3C/g%3E%3C/svg%3E")' : 'none'
             }}
             onClick={handleCanvasClick}
           >
-            {currentSlide.elements.map(renderElement)}
-            
-            {/* Rulers */}
-            {showGrid && (
-              <>
-                <div className="absolute top-0 left-0 w-full h-4 bg-white border-b flex">
-                  {Array.from({ length: 20 }, (_, i) => (
-                    <div key={i} className="flex-1 border-r border-gray-200 text-xs text-gray-400 text-center">
-                      {i * 50}
-                    </div>
-                  ))}
-                </div>
-                <div className="absolute top-0 left-0 w-4 h-full bg-white border-r flex flex-col">
-                  {Array.from({ length: 14 }, (_, i) => (
-                    <div key={i} className="flex-1 border-b border-gray-200 text-xs text-gray-400 text-center writing-mode-vertical">
-                      {i * 50}
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
+            {currentSlide?.elements.map(renderElement)}
           </div>
         </div>
       </div>
@@ -745,7 +855,7 @@ export function ReportBuilder() {
           </div>
 
           <div className="space-y-2 max-h-48 overflow-y-auto">
-            {report.slides.map((slide, index) => (
+            {currentReport?.slides.map((slide, index) => (
               <div
                 key={slide.id}
                 className={`p-3 rounded-lg cursor-pointer border-2 transition-all ${
@@ -768,23 +878,6 @@ export function ReportBuilder() {
               </div>
             ))}
           </div>
-
-          <div className="mt-4 flex gap-2">
-            <Button variant="outline" size="sm" className="flex-1" onClick={duplicateSlide}>
-              <Copy className="h-4 w-4 mr-1" />
-              Copy
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="flex-1" 
-              onClick={deleteSlide}
-              disabled={report.slides.length <= 1}
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Delete
-            </Button>
-          </div>
         </div>
 
         {/* Properties Panel */}
@@ -796,7 +889,7 @@ export function ReportBuilder() {
               {/* Element info */}
               <div className="p-3 bg-gray-50 rounded-lg">
                 <div className="text-sm font-medium">
-                  {elementTemplates.find(t => t.type === currentSlide.elements.find(e => e.id === selectedElement)?.type)?.label || 'Element'}
+                  {elementTemplates.find(t => t.type === currentSlide?.elements.find(e => e.id === selectedElement)?.type)?.label || 'Element'}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
                   ID: {selectedElement.slice(-8)}
@@ -812,40 +905,36 @@ export function ReportBuilder() {
                       <Label className="text-xs">X</Label>
                       <Input 
                         type="number" 
-                        size="sm" 
                         className="h-8"
-                        value={currentSlide.elements.find(e => e.id === selectedElement)?.x || 0}
-                        onChange={(e) => updateElement(selectedElement, { x: parseInt(e.target.value) })}
+                        value={currentSlide?.elements.find(e => e.id === selectedElement)?.x || 0}
+                        onChange={(e) => updateElement(selectedElement, { x: parseInt(e.target.value) || 0 })}
                       />
                     </div>
                     <div>
                       <Label className="text-xs">Y</Label>
                       <Input 
                         type="number" 
-                        size="sm" 
                         className="h-8"
-                        value={currentSlide.elements.find(e => e.id === selectedElement)?.y || 0}
-                        onChange={(e) => updateElement(selectedElement, { y: parseInt(e.target.value) })}
+                        value={currentSlide?.elements.find(e => e.id === selectedElement)?.y || 0}
+                        onChange={(e) => updateElement(selectedElement, { y: parseInt(e.target.value) || 0 })}
                       />
                     </div>
                     <div>
                       <Label className="text-xs">Width</Label>
                       <Input 
                         type="number" 
-                        size="sm" 
                         className="h-8"
-                        value={currentSlide.elements.find(e => e.id === selectedElement)?.width || 0}
-                        onChange={(e) => updateElement(selectedElement, { width: parseInt(e.target.value) })}
+                        value={currentSlide?.elements.find(e => e.id === selectedElement)?.width || 0}
+                        onChange={(e) => updateElement(selectedElement, { width: parseInt(e.target.value) || 0 })}
                       />
                     </div>
                     <div>
                       <Label className="text-xs">Height</Label>
                       <Input 
                         type="number" 
-                        size="sm" 
                         className="h-8"
-                        value={currentSlide.elements.find(e => e.id === selectedElement)?.height || 0}
-                        onChange={(e) => updateElement(selectedElement, { height: parseInt(e.target.value) })}
+                        value={currentSlide?.elements.find(e => e.id === selectedElement)?.height || 0}
+                        onChange={(e) => updateElement(selectedElement, { height: parseInt(e.target.value) || 0 })}
                       />
                     </div>
                   </div>
@@ -854,9 +943,9 @@ export function ReportBuilder() {
                 <div>
                   <Label className="text-sm font-medium">Font Size</Label>
                   <Slider
-                    value={[currentSlide.elements.find(e => e.id === selectedElement)?.style?.fontSize || 16]}
+                    value={[currentSlide?.elements.find(e => e.id === selectedElement)?.style?.fontSize || 16]}
                     onValueChange={(values) => {
-                      const element = currentSlide.elements.find(e => e.id === selectedElement);
+                      const element = currentSlide?.elements.find(e => e.id === selectedElement);
                       if (element) {
                         updateElement(selectedElement, {
                           style: { ...element.style, fontSize: values[0] }
@@ -869,7 +958,7 @@ export function ReportBuilder() {
                     className="mt-2"
                   />
                   <div className="text-xs text-gray-500 mt-1">
-                    {currentSlide.elements.find(e => e.id === selectedElement)?.style?.fontSize || 16}px
+                    {currentSlide?.elements.find(e => e.id === selectedElement)?.style?.fontSize || 16}px
                   </div>
                 </div>
 
@@ -882,12 +971,12 @@ export function ReportBuilder() {
                         variant="outline"
                         size="sm"
                         className={`h-8 ${
-                          currentSlide.elements.find(e => e.id === selectedElement)?.style?.textAlign === align
+                          currentSlide?.elements.find(e => e.id === selectedElement)?.style?.textAlign === align
                             ? 'bg-blue-100'
                             : ''
                         }`}
                         onClick={() => {
-                          const element = currentSlide.elements.find(e => e.id === selectedElement);
+                          const element = currentSlide?.elements.find(e => e.id === selectedElement);
                           if (element) {
                             updateElement(selectedElement, {
                               style: { ...element.style, textAlign: align as any }
@@ -923,16 +1012,11 @@ export function ReportBuilder() {
             <CodeMirrorSQLEditor
               value={currentQuery}
               onChange={setCurrentQuery}
-              placeholder="Enter your SQL query here..."
+              onExecute={() => {
+                console.log('Executing query:', currentQuery);
+                setShowSQLEditor(false);
+              }}
             />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowSQLEditor(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => setShowSQLEditor(false)}>
-              Apply Query
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
