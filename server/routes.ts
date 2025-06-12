@@ -261,17 +261,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Dashboard tile not found" });
       }
 
-      if (!tile.dataSource?.query) {
+      const dataSource = tile.dataSource as Record<string, any>;
+      if (!dataSource?.query) {
         return res.status(400).json({ error: "No query configured for this tile" });
       }
 
       // Execute the Snowflake query
-      const result = await snowflakeService.executeQuery(tile.dataSource.query);
+      const result = await snowflakeService.executeQuery(dataSource.query);
       
       if (!result.success) {
         return res.status(400).json({ 
           error: result.error,
-          query: tile.dataSource.query 
+          query: dataSource.query 
         });
       }
 
@@ -280,7 +281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         rows: result.rows,
         success: true,
         tileId: tileId,
-        query: tile.dataSource.query
+        query: dataSource.query
       });
     } catch (error) {
       console.error("Dashboard tile data loading error:", error);
