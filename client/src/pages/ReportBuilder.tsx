@@ -552,8 +552,13 @@ export function ReportBuilder() {
             throw new Error("Empty or invalid PDF file");
           }
 
-          // Set up PDF.js worker
-          pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+          // Set up PDF.js worker - use the bundled version to avoid version mismatches
+          if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+              'pdfjs-dist/build/pdf.worker.min.js',
+              import.meta.url
+            ).toString();
+          }
           
           const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
           const pdf = await loadingTask.promise;
@@ -839,13 +844,20 @@ export function ReportBuilder() {
     };
 
     // Parse shapes with proper positioning and styling
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(slideXml, 'text/xml');
-    
-    // Get all shape elements
-    const shapes = xmlDoc.getElementsByTagName('p:sp');
-    
-    for (let i = 0; i < shapes.length; i++) {
+    try {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(slideXml, 'text/xml');
+      
+      // Check for parsing errors
+      const parserError = xmlDoc.getElementsByTagName('parsererror');
+      if (parserError.length > 0) {
+        throw new Error('XML parsing error');
+      }
+      
+      // Get all shape elements
+      const shapes = xmlDoc.getElementsByTagName('p:sp');
+      
+      for (let i = 0; i < shapes.length; i++) {
       const shape = shapes[i];
       elementCounter++;
       
@@ -984,20 +996,46 @@ export function ReportBuilder() {
 
     // Extract slide background
     let slideBackground = '#ffffff';
-    const bgElement = xmlDoc.getElementsByTagName('p:bg')[0];
-    if (bgElement) {
-      const solidFill = bgElement.getElementsByTagName('a:solidFill')[0];
-      if (solidFill) {
-        slideBackground = extractColor(solidFill.outerHTML);
+      const bgElement = xmlDoc.getElementsByTagName('p:bg')[0];
+      if (bgElement) {
+        const solidFill = bgElement.getElementsByTagName('a:solidFill')[0];
+        if (solidFill) {
+          slideBackground = extractColor(solidFill.outerHTML);
+        }
       }
-    }
 
-    return {
-      id: `slide-${slideNumber}`,
-      name: `Slide ${slideNumber}`,
-      elements,
-      backgroundColor: slideBackground
-    };
+      return {
+        id: `slide-${slideNumber}`,
+        name: `Slide ${slideNumber}`,
+        elements,
+        backgroundColor: slideBackground
+      };
+    } catch (error) {
+      // If XML parsing fails, create a fallback slide
+      console.warn(`Error parsing slide ${slideNumber} XML:`, error);
+      return {
+        id: `slide-${slideNumber}`,
+        name: `Slide ${slideNumber}`,
+        elements: [{
+          id: `text-${slideNumber}-fallback`,
+          type: 'text',
+          x: 100,
+          y: 200,
+          width: 400,
+          height: 60,
+          content: `Slide ${slideNumber} - Content could not be parsed`,
+          style: {
+            fontSize: 16,
+            fontWeight: 'normal',
+            textAlign: 'left',
+            color: '#666666',
+            backgroundColor: 'transparent',
+            fontFamily: 'Arial'
+          }
+        }],
+        backgroundColor: '#ffffff'
+      };
+    }
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
