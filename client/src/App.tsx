@@ -7,6 +7,7 @@ import { queryClient } from "./lib/queryClient";
 import { Layout } from "./components/layout/Layout";
 import { UserProvider, useUser } from "./contexts/UserContext";
 import Dashboard from "./pages/Dashboard";
+import { DataStudio } from "./pages/DataStudio";
 import Users from "./pages/Users";
 import UserProfile from "./pages/UserProfile";
 import Cohorts from "./pages/Cohorts";

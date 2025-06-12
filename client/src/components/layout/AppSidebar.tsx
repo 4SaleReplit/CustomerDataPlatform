@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { 
   BarChart3, 
@@ -12,7 +12,13 @@ import {
   FileText,
   Cable,
   Shield,
-  LogOut
+  LogOut,
+  Home,
+  PieChart,
+  Activity,
+  TrendingUp,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { trackBusinessEvent } from '@/lib/amplitude';
 import { useUser } from '@/contexts/UserContext';
@@ -26,19 +32,67 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: BarChart3 },
-  { name: 'User Explorer', href: '/users', icon: Users },
-  { name: 'Cohorts', href: '/cohorts', icon: Target },
-  { name: 'Segment Tags', href: '/segments', icon: Tags },
-  { name: 'Upselling Campaigns', href: '/campaigns', icon: Megaphone },
-  { name: 'Campaign Calendar', href: '/calendar', icon: Calendar },
-  { name: 'Activity Log', href: '/activity-log', icon: FileText },
+  { 
+    name: 'Home', 
+    href: '/', 
+    icon: Home,
+    children: [
+      { name: 'Data Studio', href: '/data-studio', icon: PieChart }
+    ]
+  },
+  { name: 'All Content', href: '/content', icon: FileText },
+  { name: 'Live Events', href: '/events', icon: Activity },
+  { name: 'Ask Amplitude', href: '/ask', icon: Shield },
+  { 
+    name: 'Product Analytics', 
+    href: '/analytics', 
+    icon: TrendingUp,
+    children: [
+      { name: 'Product Overview', href: '/analytics/overview', icon: BarChart3 },
+      { name: 'Onboarding', href: '/analytics/onboarding', icon: Users },
+      { name: 'Feature Engagement', href: '/analytics/features', icon: Target },
+      { name: 'Retention', href: '/analytics/retention', icon: Calendar }
+    ]
+  },
+  { 
+    name: 'Marketing Analytics', 
+    href: '/marketing', 
+    icon: Megaphone,
+    children: [
+      { name: 'User Explorer', href: '/users', icon: Users },
+      { name: 'Cohorts', href: '/cohorts', icon: Target },
+      { name: 'Segment Tags', href: '/segments', icon: Tags },
+      { name: 'Upselling Campaigns', href: '/campaigns', icon: Megaphone }
+    ]
+  },
+  { 
+    name: 'Users', 
+    href: '/user-analytics', 
+    icon: Users,
+    children: []
+  },
+  { name: 'Session Replay', href: '/sessions', icon: Activity },
+  { name: 'Heatmaps', href: '/heatmaps', icon: TrendingUp },
+  { 
+    name: 'Experiment', 
+    href: '/experiments', 
+    icon: Database,
+    children: []
+  },
+  { name: 'Guides and Surveys', href: '/guides', icon: FileText },
+  { name: 'Data', href: '/data', icon: Database },
+  { name: 'Metrics', href: '/metrics', icon: BarChart3 },
+  { name: 'Releases', href: '/releases', icon: Cable },
   { name: 'Integrations', href: '/integrations', icon: Cable },
   { name: 'Admin', href: '/admin', icon: Settings },
 ];
@@ -47,6 +101,7 @@ export function AppSidebar() {
   const [location, setLocation] = useLocation();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const [expandedItems, setExpandedItems] = useState<string[]>(['Home', 'Product Analytics', 'Marketing Analytics']);
   
   // Safely get user context
   let user = null;
@@ -65,6 +120,14 @@ export function AppSidebar() {
       logout();
       setLocation('/login');
     }
+  };
+
+  const toggleExpanded = (itemName: string) => {
+    setExpandedItems(prev => 
+      prev.includes(itemName) 
+        ? prev.filter(name => name !== itemName)
+        : [...prev, itemName]
+    );
   };
 
   return (
@@ -93,42 +156,71 @@ export function AppSidebar() {
               {navigation.map((item) => {
                 const isActive = location === item.href || 
                   (item.href !== '/' && location.startsWith(item.href));
+                const isExpanded = expandedItems.includes(item.name);
+                const hasChildren = item.children && item.children.length > 0;
                 
                 return (
                   <SidebarMenuItem key={item.name}>
-                    <SidebarMenuButton 
-                      asChild 
-                      isActive={isActive}
-                      tooltip={isCollapsed ? item.name : undefined}
-                      className={`
-                        group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
-                        hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 
-                        hover:border-blue-200 hover:shadow-sm
-                        ${isActive ? 
-                          'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg border-blue-300' : 
-                          'text-gray-700 hover:text-blue-700'
-                        }
-                      `}
-                    >
-                      <Link
-                        href={item.href}
-                        className="flex items-center gap-3 w-full"
-                        onClick={() => trackBusinessEvent.navigationItemClicked(item.name)}
+                    {hasChildren ? (
+                      <Collapsible 
+                        open={isExpanded} 
+                        onOpenChange={() => toggleExpanded(item.name)}
+                        className="w-full"
                       >
-                        <div className={`
-                          flex items-center justify-center w-8 h-8 rounded-lg transition-colors
-                          ${isActive ? 
-                            'bg-white/20' : 
-                            'group-hover:bg-blue-100'
-                          }
-                        `}>
-                          <item.icon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-current'}`} />
-                        </div>
-                        {!isCollapsed && (
-                          <span className="font-medium text-sm tracking-tight">{item.name}</span>
-                        )}
-                      </Link>
-                    </SidebarMenuButton>
+                        <CollapsibleTrigger asChild>
+                          <SidebarMenuButton 
+                            isActive={isActive}
+                            tooltip={isCollapsed ? item.name : undefined}
+                            className="w-full justify-between hover:bg-accent hover:text-accent-foreground"
+                          >
+                            <div className="flex items-center gap-3">
+                              <item.icon className="h-4 w-4 flex-shrink-0" />
+                              {!isCollapsed && (
+                                <span className="font-medium text-sm">{item.name}</span>
+                              )}
+                            </div>
+                            {!isCollapsed && hasChildren && (
+                              isExpanded ? 
+                                <ChevronDown className="h-4 w-4" /> : 
+                                <ChevronRight className="h-4 w-4" />
+                            )}
+                          </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <SidebarMenuSub>
+                            {item.children?.map((child) => {
+                              const childIsActive = location === child.href;
+                              return (
+                                <SidebarMenuSubItem key={child.name}>
+                                  <SidebarMenuSubButton asChild isActive={childIsActive}>
+                                    <Link
+                                      href={child.href}
+                                      onClick={() => trackBusinessEvent.navigationItemClicked(child.name)}
+                                    >
+                                      <child.icon className="h-4 w-4" />
+                                      <span>{child.name}</span>
+                                    </Link>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              );
+                            })}
+                          </SidebarMenuSub>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    ) : (
+                      <SidebarMenuButton asChild isActive={isActive}>
+                        <Link
+                          href={item.href}
+                          onClick={() => trackBusinessEvent.navigationItemClicked(item.name)}
+                          className="flex items-center gap-3"
+                        >
+                          <item.icon className="h-4 w-4 flex-shrink-0" />
+                          {!isCollapsed && (
+                            <span className="font-medium text-sm">{item.name}</span>
+                          )}
+                        </Link>
+                      </SidebarMenuButton>
+                    )}
                   </SidebarMenuItem>
                 );
               })}
