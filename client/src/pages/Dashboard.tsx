@@ -6,6 +6,7 @@ import { DashboardBuilder, type DashboardTile } from '@/components/dashboard/Das
 import { TileEditDialog } from '@/components/dashboard/TileEditDialog';
 import { TimeFilter, type TimeFilterState } from '@/components/dashboard/TimeFilter';
 import { Sidebar } from '@/components/dashboard/Sidebar';
+import { DataStudioHeader } from '@/components/dashboard/DataStudioHeader';
 import { SQLEditor } from '@/components/dashboard/SQLEditor';
 import { Worksheets } from '@/components/dashboard/Worksheets';
 import { useToast } from '@/hooks/use-toast';
@@ -356,58 +357,171 @@ function Dashboard() {
   };
 
   const renderContent = () => {
+    const isDataStudioTab = ['bi-interface', 'worksheets', 'visualizations', 'reports', 'analytics'].includes(activeTab);
+    
     switch (activeTab) {
       case 'bi-interface':
-        return <SQLEditor onCreateVisualization={handleCreateVisualization} />;
+        return (
+          <div className="flex-1 flex flex-col">
+            <DataStudioHeader activeTab={activeTab} />
+            <div className="flex-1">
+              <SQLEditor onCreateVisualization={handleCreateVisualization} />
+            </div>
+          </div>
+        );
       
       case 'worksheets':
-        return <Worksheets onCreateNew={() => setActiveTab('bi-interface')} />;
+        return (
+          <div className="flex-1 flex flex-col">
+            <DataStudioHeader activeTab={activeTab} />
+            <div className="flex-1">
+              <Worksheets onCreateNew={() => setActiveTab('bi-interface')} />
+            </div>
+          </div>
+        );
       
       case 'visualizations':
         return (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-4">Visualization Gallery</h2>
-            <p className="text-muted-foreground">Browse and manage saved visualizations.</p>
+          <div className="flex-1 flex flex-col">
+            <DataStudioHeader activeTab={activeTab} />
+            <div className="flex-1 p-6">
+              <div className="max-w-4xl">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                    <h3 className="font-semibold mb-2">Chart Gallery</h3>
+                    <p className="text-sm text-muted-foreground">Browse saved chart visualizations</p>
+                  </div>
+                  <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                    <h3 className="font-semibold mb-2">Dashboard Templates</h3>
+                    <p className="text-sm text-muted-foreground">Pre-built dashboard layouts</p>
+                  </div>
+                  <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                    <h3 className="font-semibold mb-2">Custom Views</h3>
+                    <p className="text-sm text-muted-foreground">User-created visualizations</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         );
         
       case 'reports':
         return (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-4">Reports</h2>
-            <p className="text-muted-foreground">Generate and manage analytical reports.</p>
+          <div className="flex-1 flex flex-col">
+            <DataStudioHeader activeTab={activeTab} />
+            <div className="flex-1 p-6">
+              <div className="max-w-4xl">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                    <h3 className="font-semibold mb-2">Scheduled Reports</h3>
+                    <p className="text-sm text-muted-foreground">Automated report generation</p>
+                  </div>
+                  <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                    <h3 className="font-semibold mb-2">Custom Reports</h3>
+                    <p className="text-sm text-muted-foreground">Build custom analytical reports</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         );
         
       case 'analytics':
         return (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-4">Analytics</h2>
-            <p className="text-muted-foreground">Advanced analytics and insights.</p>
+          <div className="flex-1 flex flex-col">
+            <DataStudioHeader activeTab={activeTab} />
+            <div className="flex-1 p-6">
+              <div className="max-w-4xl">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                    <h3 className="font-semibold mb-2">User Analytics</h3>
+                    <p className="text-sm text-muted-foreground">Deep dive into user behavior</p>
+                  </div>
+                  <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                    <h3 className="font-semibold mb-2">Performance Metrics</h3>
+                    <p className="text-sm text-muted-foreground">Platform performance analysis</p>
+                  </div>
+                  <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                    <h3 className="font-semibold mb-2">Predictive Models</h3>
+                    <p className="text-sm text-muted-foreground">ML-powered insights</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         );
         
       case 'cohorts':
         return (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-4">Cohorts</h2>
-            <p className="text-muted-foreground">Manage user cohorts and segments.</p>
+          <div className="flex-1 p-6">
+            <div className="max-w-6xl">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold mb-2">Cohorts</h2>
+                <p className="text-muted-foreground">Manage user cohorts and segments for targeted campaigns</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">User Segments</h3>
+                  <p className="text-sm text-muted-foreground">Create and manage user segments</p>
+                </div>
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">Behavioral Cohorts</h3>
+                  <p className="text-sm text-muted-foreground">Group users by behavior patterns</p>
+                </div>
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">Sync to Platforms</h3>
+                  <p className="text-sm text-muted-foreground">Export cohorts to marketing platforms</p>
+                </div>
+              </div>
+            </div>
           </div>
         );
         
       case 'campaigns':
         return (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-4">Campaigns</h2>
-            <p className="text-muted-foreground">Create and manage marketing campaigns.</p>
+          <div className="flex-1 p-6">
+            <div className="max-w-6xl">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold mb-2">Campaigns</h2>
+                <p className="text-muted-foreground">Create and manage marketing campaigns across platforms</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">Email Campaigns</h3>
+                  <p className="text-sm text-muted-foreground">Design and send targeted email campaigns</p>
+                </div>
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">Push Notifications</h3>
+                  <p className="text-sm text-muted-foreground">Send personalized push notifications</p>
+                </div>
+              </div>
+            </div>
           </div>
         );
         
       case 'integrations':
         return (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-4">Integrations</h2>
-            <p className="text-muted-foreground">Configure platform integrations.</p>
+          <div className="flex-1 p-6">
+            <div className="max-w-6xl">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold mb-2">Integrations</h2>
+                <p className="text-muted-foreground">Configure platform integrations and API connections</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">Amplitude</h3>
+                  <p className="text-sm text-muted-foreground">Product analytics integration</p>
+                </div>
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">Braze</h3>
+                  <p className="text-sm text-muted-foreground">Customer engagement platform</p>
+                </div>
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">Snowflake</h3>
+                  <p className="text-sm text-muted-foreground">Data warehouse connection</p>
+                </div>
+              </div>
+            </div>
           </div>
         );
       
@@ -420,10 +534,10 @@ function Dashboard() {
               <div className="page-header flex items-center justify-between px-8 py-6">
                 <div className="space-y-2">
                   <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-gray-900 to-blue-700 bg-clip-text text-transparent">
-                    Analytics Dashboard
+                    Home Dashboard
                   </h1>
                   <p className="text-xl text-muted-foreground">
-                    Real-time analytics and business intelligence
+                    Core analytics dashboard - Super Admin only
                   </p>
                 </div>
                 
