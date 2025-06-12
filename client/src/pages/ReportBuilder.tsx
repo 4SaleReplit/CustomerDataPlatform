@@ -409,6 +409,7 @@ export function ReportBuilder() {
 
   const handleMouseDown = (e: React.MouseEvent, elementId: string, action: 'drag' | 'resize', handle?: string) => {
     e.stopPropagation();
+    e.preventDefault();
     setSelectedElement(elementId);
 
     const element = currentSlide?.elements.find(el => el.id === elementId);
@@ -436,12 +437,12 @@ export function ReportBuilder() {
       const mouseX = (e.clientX - rect.left) * (100 / zoom);
       const mouseY = (e.clientY - rect.top) * (100 / zoom);
 
-      if (action === 'drag' && isDragging) {
+      if (action === 'drag') {
         const newX = Math.max(0, Math.min(1000 - element.width, mouseX - (dragOffset.x * 100 / zoom)));
         const newY = Math.max(0, Math.min(700 - element.height, mouseY - (dragOffset.y * 100 / zoom)));
         
         updateElement(elementId, { x: newX, y: newY });
-      } else if (action === 'resize' && isResizing) {
+      } else if (action === 'resize') {
         let newWidth = element.width;
         let newHeight = element.height;
         let newX = element.x;
@@ -509,7 +510,7 @@ export function ReportBuilder() {
     return (
       <div
         key={element.id}
-        className={`absolute select-none group ${isSelected ? 'border-2 border-blue-500' : 'border-2 border-transparent hover:border-blue-300'}`}
+        className={`absolute select-none group ${isSelected ? 'border-2 border-blue-500 shadow-lg' : 'border-2 border-transparent hover:border-blue-300'} ${isDragging && selectedElement === element.id ? 'shadow-2xl z-50' : ''}`}
         style={{
           left: element.x * (zoom / 100),
           top: element.y * (zoom / 100),
@@ -525,7 +526,9 @@ export function ReportBuilder() {
           justifyContent: element.style.textAlign === 'center' ? 'center' : element.style.textAlign === 'right' ? 'flex-end' : 'flex-start',
           padding: '8px',
           boxSizing: 'border-box',
-          cursor: isDragging ? 'grabbing' : 'grab'
+          cursor: isDragging && selectedElement === element.id ? 'grabbing' : 'grab',
+          pointerEvents: 'auto',
+          userSelect: 'none'
         }}
         onMouseDown={(e) => handleMouseDown(e, element.id, 'drag')}
         onClick={(e) => {
@@ -540,13 +543,19 @@ export function ReportBuilder() {
           </div>
         )}
         {element.type === 'chart' && (
-          <div className="w-full h-full bg-gray-100 border rounded flex items-center justify-center text-gray-500">
+          <div className="w-full h-full bg-gray-100 border rounded flex items-center justify-center text-gray-500 pointer-events-none">
             <BarChart3 className="h-8 w-8" />
             <span className="ml-2">Chart</span>
           </div>
         )}
+        {element.type === 'table' && (
+          <div className="w-full h-full bg-white border rounded flex items-center justify-center text-gray-500 pointer-events-none">
+            <Table className="h-8 w-8" />
+            <span className="ml-2">Table</span>
+          </div>
+        )}
         {element.type === 'metric' && (
-          <div className="w-full h-full bg-gradient-to-r from-blue-50 to-blue-100 border rounded p-4">
+          <div className="w-full h-full bg-gradient-to-r from-blue-50 to-blue-100 border rounded p-4 pointer-events-none">
             <div className="text-2xl font-bold text-blue-900">
               {element.content?.value || '0'}
             </div>
