@@ -303,26 +303,57 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return { word: '', startPos: 0, endPos: 0 };
     
-    const range = selection.getRangeAt(0);
     const text = element.textContent || '';
-    const cursorPos = range.startOffset;
+    
+    // Get cursor position more reliably
+    let cursorPos = 0;
+    try {
+      const range = selection.getRangeAt(0);
+      
+      // Walk through text nodes to find actual cursor position
+      const walker = document.createTreeWalker(
+        element,
+        NodeFilter.SHOW_TEXT,
+        null
+      );
+      
+      let textNode;
+      let offset = 0;
+      
+      while (textNode = walker.nextNode()) {
+        if (textNode === range.startContainer) {
+          cursorPos = offset + range.startOffset;
+          break;
+        }
+        offset += textNode.textContent?.length || 0;
+      }
+      
+      // Fallback to range offset if walker fails
+      if (textNode === null) {
+        cursorPos = range.startOffset;
+      }
+    } catch (e) {
+      cursorPos = 0;
+    }
     
     // Find word boundaries
     let startPos = cursorPos;
     let endPos = cursorPos;
     
     // Go backwards to find start of word
-    while (startPos > 0 && /[a-zA-Z_]/.test(text[startPos - 1])) {
+    while (startPos > 0 && /[a-zA-Z_0-9]/.test(text[startPos - 1])) {
       startPos--;
     }
     
-    // Go forwards to find end of word
-    while (endPos < text.length && /[a-zA-Z_]/.test(text[endPos])) {
+    // Go forwards to find end of word (but not past cursor for autocomplete)
+    while (endPos < cursorPos && /[a-zA-Z_0-9]/.test(text[endPos])) {
       endPos++;
     }
     
+    const word = text.substring(startPos, endPos);
+    
     return {
-      word: text.substring(startPos, endPos),
+      word,
       startPos,
       endPos
     };
@@ -330,31 +361,41 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
 
   // Update autocomplete suggestions
   const updateAutocomplete = useCallback((word: string, element: HTMLDivElement) => {
+    // Show autocomplete for any non-empty word
     if (word.length === 0) {
       setShowAutocomplete(false);
       return;
     }
     
+    // Filter keywords that start with the typed word (case insensitive)
     const filtered = sqlKeywords.filter(keyword => 
       keyword.toLowerCase().startsWith(word.toLowerCase())
     );
     
+    // Debug logging
+    console.log('Autocomplete debug:', { word, filtered: filtered.slice(0, 5) });
+    
     if (filtered.length > 0) {
-      setFilteredSuggestions(filtered);
+      setFilteredSuggestions(filtered.slice(0, 10)); // Limit to 10 suggestions
       setSelectedSuggestion(0);
       setCurrentWord(word);
       
       // Calculate position for dropdown
       const selection = window.getSelection();
       if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
-        const editorRect = element.getBoundingClientRect();
-        
-        setAutocompletePosition({
-          top: rect.bottom - editorRect.top + 5,
-          left: rect.left - editorRect.left
-        });
+        try {
+          const range = selection.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          const editorRect = element.getBoundingClientRect();
+          
+          setAutocompletePosition({
+            top: rect.bottom - editorRect.top + 5,
+            left: rect.left - editorRect.left
+          });
+        } catch (e) {
+          // Fallback position
+          setAutocompletePosition({ top: 25, left: 0 });
+        }
       }
       
       setShowAutocomplete(true);
