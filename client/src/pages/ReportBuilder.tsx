@@ -519,6 +519,11 @@ export function ReportBuilder() {
         refreshInterval: existingConfig.refreshInterval || 300000
       });
       
+      // Load existing query results if available
+      if (content.queryResults) {
+        setQueryResults(content.queryResults);
+      }
+      
       setShowSQLEditor(true);
     }
   };
@@ -556,7 +561,8 @@ export function ReportBuilder() {
         const updatedContent = {
           ...element.content,
           query: currentQuery,
-          refreshConfig: refreshConfig
+          refreshConfig: refreshConfig,
+          queryResults: queryResults // Store the query results for display
         };
         updateElement(currentEditingElement, { content: updatedContent });
       }
@@ -619,10 +625,19 @@ export function ReportBuilder() {
         {element.type === 'metric' && (
           <div className="w-full h-full bg-gradient-to-r from-blue-50 to-blue-100 border rounded p-4 pointer-events-none">
             <div className="text-2xl font-bold text-blue-900">
-              {element.content?.value || '0'}
+              {(() => {
+                if (element.content?.queryResults && element.content.queryResults.rows && element.content.queryResults.rows.length > 0) {
+                  const value = element.content.queryResults.rows[0][0];
+                  if (typeof value === 'number') {
+                    return value.toLocaleString();
+                  }
+                  return value || '0';
+                }
+                return element.content?.value || '0';
+              })()}
             </div>
             <div className="text-sm text-blue-600">
-              {element.content?.label || 'Metric'}
+              {element.content?.title || element.content?.label || 'Metric'}
             </div>
           </div>
         )}

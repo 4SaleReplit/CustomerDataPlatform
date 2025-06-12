@@ -291,6 +291,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Query execution endpoint for report builder
+  app.post("/api/dashboard/tiles/execute-query", async (req, res) => {
+    try {
+      const { query } = req.body;
+      
+      if (!query) {
+        return res.status(400).json({ error: "Query is required" });
+      }
+
+      // Execute the Snowflake query
+      const result = await snowflakeService.executeQuery(query);
+      
+      if (!result.success) {
+        return res.status(400).json({ 
+          error: result.error,
+          query: query 
+        });
+      }
+
+      res.json({
+        columns: result.columns,
+        rows: result.rows,
+        success: true,
+        query: query
+      });
+    } catch (error) {
+      console.error("Query execution error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to execute query" 
+      });
+    }
+  });
+
   // Cohort management routes
   app.get("/api/cohorts", async (req, res) => {
     try {
