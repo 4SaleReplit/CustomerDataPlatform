@@ -54,20 +54,7 @@ const navigation = [
       { name: 'Data Explorer', href: '/data-studio/explorer', icon: BarChart3 }
     ]
   },
-  { name: 'All Content', href: '/content', icon: FileText },
-  { name: 'Live Events', href: '/events', icon: Activity },
   { name: 'Ask Amplitude', href: '/ask', icon: Shield },
-  { 
-    name: 'Product Analytics', 
-    href: '/analytics', 
-    icon: TrendingUp,
-    children: [
-      { name: 'Product Overview', href: '/analytics/overview', icon: BarChart3 },
-      { name: 'Onboarding', href: '/analytics/onboarding', icon: Users },
-      { name: 'Feature Engagement', href: '/analytics/features', icon: Target },
-      { name: 'Retention', href: '/analytics/retention', icon: Calendar }
-    ]
-  },
   { 
     name: 'Marketing Analytics', 
     href: '/marketing', 
@@ -79,24 +66,6 @@ const navigation = [
       { name: 'Upselling Campaigns', href: '/campaigns', icon: Megaphone }
     ]
   },
-  { 
-    name: 'Users', 
-    href: '/user-analytics', 
-    icon: Users,
-    children: []
-  },
-  { name: 'Session Replay', href: '/sessions', icon: Activity },
-  { name: 'Heatmaps', href: '/heatmaps', icon: TrendingUp },
-  { 
-    name: 'Experiment', 
-    href: '/experiments', 
-    icon: Database,
-    children: []
-  },
-  { name: 'Guides and Surveys', href: '/guides', icon: FileText },
-  { name: 'Data', href: '/data', icon: Database },
-  { name: 'Metrics', href: '/metrics', icon: BarChart3 },
-  { name: 'Releases', href: '/releases', icon: Cable },
   { name: 'Integrations', href: '/integrations', icon: Cable },
   { name: 'Admin', href: '/admin', icon: Settings },
 ];
