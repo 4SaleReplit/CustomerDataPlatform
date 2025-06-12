@@ -8,6 +8,10 @@ import { Layout } from "./components/layout/Layout";
 import { UserProvider, useUser } from "./contexts/UserContext";
 import Dashboard from "./pages/Dashboard";
 import { DataStudio } from "./pages/DataStudio";
+import { DataStudioSQL } from "./pages/DataStudioSQL";
+import { DataStudioFiles } from "./pages/DataStudioFiles";
+import { DataStudioLineage } from "./pages/DataStudioLineage";
+import { DataStudioDataExplorer } from "./pages/DataStudioDataExplorer";
 import Users from "./pages/Users";
 import UserProfile from "./pages/UserProfile";
 import Cohorts from "./pages/Cohorts";
@@ -57,6 +61,10 @@ const AppRouter = () => {
         {/* Main App Routes */}
         <Route path="/" component={Dashboard} />
         <Route path="/data-studio" component={DataStudio} />
+        <Route path="/data-studio/sql" component={DataStudioSQL} />
+        <Route path="/data-studio/files" component={DataStudioFiles} />
+        <Route path="/data-studio/lineage" component={DataStudioLineage} />
+        <Route path="/data-studio/explorer" component={DataStudioDataExplorer} />
         <Route path="/users" component={Users} />
         <Route path="/users/:userId" component={UserProfile} />
         <Route path="/cohorts" component={Cohorts} />

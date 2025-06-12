@@ -42,12 +42,16 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const navigation = [
+  { name: 'Home', href: '/', icon: Home, children: [] },
   { 
-    name: 'Home', 
-    href: '/', 
-    icon: Home,
+    name: 'Data Studio', 
+    href: '/data-studio', 
+    icon: PieChart,
     children: [
-      { name: 'Data Studio', href: '/data-studio', icon: PieChart }
+      { name: 'SQL Editor', href: '/data-studio/sql', icon: Database },
+      { name: 'File System', href: '/data-studio/files', icon: FileText },
+      { name: 'Lineage', href: '/data-studio/lineage', icon: Activity },
+      { name: 'Data Explorer', href: '/data-studio/explorer', icon: BarChart3 }
     ]
   },
   { name: 'All Content', href: '/content', icon: FileText },
