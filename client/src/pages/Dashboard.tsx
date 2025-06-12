@@ -10,7 +10,7 @@ import { SQLEditor } from '@/components/dashboard/SQLEditor';
 import { Worksheets } from '@/components/dashboard/Worksheets';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
-import { trackBusinessEvent } from '@/lib/amplitude';
+import { trackEvent } from '@/lib/amplitude';
 
 const initialTiles: DashboardTile[] = [
   {
@@ -69,7 +69,7 @@ const initialTiles: DashboardTile[] = [
   },
   {
     id: 'lifecycle-stages',
-    type: 'pie',
+    type: 'chart',
     title: 'User Lifecycle Stages',
     x: 9,
     y: 0,
@@ -87,7 +87,7 @@ const initialTiles: DashboardTile[] = [
   },
   {
     id: 'tile-1749408515094',
-    type: 'bar',
+    type: 'chart',
     title: 'Top Countries by User Count',
     x: 0,
     y: 3,
@@ -172,7 +172,7 @@ function Dashboard() {
 
   // Track page view when component mounts
   useEffect(() => {
-    trackBusinessEvent('Page Viewed', {
+    trackEvent('Page Viewed', {
       page_name: 'dashboard'
     });
   }, []);
