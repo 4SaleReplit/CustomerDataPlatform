@@ -799,85 +799,102 @@ export function ReportBuilder() {
           const zip = new PiZip(arrayBuffer);
           const slides: Slide[] = [];
 
-          // Check if this is a valid PPTX file
+          // Validate PPTX structure
           const presentationFile = zip.file("ppt/presentation.xml");
           if (!presentationFile) {
-            // Fallback: create basic slide structure
-            slides.push({
-              id: 'slide-1',
-              name: 'Imported Content',
-              elements: [{
-                id: 'text-1',
-                type: 'text',
-                x: 100,
-                y: 100,
-                width: 600,
-                height: 80,
-                content: `Content imported from: ${file.name}`,
-                style: {
-                  fontSize: 24,
-                  fontWeight: 'bold',
-                  textAlign: 'center',
-                  color: '#333333',
-                  backgroundColor: 'transparent',
-                  fontFamily: 'Arial'
-                }
-              }],
-              backgroundColor: '#ffffff'
-            });
-            resolve(slides);
-            return;
+            throw new Error("Invalid PowerPoint file - missing presentation structure");
           }
 
           const presentationXml = presentationFile.asText();
-          const slideMatches = presentationXml.match(/<p:sldId[^>]*>/g) || [];
-          const slideCount = slideMatches.length;
+          
+          // Extract theme and master slide information for proper styling
+          const themeFile = zip.file("ppt/theme/theme1.xml");
+          const themeXml = themeFile ? themeFile.asText() : "";
+          
+          const relsFile = zip.file("ppt/_rels/presentation.xml.rels");
+          const relationshipsXml = relsFile ? relsFile.asText() : "";
 
-          if (slideCount === 0) {
+          // Parse slide relationships with proper mapping
+          const slideIdPattern = /<p:sldId[^>]*id="([^"]*)"[^>]*r:id="([^"]*)"/g;
+          const slideReferences = [];
+          let match;
+          
+          while ((match = slideIdPattern.exec(presentationXml)) !== null) {
+            slideReferences.push({
+              slideId: match[1],
+              relationshipId: match[2]
+            });
+          }
+
+          if (slideReferences.length === 0) {
             throw new Error("No slides found in presentation");
           }
 
-          // Parse each slide with error handling
-          for (let i = 1; i <= slideCount; i++) {
+          // Build relationship mapping for slide paths
+          const relationshipMap = new Map();
+          const relationshipPattern = /<Relationship[^>]*Id="([^"]*)"[^>]*Target="([^"]*)"/g;
+          let relMatch;
+          
+          while ((relMatch = relationshipPattern.exec(relationshipsXml)) !== null) {
+            relationshipMap.set(relMatch[1], relMatch[2]);
+          }
+
+          // Process each slide with comprehensive parsing
+          for (let i = 0; i < slideReferences.length; i++) {
             try {
-              const slideFile = zip.file(`ppt/slides/slide${i}.xml`);
-              if (slideFile) {
-                const slideXml = slideFile.asText();
-                const slide = parseSlideXML(slideXml, i);
-                slides.push(slide);
-              } else {
-                // Create fallback slide
-                slides.push({
-                  id: `slide-${i}`,
-                  name: `Slide ${i}`,
-                  elements: [{
-                    id: `text-${i}-1`,
-                    type: 'text',
-                    x: 100,
-                    y: 200,
-                    width: 400,
-                    height: 60,
-                    content: `Slide ${i} Content`,
-                    style: {
-                      fontSize: 18,
-                      fontWeight: 'normal',
-                      textAlign: 'left',
-                      color: '#000000',
-                      backgroundColor: 'transparent',
-                      fontFamily: 'Arial'
-                    }
-                  }],
-                  backgroundColor: '#ffffff'
-                });
+              const slideRef = slideReferences[i];
+              const slidePath = relationshipMap.get(slideRef.relationshipId);
+              
+              if (slidePath) {
+                const fullSlidePath = slidePath.startsWith('slides/') ? `ppt/${slidePath}` : `ppt/slides/${slidePath}`;
+                const slideFile = zip.file(fullSlidePath);
+                
+                if (slideFile) {
+                  const slideXml = slideFile.asText();
+                  const slideLayoutFile = await extractSlideLayout(slideXml, zip);
+                  const slideMasterFile = await extractSlideMaster(slideXml, zip);
+                  
+                  const parsedSlide = parseSlideXMLProfessional(
+                    slideXml, 
+                    i + 1, 
+                    zip, 
+                    themeXml, 
+                    slideLayoutFile, 
+                    slideMasterFile
+                  );
+                  slides.push(parsedSlide);
+                }
               }
             } catch (slideError) {
-              console.warn(`Error parsing slide ${i}:`, slideError);
-              // Continue with other slides
+              console.error(`Error parsing slide ${i + 1}:`, slideError);
+              // Create a placeholder slide with error information
+              slides.push({
+                id: `slide-${i + 1}`,
+                name: `Slide ${i + 1}`,
+                elements: [{
+                  id: `error-${i + 1}`,
+                  type: 'text',
+                  x: 100,
+                  y: 250,
+                  width: 600,
+                  height: 100,
+                  content: `Slide ${i + 1} - Error during parsing. Complex elements may not be displayed correctly.`,
+                  style: {
+                    fontSize: 16,
+                    fontWeight: 'normal',
+                    textAlign: 'center',
+                    color: '#cc6600',
+                    backgroundColor: '#fff3cd',
+                    fontFamily: 'Arial'
+                  }
+                }],
+                backgroundColor: '#ffffff'
+              });
             }
           }
 
           if (slides.length === 0) {
-            throw new Error("Failed to parse any slides from the presentation");
+            throw new Error("Unable to parse any slides from the presentation");
           }
 
           resolve(slides);
@@ -889,6 +906,391 @@ export function ReportBuilder() {
       reader.onerror = () => reject(new Error("Failed to read file"));
       reader.readAsArrayBuffer(file);
     });
+  };
+
+  // Helper functions for professional PowerPoint parsing
+  const extractSlideLayout = async (slideXml: string, zip: any): Promise<string> => {
+    try {
+      const layoutRelPattern = /<p:sldLayoutId[^>]*r:id="([^"]*)"/;
+      const layoutMatch = slideXml.match(layoutRelPattern);
+      if (layoutMatch) {
+        const layoutRelsFile = zip.file("ppt/slides/_rels/slide1.xml.rels");
+        if (layoutRelsFile) {
+          const layoutRelsXml = layoutRelsFile.asText();
+          const layoutTargetPattern = new RegExp(`<Relationship[^>]*Id="${layoutMatch[1]}"[^>]*Target="([^"]*)"`);
+          const targetMatch = layoutRelsXml.match(layoutTargetPattern);
+          if (targetMatch) {
+            const layoutFile = zip.file(`ppt/${targetMatch[1]}`);
+            return layoutFile ? layoutFile.asText() : "";
+          }
+        }
+      }
+    } catch (error) {
+      console.warn("Could not extract slide layout:", error);
+    }
+    return "";
+  };
+
+  const extractSlideMaster = async (slideXml: string, zip: any): Promise<string> => {
+    try {
+      const masterFile = zip.file("ppt/slideMasters/slideMaster1.xml");
+      return masterFile ? masterFile.asText() : "";
+    } catch (error) {
+      console.warn("Could not extract slide master:", error);
+    }
+    return "";
+  };
+
+  const parseSlideXMLProfessional = (
+    slideXml: string, 
+    slideNumber: number, 
+    zip: any, 
+    themeXml: string, 
+    layoutXml: string, 
+    masterXml: string
+  ): Slide => {
+    const elements: SlideElement[] = [];
+    let elementCounter = 0;
+
+    try {
+      // Parse XML using DOMParser for better handling
+      const parser = new DOMParser();
+      const slideDoc = parser.parseFromString(slideXml, 'text/xml');
+      
+      // Extract slide background
+      let backgroundColor = '#ffffff';
+      const bgElement = slideDoc.querySelector('p\\:bg, bg');
+      if (bgElement) {
+        backgroundColor = extractBackgroundColor(bgElement, themeXml);
+      }
+
+      // Extract all shape elements from the slide
+      const shapes = slideDoc.querySelectorAll('p\\:sp, sp');
+      
+      shapes.forEach((shape, index) => {
+        try {
+          const element = parseShapeElement(shape, slideNumber, elementCounter++, themeXml);
+          if (element) {
+            elements.push(element);
+          }
+        } catch (error) {
+          console.warn(`Error parsing shape ${index}:`, error);
+        }
+      });
+
+      // Extract image elements
+      const pics = slideDoc.querySelectorAll('p\\:pic, pic');
+      pics.forEach((pic, index) => {
+        try {
+          const element = parsePictureElement(pic, slideNumber, elementCounter++, zip);
+          if (element) {
+            elements.push(element);
+          }
+        } catch (error) {
+          console.warn(`Error parsing picture ${index}:`, error);
+        }
+      });
+
+      // Extract table elements
+      const tables = slideDoc.querySelectorAll('a\\:tbl, tbl');
+      tables.forEach((table, index) => {
+        try {
+          const element = parseTableElement(table, slideNumber, elementCounter++);
+          if (element) {
+            elements.push(element);
+          }
+        } catch (error) {
+          console.warn(`Error parsing table ${index}:`, error);
+        }
+      });
+
+    } catch (error) {
+      console.error(`Error parsing slide ${slideNumber} XML:`, error);
+      // Create fallback text element
+      elements.push({
+        id: `fallback-${slideNumber}`,
+        type: 'text',
+        x: 100,
+        y: 250,
+        width: 600,
+        height: 100,
+        content: `Slide ${slideNumber} - Complex content detected. Some elements may not display correctly.`,
+        style: {
+          fontSize: 18,
+          fontWeight: 'normal',
+          textAlign: 'center',
+          color: '#666666',
+          backgroundColor: 'transparent',
+          fontFamily: 'Arial'
+        }
+      });
+    }
+
+    return {
+      id: `slide-${slideNumber}`,
+      name: `Slide ${slideNumber}`,
+      elements,
+      backgroundColor
+    };
+  };
+
+  // Professional PowerPoint element parsing functions
+  const parseShapeElement = (shape: Element, slideNumber: number, counter: number, themeXml: string): SlideElement | null => {
+    try {
+      const spPr = shape.querySelector('p\\:spPr, spPr');
+      if (!spPr) return null;
+
+      // Extract positioning and dimensions
+      const xfrm = spPr.querySelector('a\\:xfrm, xfrm');
+      if (!xfrm) return null;
+
+      const off = xfrm.querySelector('a\\:off, off');
+      const ext = xfrm.querySelector('a\\:ext, ext');
+      
+      if (!off || !ext) return null;
+
+      const x = Math.max(0, emuToPixels(off.getAttribute('x') || '0'));
+      const y = Math.max(0, emuToPixels(off.getAttribute('y') || '0'));
+      const width = Math.max(50, emuToPixels(ext.getAttribute('cx') || '100'));
+      const height = Math.max(20, emuToPixels(ext.getAttribute('cy') || '50'));
+
+      // Extract text content
+      const txBody = shape.querySelector('p\\:txBody, txBody');
+      let textContent = '';
+      let textStyle: any = {
+        fontSize: 16,
+        fontWeight: 'normal',
+        textAlign: 'left',
+        color: '#000000',
+        backgroundColor: 'transparent',
+        fontFamily: 'Arial'
+      };
+
+      if (txBody) {
+        const paragraphs = txBody.querySelectorAll('a\\:p, p');
+        const textParts: string[] = [];
+        
+        paragraphs.forEach(para => {
+          const runs = para.querySelectorAll('a\\:r, r');
+          let paraText = '';
+          
+          runs.forEach(run => {
+            const text = run.querySelector('a\\:t, t');
+            if (text) {
+              paraText += text.textContent || '';
+            }
+            
+            // Extract text formatting
+            const rPr = run.querySelector('a\\:rPr, rPr');
+            if (rPr) {
+              const fontSize = rPr.getAttribute('sz');
+              if (fontSize) textStyle.fontSize = Math.max(8, parseInt(fontSize) / 100);
+              
+              const bold = rPr.getAttribute('b');
+              if (bold === '1') textStyle.fontWeight = 'bold';
+              
+              const fontRef = rPr.querySelector('a\\:latin, latin');
+              if (fontRef) {
+                textStyle.fontFamily = fontRef.getAttribute('typeface') || 'Arial';
+              }
+            }
+          });
+          
+          if (paraText.trim()) {
+            textParts.push(paraText.trim());
+          }
+        });
+        
+        textContent = textParts.join('\n');
+      }
+
+      // Extract shape fill and styling
+      const solidFill = spPr.querySelector('a\\:solidFill, solidFill');
+      if (solidFill) {
+        const color = extractColorFromFill(solidFill, themeXml);
+        if (color !== 'transparent') {
+          textStyle.backgroundColor = color;
+        }
+      }
+
+      // Create element based on content
+      if (textContent.trim()) {
+        return {
+          id: `pptx-text-${slideNumber}-${counter}`,
+          type: 'text',
+          x: Math.round(x),
+          y: Math.round(y),
+          width: Math.round(width),
+          height: Math.round(height),
+          content: textContent,
+          style: textStyle
+        };
+      } else {
+        // Check for shape geometry
+        const prstGeom = spPr.querySelector('a\\:prstGeom, prstGeom');
+        const shapeType = prstGeom?.getAttribute('prst') || 'rect';
+        
+        return {
+          id: `pptx-shape-${slideNumber}-${counter}`,
+          type: 'shape',
+          x: Math.round(x),
+          y: Math.round(y),
+          width: Math.round(width),
+          height: Math.round(height),
+          content: { shape: shapeType === 'ellipse' ? 'circle' : 'rectangle' },
+          style: textStyle
+        };
+      }
+    } catch (error) {
+      console.warn('Error parsing shape element:', error);
+      return null;
+    }
+  };
+
+  const parsePictureElement = (pic: Element, slideNumber: number, counter: number, zip: any): SlideElement | null => {
+    try {
+      const spPr = pic.querySelector('p\\:spPr, spPr, pic\\:spPr');
+      if (!spPr) return null;
+
+      // Extract positioning
+      const xfrm = spPr.querySelector('a\\:xfrm, xfrm');
+      if (!xfrm) return null;
+
+      const off = xfrm.querySelector('a\\:off, off');
+      const ext = xfrm.querySelector('a\\:ext, ext');
+      
+      if (!off || !ext) return null;
+
+      const x = Math.max(0, emuToPixels(off.getAttribute('x') || '0'));
+      const y = Math.max(0, emuToPixels(off.getAttribute('y') || '0'));
+      const width = Math.max(50, emuToPixels(ext.getAttribute('cx') || '100'));
+      const height = Math.max(50, emuToPixels(ext.getAttribute('cy') || '100'));
+
+      // Extract image reference
+      const blip = pic.querySelector('a\\:blip, blip');
+      if (blip) {
+        const embedId = blip.getAttribute('r:embed');
+        if (embedId) {
+          // For now, create placeholder for image
+          return {
+            id: `pptx-image-${slideNumber}-${counter}`,
+            type: 'image',
+            x: Math.round(x),
+            y: Math.round(y),
+            width: Math.round(width),
+            height: Math.round(height),
+            content: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMDAgNzBMMTMwIDEyMEg3MEwxMDAgNzBaIiBmaWxsPSIjOUI5QjlCIi8+CjxjaXJjbGUgY3g9IjE0MCIgY3k9IjYwIiByPSIxMCIgZmlsbD0iIzlCOUI5QiIvPgo8L3N2Zz4K',
+            style: {
+              fontSize: 16,
+              fontWeight: 'normal',
+              textAlign: 'center',
+              color: '#000000',
+              backgroundColor: 'transparent',
+              fontFamily: 'Arial'
+            }
+          };
+        }
+      }
+    } catch (error) {
+      console.warn('Error parsing picture element:', error);
+    }
+    return null;
+  };
+
+  const parseTableElement = (table: Element, slideNumber: number, counter: number): SlideElement | null => {
+    try {
+      // Extract table content and convert to text representation
+      const rows = table.querySelectorAll('a\\:tr, tr');
+      const tableData: string[] = [];
+      
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('a\\:tc, tc');
+        const rowData: string[] = [];
+        
+        cells.forEach(cell => {
+          const text = cell.textContent?.trim() || '';
+          rowData.push(text);
+        });
+        
+        if (rowData.length > 0) {
+          tableData.push(rowData.join(' | '));
+        }
+      });
+
+      if (tableData.length > 0) {
+        return {
+          id: `pptx-table-${slideNumber}-${counter}`,
+          type: 'text',
+          x: 50,
+          y: 50 + (counter * 80),
+          width: 700,
+          height: Math.max(100, tableData.length * 25),
+          content: tableData.join('\n'),
+          style: {
+            fontSize: 14,
+            fontWeight: 'normal',
+            textAlign: 'left',
+            color: '#000000',
+            backgroundColor: '#f8f9fa',
+            fontFamily: 'Arial'
+          }
+        };
+      }
+    } catch (error) {
+      console.warn('Error parsing table element:', error);
+    }
+    return null;
+  };
+
+  const extractBackgroundColor = (bgElement: Element, themeXml: string): string => {
+    try {
+      const solidFill = bgElement.querySelector('a\\:solidFill, solidFill');
+      if (solidFill) {
+        return extractColorFromFill(solidFill, themeXml);
+      }
+    } catch (error) {
+      console.warn('Error extracting background color:', error);
+    }
+    return '#ffffff';
+  };
+
+  const extractColorFromFill = (fillElement: Element, themeXml: string): string => {
+    try {
+      // Extract RGB color
+      const srgbClr = fillElement.querySelector('a\\:srgbClr, srgbClr');
+      if (srgbClr) {
+        const val = srgbClr.getAttribute('val');
+        return val ? `#${val}` : '#000000';
+      }
+
+      // Extract scheme color
+      const schemeClr = fillElement.querySelector('a\\:schemeClr, schemeClr');
+      if (schemeClr) {
+        const val = schemeClr.getAttribute('val');
+        // Map common scheme colors
+        const colorMap: { [key: string]: string } = {
+          'bg1': '#ffffff',
+          'tx1': '#000000',
+          'bg2': '#f8f9fa',
+          'tx2': '#333333',
+          'accent1': '#0d6efd',
+          'accent2': '#198754',
+          'accent3': '#dc3545',
+          'accent4': '#ffc107',
+          'accent5': '#6f42c1',
+          'accent6': '#fd7e14'
+        };
+        return colorMap[val || ''] || '#000000';
+      }
+    } catch (error) {
+      console.warn('Error extracting color:', error);
+    }
+    return 'transparent';
+  };
+
+  const emuToPixels = (emu: string | number): number => {
+    const emuValue = typeof emu === 'string' ? parseInt(emu) : emu;
+    return Math.round((emuValue || 0) / 9525);
   };
 
   const parseSlideXML = (slideXml: string, slideNumber: number): Slide => {
