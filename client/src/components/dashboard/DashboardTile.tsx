@@ -44,14 +44,14 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
   const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
   const queryClient = useQueryClient();
 
-  // Fetch authentic Snowflake data only when explicitly requested
+  // Fetch authentic Snowflake data using the working tile data endpoint
   const { data: snowflakeData, isLoading: snowflakeLoading, refetch: refetchSnowflake } = useQuery({
-    queryKey: ['/api/snowflake/query', tile.id],
+    queryKey: ['/api/dashboard/tiles', tile.id, 'data'],
     queryFn: async () => {
-      const response = await apiRequest('/api/snowflake/query', {
+      const response = await apiRequest(`/api/dashboard/tiles/${tile.id}/data`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: tile.dataSource.query })
+        body: JSON.stringify({})
       });
       const timestamp = new Date();
       setLastRefreshTime(timestamp);
@@ -82,7 +82,7 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
       try {
         const parsedData = JSON.parse(storedData);
         // Pre-populate the cache with stored data to prevent initial queries
-        queryClient.setQueryData(['/api/snowflake/query', tile.id], parsedData);
+        queryClient.setQueryData(['/api/dashboard/tiles', tile.id, 'data'], parsedData);
         console.log(`Loaded cached data for tile ${tile.id}`);
       } catch (error) {
         console.error(`Failed to parse cached data for tile ${tile.id}:`, error);
