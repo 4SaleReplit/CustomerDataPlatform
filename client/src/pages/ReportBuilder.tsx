@@ -275,30 +275,61 @@ export function ReportBuilder() {
 
   const slideTemplates = [
     {
+      name: 'Executive Summary',
+      thumbnail: '🎯',
+      elements: [
+        { type: 'text', content: 'Executive Summary', x: 60, y: 40, width: 680, height: 60, style: { fontSize: 42, fontWeight: 'bold', color: '#1f2937' } },
+        { type: 'text', content: 'Key Performance Indicators', x: 60, y: 120, width: 680, height: 30, style: { fontSize: 18, color: '#6b7280' } },
+        { type: 'metric', content: { title: 'Total Revenue', label: 'Revenue', value: '$2.4M', change: '+12%' }, x: 60, y: 180, width: 200, height: 140 },
+        { type: 'metric', content: { title: 'Active Users', label: 'Users', value: '45.2K', change: '+8%' }, x: 290, y: 180, width: 200, height: 140 },
+        { type: 'metric', content: { title: 'Conversion Rate', label: 'Conversion', value: '3.8%', change: '+0.3%' }, x: 520, y: 180, width: 200, height: 140 },
+        { type: 'text', content: 'This quarter shows strong performance across all key metrics with double-digit revenue growth and improved user engagement.', x: 60, y: 350, width: 660, height: 60, style: { fontSize: 16, lineHeight: '1.5', color: '#374151' } }
+      ]
+    },
+    {
+      name: 'Data Insights',
+      thumbnail: '📊',
+      elements: [
+        { type: 'text', content: 'Data Analysis & Insights', x: 60, y: 40, width: 680, height: 60, style: { fontSize: 38, fontWeight: 'bold', color: '#1f2937' } },
+        { type: 'chart', content: { title: 'Performance Trends', chartType: 'line', query: '' }, x: 60, y: 120, width: 360, height: 280 },
+        { type: 'table', content: { title: 'Top Segments', query: '' }, x: 450, y: 120, width: 290, height: 280 },
+        { type: 'text', content: 'Key Findings:', x: 60, y: 420, width: 680, height: 30, style: { fontSize: 18, fontWeight: 'bold', color: '#1f2937' } },
+        { type: 'text', content: '• Performance increased 25% over last quarter\n• Top 3 segments drive 80% of total value\n• Seasonal trends indicate Q4 growth opportunity', x: 60, y: 460, width: 680, height: 80, style: { fontSize: 14, lineHeight: '1.6', color: '#374151' } }
+      ]
+    },
+    {
+      name: 'Financial Overview',
+      thumbnail: '💰',
+      elements: [
+        { type: 'text', content: 'Financial Performance', x: 60, y: 40, width: 680, height: 60, style: { fontSize: 38, fontWeight: 'bold', color: '#1f2937' } },
+        { type: 'text', content: 'Q3 2024 Results', x: 60, y: 100, width: 680, height: 30, style: { fontSize: 18, color: '#6b7280' } },
+        { type: 'metric', content: { title: 'Revenue', label: 'Total Revenue', value: '$2.4M', change: '+12.5%' }, x: 60, y: 150, width: 160, height: 120 },
+        { type: 'metric', content: { title: 'Profit', label: 'Net Profit', value: '$480K', change: '+18.2%' }, x: 240, y: 150, width: 160, height: 120 },
+        { type: 'metric', content: { title: 'Margin', label: 'Profit Margin', value: '20%', change: '+2.1%' }, x: 420, y: 150, width: 160, height: 120 },
+        { type: 'metric', content: { title: 'EBITDA', label: 'EBITDA', value: '$720K', change: '+15.8%' }, x: 600, y: 150, width: 160, height: 120 },
+        { type: 'chart', content: { title: 'Revenue Trend (12 Months)', chartType: 'bar', query: '' }, x: 60, y: 300, width: 700, height: 200 }
+      ]
+    },
+    {
+      name: 'Customer Analytics',
+      thumbnail: '👥',
+      elements: [
+        { type: 'text', content: 'Customer Analytics Dashboard', x: 60, y: 40, width: 680, height: 60, style: { fontSize: 36, fontWeight: 'bold', color: '#1f2937' } },
+        { type: 'metric', content: { title: 'Total Customers', label: 'Customers', value: '12.8K', change: '+15%' }, x: 60, y: 120, width: 170, height: 130 },
+        { type: 'metric', content: { title: 'New Acquisitions', label: 'New This Month', value: '1.2K', change: '+22%' }, x: 250, y: 120, width: 170, height: 130 },
+        { type: 'metric', content: { title: 'Retention Rate', label: 'Retention', value: '94.5%', change: '+1.2%' }, x: 440, y: 120, width: 170, height: 130 },
+        { type: 'metric', content: { title: 'Avg. LTV', label: 'Customer LTV', value: '$1,250', change: '+8%' }, x: 630, y: 120, width: 170, height: 130 },
+        { type: 'chart', content: { title: 'Customer Segmentation', chartType: 'pie', query: '' }, x: 60, y: 280, width: 340, height: 220 },
+        { type: 'table', content: { title: 'Top Customer Segments', query: '' }, x: 420, y: 280, width: 380, height: 220 }
+      ]
+    },
+    {
       name: 'Title Slide',
-      thumbnail: '📊',
+      thumbnail: '🎬',
       elements: [
-        { type: 'text', content: 'Presentation Title', x: 50, y: 200, width: 700, height: 80, style: { fontSize: 48, fontWeight: 'bold', textAlign: 'center' } },
-        { type: 'text', content: 'Subtitle or description', x: 50, y: 300, width: 700, height: 40, style: { fontSize: 24, textAlign: 'center', color: '#666' } }
-      ]
-    },
-    {
-      name: 'Content Slide',
-      thumbnail: '📈',
-      elements: [
-        { type: 'text', content: 'Slide Title', x: 50, y: 50, width: 700, height: 60, style: { fontSize: 36, fontWeight: 'bold' } },
-        { type: 'chart', content: { chartType: 'bar', title: 'Performance Data' }, x: 50, y: 150, width: 350, height: 300 },
-        { type: 'text', content: 'Key insights and analysis go here.', x: 450, y: 150, width: 300, height: 300, style: { fontSize: 16 } }
-      ]
-    },
-    {
-      name: 'Metrics Dashboard',
-      thumbnail: '📊',
-      elements: [
-        { type: 'text', content: 'Key Metrics', x: 50, y: 50, width: 700, height: 60, style: { fontSize: 36, fontWeight: 'bold' } },
-        { type: 'metric', content: { label: 'Total Users', value: '156K', change: '+12%' }, x: 50, y: 150, width: 200, height: 120 },
-        { type: 'metric', content: { label: 'Revenue', value: '$2.4M', change: '+8%' }, x: 300, y: 150, width: 200, height: 120 },
-        { type: 'metric', content: { label: 'Conversion', value: '3.8%', change: '+0.3%' }, x: 550, y: 150, width: 200, height: 120 }
+        { type: 'text', content: 'Quarterly Business Review', x: 100, y: 180, width: 600, height: 90, style: { fontSize: 52, fontWeight: 'bold', textAlign: 'center', color: '#ffffff' } },
+        { type: 'text', content: 'Q3 2024 Performance Summary', x: 100, y: 290, width: 600, height: 50, style: { fontSize: 24, textAlign: 'center', color: '#f3f4f6' } },
+        { type: 'text', content: 'Prepared by: Analytics Team', x: 100, y: 420, width: 600, height: 30, style: { fontSize: 16, textAlign: 'center', color: '#d1d5db' } }
       ]
     }
   ];
