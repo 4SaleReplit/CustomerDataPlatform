@@ -490,7 +490,7 @@ export function ReportBuilder() {
             width: 340,
             height: 200,
             content: 'This Week\'s Priorities:\n\n• [Priority item 1]\n• [Priority item 2]\n• [Priority item 3]\n• [Priority item 4]',
-            style: { fontSize: 16, lineHeight: '1.8', color: '#374151', backgroundColor: 'transparent' }
+            style: { fontSize: 16, color: '#374151', backgroundColor: 'transparent' }
           },
           {
             id: 'actions-focus',
@@ -500,7 +500,7 @@ export function ReportBuilder() {
             width: 340,
             height: 200,
             content: 'Areas of Focus:\n\n• [Focus area 1]\n• [Focus area 2]\n• [Focus area 3]\n• [Focus area 4]',
-            style: { fontSize: 16, lineHeight: '1.8', color: '#374151', backgroundColor: 'transparent' }
+            style: { fontSize: 16, color: '#374151', backgroundColor: 'transparent' }
           },
           {
             id: 'actions-goals',
@@ -510,7 +510,7 @@ export function ReportBuilder() {
             width: 700,
             height: 120,
             content: 'Next Week Goals:\n• [Goal 1 with owner and deadline]\n• [Goal 2 with owner and deadline]\n• [Goal 3 with owner and deadline]',
-            style: { fontSize: 14, lineHeight: '1.8', color: '#374151', backgroundColor: '#f9fafb' }
+            style: { fontSize: 14, color: '#374151', backgroundColor: '#f9fafb' }
           }
         ]
       }
