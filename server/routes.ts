@@ -249,6 +249,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Dashboard tile data loading endpoint
+  app.post("/api/dashboard/tiles/:tileId/data", async (req, res) => {
+    try {
+      const { tileId } = req.params;
+      const tile = await storage.getDashboardTiles().then(tiles => 
+        tiles.find(t => t.id === tileId)
+      );
+      
+      if (!tile) {
+        return res.status(404).json({ error: "Dashboard tile not found" });
+      }
+
+      if (!tile.dataSource?.query) {
+        return res.status(400).json({ error: "No query configured for this tile" });
+      }
+
+      // Execute the Snowflake query
+      const result = await snowflakeService.executeQuery(tile.dataSource.query);
+      
+      if (!result.success) {
+        return res.status(400).json({ 
+          error: result.error,
+          query: tile.dataSource.query 
+        });
+      }
+
+      res.json({
+        columns: result.columns,
+        rows: result.rows,
+        success: true,
+        tileId: tileId,
+        query: tile.dataSource.query
+      });
+    } catch (error) {
+      console.error("Dashboard tile data loading error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to load tile data" 
+      });
+    }
+  });
+
   // Cohort management routes
   app.get("/api/cohorts", async (req, res) => {
     try {
