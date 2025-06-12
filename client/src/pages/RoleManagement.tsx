@@ -591,7 +591,6 @@ export default function RoleManagement() {
                     size="sm" 
                     onClick={() => startEdit(role)}
                     className="flex-1 hover:bg-blue-50 hover:border-blue-200"
-                    disabled={role.isSystemRole}
                   >
                     <Edit className="h-3 w-3 mr-1" />
                     Edit
@@ -600,7 +599,7 @@ export default function RoleManagement() {
                     variant="destructive" 
                     size="sm"
                     onClick={() => deleteRoleMutation.mutate(role.id)}
-                    disabled={role.isSystemRole || deleteRoleMutation.isPending}
+                    disabled={deleteRoleMutation.isPending}
                     className="hover:bg-red-600"
                   >
                     <Trash2 className="h-3 w-3" />
