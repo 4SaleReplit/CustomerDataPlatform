@@ -21,39 +21,32 @@ export function DataStudio() {
       color: 'bg-green-50 text-green-600 dark:bg-green-950 dark:text-green-400'
     },
     {
-      title: 'Reports Builder',
-      description: 'Create automated slide-based reports with Canva-like builder and scheduling',
-      icon: FileText,
-      href: '/data-studio/reports',
-      color: 'bg-purple-50 text-purple-600 dark:bg-purple-950 dark:text-purple-400'
-    },
-    {
       title: 'SQL Editor',
       description: 'Advanced SQL editor with syntax highlighting, autocomplete, and query execution',
       icon: Database,
       href: '/data-studio/sql',
-      color: 'bg-orange-50 text-orange-600 dark:bg-orange-950 dark:text-orange-400'
+      color: 'bg-purple-50 text-purple-600 dark:bg-purple-950 dark:text-purple-400'
     },
     {
       title: 'File System',
       description: 'Organize dashboards and tiles in folders with team collaboration features',
       icon: FileText,
       href: '/data-studio/files',
-      color: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400'
+      color: 'bg-orange-50 text-orange-600 dark:bg-orange-950 dark:text-orange-400'
     },
     {
       title: 'Lineage',
       description: 'Track data lineage and dependencies across your data pipeline',
       icon: Activity,
       href: '/data-studio/lineage',
-      color: 'bg-teal-50 text-teal-600 dark:bg-teal-950 dark:text-teal-400'
+      color: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400'
     },
     {
       title: 'Data Explorer',
       description: 'Browse databases, tables, and columns with detailed schema information',
       icon: Database,
       href: '/data-studio/explorer',
-      color: 'bg-pink-50 text-pink-600 dark:bg-pink-950 dark:text-pink-400'
+      color: 'bg-teal-50 text-teal-600 dark:bg-teal-950 dark:text-teal-400'
     }
   ];
 

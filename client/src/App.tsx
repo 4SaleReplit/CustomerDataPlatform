@@ -67,12 +67,12 @@ const AppRouter = () => {
         <Route path="/data-studio" component={DataStudio} />
         <Route path="/data-studio/dashboards" component={DataStudioDashboards} />
         <Route path="/data-studio/explores" component={DataStudioExplores} />
-        <Route path="/data-studio/reports" component={DataStudioReports} />
-        <Route path="/data-studio/reports/builder/:id?" component={ReportBuilder} />
         <Route path="/data-studio/sql" component={DataStudioSQL} />
         <Route path="/data-studio/files" component={DataStudioFiles} />
         <Route path="/data-studio/lineage" component={DataStudioLineage} />
         <Route path="/data-studio/explorer" component={DataStudioDataExplorer} />
+        <Route path="/reports" component={DataStudioReports} />
+        <Route path="/reports/builder/:id?" component={ReportBuilder} />
         <Route path="/users" component={Users} />
         <Route path="/users/:userId" component={UserProfile} />
         <Route path="/cohorts" component={Cohorts} />

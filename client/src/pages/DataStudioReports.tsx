@@ -238,7 +238,11 @@ export function DataStudioReports() {
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setShowNewReport(false)}>Cancel</Button>
-                  <Button onClick={() => setShowNewReport(false)}>Create & Open Builder</Button>
+                  <Button onClick={() => {
+                    setShowNewReport(false);
+                    // Navigate to builder - would be handled by routing
+                    window.location.href = '/reports/builder';
+                  }}>Create & Open Builder</Button>
                 </div>
               </div>
             </DialogContent>
@@ -288,7 +292,7 @@ export function DataStudioReports() {
                             <Eye className="h-4 w-4 mr-2" />
                             Preview
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => window.location.href = `/reports/builder/${report.id}`}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit Builder
                           </DropdownMenuItem>
