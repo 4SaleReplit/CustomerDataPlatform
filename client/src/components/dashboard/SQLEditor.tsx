@@ -36,7 +36,7 @@ interface QueryResult {
 }
 
 interface SQLEditorProps {
-  onCreateVisualization?: (data: any, chartType: string) => void;
+  onCreateVisualization?: (data: any, chartType: string, query?: string) => void;
 }
 
 const CHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'];
@@ -402,7 +402,8 @@ export function SQLEditor({ onCreateVisualization }: SQLEditorProps) {
                               <Button 
                                 onClick={() => onCreateVisualization?.(
                                   transformDataForChart(option.type), 
-                                  option.type
+                                  option.type,
+                                  query
                                 )}
                                 className="w-full"
                               >

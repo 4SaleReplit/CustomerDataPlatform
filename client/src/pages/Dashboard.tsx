@@ -321,7 +321,7 @@ function Dashboard() {
   };
 
   // Handler functions for BI interface
-  const handleCreateVisualization = (data: any, chartType: string) => {
+  const handleCreateVisualization = (data: any, chartType: string, query?: string) => {
     // Create a new tile from SQL editor visualization
     const newTile: DashboardTile = {
       id: `sql-viz-${Date.now()}`,
@@ -333,7 +333,7 @@ function Dashboard() {
       height: 4,
       dataSource: {
         table: 'custom',
-        query: '', // Store the original query
+        query: query || '', // Store the original query from SQL editor
         aggregation: chartType
       },
       refreshConfig: {

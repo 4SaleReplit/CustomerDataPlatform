@@ -892,16 +892,18 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
         }
         
         .line-numbers {
-          background-color: #1f2937;
-          color: #6b7280;
+          background-color: ${tokenColors.background};
+          color: ${tokenColors.comment};
           padding: 12px 8px;
           font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Menlo', 'Consolas', monospace;
-          font-size: 12px;
+          font-size: 14px;
           line-height: 1.6;
           text-align: right;
-          min-width: 40px;
+          min-width: 50px;
           user-select: none;
-          border-right: 1px solid #374151;
+          border-right: 1px solid #073642;
+          white-space: pre;
+          overflow: hidden;
         }
         
         .codemirror-sql-editor {

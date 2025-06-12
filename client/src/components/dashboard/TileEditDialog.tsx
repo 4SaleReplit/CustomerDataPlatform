@@ -3,10 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Users, TrendingUp, TrendingDown } from 'lucide-react';
+import { CodeMirrorSQLEditor } from './CodeMirrorSQLEditor';
 import type { DashboardTile } from './DashboardBuilder';
 
 interface TileEditDialogProps {
@@ -184,16 +184,18 @@ export function TileEditDialog({ tile, isOpen, onClose, onSave }: TileEditDialog
           </div>
 
           <div className="space-y-2">
-            <Label>Query</Label>
-            <Textarea
-              placeholder="Enter SQL query..."
-              value={editedTile.dataSource.query}
-              onChange={(e) => setEditedTile({
-                ...editedTile,
-                dataSource: { ...editedTile.dataSource, query: e.target.value }
-              })}
-              rows={4}
-            />
+            <Label>SQL Query</Label>
+            <div className="h-32">
+              <CodeMirrorSQLEditor
+                value={editedTile.dataSource.query}
+                onChange={(query) => setEditedTile({
+                  ...editedTile,
+                  dataSource: { ...editedTile.dataSource, query }
+                })}
+                placeholder="Enter SQL query..."
+                className="h-full"
+              />
+            </div>
           </div>
 
           <div className="space-y-4">
