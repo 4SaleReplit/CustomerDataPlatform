@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import { 
   Plus, 
   Save, 
@@ -186,6 +187,14 @@ export function ReportBuilder() {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [resizeHandle, setResizeHandle] = useState<string | null>(null);
+  const [isExecutingQuery, setIsExecutingQuery] = useState(false);
+  const [queryResults, setQueryResults] = useState<any>(null);
+  const [currentEditingElement, setCurrentEditingElement] = useState<string | null>(null);
+  const [refreshConfig, setRefreshConfig] = useState({
+    autoRefresh: false,
+    refreshOnLoad: true,
+    refreshInterval: 300000
+  });
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const currentSlide = currentReport?.slides[currentSlideIndex];
@@ -500,8 +509,61 @@ export function ReportBuilder() {
       // Open SQL editor for data elements
       const content = element.content as any;
       setCurrentQuery(content.query || '');
+      setCurrentEditingElement(elementId);
+      
+      // Load existing refresh configuration
+      const existingConfig = content.refreshConfig || {};
+      setRefreshConfig({
+        autoRefresh: existingConfig.autoRefresh || false,
+        refreshOnLoad: existingConfig.refreshOnLoad !== undefined ? existingConfig.refreshOnLoad : true,
+        refreshInterval: existingConfig.refreshInterval || 300000
+      });
+      
       setShowSQLEditor(true);
     }
+  };
+
+  const executeQuery = async () => {
+    if (!currentQuery.trim()) return;
+    
+    setIsExecutingQuery(true);
+    try {
+      const response = await fetch('/api/dashboard/tiles/execute-query', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: currentQuery }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setQueryResults(data);
+      } else {
+        console.error('Query execution failed');
+      }
+    } catch (error) {
+      console.error('Error executing query:', error);
+    } finally {
+      setIsExecutingQuery(false);
+    }
+  };
+
+  const saveQueryToElement = () => {
+    if (currentEditingElement && currentReport) {
+      const element = currentSlide?.elements.find(el => el.id === currentEditingElement);
+      if (element && (element.type === 'chart' || element.type === 'table' || element.type === 'metric')) {
+        const updatedContent = {
+          ...element.content,
+          query: currentQuery,
+          refreshConfig: refreshConfig
+        };
+        updateElement(currentEditingElement, { content: updatedContent });
+      }
+    }
+    setShowSQLEditor(false);
+    setCurrentEditingElement(null);
+    setQueryResults(null);
   };
 
   const renderElement = (element: SlideElement) => {
@@ -1528,49 +1590,145 @@ export function ReportBuilder() {
 
       {/* SQL Editor Dialog */}
       <Dialog open={showSQLEditor} onOpenChange={setShowSQLEditor}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
+        <DialogContent className="max-w-6xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>SQL Query Editor</DialogTitle>
+            <DialogTitle>SQL Query Editor & Configuration</DialogTitle>
           </DialogHeader>
-          <div className="h-96">
-            <CodeMirrorSQLEditor
-              value={currentQuery}
-              onChange={setCurrentQuery}
-              onExecute={() => {
-                // Save query back to selected element
-                if (selectedElement && currentReport) {
-                  const element = currentSlide?.elements.find(el => el.id === selectedElement);
-                  if (element && (element.type === 'chart' || element.type === 'table' || element.type === 'metric')) {
-                    const updatedContent = {
-                      ...element.content,
-                      query: currentQuery
-                    };
-                    updateElement(selectedElement, { content: updatedContent });
-                  }
-                }
-                setShowSQLEditor(false);
-              }}
-            />
+          
+          <div className="flex-1 flex gap-4 min-h-0">
+            {/* Left side - Query Editor */}
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="flex items-center gap-2 mb-3">
+                <Button 
+                  onClick={executeQuery} 
+                  disabled={isExecutingQuery || !currentQuery.trim()}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {isExecutingQuery ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Running...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4 mr-2" />
+                      Run Query
+                    </>
+                  )}
+                </Button>
+                <Badge variant="secondary" className="text-xs">
+                  Press Ctrl+Enter to run
+                </Badge>
+              </div>
+              
+              <div className="flex-1 min-h-0">
+                <CodeMirrorSQLEditor
+                  value={currentQuery}
+                  onChange={setCurrentQuery}
+                  onExecute={executeQuery}
+                />
+              </div>
+            </div>
+
+            {/* Right side - Configuration & Results */}
+            <div className="w-80 flex flex-col gap-4">
+              {/* Refresh Configuration */}
+              <Card className="p-4">
+                <h4 className="font-medium mb-3">Refresh Settings</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm">Auto Refresh</Label>
+                    <Switch
+                      checked={refreshConfig.autoRefresh}
+                      onCheckedChange={(checked) => 
+                        setRefreshConfig(prev => ({ ...prev, autoRefresh: checked }))
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm">Refresh on Load</Label>
+                    <Switch
+                      checked={refreshConfig.refreshOnLoad}
+                      onCheckedChange={(checked) => 
+                        setRefreshConfig(prev => ({ ...prev, refreshOnLoad: checked }))
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Refresh Interval</Label>
+                    <Select 
+                      value={refreshConfig.refreshInterval.toString()}
+                      onValueChange={(value) => 
+                        setRefreshConfig(prev => ({ ...prev, refreshInterval: parseInt(value) }))
+                      }
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="60000">1 minute</SelectItem>
+                        <SelectItem value="300000">5 minutes</SelectItem>
+                        <SelectItem value="600000">10 minutes</SelectItem>
+                        <SelectItem value="1800000">30 minutes</SelectItem>
+                        <SelectItem value="3600000">1 hour</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Query Results */}
+              {queryResults && (
+                <Card className="flex-1 p-4 min-h-0">
+                  <h4 className="font-medium mb-3">Query Results</h4>
+                  <div className="text-sm text-muted-foreground mb-2">
+                    {queryResults.rows?.length || 0} rows returned
+                  </div>
+                  <div className="overflow-auto max-h-48 border rounded">
+                    {queryResults.rows && queryResults.rows.length > 0 ? (
+                      <table className="w-full text-xs">
+                        <thead className="bg-gray-50 sticky top-0">
+                          <tr>
+                            {Object.keys(queryResults.rows[0]).map((key) => (
+                              <th key={key} className="p-2 text-left border-r">
+                                {key}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {queryResults.rows.slice(0, 10).map((row: any, index: number) => (
+                            <tr key={index} className="border-b">
+                              {Object.values(row).map((value: any, colIndex: number) => (
+                                <td key={colIndex} className="p-2 border-r">
+                                  {String(value)}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div className="p-4 text-center text-muted-foreground">
+                        No data returned
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              )}
+            </div>
           </div>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setShowSQLEditor(false)}>
+
+          <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
+            <Button variant="outline" onClick={() => {
+              setShowSQLEditor(false);
+              setCurrentEditingElement(null);
+              setQueryResults(null);
+            }}>
               Cancel
             </Button>
-            <Button onClick={() => {
-              // Save query back to selected element
-              if (selectedElement && currentReport) {
-                const element = currentSlide?.elements.find(el => el.id === selectedElement);
-                if (element && (element.type === 'chart' || element.type === 'table' || element.type === 'metric')) {
-                  const updatedContent = {
-                    ...element.content,
-                    query: currentQuery
-                  };
-                  updateElement(selectedElement, { content: updatedContent });
-                }
-              }
-              setShowSQLEditor(false);
-            }}>
-              Save Query
+            <Button onClick={saveQueryToElement}>
+              Save Query & Configuration
             </Button>
           </div>
         </DialogContent>
