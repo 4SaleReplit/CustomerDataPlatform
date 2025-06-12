@@ -625,7 +625,7 @@ export function ReportBuilder() {
                   const isLargeBlock = text.length > 200;
                   
                   elements.push({
-                    id: `text-${pageNum}-${index + 1}`,
+                    id: `pdf-text-${pageNum}-${index + 1}`,
                     type: 'text',
                     x: 50,
                     y: yPosition,
@@ -1510,11 +1510,12 @@ export function ReportBuilder() {
           top: element.y * (zoom / 100),
           width: element.width * (zoom / 100),
           height: element.height * (zoom / 100),
-          fontSize: (element.style.fontSize || 16) * (zoom / 100),
-          color: element.style.color,
-          backgroundColor: element.style.backgroundColor,
-          textAlign: element.style.textAlign,
-          fontWeight: element.style.fontWeight,
+          fontSize: Math.max(8, (element.style.fontSize || 16) * (zoom / 100)),
+          color: element.style.color || '#000000',
+          backgroundColor: element.style.backgroundColor || 'transparent',
+          textAlign: element.style.textAlign || 'left',
+          fontWeight: element.style.fontWeight || 'normal',
+          fontFamily: (element.style as any).fontFamily || 'Arial',
           display: 'flex',
           alignItems: 'center',
           justifyContent: element.style.textAlign === 'center' ? 'center' : element.style.textAlign === 'right' ? 'flex-end' : 'flex-start',
@@ -1533,20 +1534,45 @@ export function ReportBuilder() {
       >
         {element.type === 'text' && (
           <div 
+            className="w-full h-full p-2 text-overflow-ellipsis relative"
             style={{ 
-              width: '100%', 
-              height: '100%',
               fontFamily: (element.style as any).fontFamily || 'Arial',
               fontStyle: (element.style as any).fontStyle || 'normal',
+              fontSize: `${(element.style.fontSize || 16) * (zoom / 100)}px`,
+              fontWeight: element.style.fontWeight || 'normal',
+              color: element.style.color || '#000000',
+              backgroundColor: element.style.backgroundColor || 'transparent',
+              textAlign: element.style.textAlign || 'left',
               whiteSpace: 'pre-wrap',
               wordWrap: 'break-word',
               overflow: 'hidden',
+              lineHeight: '1.4',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: element.style.textAlign === 'center' ? 'center' : element.style.textAlign === 'right' ? 'flex-end' : 'flex-start'
+              alignItems: element.style.textAlign === 'center' ? 'center' : 'flex-start',
+              justifyContent: element.style.textAlign === 'center' ? 'center' : element.style.textAlign === 'right' ? 'flex-end' : 'flex-start',
+              flexDirection: 'column',
+              border: isSelected ? '2px solid #3b82f6' : element.id.includes('pdf') ? '1px dashed #9ca3af' : '1px solid transparent'
             }}
           >
-            {typeof element.content === 'string' ? element.content : 'Text Element'}
+            {/* PDF Content Indicator */}
+            {element.id.includes('pdf') && !isSelected && (
+              <div className="absolute top-1 right-1 w-3 h-3 bg-purple-500 rounded-full flex items-center justify-center" title="PDF Content">
+                <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+              </div>
+            )}
+            
+            <div style={{ 
+              width: '100%', 
+              height: '100%',
+              textAlign: element.style.textAlign || 'left',
+              overflow: 'auto',
+              fontSize: 'inherit',
+              lineHeight: 'inherit',
+              wordBreak: 'break-word',
+              hyphens: 'auto'
+            }}>
+              {typeof element.content === 'string' ? element.content : 'Text Element'}
+            </div>
           </div>
         )}
         {element.type === 'chart' && (
