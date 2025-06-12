@@ -559,89 +559,86 @@ export function ReportBuilder() {
           const pdf = await loadingTask.promise;
           const slides: Slide[] = [];
 
-          // Parse each page as a slide
+          // Parse each page as a slide with precise positioning
           for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
             try {
               const page = await pdf.getPage(pageNum);
+              const viewport = page.getViewport({ scale: 1.0 });
               const textContent = await page.getTextContent();
               
-              let yPosition = 100;
               const elements: SlideElement[] = [];
               
-              // Enhanced text parsing for better content organization
-              const textItems: any[] = [];
-              
-              textContent.items.forEach((item: any) => {
-                if (item.str && item.str.trim()) {
-                  textItems.push({
-                    text: item.str.trim(),
-                    x: item.transform[4],
-                    y: item.transform[5],
-                    fontSize: item.height || 12,
-                    fontName: item.fontName || 'Arial'
-                  });
-                }
-              });
-              
-              // Sort by Y position (top to bottom) then by X position (left to right)
-              textItems.sort((a, b) => {
-                const yDiff = b.y - a.y; // Reverse for top-to-bottom
-                if (Math.abs(yDiff) > 5) return yDiff; // Different lines
-                return a.x - b.x; // Same line, left to right
-              });
-              
-              // Group text items into logical blocks
-              const textBlocks: string[] = [];
-              let currentBlock = '';
-              let lastY = textItems[0]?.y || 0;
-              
-              textItems.forEach((item, index) => {
-                const isNewLine = Math.abs(item.y - lastY) > 5;
-                const isTitle = item.fontSize > 14 || /^[A-Z\s]+$/.test(item.text);
-                
-                if (isNewLine && currentBlock.trim()) {
-                  textBlocks.push(currentBlock.trim());
-                  currentBlock = '';
-                }
-                
-                currentBlock += (currentBlock && !isNewLine ? ' ' : '') + item.text;
-                lastY = item.y;
-                
-                // End block if this looks like a standalone title/header
-                if (isTitle && item.text.length < 50 && index < textItems.length - 1) {
-                  textBlocks.push(currentBlock.trim());
-                  currentBlock = '';
-                }
-              });
-              
-              if (currentBlock.trim()) {
-                textBlocks.push(currentBlock.trim());
-              }
-              
-              // Convert text blocks to slide elements
-              textBlocks.forEach((text, index) => {
-                if (text.length > 2) { // Filter out single characters or very short text
-                  const isHeader = text.length < 50 && /^[A-Z\s\d%▲▼-]+$/.test(text);
-                  const isLargeBlock = text.length > 200;
+              // Process each text item individually to preserve exact formatting
+              textContent.items.forEach((item: any, index: number) => {
+                if (item.str && item.str.trim() && item.str.trim().length > 0) {
+                  const text = item.str.trim();
+                  const transform = item.transform;
+                  
+                  // Extract precise positioning and dimensions
+                  const pdfX = transform[4];
+                  const pdfY = transform[5];
+                  const fontSize = Math.abs(transform[0]) || item.height || 12;
+                  
+                  // Convert PDF coordinates to canvas coordinates (800x600)
+                  const canvasX = Math.max(10, Math.min(780, (pdfX / viewport.width) * 800));
+                  const canvasY = Math.max(10, Math.min(580, ((viewport.height - pdfY) / viewport.height) * 600));
+                  
+                  // Calculate precise text dimensions
+                  const charWidth = fontSize * 0.55; // More accurate character width
+                  const textWidth = Math.max(30, Math.min(350, text.length * charWidth + 20));
+                  const textHeight = Math.max(fontSize + 6, fontSize * 1.4);
+                  
+                  // Ensure elements stay within canvas bounds
+                  const elementWidth = Math.min(textWidth, 800 - canvasX - 10);
+                  const elementHeight = Math.min(textHeight, 600 - canvasY - 10);
+                  
+                  // Extract font information from PDF
+                  let fontFamily = 'Arial';
+                  let fontWeight = 'normal';
+                  
+                  if (item.fontName) {
+                    const fontName = item.fontName.toLowerCase();
+                    if (fontName.includes('bold')) fontWeight = 'bold';
+                    if (fontName.includes('times')) fontFamily = 'Times New Roman';
+                    else if (fontName.includes('helvetica')) fontFamily = 'Helvetica';
+                    else if (fontName.includes('calibri')) fontFamily = 'Calibri';
+                    else if (fontName.includes('arial')) fontFamily = 'Arial';
+                  }
+                  
+                  // Analyze content for styling hints
+                  const isNumeric = /^\d+(\.\d+)?%?$/.test(text);
+                  const isTitle = fontSize > 16 && text.length < 80;
+                  const isHeader = fontSize > 12 && /^[A-Z\s\d%▲▼-]+$/.test(text);
+                  const isLargeText = fontSize > 14;
+                  
+                  // Override font weight for headers and titles
+                  if (isTitle || isHeader || isLargeText) fontWeight = 'bold';
+                  
+                  // Determine text alignment based on position
+                  let textAlign: 'left' | 'center' | 'right' = 'left';
+                  const centerZone = canvasX > 300 && canvasX < 500;
+                  const rightZone = canvasX > 600;
+                  
+                  if (centerZone) textAlign = 'center';
+                  else if (rightZone) textAlign = 'right';
                   
                   elements.push({
                     id: `pdf-text-${pageNum}-${index + 1}`,
                     type: 'text',
-                    x: 50,
-                    y: yPosition,
-                    width: isLargeBlock ? 700 : Math.min(600, Math.max(250, text.length * 6)),
-                    height: isLargeBlock ? 120 : isHeader ? 50 : 70,
+                    x: Math.round(canvasX),
+                    y: Math.round(canvasY),
+                    width: Math.round(elementWidth),
+                    height: Math.round(elementHeight),
                     content: text,
                     style: {
-                      fontSize: isHeader ? 20 : isLargeBlock ? 14 : 16,
-                      fontWeight: isHeader ? 'bold' : 'normal',
-                      textAlign: isHeader ? 'center' : 'left',
+                      fontSize: Math.max(8, Math.min(24, Math.round(fontSize))),
+                      fontWeight: fontWeight,
+                      textAlign: textAlign,
                       color: '#000000',
                       backgroundColor: 'transparent',
-                      fontFamily: 'Arial'
+                      fontFamily: fontFamily
                     }
                   });
-                  yPosition += (isLargeBlock ? 140 : isHeader ? 70 : 90);
                 }
               });
 
@@ -1541,7 +1538,6 @@ export function ReportBuilder() {
               fontSize: `${(element.style.fontSize || 16) * (zoom / 100)}px`,
               fontWeight: element.style.fontWeight || 'normal',
               color: element.style.color || '#000000',
-              backgroundColor: element.style.backgroundColor || 'transparent',
               textAlign: element.style.textAlign || 'left',
               whiteSpace: 'pre-wrap',
               wordWrap: 'break-word',
@@ -1551,7 +1547,9 @@ export function ReportBuilder() {
               alignItems: element.style.textAlign === 'center' ? 'center' : 'flex-start',
               justifyContent: element.style.textAlign === 'center' ? 'center' : element.style.textAlign === 'right' ? 'flex-end' : 'flex-start',
               flexDirection: 'column',
-              border: isSelected ? '2px solid #3b82f6' : element.id.includes('pdf') ? '1px dashed #9ca3af' : '1px solid transparent'
+              border: isSelected ? '2px solid #3b82f6' : element.id.includes('pdf') ? '1px solid #e5e7eb' : '1px solid transparent',
+              minHeight: '20px',
+              backgroundColor: element.style.backgroundColor || (element.id.includes('pdf') ? 'rgba(255, 255, 255, 0.95)' : 'transparent')
             }}
           >
             {/* PDF Content Indicator */}
