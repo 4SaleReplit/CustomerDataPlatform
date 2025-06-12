@@ -5,6 +5,9 @@ import { RefreshCw, Settings, X, Save, Plus } from 'lucide-react';
 import { DashboardBuilder, type DashboardTile } from '@/components/dashboard/DashboardBuilder';
 import { TileEditDialog } from '@/components/dashboard/TileEditDialog';
 import { TimeFilter, type TimeFilterState } from '@/components/dashboard/TimeFilter';
+import { DashboardNavbar } from '@/components/dashboard/DashboardNavbar';
+import { SQLEditor } from '@/components/dashboard/SQLEditor';
+import { Worksheets } from '@/components/dashboard/Worksheets';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { trackBusinessEvent } from '@/lib/amplitude';
@@ -129,6 +132,7 @@ function Dashboard() {
   const [tiles, setTiles] = useState<DashboardTile[]>(initialTiles);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingTile, setEditingTile] = useState<DashboardTile | null>(null);
+  const [activeTab, setActiveTab] = useState('dashboards');
   const [timeFilters, setTimeFilters] = useState<TimeFilterState>({
     chartType: 'line',
     timeRange: '7d',
@@ -364,104 +368,183 @@ function Dashboard() {
     );
   }
 
+  // Handler functions
+  const handleCreateVisualization = (data: any, chartType: string) => {
+    // Create a new tile from SQL editor visualization
+    const newTile: DashboardTile = {
+      id: `sql-viz-${Date.now()}`,
+      type: chartType as any,
+      title: `SQL ${chartType} Chart`,
+      x: 0,
+      y: 0,
+      width: 6,
+      height: 4,
+      dataSource: {
+        table: 'custom',
+        query: '', // Store the original query
+        aggregation: chartType
+      },
+      refreshConfig: {
+        autoRefresh: false,
+        refreshOnLoad: false
+      }
+    };
+    
+    setTiles(prev => [...prev, newTile]);
+    setActiveTab('dashboards');
+    
+    toast({
+      title: "Visualization Added",
+      description: "Chart has been added to your dashboard.",
+    });
+  };
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+  };
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'sql-editor':
+        return <SQLEditor onCreateVisualization={handleCreateVisualization} />;
+      
+      case 'worksheets':
+        return <Worksheets onCreateNew={() => setActiveTab('sql-editor')} />;
+      
+      case 'tiles':
+        return (
+          <div className="p-6">
+            <h2 className="text-2xl font-bold mb-4">Tile Management</h2>
+            <p className="text-muted-foreground">Manage individual dashboard tiles and their configurations.</p>
+          </div>
+        );
+      
+      case 'visualizations':
+        return (
+          <div className="p-6">
+            <h2 className="text-2xl font-bold mb-4">Visualization Gallery</h2>
+            <p className="text-muted-foreground">Browse and manage saved visualizations.</p>
+          </div>
+        );
+      
+      case 'dashboards':
+      default:
+        return (
+          <div className="flex-1 flex flex-col">
+            {/* Dashboard Controls */}
+            <div className="border-b bg-gradient-to-r from-white to-blue-50/30 backdrop-blur-sm">
+              <div className="page-header flex items-center justify-between px-8 py-6">
+                <div className="space-y-2">
+                  <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-gray-900 to-blue-700 bg-clip-text text-transparent">
+                    Analytics Dashboard
+                  </h1>
+                  <p className="text-xl text-muted-foreground">
+                    Real-time analytics and business intelligence
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <Badge variant="outline" className="hidden sm:flex px-4 py-2 text-sm font-medium border-blue-200 text-blue-700 bg-blue-50">
+                    {tiles.length} active tiles
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="default"
+                    onClick={handleGlobalRefresh}
+                    disabled={isLoading}
+                    className="px-6 py-3 font-medium border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                    {isLoading ? 'Refreshing...' : 'Refresh All'}
+                  </Button>
+                  {isEditMode && (
+                    <Button
+                      variant="outline"
+                      size="default"
+                      onClick={handleSaveLayout}
+                      className="px-6 py-3 font-medium border-green-200 hover:bg-green-50 hover:border-green-300 transition-all"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Layout
+                    </Button>
+                  )}
+                  <Button
+                    variant={isEditMode ? "default" : "outline"}
+                    size="default"
+                    onClick={handleToggleEditMode}
+                    className={isEditMode ? "btn-primary px-6 py-3 font-medium" : "px-6 py-3 font-medium hover:bg-gray-50 transition-all"}
+                  >
+                    {isEditMode ? (
+                      <>
+                        <X className="h-4 w-4 mr-2" />
+                        Exit Edit
+                      </>
+                    ) : (
+                      <>
+                        <Settings className="h-4 w-4 mr-2" />
+                        Edit Layout
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Enhanced Time Filters */}
+              <div className="px-8 pb-6">
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-100 p-4">
+                  <TimeFilter 
+                    filters={timeFilters} 
+                    onFiltersChange={handleTimeFiltersChange} 
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Enhanced Dashboard Content */}
+            <div className="flex-1 p-8 bg-gradient-to-br from-gray-50/50 to-blue-50/30">
+              <div className="bg-white/60 backdrop-blur-sm rounded-3xl border border-white/20 shadow-lg p-6">
+                <DashboardBuilder
+                  tiles={tiles}
+                  onTilesChange={handleTilesChange}
+                  isEditMode={isEditMode}
+                  onEditTile={handleEditTile}
+                  onRemoveTile={handleRemoveTile}
+                  onDuplicateTile={handleDuplicateTile}
+                  onRefreshTile={handleRefreshTile}
+                />
+              </div>
+            </div>
+
+            {/* Edit Dialog */}
+            {editingTile && (
+              <TileEditDialog
+                tile={editingTile}
+                isOpen={!!editingTile}
+                onClose={() => setEditingTile(null)}
+                onSave={handleSaveEditedTile}
+              />
+            )}
+          </div>
+        );
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-background fade-in">
-      {/* Enhanced Header */}
-      <div className="border-b bg-gradient-to-r from-white to-blue-50/30 backdrop-blur-sm">
-        <div className="page-header flex items-center justify-between px-8 py-6">
-          <div className="space-y-2">
-            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-gray-900 to-blue-700 bg-clip-text text-transparent">
-              Dashboard
-            </h1>
-            <p className="text-xl text-muted-foreground">
-              Real-time analytics and business intelligence
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <Badge variant="outline" className="hidden sm:flex px-4 py-2 text-sm font-medium border-blue-200 text-blue-700 bg-blue-50">
-              {tiles.length} active tiles
-            </Badge>
-            <Button
-              variant="outline"
-              size="default"
-              onClick={handleGlobalRefresh}
-              disabled={isLoading}
-              className="px-6 py-3 font-medium border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              {isLoading ? 'Refreshing...' : 'Refresh All'}
-            </Button>
-            {isEditMode && (
-              <Button
-                variant="outline"
-                size="default"
-                onClick={handleSaveLayout}
-                className="px-6 py-3 font-medium border-green-200 hover:bg-green-50 hover:border-green-300 transition-all"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                Save Layout
-              </Button>
-            )}
-            <Button
-              variant={isEditMode ? "default" : "outline"}
-              size="default"
-              onClick={handleToggleEditMode}
-              className={isEditMode ? "btn-primary px-6 py-3 font-medium" : "px-6 py-3 font-medium hover:bg-gray-50 transition-all"}
-            >
-              {isEditMode ? (
-                <>
-                  <X className="h-4 w-4 mr-2" />
-                  Exit Edit
-                </>
-              ) : (
-                <>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Edit Layout
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-
-        {/* Enhanced Time Filters */}
-        <div className="px-8 pb-6">
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-100 p-4">
-            <TimeFilter 
-              filters={timeFilters} 
-              onFiltersChange={handleTimeFiltersChange} 
-            />
-          </div>
-        </div>
+      {/* Secondary Navigation */}
+      <DashboardNavbar 
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        onSave={activeTab === 'dashboards' ? handleSaveLayout : undefined}
+        isEditMode={isEditMode}
+      />
+      
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {renderContent()}
       </div>
-
-      {/* Enhanced Dashboard Content */}
-      <div className="flex-1 p-8 bg-gradient-to-br from-gray-50/50 to-blue-50/30">
-        <div className="bg-white/60 backdrop-blur-sm rounded-3xl border border-white/20 shadow-lg p-6">
-          <DashboardBuilder
-            tiles={tiles}
-            onTilesChange={handleTilesChange}
-            isEditMode={isEditMode}
-            onEditTile={handleEditTile}
-            onRemoveTile={handleRemoveTile}
-            onDuplicateTile={handleDuplicateTile}
-            onRefreshTile={handleRefreshTile}
-          />
-        </div>
-      </div>
-
-      {/* Edit Dialog */}
-      {editingTile && (
-        <TileEditDialog
-          tile={editingTile}
-          isOpen={!!editingTile}
-          onClose={() => setEditingTile(null)}
-          onSave={handleSaveEditedTile}
-        />
-      )}
     </div>
   );
 }
 
-// Memoize Dashboard component to prevent unnecessary re-renders during navigation
-export default React.memo(Dashboard);
+export default Dashboard;

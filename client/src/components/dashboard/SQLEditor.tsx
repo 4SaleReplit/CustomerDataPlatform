@@ -144,11 +144,11 @@ export function SQLEditor({ onCreateVisualization }: SQLEditorProps) {
   };
 
   const transformDataForChart = (chartType: string) => {
-    if (!queryResult?.rows) return [];
+    if (!queryResult?.rows || !queryResult.columns) return [];
     
     return queryResult.rows.map(row => {
       const obj: any = {};
-      queryResult.columns.forEach((col, index) => {
+      queryResult.columns!.forEach((col, index) => {
         obj[col.name] = row[index];
       });
       return obj;
@@ -160,7 +160,7 @@ export function SQLEditor({ onCreateVisualization }: SQLEditorProps) {
     
     switch (type) {
       case 'bar':
-        if (queryResult?.columns.length === 2) {
+        if (queryResult?.columns && queryResult.columns.length === 2) {
           const xKey = queryResult.columns[0].name;
           const yKey = queryResult.columns[1].name;
           
@@ -179,7 +179,7 @@ export function SQLEditor({ onCreateVisualization }: SQLEditorProps) {
         break;
         
       case 'line':
-        if (queryResult?.columns.length >= 2) {
+        if (queryResult?.columns && queryResult.columns.length >= 2) {
           const xKey = queryResult.columns[0].name;
           const yKey = queryResult.columns[1].name;
           
@@ -198,7 +198,7 @@ export function SQLEditor({ onCreateVisualization }: SQLEditorProps) {
         break;
         
       case 'pie':
-        if (queryResult?.columns.length === 2) {
+        if (queryResult?.columns && queryResult.columns.length === 2) {
           const nameKey = queryResult.columns[0].name;
           const valueKey = queryResult.columns[1].name;
           
