@@ -5,7 +5,7 @@ import { RefreshCw, Settings, X, Save, Plus } from 'lucide-react';
 import { DashboardBuilder, type DashboardTile } from '@/components/dashboard/DashboardBuilder';
 import { TileEditDialog } from '@/components/dashboard/TileEditDialog';
 import { TimeFilter, type TimeFilterState } from '@/components/dashboard/TimeFilter';
-import { DashboardNavbar } from '@/components/dashboard/DashboardNavbar';
+import { Sidebar } from '@/components/dashboard/Sidebar';
 import { SQLEditor } from '@/components/dashboard/SQLEditor';
 import { Worksheets } from '@/components/dashboard/Worksheets';
 import { useToast } from '@/hooks/use-toast';
@@ -130,7 +130,7 @@ function Dashboard() {
   const [tiles, setTiles] = useState<DashboardTile[]>(initialTiles);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingTile, setEditingTile] = useState<DashboardTile | null>(null);
-  const [activeTab, setActiveTab] = useState('dashboards');
+  const [activeTab, setActiveTab] = useState('home');
   const [timeFilters, setTimeFilters] = useState<TimeFilterState>({
     chartType: 'line',
     timeRange: '7d',
@@ -357,19 +357,11 @@ function Dashboard() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'sql-editor':
+      case 'bi-interface':
         return <SQLEditor onCreateVisualization={handleCreateVisualization} />;
       
       case 'worksheets':
-        return <Worksheets onCreateNew={() => setActiveTab('sql-editor')} />;
-      
-      case 'tiles':
-        return (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-4">Tile Management</h2>
-            <p className="text-muted-foreground">Manage individual dashboard tiles and their configurations.</p>
-          </div>
-        );
+        return <Worksheets onCreateNew={() => setActiveTab('bi-interface')} />;
       
       case 'visualizations':
         return (
@@ -378,8 +370,48 @@ function Dashboard() {
             <p className="text-muted-foreground">Browse and manage saved visualizations.</p>
           </div>
         );
+        
+      case 'reports':
+        return (
+          <div className="p-6">
+            <h2 className="text-2xl font-bold mb-4">Reports</h2>
+            <p className="text-muted-foreground">Generate and manage analytical reports.</p>
+          </div>
+        );
+        
+      case 'analytics':
+        return (
+          <div className="p-6">
+            <h2 className="text-2xl font-bold mb-4">Analytics</h2>
+            <p className="text-muted-foreground">Advanced analytics and insights.</p>
+          </div>
+        );
+        
+      case 'cohorts':
+        return (
+          <div className="p-6">
+            <h2 className="text-2xl font-bold mb-4">Cohorts</h2>
+            <p className="text-muted-foreground">Manage user cohorts and segments.</p>
+          </div>
+        );
+        
+      case 'campaigns':
+        return (
+          <div className="p-6">
+            <h2 className="text-2xl font-bold mb-4">Campaigns</h2>
+            <p className="text-muted-foreground">Create and manage marketing campaigns.</p>
+          </div>
+        );
+        
+      case 'integrations':
+        return (
+          <div className="p-6">
+            <h2 className="text-2xl font-bold mb-4">Integrations</h2>
+            <p className="text-muted-foreground">Configure platform integrations.</p>
+          </div>
+        );
       
-      case 'dashboards':
+      case 'home':
       default:
         return (
           <div className="flex-1 flex flex-col">
@@ -493,13 +525,11 @@ function Dashboard() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background fade-in">
-      {/* Secondary Navigation */}
-      <DashboardNavbar 
+    <div className="flex h-screen bg-background">
+      {/* Sidebar Navigation */}
+      <Sidebar 
         activeTab={activeTab}
         onTabChange={handleTabChange}
-        onSave={activeTab === 'dashboards' ? handleSaveLayout : undefined}
-        isEditMode={isEditMode}
       />
       
       {/* Main Content */}
