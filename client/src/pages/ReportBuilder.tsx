@@ -552,13 +552,8 @@ export function ReportBuilder() {
             throw new Error("Empty or invalid PDF file");
           }
 
-          // Set up PDF.js worker - use the bundled version to avoid version mismatches
-          if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-              'pdfjs-dist/build/pdf.worker.min.js',
-              import.meta.url
-            ).toString();
-          }
+          // Set up PDF.js worker - use CDN version that matches the installed package
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
           
           const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
           const pdf = await loadingTask.promise;
@@ -573,43 +568,82 @@ export function ReportBuilder() {
               let yPosition = 100;
               const elements: SlideElement[] = [];
               
-              // Group text items by their Y position to create text blocks
-              const textGroups: { [key: number]: string[] } = {};
+              // Enhanced text parsing for better content organization
+              const textItems: any[] = [];
               
               textContent.items.forEach((item: any) => {
                 if (item.str && item.str.trim()) {
-                  const y = Math.round(item.transform[5] / 10) * 10; // Group by approximate Y position
-                  if (!textGroups[y]) textGroups[y] = [];
-                  textGroups[y].push(item.str);
+                  textItems.push({
+                    text: item.str.trim(),
+                    x: item.transform[4],
+                    y: item.transform[5],
+                    fontSize: item.height || 12,
+                    fontName: item.fontName || 'Arial'
+                  });
                 }
               });
               
-              // Convert text groups to slide elements
-              Object.keys(textGroups)
-                .sort((a, b) => parseInt(b) - parseInt(a)) // Sort from top to bottom
-                .forEach((yPos, index) => {
-                  const text = textGroups[parseInt(yPos)].join(' ').trim();
-                  if (text.length > 0) {
-                    elements.push({
-                      id: `text-${pageNum}-${index + 1}`,
-                      type: 'text',
-                      x: 50,
-                      y: yPosition,
-                      width: Math.min(700, Math.max(300, text.length * 8)),
-                      height: text.length > 100 ? 80 : text.length > 50 ? 60 : 40,
-                      content: text,
-                      style: {
-                        fontSize: text.length < 50 ? 18 : text.length < 100 ? 16 : 14,
-                        fontWeight: index === 0 ? 'bold' : 'normal',
-                        textAlign: 'left',
-                        color: '#000000',
-                        backgroundColor: 'transparent',
-                        fontFamily: 'Arial'
-                      }
-                    });
-                    yPosition += (text.length > 100 ? 100 : text.length > 50 ? 80 : 60);
-                  }
-                });
+              // Sort by Y position (top to bottom) then by X position (left to right)
+              textItems.sort((a, b) => {
+                const yDiff = b.y - a.y; // Reverse for top-to-bottom
+                if (Math.abs(yDiff) > 5) return yDiff; // Different lines
+                return a.x - b.x; // Same line, left to right
+              });
+              
+              // Group text items into logical blocks
+              const textBlocks: string[] = [];
+              let currentBlock = '';
+              let lastY = textItems[0]?.y || 0;
+              
+              textItems.forEach((item, index) => {
+                const isNewLine = Math.abs(item.y - lastY) > 5;
+                const isTitle = item.fontSize > 14 || /^[A-Z\s]+$/.test(item.text);
+                
+                if (isNewLine && currentBlock.trim()) {
+                  textBlocks.push(currentBlock.trim());
+                  currentBlock = '';
+                }
+                
+                currentBlock += (currentBlock && !isNewLine ? ' ' : '') + item.text;
+                lastY = item.y;
+                
+                // End block if this looks like a standalone title/header
+                if (isTitle && item.text.length < 50 && index < textItems.length - 1) {
+                  textBlocks.push(currentBlock.trim());
+                  currentBlock = '';
+                }
+              });
+              
+              if (currentBlock.trim()) {
+                textBlocks.push(currentBlock.trim());
+              }
+              
+              // Convert text blocks to slide elements
+              textBlocks.forEach((text, index) => {
+                if (text.length > 2) { // Filter out single characters or very short text
+                  const isHeader = text.length < 50 && /^[A-Z\s\d%▲▼-]+$/.test(text);
+                  const isLargeBlock = text.length > 200;
+                  
+                  elements.push({
+                    id: `text-${pageNum}-${index + 1}`,
+                    type: 'text',
+                    x: 50,
+                    y: yPosition,
+                    width: isLargeBlock ? 700 : Math.min(600, Math.max(250, text.length * 6)),
+                    height: isLargeBlock ? 120 : isHeader ? 50 : 70,
+                    content: text,
+                    style: {
+                      fontSize: isHeader ? 20 : isLargeBlock ? 14 : 16,
+                      fontWeight: isHeader ? 'bold' : 'normal',
+                      textAlign: isHeader ? 'center' : 'left',
+                      color: '#000000',
+                      backgroundColor: 'transparent',
+                      fontFamily: 'Arial'
+                    }
+                  });
+                  yPosition += (isLargeBlock ? 140 : isHeader ? 70 : 90);
+                }
+              });
 
               // If no text found, create a placeholder
               if (elements.length === 0) {
