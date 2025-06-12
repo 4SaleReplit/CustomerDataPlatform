@@ -50,6 +50,7 @@ const navigation = [
     children: [
       { name: 'Dashboards', href: '/data-studio/dashboards', icon: BarChart3 },
       { name: 'Explores', href: '/data-studio/explores', icon: PieChart },
+      { name: 'Reports Builder', href: '/data-studio/reports', icon: FileText },
       { name: 'SQL Editor', href: '/data-studio/sql', icon: Database },
       { name: 'File System', href: '/data-studio/files', icon: FileText },
       { name: 'Lineage', href: '/data-studio/lineage', icon: Activity },
