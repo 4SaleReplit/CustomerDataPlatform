@@ -16,7 +16,12 @@ import {
   Calendar,
   Target,
   Share2,
-  Zap
+  Zap,
+  Tags,
+  Megaphone,
+  CalendarDays,
+  FileText,
+  Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -39,6 +44,46 @@ const navItems: NavItem[] = [
     icon: Home 
   },
   { 
+    id: 'user-explorer', 
+    label: 'User Explorer', 
+    icon: User 
+  },
+  { 
+    id: 'cohorts', 
+    label: 'Cohorts', 
+    icon: Users 
+  },
+  { 
+    id: 'segment-tags', 
+    label: 'Segment Tags', 
+    icon: Tags 
+  },
+  { 
+    id: 'upselling-campaigns', 
+    label: 'Upselling Campaigns', 
+    icon: Megaphone 
+  },
+  { 
+    id: 'campaign-calendar', 
+    label: 'Campaign Calendar', 
+    icon: CalendarDays 
+  },
+  { 
+    id: 'activity-log', 
+    label: 'Activity Log', 
+    icon: FileText 
+  },
+  { 
+    id: 'integrations', 
+    label: 'Integrations', 
+    icon: Share2 
+  },
+  { 
+    id: 'admin', 
+    label: 'Admin', 
+    icon: Shield 
+  },
+  { 
     id: 'data-studio', 
     label: 'Data Studio', 
     icon: Database,
@@ -48,27 +93,6 @@ const navItems: NavItem[] = [
       { id: 'visualizations', label: 'Visualizations', icon: BarChart3 },
       { id: 'reports', label: 'Reports', icon: TrendingUp },
       { id: 'analytics', label: 'Analytics', icon: Activity }
-    ]
-  },
-  { 
-    id: 'cohorts', 
-    label: 'Cohorts', 
-    icon: Users 
-  },
-  { 
-    id: 'campaigns', 
-    label: 'Campaigns', 
-    icon: Calendar 
-  },
-  { 
-    id: 'integrations', 
-    label: 'Integrations', 
-    icon: Settings,
-    children: [
-      { id: 'amplitude', label: 'Amplitude', icon: Target },
-      { id: 'braze', label: 'Braze', icon: Share2 },
-      { id: 'snowflake', label: 'Snowflake', icon: Database },
-      { id: 'api-keys', label: 'API Keys', icon: Zap }
     ]
   }
 ];

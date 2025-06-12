@@ -451,6 +451,32 @@ function Dashboard() {
           </div>
         );
         
+      case 'user-explorer':
+        return (
+          <div className="flex-1 p-6">
+            <div className="max-w-6xl">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold mb-2">User Explorer</h2>
+                <p className="text-muted-foreground">Explore and analyze user data and behavior patterns</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">User Search</h3>
+                  <p className="text-sm text-muted-foreground">Search and filter users by various criteria</p>
+                </div>
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">User Profiles</h3>
+                  <p className="text-sm text-muted-foreground">Detailed user profile views and analytics</p>
+                </div>
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">Behavior Analysis</h3>
+                  <p className="text-sm text-muted-foreground">Analyze user behavior and engagement patterns</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
       case 'cohorts':
         return (
           <div className="flex-1 p-6">
@@ -471,6 +497,102 @@ function Dashboard() {
                 <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
                   <h3 className="font-semibold mb-2">Sync to Platforms</h3>
                   <p className="text-sm text-muted-foreground">Export cohorts to marketing platforms</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'segment-tags':
+        return (
+          <div className="flex-1 p-6">
+            <div className="max-w-6xl">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold mb-2">Segment Tags</h2>
+                <p className="text-muted-foreground">Create and manage user segment tags for targeted marketing</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">Tag Management</h3>
+                  <p className="text-sm text-muted-foreground">Create, edit, and organize segment tags</p>
+                </div>
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">Tag Rules</h3>
+                  <p className="text-sm text-muted-foreground">Define automated tagging rules and conditions</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'upselling-campaigns':
+        return (
+          <div className="flex-1 p-6">
+            <div className="max-w-6xl">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold mb-2">Upselling Campaigns</h2>
+                <p className="text-muted-foreground">Design and manage targeted upselling campaigns</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">Campaign Builder</h3>
+                  <p className="text-sm text-muted-foreground">Create personalized upselling campaigns</p>
+                </div>
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">A/B Testing</h3>
+                  <p className="text-sm text-muted-foreground">Test different campaign variations</p>
+                </div>
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">Performance Analytics</h3>
+                  <p className="text-sm text-muted-foreground">Track campaign performance and ROI</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'campaign-calendar':
+        return (
+          <div className="flex-1 p-6">
+            <div className="max-w-6xl">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold mb-2">Campaign Calendar</h2>
+                <p className="text-muted-foreground">Schedule and view all campaigns in a calendar format</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">Monthly View</h3>
+                  <p className="text-sm text-muted-foreground">View campaigns by month with scheduling</p>
+                </div>
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">Campaign Conflicts</h3>
+                  <p className="text-sm text-muted-foreground">Identify and resolve scheduling conflicts</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'activity-log':
+        return (
+          <div className="flex-1 p-6">
+            <div className="max-w-6xl">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold mb-2">Activity Log</h2>
+                <p className="text-muted-foreground">Track all system activities and user actions</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">User Activities</h3>
+                  <p className="text-sm text-muted-foreground">Monitor user login and action history</p>
+                </div>
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">System Events</h3>
+                  <p className="text-sm text-muted-foreground">Track system changes and updates</p>
+                </div>
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">Audit Trail</h3>
+                  <p className="text-sm text-muted-foreground">Complete audit trail for compliance</p>
                 </div>
               </div>
             </div>
@@ -519,6 +641,32 @@ function Dashboard() {
                 <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
                   <h3 className="font-semibold mb-2">Snowflake</h3>
                   <p className="text-sm text-muted-foreground">Data warehouse connection</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'admin':
+        return (
+          <div className="flex-1 p-6">
+            <div className="max-w-6xl">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold mb-2">Admin</h2>
+                <p className="text-muted-foreground">System administration and user management</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">User Management</h3>
+                  <p className="text-sm text-muted-foreground">Manage team members and permissions</p>
+                </div>
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">System Settings</h3>
+                  <p className="text-sm text-muted-foreground">Configure platform settings and preferences</p>
+                </div>
+                <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold mb-2">Security</h3>
+                  <p className="text-sm text-muted-foreground">Security settings and access controls</p>
                 </div>
               </div>
             </div>
