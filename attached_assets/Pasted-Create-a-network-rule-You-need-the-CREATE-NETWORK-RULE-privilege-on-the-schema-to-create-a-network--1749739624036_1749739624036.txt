@@ -1,0 +1,43 @@
+Create a network rule
+You need the CREATE NETWORK RULE privilege on the schema to create a network rule. By default, only the ACCOUNTADMIN and SECURITYADMIN roles, along with the schema owner, have this privilege.
+
+The mode of a network rule that will be used by a network policy must be INGRESS or INTERNAL STAGE.
+
+To gain a better understand of best practices and strategies for creating network rules, see About network rules.
+
+You can create a network rule using Snowsight or by executing a SQL command:
+
+Snowsight
+Sign in to Snowsight.
+
+Select Admin » Security.
+
+Select the Network Rules tab.
+
+Select + Network Rule.
+
+Enter the name of the network rule.
+
+Select the schema of the network rule. Network rule are schema-level objects.
+
+Optionally, add a descriptive comment for the network rule to help organize and maintain network rules in the schema.
+
+In the Type drop-down, select the type of identifier being defined in the network rule. The Host Port type is not a valid option for network rules being used with network policies.
+
+In the Mode drop-down, select Ingress or Internal Stage. The Egress mode is not a valid option for network rules being used with network policies.
+
+Enter a comma-separated list of the identifiers that will be allowed or blocked when the network rule is added to a network policy. The identifiers in this list must all be of the type specified in the Type drop-down.
+
+Select Create Network Rule.
+
+SQL
+An administrator can execute the CREATE NETWORK RULE command to create a new network rule, specifying a list of network identifiers along with the type of those identifiers.
+
+For example, to use a custom role to create a network rule that can be used to allow or block traffic from a range of IP addresses:
+
+GRANT USAGE ON DATABASE securitydb TO ROLE network_admin;
+GRANT USAGE ON SCHEMA securitydb.myrules TO ROLE network_admin;
+GRANT CREATE NETWORK RULE ON SCHEMA securitydb.myrules TO ROLE network_admin;
+USE ROLE network_admin;
+
+CREATE NETWORK RULE cloud_network TYPE = IPV4 VALUE_LIST = ('47.88.25.32/27');
