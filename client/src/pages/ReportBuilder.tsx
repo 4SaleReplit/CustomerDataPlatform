@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
+import JSZip from 'pizzip';
 import { 
   Plus, 
   Save, 
@@ -196,6 +197,8 @@ export function ReportBuilder() {
     refreshOnLoad: true,
     refreshInterval: 300000
   });
+  const [isUploading, setIsUploading] = useState(false);
+  const [showUploader, setShowUploader] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const currentSlide = currentReport?.slides[currentSlideIndex];
@@ -532,6 +535,143 @@ export function ReportBuilder() {
 
     setReports([wbrReport, ...reports]);
     openDesigner(wbrReport.id);
+  };
+
+  const parsePPTXFile = async (file: File): Promise<Slide[]> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const arrayBuffer = e.target?.result as ArrayBuffer;
+          const zip = new JSZip(arrayBuffer);
+          
+          // Parse presentation.xml to get slide relationships
+          const presentationXml = zip.file("ppt/presentation.xml")?.asText();
+          if (!presentationXml) {
+            throw new Error("Invalid PowerPoint file");
+          }
+
+          // Extract slide count from presentation.xml
+          const slideMatches = presentationXml.match(/<p:sldId[^>]*>/g) || [];
+          const slideCount = slideMatches.length;
+
+          const slides: Slide[] = [];
+
+          // Parse each slide
+          for (let i = 1; i <= slideCount; i++) {
+            const slideXml = zip.file(`ppt/slides/slide${i}.xml`)?.asText();
+            if (slideXml) {
+              const slide = parseSlideXML(slideXml, i);
+              slides.push(slide);
+            }
+          }
+
+          resolve(slides);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
+  const parseSlideXML = (slideXml: string, slideNumber: number): Slide => {
+    const elements: SlideElement[] = [];
+    
+    // Parse text elements
+    const textMatches = slideXml.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) || [];
+    textMatches.forEach((match, index) => {
+      const text = match.replace(/<[^>]*>/g, '');
+      if (text.trim()) {
+        elements.push({
+          id: `text-${slideNumber}-${index}`,
+          type: 'text',
+          x: 60 + (index * 20),
+          y: 60 + (index * 40),
+          width: 400,
+          height: 50,
+          content: text,
+          style: {
+            fontSize: 16,
+            fontWeight: 'normal',
+            textAlign: 'left',
+            color: '#000000',
+            backgroundColor: 'transparent'
+          }
+        });
+      }
+    });
+
+    // Parse shape elements (simplified)
+    const shapeMatches = slideXml.match(/<p:sp[^>]*>/g) || [];
+    shapeMatches.forEach((match, index) => {
+      if (index < 3) { // Limit to prevent too many shapes
+        elements.push({
+          id: `shape-${slideNumber}-${index}`,
+          type: 'shape',
+          x: 100 + (index * 50),
+          y: 200 + (index * 30),
+          width: 100,
+          height: 100,
+          content: { shape: 'rectangle' },
+          style: {
+            fontSize: 16,
+            fontWeight: 'normal',
+            textAlign: 'left',
+            color: '#000000',
+            backgroundColor: 'transparent'
+          }
+        });
+      }
+    });
+
+    return {
+      id: `slide-${slideNumber}`,
+      name: `Slide ${slideNumber}`,
+      elements,
+      backgroundColor: '#ffffff'
+    };
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.pptx')) {
+      alert('Please select a valid PowerPoint (.pptx) file');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const slides = await parsePPTXFile(file);
+      
+      const uploadedReport: Report = {
+        id: Date.now().toString(),
+        name: file.name.replace('.pptx', ''),
+        description: 'Uploaded PowerPoint presentation',
+        lastModified: 'Just now',
+        status: 'draft',
+        slides,
+        settings: {
+          schedule: 'weekly',
+          recipients: [],
+          autoRefresh: false
+        }
+      };
+
+      setReports([uploadedReport, ...reports]);
+      setShowUploader(false);
+      openDesigner(uploadedReport.id);
+    } catch (error) {
+      console.error('Error parsing PowerPoint file:', error);
+      alert('Failed to parse PowerPoint file. Please ensure it\'s a valid .pptx file.');
+    } finally {
+      setIsUploading(false);
+      // Reset file input
+      event.target.value = '';
+    }
   };
 
   const duplicateReport = (reportId: string) => {
@@ -1056,6 +1196,10 @@ export function ReportBuilder() {
               <p className="text-gray-600 mt-1">Create and manage presentation reports with live data</p>
             </div>
             <div className="flex gap-3">
+              <Button onClick={() => setShowUploader(true)} className="bg-purple-600 hover:bg-purple-700">
+                <Upload className="h-4 w-4 mr-2" />
+                Upload PPTX
+              </Button>
               <Button onClick={createWBRTemplate} className="bg-green-600 hover:bg-green-700">
                 <FileText className="h-4 w-4 mr-2" />
                 WBR Template
@@ -1137,6 +1281,55 @@ export function ReportBuilder() {
             </Card>
           </div>
         </div>
+
+        {/* File Upload Dialog */}
+        <Dialog open={showUploader} onOpenChange={setShowUploader}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Upload PowerPoint Presentation</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="text-sm text-gray-600">
+                Upload a PowerPoint (.pptx) file to convert it into an editable presentation in the design studio.
+              </div>
+              
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <input
+                  type="file"
+                  accept=".pptx"
+                  onChange={handleFileUpload}
+                  disabled={isUploading}
+                  className="hidden"
+                  id="pptx-upload"
+                />
+                <label
+                  htmlFor="pptx-upload"
+                  className={`cursor-pointer ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <Upload className="h-8 w-8 mx-auto mb-3 text-gray-400" />
+                  <div className="text-sm font-medium text-gray-900 mb-1">
+                    {isUploading ? 'Processing...' : 'Click to upload PPTX'}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Supports PowerPoint 2007+ (.pptx files)
+                  </div>
+                </label>
+              </div>
+              
+              {isUploading && (
+                <div className="flex items-center justify-center space-x-2">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span className="text-sm text-gray-600">Parsing presentation...</span>
+                </div>
+              )}
+              
+              <div className="text-xs text-gray-500">
+                The uploaded presentation will be converted to editable slides where you can add data visualizations and modify content.
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
