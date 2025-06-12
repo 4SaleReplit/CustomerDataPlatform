@@ -190,6 +190,7 @@ export function ReportBuilder() {
   const [isExecutingQuery, setIsExecutingQuery] = useState(false);
   const [queryResults, setQueryResults] = useState<any>(null);
   const [currentEditingElement, setCurrentEditingElement] = useState<string | null>(null);
+  const [currentTitle, setCurrentTitle] = useState('');
   const [refreshConfig, setRefreshConfig] = useState({
     autoRefresh: false,
     refreshOnLoad: true,
@@ -509,6 +510,7 @@ export function ReportBuilder() {
       // Open SQL editor for data elements
       const content = element.content as any;
       setCurrentQuery(content.query || '');
+      setCurrentTitle(content.title || '');
       setCurrentEditingElement(elementId);
       
       // Load existing refresh configuration
@@ -560,6 +562,7 @@ export function ReportBuilder() {
       if (element && (element.type === 'chart' || element.type === 'table' || element.type === 'metric')) {
         const updatedContent = {
           ...element.content,
+          title: currentTitle,
           query: currentQuery,
           refreshConfig: refreshConfig,
           queryResults: queryResults // Store the query results for display
@@ -569,6 +572,7 @@ export function ReportBuilder() {
     }
     setShowSQLEditor(false);
     setCurrentEditingElement(null);
+    setCurrentTitle('');
     setQueryResults(null);
   };
 
@@ -611,15 +615,25 @@ export function ReportBuilder() {
           </div>
         )}
         {element.type === 'chart' && (
-          <div className="w-full h-full bg-gray-100 border rounded flex items-center justify-center text-gray-500 pointer-events-none">
-            <BarChart3 className="h-8 w-8" />
-            <span className="ml-2">Chart</span>
+          <div className="w-full h-full bg-white border rounded p-2 flex flex-col pointer-events-none">
+            <div className="font-semibold text-sm mb-2 text-gray-700 border-b pb-1">
+              {element.content?.title || 'Chart Title'}
+            </div>
+            <div className="flex-1 flex items-center justify-center text-gray-500">
+              <BarChart3 className="h-8 w-8" />
+              <span className="ml-2">Chart Visualization</span>
+            </div>
           </div>
         )}
         {element.type === 'table' && (
-          <div className="w-full h-full bg-white border rounded flex items-center justify-center text-gray-500 pointer-events-none">
-            <Table className="h-8 w-8" />
-            <span className="ml-2">Table</span>
+          <div className="w-full h-full bg-white border rounded p-2 flex flex-col pointer-events-none">
+            <div className="font-semibold text-sm mb-2 text-gray-700 border-b pb-1">
+              {element.content?.title || 'Table Title'}
+            </div>
+            <div className="flex-1 flex items-center justify-center text-gray-500">
+              <Table className="h-8 w-8" />
+              <span className="ml-2">Data Table</span>
+            </div>
           </div>
         )}
         {element.type === 'metric' && (
@@ -1613,6 +1627,20 @@ export function ReportBuilder() {
           <div className="flex-1 flex gap-4 min-h-0">
             {/* Left side - Query Editor */}
             <div className="flex-1 flex flex-col min-h-0">
+              {/* Title Input */}
+              <div className="mb-3">
+                <Label htmlFor="tile-title" className="text-sm font-medium">
+                  Visualization Title
+                </Label>
+                <Input
+                  id="tile-title"
+                  value={currentTitle}
+                  onChange={(e) => setCurrentTitle(e.target.value)}
+                  placeholder="Enter a title for this visualization"
+                  className="mt-1"
+                />
+              </div>
+              
               <div className="flex items-center gap-2 mb-3">
                 <Button 
                   onClick={executeQuery} 
