@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { SolarizedSQLEditor } from './SolarizedSQLEditor';
+import { FixedSolarizedEditor } from './FixedSolarizedEditor';
 import { 
   Play, 
   Save, 
@@ -287,7 +287,7 @@ export function SQLEditor({ onCreateVisualization }: SQLEditorProps) {
         </CardHeader>
         <CardContent>
           <div className="rounded-md border border-gray-700 min-h-32">
-            <SolarizedSQLEditor
+            <FixedSolarizedEditor
               value={query}
               onChange={setQuery}
               onExecute={executeQuery}
