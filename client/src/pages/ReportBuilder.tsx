@@ -540,6 +540,142 @@ export function ReportBuilder() {
     openDesigner(wbrReport.id);
   };
 
+  // PDF parsing function
+  const parsePDFFile = async (file: File): Promise<Slide[]> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const arrayBuffer = e.target?.result as ArrayBuffer;
+          
+          if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+            throw new Error("Empty or invalid PDF file");
+          }
+
+          // Set up PDF.js worker
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+          
+          const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+          const pdf = await loadingTask.promise;
+          const slides: Slide[] = [];
+
+          // Parse each page as a slide
+          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            try {
+              const page = await pdf.getPage(pageNum);
+              const textContent = await page.getTextContent();
+              
+              let yPosition = 100;
+              const elements: SlideElement[] = [];
+              
+              // Group text items by their Y position to create text blocks
+              const textGroups: { [key: number]: string[] } = {};
+              
+              textContent.items.forEach((item: any) => {
+                if (item.str && item.str.trim()) {
+                  const y = Math.round(item.transform[5] / 10) * 10; // Group by approximate Y position
+                  if (!textGroups[y]) textGroups[y] = [];
+                  textGroups[y].push(item.str);
+                }
+              });
+              
+              // Convert text groups to slide elements
+              Object.keys(textGroups)
+                .sort((a, b) => parseInt(b) - parseInt(a)) // Sort from top to bottom
+                .forEach((yPos, index) => {
+                  const text = textGroups[parseInt(yPos)].join(' ').trim();
+                  if (text.length > 0) {
+                    elements.push({
+                      id: `text-${pageNum}-${index + 1}`,
+                      type: 'text',
+                      x: 50,
+                      y: yPosition,
+                      width: Math.min(700, Math.max(300, text.length * 8)),
+                      height: text.length > 100 ? 80 : text.length > 50 ? 60 : 40,
+                      content: text,
+                      style: {
+                        fontSize: text.length < 50 ? 18 : text.length < 100 ? 16 : 14,
+                        fontWeight: index === 0 ? 'bold' : 'normal',
+                        textAlign: 'left',
+                        color: '#000000',
+                        backgroundColor: 'transparent',
+                        fontFamily: 'Arial'
+                      }
+                    });
+                    yPosition += (text.length > 100 ? 100 : text.length > 50 ? 80 : 60);
+                  }
+                });
+
+              // If no text found, create a placeholder
+              if (elements.length === 0) {
+                elements.push({
+                  id: `text-${pageNum}-1`,
+                  type: 'text',
+                  x: 100,
+                  y: 200,
+                  width: 400,
+                  height: 60,
+                  content: `Page ${pageNum} Content`,
+                  style: {
+                    fontSize: 18,
+                    fontWeight: 'normal',
+                    textAlign: 'left',
+                    color: '#000000',
+                    backgroundColor: 'transparent',
+                    fontFamily: 'Arial'
+                  }
+                });
+              }
+
+              slides.push({
+                id: `slide-${pageNum}`,
+                name: `Page ${pageNum}`,
+                elements,
+                backgroundColor: '#ffffff'
+              });
+            } catch (pageError) {
+              console.warn(`Error parsing PDF page ${pageNum}:`, pageError);
+              // Create fallback slide
+              slides.push({
+                id: `slide-${pageNum}`,
+                name: `Page ${pageNum}`,
+                elements: [{
+                  id: `text-${pageNum}-1`,
+                  type: 'text',
+                  x: 100,
+                  y: 200,
+                  width: 400,
+                  height: 60,
+                  content: `Page ${pageNum} - Content could not be parsed`,
+                  style: {
+                    fontSize: 16,
+                    fontWeight: 'normal',
+                    textAlign: 'left',
+                    color: '#666666',
+                    backgroundColor: 'transparent',
+                    fontFamily: 'Arial'
+                  }
+                }],
+                backgroundColor: '#ffffff'
+              });
+            }
+          }
+
+          if (slides.length === 0) {
+            throw new Error("No pages found in PDF");
+          }
+
+          resolve(slides);
+        } catch (error) {
+          console.error('PDF parsing error:', error);
+          reject(new Error(`Failed to parse PDF: ${error instanceof Error ? error.message : 'Unknown error'}`));
+        }
+      };
+      reader.onerror = () => reject(new Error("Failed to read PDF file"));
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
   const parsePPTXFile = async (file: File): Promise<Slide[]> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -868,24 +1004,31 @@ export function ReportBuilder() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.toLowerCase().endsWith('.pptx')) {
-      alert('Please select a valid PowerPoint (.pptx) file');
+    const fileExtension = file.name.toLowerCase().split('.').pop();
+    if (!fileExtension || !['pptx', 'pdf'].includes(fileExtension)) {
+      alert('Please select a valid PowerPoint (.pptx) or PDF (.pdf) file');
       return;
     }
 
     setIsUploading(true);
     try {
-      const slides = await parsePPTXFile(file);
+      let slides: Slide[] = [];
+      
+      if (fileExtension === 'pptx') {
+        slides = await parsePPTXFile(file);
+      } else if (fileExtension === 'pdf') {
+        slides = await parsePDFFile(file);
+      }
       
       const uploadedReport: Report = {
         id: Date.now().toString(),
-        name: file.name.replace('.pptx', ''),
-        description: 'Uploaded PowerPoint presentation',
+        name: file.name.replace(/\.[^/.]+$/, ''),
+        description: `Imported from ${file.name} (${fileExtension.toUpperCase()})`,
         lastModified: 'Just now',
         status: 'draft',
         slides,
         settings: {
-          schedule: 'weekly',
+          schedule: 'manual',
           recipients: [],
           autoRefresh: false
         }
@@ -895,8 +1038,9 @@ export function ReportBuilder() {
       setShowUploader(false);
       openDesigner(uploadedReport.id);
     } catch (error) {
-      console.error('Error parsing PowerPoint file:', error);
-      alert('Failed to parse PowerPoint file. Please ensure it\'s a valid .pptx file.');
+      console.error('Error parsing file:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Failed to parse ${fileExtension?.toUpperCase()} file: ${errorMessage}`);
     } finally {
       setIsUploading(false);
       // Reset file input
@@ -1441,7 +1585,7 @@ export function ReportBuilder() {
             <div className="flex gap-3">
               <Button onClick={() => setShowUploader(true)} className="bg-purple-600 hover:bg-purple-700">
                 <Upload className="h-4 w-4 mr-2" />
-                Upload PPTX
+                Upload File
               </Button>
               <Button onClick={createWBRTemplate} className="bg-green-600 hover:bg-green-700">
                 <FileText className="h-4 w-4 mr-2" />
@@ -1529,33 +1673,33 @@ export function ReportBuilder() {
         <Dialog open={showUploader} onOpenChange={setShowUploader}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Upload PowerPoint Presentation</DialogTitle>
+              <DialogTitle>Upload Presentation or Document</DialogTitle>
             </DialogHeader>
             
             <div className="space-y-4">
               <div className="text-sm text-gray-600">
-                Upload a PowerPoint (.pptx) file to convert it into an editable presentation in the design studio.
+                Upload a PowerPoint (.pptx) or PDF (.pdf) file to convert it into an editable presentation in the design studio.
               </div>
               
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                 <input
                   type="file"
-                  accept=".pptx"
+                  accept=".pptx,.pdf"
                   onChange={handleFileUpload}
                   disabled={isUploading}
                   className="hidden"
-                  id="pptx-upload"
+                  id="file-upload"
                 />
                 <label
-                  htmlFor="pptx-upload"
+                  htmlFor="file-upload"
                   className={`cursor-pointer ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <Upload className="h-8 w-8 mx-auto mb-3 text-gray-400" />
                   <div className="text-sm font-medium text-gray-900 mb-1">
-                    {isUploading ? 'Processing...' : 'Click to upload PPTX'}
+                    {isUploading ? 'Processing...' : 'Click to upload file'}
                   </div>
                   <div className="text-xs text-gray-500">
-                    Supports PowerPoint 2007+ (.pptx files)
+                    Supports PowerPoint (.pptx) and PDF (.pdf) files
                   </div>
                 </label>
               </div>
@@ -1563,12 +1707,20 @@ export function ReportBuilder() {
               {isUploading && (
                 <div className="flex items-center justify-center space-x-2">
                   <RefreshCw className="h-4 w-4 animate-spin" />
-                  <span className="text-sm text-gray-600">Parsing presentation...</span>
+                  <span className="text-sm text-gray-600">Parsing document...</span>
                 </div>
               )}
               
+              <div className="space-y-2">
+                <div className="text-xs font-medium text-gray-700">Supported formats:</div>
+                <div className="text-xs text-gray-500 space-y-1">
+                  <div>• PowerPoint (.pptx) - Preserves fonts, colors, positioning, and formatting</div>
+                  <div>• PDF (.pdf) - Extracts text content and converts pages to editable slides</div>
+                </div>
+              </div>
+              
               <div className="text-xs text-gray-500">
-                The uploaded presentation will be converted to editable slides where you can add data visualizations and modify content.
+                The uploaded document will be converted to editable slides where you can add data visualizations and modify content.
               </div>
             </div>
           </DialogContent>
