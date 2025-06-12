@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { SQLSyntaxHighlighter } from './SQLSyntaxHighlighter';
 import { 
   Play, 
   Save, 
@@ -286,18 +287,15 @@ export function SQLEditor({ onCreateVisualization }: SQLEditorProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <Textarea
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Enter your SQL query here..."
-            className="min-h-32 font-mono text-sm"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault();
-                executeQuery();
-              }
-            }}
-          />
+          <div className="border rounded-md bg-white dark:bg-gray-950 min-h-32">
+            <SQLSyntaxHighlighter
+              value={query}
+              onChange={setQuery}
+              onExecute={executeQuery}
+              placeholder="Enter your SQL query here... (Ctrl+Enter to execute)"
+              className="w-full h-32"
+            />
+          </div>
           <div className="flex items-center justify-between mt-2 text-sm text-muted-foreground">
             <span>Press Ctrl+Enter to execute</span>
             {executionTime && (
