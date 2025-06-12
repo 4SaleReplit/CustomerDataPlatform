@@ -17,6 +17,117 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
   const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
   const [selectedSuggestion, setSelectedSuggestion] = useState(0);
 
+  // Snowflake database schema from the provided data
+  const snowflakeSchema: Record<string, Record<string, Record<string, string[]>>> = {
+    "DATA_LAKE": {
+      "DATA_PLATFORM_METRICS": {
+        "DATA_VOLUME": ["DATE", "TABLE_CATALOG", "TABLE_SCHEMA", "TABLE_NAME", "SIZE", "PREV_SIZE", "DELTA_SIZE", "RECORDS", "PREV_ROWS_COUNT", "DELTA_ROWS_COUNT"]
+      },
+      "DYNAMODB": {
+        "DEVICE_USER_ADV_VIEWS": ["DEVICE_ID", "USER_ADV_ID", "DATE_VIEWED", "IS_DELETED", "SYNCED", "PK_DEVICE_ADV_DATE"],
+        "DEV_DEVICE_USER_ADV_VIEWS": ["DEVICE_ID", "USER_ADV_ID", "DATE_VIEWED", "IS_DELETED", "SYNCED", "PK_DEVICE_ADV_DATE"],
+        "STAGING_DEVICE_USER_ADV_VIEWS": ["DEVICE_ID", "USER_ADV_ID", "DATE_VIEWED", "IS_DELETED", "SYNCED"],
+        "USER_ADV_VIEWS_HOUR": ["DATE", "USER_ADV_ID", "COUNT"]
+      },
+      "INFORMATION_SCHEMA": {}
+    },
+    "DBT_CORE_PROD_DATABASE": {
+      "DATA_MART": {
+        "DOM_LEVEL_1_SI": ["LEVEL_1", "EN_NAME", "FULL_PATH", "Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7", "Day 8", "Day 9", "Day 10", "Day 11", "Day 12", "Day 13", "Day 14", "Day 15", "Day 16", "Day 17", "Day 18", "Day 19", "Day 20", "Day 21", "Day 22", "Day 23", "Day 24", "Day 25", "Day 26", "Day 27", "Day 28", "Day 29", "Day 30", "Day 31"],
+        "DOM_VERTICAL_SI": ["VERTICAL_NAME", "Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7", "Day 8", "Day 9", "Day 10", "Day 11", "Day 12", "Day 13", "Day 14", "Day 15", "Day 16", "Day 17", "Day 18", "Day 19", "Day 20", "Day 21", "Day 22", "Day 23", "Day 24", "Day 25", "Day 26", "Day 27", "Day 28", "Day 29", "Day 30", "Day 31"],
+        "OFFICES_STATS_REPORT": ["USER_ADV_ID", "USER_ID", "DATE_PUBLISHED", "SOURCE_TABLE", "CAT_ID", "SOURCE", "ASKING_PRICE", "TITLE", "LEVEL_1", "LEVEL_3", "LEVEL_4", "FIRST_NAME_FIXED", "LAST_NAME_FIXED", "USER_TYPE", "TOTAL_VIEWS", "MILLAGE", "PHONECALL", "CALLICON", "WHATSAPPCALL", "CHAT", "CALL", "PHONE", "WHATSAPPICON", "ENQUIRENOW", "EXTERNALURL", "TESTDRIVE"]
+      },
+      "OPERATIONS": {
+        "USER_SEGMENTATION_PROJECT_V4": ["USER_ADV_ID", "USER_ID", "DATE_CREATED", "VERTICAL", "LEVEL_1", "LEVEL_2", "LEVEL_3", "LEVEL_4", "TOTAL_LISTINGS_COUNT", "ACTIVE_LISTINGS_COUNT", "EXPIRED_LISTINGS_COUNT", "DELETED_LISTINGS_COUNT", "TOTAL_VIEWS", "TOTAL_CTAS", "PHONE_CALL_CTAS", "WHATSAPP_CTAS", "CHAT_CTAS", "AVG_VIEWS_PER_LISTING", "AVG_CTAS_PER_LISTING", "CONVERSION_RATE"],
+        "AGGREGATED_LOSSES": ["DATE_MONTH", "VERTICAL", "LEVEL_1", "PLAN_NAME", "TOTAL_LOSSES"],
+        "BUNDLES_COST": ["category_id", "bundle_id", "bundle_name", "views", "price", "description", "next_page", "is_free", "extend_period", "recommended", "badge", "visibility_link", "features", "addons", "plan_base_price", "Vertical", "Category", "Date"],
+        "BUNDLES_PRICE": ["category_id", "plan_id", "name", "views", "price", "description", "next_page", "is_free", "extend_period", "recommended", "badge", "visibility_link", "features", "refreshes", "addons", "plan_base_price", "Vertical", "Category", "Date"],
+        "CARS_LISTINGS_PROJECTION": ["USER_ADV_ID", "BRAND_ID", "MODEL_ID", "MAN_YEAR", "ASKING_PRICE", "FULL_PATH", "CAT_NAME", "count", "lower_bound", "average_price", "upper_bound", "percentile_10", "percentile_30", "percentile_60", "percentile_90", "PRICING"]
+      },
+      "INFORMATION_SCHEMA": {}
+    }
+  };
+
+  // Get all database names
+  const getDatabaseNames = useCallback(() => {
+    return Object.keys(snowflakeSchema);
+  }, []);
+
+  // Get schema names for a database
+  const getSchemaNames = useCallback((database: string) => {
+    const db = snowflakeSchema[database];
+    return db ? Object.keys(db) : [];
+  }, []);
+
+  // Get table names for a database.schema
+  const getTableNames = useCallback((database: string, schema: string) => {
+    const db = snowflakeSchema[database];
+    const schemaObj = db?.[schema];
+    return schemaObj ? Object.keys(schemaObj) : [];
+  }, []);
+
+  // Get column names for a database.schema.table
+  const getColumnNames = useCallback((database: string, schema: string, table: string) => {
+    const db = snowflakeSchema[database];
+    const schemaObj = db?.[schema];
+    const tableObj = schemaObj?.[table];
+    return tableObj || [];
+  }, []);
+
+  // Analyze query context to determine what type of suggestions to show
+  const analyzeContext = useCallback((text: string, cursorPos: number): {
+    type: 'keyword' | 'database' | 'schema' | 'table' | 'column';
+    database?: string;
+    schema?: string;
+    table?: string;
+  } => {
+    const textBeforeCursor = text.substring(0, cursorPos).toUpperCase();
+    
+    // Check if we're after FROM, JOIN, UPDATE, INTO, etc. - suggest tables
+    if (/\b(FROM|JOIN|UPDATE|INTO)\s+[A-Z_]*\.?[A-Z_]*\.?[A-Z_]*$/i.test(textBeforeCursor)) {
+      const parts = textBeforeCursor.split(/\s+/).pop()?.split('.');
+      if (parts && parts.length === 1) {
+        return { type: 'database' };
+      } else if (parts && parts.length === 2) {
+        return { type: 'schema', database: parts[0] };
+      } else if (parts && parts.length === 3) {
+        return { type: 'table', database: parts[0], schema: parts[1] };
+      }
+      return { type: 'table' };
+    }
+    
+    // Check if we're in SELECT, WHERE, ORDER BY, GROUP BY - suggest columns or keywords
+    if (/\b(SELECT|WHERE|ORDER\s+BY|GROUP\s+BY)\s+[A-Z_]*$/i.test(textBeforeCursor)) {
+      // Try to find table context from FROM clause
+      const fromMatch = text.match(/\bFROM\s+([A-Z_]+(?:\.[A-Z_]+)?(?:\.[A-Z_]+)?)/i);
+      if (fromMatch) {
+        const tableParts = fromMatch[1].split('.');
+        if (tableParts.length === 3) {
+          return { type: 'column', database: tableParts[0], schema: tableParts[1], table: tableParts[2] };
+        } else if (tableParts.length === 2) {
+          return { type: 'column', schema: tableParts[0], table: tableParts[1] };
+        } else {
+          return { type: 'column', table: tableParts[0] };
+        }
+      }
+      return { type: 'keyword' };
+    }
+    
+    // Check if we're typing a qualified name with dots
+    const wordParts = textBeforeCursor.split(/\s+/).pop()?.split('.');
+    if (wordParts && wordParts.length > 1) {
+      if (wordParts.length === 2) {
+        return { type: 'schema', database: wordParts[0] };
+      } else if (wordParts.length === 3) {
+        return { type: 'table', database: wordParts[0], schema: wordParts[1] };
+      } else if (wordParts.length === 4) {
+        return { type: 'column', database: wordParts[0], schema: wordParts[1], table: wordParts[2] };
+      }
+    }
+    
+    return { type: 'keyword' };
+  }, []);
+
   // Comprehensive Snowflake SQL keywords for autocomplete
   const sqlKeywords = [
     // Core DML Keywords
@@ -414,29 +525,129 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
     };
   }, []);
 
-  // Update autocomplete suggestions
+  // Update autocomplete suggestions with context awareness
   const updateAutocomplete = useCallback((word: string, element: HTMLDivElement) => {
-    // Show autocomplete for any non-empty word
     if (word.length === 0) {
       setShowAutocomplete(false);
       return;
     }
     
-    // Filter keywords that start with the typed word (case insensitive)
-    const filtered = sqlKeywords.filter(keyword => 
-      keyword.toLowerCase().startsWith(word.toLowerCase())
-    );
+    const text = element.textContent || '';
+    const selection = window.getSelection();
+    let cursorPos = 0;
+    
+    // Get cursor position
+    if (selection && selection.rangeCount > 0) {
+      try {
+        const range = selection.getRangeAt(0);
+        const walker = document.createTreeWalker(
+          element,
+          NodeFilter.SHOW_TEXT
+        );
+        
+        let textNode;
+        let offset = 0;
+        
+        while (textNode = walker.nextNode()) {
+          if (textNode === range.startContainer) {
+            cursorPos = offset + range.startOffset;
+            break;
+          }
+          offset += textNode.textContent?.length || 0;
+        }
+      } catch (e) {
+        cursorPos = text.length;
+      }
+    }
+    
+    // Analyze context to determine what type of suggestions to show
+    const context = analyzeContext(text, cursorPos);
+    let suggestions: string[] = [];
+    
+    switch (context.type) {
+      case 'database':
+        suggestions = getDatabaseNames().filter(db => 
+          db.toLowerCase().startsWith(word.toLowerCase())
+        );
+        break;
+        
+      case 'schema':
+        if (context.database) {
+          suggestions = getSchemaNames(context.database).filter(schema => 
+            schema.toLowerCase().startsWith(word.toLowerCase())
+          );
+        }
+        break;
+        
+      case 'table':
+        if (context.database && context.schema) {
+          suggestions = getTableNames(context.database, context.schema).filter(table => 
+            table.toLowerCase().startsWith(word.toLowerCase())
+          );
+        } else {
+          // Show all tables from all schemas if no specific database/schema context
+          const allTables: string[] = [];
+          Object.values(snowflakeSchema).forEach(db => {
+            Object.values(db).forEach(schema => {
+              if (typeof schema === 'object') {
+                allTables.push(...Object.keys(schema));
+              }
+            });
+          });
+          const uniqueTables = allTables.filter((table, index, arr) => 
+            arr.indexOf(table) === index
+          );
+          suggestions = uniqueTables.filter(table => 
+            table.toLowerCase().startsWith(word.toLowerCase())
+          );
+        }
+        break;
+        
+      case 'column':
+        if (context.database && context.schema && context.table) {
+          suggestions = getColumnNames(context.database, context.schema, context.table).filter(column => 
+            column.toLowerCase().startsWith(word.toLowerCase())
+          );
+        } else {
+          // Show common columns if no specific table context
+          const allColumns: string[] = [];
+          Object.values(snowflakeSchema).forEach(db => {
+            Object.values(db).forEach(schema => {
+              if (typeof schema === 'object') {
+                Object.values(schema).forEach(table => {
+                  if (Array.isArray(table)) {
+                    allColumns.push(...table);
+                  }
+                });
+              }
+            });
+          });
+          const uniqueColumns = allColumns.filter((column, index, arr) => 
+            arr.indexOf(column) === index
+          );
+          suggestions = uniqueColumns.filter((column: string) => 
+            column.toLowerCase().startsWith(word.toLowerCase())
+          ).slice(0, 20); // Limit common columns
+        }
+        break;
+        
+      default:
+        // Default to SQL keywords
+        suggestions = sqlKeywords.filter(keyword => 
+          keyword.toLowerCase().startsWith(word.toLowerCase())
+        );
+        break;
+    }
     
     // Debug logging
-    console.log('Autocomplete debug:', { word, filtered: filtered.slice(0, 5) });
+    console.log('Autocomplete context:', { word, context, suggestionsCount: suggestions.length, suggestions: suggestions.slice(0, 5) });
     
-    if (filtered.length > 0) {
-      setFilteredSuggestions(filtered.slice(0, 10)); // Limit to 10 suggestions
+    if (suggestions.length > 0) {
+      setFilteredSuggestions(suggestions.slice(0, 15)); // Limit to 15 suggestions
       setSelectedSuggestion(0);
       setCurrentWord(word);
       
       // Calculate position for dropdown
-      const selection = window.getSelection();
       if (selection && selection.rangeCount > 0) {
         try {
           const range = selection.getRangeAt(0);
@@ -448,7 +659,6 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
             left: rect.left - editorRect.left
           });
         } catch (e) {
-          // Fallback position
           setAutocompletePosition({ top: 25, left: 0 });
         }
       }
@@ -457,7 +667,7 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
     } else {
       setShowAutocomplete(false);
     }
-  }, [sqlKeywords]);
+  }, [sqlKeywords, analyzeContext, getDatabaseNames, getSchemaNames, getTableNames, getColumnNames, snowflakeSchema]);
 
   // Apply syntax highlighting to a word
   const highlightCurrentWord = useCallback((element: HTMLDivElement) => {
