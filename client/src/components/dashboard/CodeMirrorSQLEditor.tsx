@@ -10,12 +10,14 @@ interface CodeMirrorSQLEditorProps {
 
 export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, onExecute }: CodeMirrorSQLEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const lineNumbersRef = useRef<HTMLDivElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [autocompletePosition, setAutocompletePosition] = useState({ top: 0, left: 0 });
   const [currentWord, setCurrentWord] = useState('');
   const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
   const [selectedSuggestion, setSelectedSuggestion] = useState(0);
+  const [lineCount, setLineCount] = useState(1);
 
   // Snowflake database schema from the provided data
   const snowflakeSchema: Record<string, Record<string, Record<string, string[]>>> = {
@@ -527,10 +529,6 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
 
   // Update autocomplete suggestions with context awareness
   const updateAutocomplete = useCallback((word: string, element: HTMLDivElement) => {
-    if (word.length === 0) {
-      setShowAutocomplete(false);
-      return;
-    }
     
     const text = element.textContent || '';
     const selection = window.getSelection();
@@ -564,79 +562,105 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
     const context = analyzeContext(text, cursorPos);
     let suggestions: string[] = [];
     
-    switch (context.type) {
-      case 'database':
-        suggestions = getDatabaseNames().filter(db => 
-          db.toLowerCase().startsWith(word.toLowerCase())
-        );
-        break;
+    // Handle dot-triggered autocomplete
+    const lastChar = text[cursorPos - 1];
+    if (lastChar === '.' || word.length === 0) {
+      // After a dot, determine what to suggest based on context
+      const textBeforeDot = text.substring(0, cursorPos - 1);
+      const parts = textBeforeDot.split(/\s+/).pop()?.split('.');
+      
+      if (parts && parts.length >= 1) {
+        const database = parts[0];
+        const schema = parts[1];
         
-      case 'schema':
-        if (context.database) {
-          suggestions = getSchemaNames(context.database).filter(schema => 
-            schema.toLowerCase().startsWith(word.toLowerCase())
-          );
+        if (parts.length === 1) {
+          // database. - suggest schemas
+          suggestions = getSchemaNames(database);
+        } else if (parts.length === 2) {
+          // database.schema. - suggest tables
+          suggestions = getTableNames(database, schema);
+        } else if (parts.length === 3) {
+          // database.schema.table. - suggest columns
+          const table = parts[2];
+          suggestions = getColumnNames(database, schema, table);
         }
-        break;
-        
-      case 'table':
-        if (context.database && context.schema) {
-          suggestions = getTableNames(context.database, context.schema).filter(table => 
-            table.toLowerCase().startsWith(word.toLowerCase())
+      }
+    } else {
+      // Regular word-based suggestions
+      switch (context.type) {
+        case 'database':
+          suggestions = getDatabaseNames().filter(db => 
+            db.toLowerCase().startsWith(word.toLowerCase())
           );
-        } else {
-          // Show all tables from all schemas if no specific database/schema context
-          const allTables: string[] = [];
-          Object.values(snowflakeSchema).forEach(db => {
-            Object.values(db).forEach(schema => {
-              if (typeof schema === 'object') {
-                allTables.push(...Object.keys(schema));
-              }
+          break;
+          
+        case 'schema':
+          if (context.database) {
+            suggestions = getSchemaNames(context.database).filter(schema => 
+              schema.toLowerCase().startsWith(word.toLowerCase())
+            );
+          }
+          break;
+          
+        case 'table':
+          if (context.database && context.schema) {
+            suggestions = getTableNames(context.database, context.schema).filter(table => 
+              table.toLowerCase().startsWith(word.toLowerCase())
+            );
+          } else {
+            // Show all tables from all schemas if no specific database/schema context
+            const allTables: string[] = [];
+            Object.values(snowflakeSchema).forEach(db => {
+              Object.values(db).forEach(schema => {
+                if (typeof schema === 'object') {
+                  allTables.push(...Object.keys(schema));
+                }
+              });
             });
-          });
-          const uniqueTables = allTables.filter((table, index, arr) => 
-            arr.indexOf(table) === index
-          );
-          suggestions = uniqueTables.filter(table => 
-            table.toLowerCase().startsWith(word.toLowerCase())
-          );
-        }
-        break;
-        
-      case 'column':
-        if (context.database && context.schema && context.table) {
-          suggestions = getColumnNames(context.database, context.schema, context.table).filter(column => 
-            column.toLowerCase().startsWith(word.toLowerCase())
-          );
-        } else {
-          // Show common columns if no specific table context
-          const allColumns: string[] = [];
-          Object.values(snowflakeSchema).forEach(db => {
-            Object.values(db).forEach(schema => {
-              if (typeof schema === 'object') {
-                Object.values(schema).forEach(table => {
-                  if (Array.isArray(table)) {
-                    allColumns.push(...table);
-                  }
-                });
-              }
+            const uniqueTables = allTables.filter((table, index, arr) => 
+              arr.indexOf(table) === index
+            );
+            suggestions = uniqueTables.filter(table => 
+              table.toLowerCase().startsWith(word.toLowerCase())
+            );
+          }
+          break;
+          
+        case 'column':
+          if (context.database && context.schema && context.table) {
+            suggestions = getColumnNames(context.database, context.schema, context.table).filter(column => 
+              column.toLowerCase().startsWith(word.toLowerCase())
+            );
+          } else {
+            // Show common columns if no specific table context
+            const allColumns: string[] = [];
+            Object.values(snowflakeSchema).forEach(db => {
+              Object.values(db).forEach(schema => {
+                if (typeof schema === 'object') {
+                  Object.values(schema).forEach(table => {
+                    if (Array.isArray(table)) {
+                      allColumns.push(...table);
+                    }
+                  });
+                }
+              });
             });
-          });
-          const uniqueColumns = allColumns.filter((column, index, arr) => 
-            arr.indexOf(column) === index
+            const uniqueColumns = allColumns.filter((column, index, arr) => 
+              arr.indexOf(column) === index
+            );
+            suggestions = uniqueColumns.filter((column: string) => 
+              column.toLowerCase().startsWith(word.toLowerCase())
+            ).slice(0, 20); // Limit common columns
+          }
+          break;
+          
+        default:
+          // Default to SQL keywords
+          suggestions = sqlKeywords.filter(keyword => 
+            keyword.toLowerCase().startsWith(word.toLowerCase())
           );
-          suggestions = uniqueColumns.filter((column: string) => 
-            column.toLowerCase().startsWith(word.toLowerCase())
-          ).slice(0, 20); // Limit common columns
-        }
-        break;
-        
-      default:
-        // Default to SQL keywords
-        suggestions = sqlKeywords.filter(keyword => 
-          keyword.toLowerCase().startsWith(word.toLowerCase())
-        );
-        break;
+          break;
+      }
     }
     
     // Debug logging
@@ -700,16 +724,38 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
     }
   }, [colorizeText]);
 
+  // Update line numbers based on content
+  const updateLineNumbers = useCallback((text: string) => {
+    const lines = text.split('\n').length;
+    setLineCount(lines);
+    
+    if (lineNumbersRef.current) {
+      const lineNumbers = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
+      lineNumbersRef.current.textContent = lineNumbers;
+    }
+  }, []);
+
   // Handle contenteditable input with real-time highlighting and autocomplete
   const handleInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement;
     const text = target.textContent || '';
     onChange(text);
     
+    // Update line numbers
+    updateLineNumbers(text);
+    
     // Get current word for autocomplete
     const { word } = getCurrentWord(target);
-    updateAutocomplete(word, target);
-  }, [onChange, getCurrentWord, updateAutocomplete]);
+    
+    // Check if user just typed a dot - trigger schema/table/column suggestions
+    const lastChar = text[text.length - 1];
+    if (lastChar === '.') {
+      // Force update autocomplete with empty word to trigger context analysis
+      updateAutocomplete('', target);
+    } else {
+      updateAutocomplete(word, target);
+    }
+  }, [onChange, getCurrentWord, updateAutocomplete, updateLineNumbers]);
 
   // Insert suggestion at current position
   const insertSuggestion = useCallback((suggestion: string) => {
@@ -794,13 +840,21 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
       if (value) {
         const colorized = colorizeText(value);
         editorRef.current.innerHTML = colorized;
+        updateLineNumbers(value);
       } else if (placeholder) {
         editorRef.current.innerHTML = `<span style="color: ${tokenColors.comment}; font-style: italic;">${placeholder}</span>`;
+        updateLineNumbers('');
       } else {
         editorRef.current.innerHTML = '';
+        updateLineNumbers('');
       }
     }
-  }, [value, colorizeText, placeholder, tokenColors.comment]);
+  }, [value, colorizeText, placeholder, tokenColors.comment, updateLineNumbers]);
+
+  // Initialize line numbers on mount
+  useEffect(() => {
+    updateLineNumbers(value || '');
+  }, [updateLineNumbers, value]);
 
   // Handle focus/blur for placeholder and highlighting
   const handleFocus = useCallback(() => {
@@ -825,8 +879,31 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
   }, [colorizeText, placeholder, tokenColors.comment]);
 
   return (
-    <div className={`relative ${className || ''}`}>
+    <div className={`relative ${className || ''}`} style={{ backgroundColor: tokenColors.background }}>
       <style>{`
+        .sql-editor-container {
+          display: flex;
+          background-color: ${tokenColors.background};
+          border-radius: 6px;
+          overflow: hidden;
+          min-height: 150px;
+          resize: vertical;
+          border: 1px solid #374151;
+        }
+        
+        .line-numbers {
+          background-color: #1f2937;
+          color: #6b7280;
+          padding: 12px 8px;
+          font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Menlo', 'Consolas', monospace;
+          font-size: 12px;
+          line-height: 1.6;
+          text-align: right;
+          min-width: 40px;
+          user-select: none;
+          border-right: 1px solid #374151;
+        }
+        
         .codemirror-sql-editor {
           font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Menlo', 'Consolas', monospace;
           font-size: 14px;
@@ -842,9 +919,11 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
           white-space: pre-wrap;
           word-wrap: break-word;
           overflow-wrap: break-word;
+          overflow-y: auto;
+          resize: none;
           
-          /* Comprehensive Dark Theme */
-          background-color: ${tokenColors.background};
+          /* Comprehensive Dark Theme - Full Background */
+          background-color: ${tokenColors.background} !important;
           color: ${tokenColors.default};
           caret-color: ${tokenColors.default};
         }
@@ -899,18 +978,26 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
         }
       `}</style>
       
-      <div
-        ref={editorRef}
-        className="codemirror-sql-editor"
-        contentEditable
-        suppressContentEditableWarning
-        onInput={handleInput}
-        onKeyDown={handleKeyDown}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        data-placeholder={placeholder}
-        spellCheck={false}
-      />
+      <div className="sql-editor-container">
+        {/* Line numbers */}
+        <div ref={lineNumbersRef} className="line-numbers">
+          1
+        </div>
+        
+        {/* Editor content */}
+        <div
+          ref={editorRef}
+          className="codemirror-sql-editor"
+          contentEditable
+          suppressContentEditableWarning
+          onInput={handleInput}
+          onKeyDown={handleKeyDown}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          data-placeholder={placeholder}
+          spellCheck={false}
+        />
+      </div>
       
       {/* Autocomplete dropdown */}
       {showAutocomplete && (
@@ -918,7 +1005,7 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
           className="autocomplete-dropdown"
           style={{
             top: autocompletePosition.top,
-            left: autocompletePosition.left
+            left: autocompletePosition.left + 50 // Offset for line numbers
           }}
         >
           {filteredSuggestions.map((suggestion, index) => (
