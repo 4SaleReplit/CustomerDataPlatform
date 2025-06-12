@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -89,6 +90,7 @@ interface Report {
 }
 
 export function ReportBuilder() {
+  const [location] = useLocation();
   const [view, setView] = useState<'list' | 'designer'>('list');
   const [reports, setReports] = useState<Report[]>([
     {
@@ -182,6 +184,13 @@ export function ReportBuilder() {
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const currentSlide = currentReport?.slides[currentSlideIndex];
+
+  // Auto-create new report when accessing designer route
+  useEffect(() => {
+    if (location === '/reports/designer' && view === 'list' && !currentReport) {
+      createNewReport();
+    }
+  }, [location, view, currentReport]);
 
   const openDesigner = (reportId: string) => {
     const report = reports.find(r => r.id === reportId);

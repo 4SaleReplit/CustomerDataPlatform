@@ -18,7 +18,9 @@ import {
   Activity,
   TrendingUp,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Edit3,
+  Presentation
 } from 'lucide-react';
 import { trackBusinessEvent } from '@/lib/amplitude';
 import { useUser } from '@/contexts/UserContext';
@@ -56,7 +58,15 @@ const navigation = [
       { name: 'Data Explorer', href: '/data-studio/explorer', icon: BarChart3 }
     ]
   },
-  { name: 'Reports Builder', href: '/reports', icon: FileText, children: [] },
+  { 
+    name: 'Reports Builder', 
+    href: '/reports', 
+    icon: FileText, 
+    children: [
+      { name: 'All Reports', href: '/reports', icon: FileText },
+      { name: 'Design Studio', href: '/reports/designer', icon: Edit3 }
+    ]
+  },
   { name: 'Ask Amplitude', href: '/ask', icon: Shield },
   { 
     name: 'Marketing Analytics', 
