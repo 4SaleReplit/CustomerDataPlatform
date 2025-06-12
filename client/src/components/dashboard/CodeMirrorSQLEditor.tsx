@@ -39,80 +39,112 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
   const colorizeText = useCallback((text: string): string => {
     if (!text) return '';
     
-    // Start with escaped HTML and preserve line breaks
-    let html = text
+    // Escape HTML first
+    let escaped = text
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/\n/g, '<br>');
+      .replace(/>/g, '&gt;');
 
-    // Apply syntax highlighting in order of precedence to avoid conflicts
-    // 1. Comments first (to avoid highlighting keywords inside comments)
-    html = html.replace(sqlPatterns.comments, `<span style="color: ${tokenColors.comment}; font-style: italic;">$&</span>`);
+    // Split by lines to preserve line breaks
+    const lines = escaped.split('\n');
+    const colorizedLines = lines.map(line => {
+      if (!line) return '';
+      
+      // Use a more precise tokenization approach
+      const tokens = [];
+      let remaining = line;
+      let position = 0;
+      
+      while (remaining) {
+        let matched = false;
+        
+        // Check for comments first
+        const commentMatch = remaining.match(/^--.*$/);
+        if (commentMatch) {
+          tokens.push(`<span style="color: ${tokenColors.comment}; font-style: italic;">${commentMatch[0]}</span>`);
+          remaining = '';
+          matched = true;
+        }
+        
+        // Check for strings
+        if (!matched) {
+          const stringMatch = remaining.match(/^'[^']*'/);
+          if (stringMatch) {
+            tokens.push(`<span style="color: ${tokenColors.string};">${stringMatch[0]}</span>`);
+            remaining = remaining.slice(stringMatch[0].length);
+            matched = true;
+          }
+        }
+        
+        // Check for keywords
+        if (!matched) {
+          const keywordMatch = remaining.match(/^(SELECT|FROM|WHERE|JOIN|INNER|LEFT|RIGHT|OUTER|FULL|ON|AS|AND|OR|NOT|IN|EXISTS|LIKE|BETWEEN|IS|NULL|ORDER|BY|GROUP|HAVING|LIMIT|OFFSET|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|ALTER|DROP|INDEX|VIEW|UNION|ALL|DISTINCT|CASE|WHEN|THEN|ELSE|END|WITH|RECURSIVE|OVER|PARTITION|WINDOW|USING|NATURAL|CROSS)\b/i);
+          if (keywordMatch) {
+            tokens.push(`<span style="color: ${tokenColors.keyword}; font-weight: 600;">${keywordMatch[0]}</span>`);
+            remaining = remaining.slice(keywordMatch[0].length);
+            matched = true;
+          }
+        }
+        
+        // Check for functions
+        if (!matched) {
+          const functionMatch = remaining.match(/^(COUNT|SUM|AVG|MIN|MAX|UPPER|LOWER|LENGTH|SUBSTRING|TRIM|COALESCE|ISNULL|CAST|CONVERT|DATEPART|YEAR|MONTH|DAY|NOW|CURRENT_TIMESTAMP|CURRENT_DATE|CURRENT_TIME|EXTRACT|CONCAT|REPLACE|ROUND|FLOOR|CEIL|ABS|POWER|SQRT|LOG|EXP|SIGN|RAND)\s*(?=\()/i);
+          if (functionMatch) {
+            tokens.push(`<span style="color: ${tokenColors.function}; font-weight: 500;">${functionMatch[0]}</span>`);
+            remaining = remaining.slice(functionMatch[0].length);
+            matched = true;
+          }
+        }
+        
+        // Check for data types
+        if (!matched) {
+          const datatypeMatch = remaining.match(/^(INT|INTEGER|BIGINT|SMALLINT|TINYINT|DECIMAL|NUMERIC|FLOAT|REAL|DOUBLE|MONEY|SMALLMONEY|BIT|CHAR|VARCHAR|NCHAR|NVARCHAR|TEXT|NTEXT|BINARY|VARBINARY|IMAGE|DATE|TIME|DATETIME|DATETIME2|SMALLDATETIME|DATETIMEOFFSET|TIMESTAMP|UNIQUEIDENTIFIER|SQL_VARIANT|XML|CURSOR|TABLE|BOOLEAN|BOOL|JSON|UUID|SERIAL|AUTOINCREMENT)\b/i);
+          if (datatypeMatch) {
+            tokens.push(`<span style="color: ${tokenColors.datatype}; font-weight: 500;">${datatypeMatch[0]}</span>`);
+            remaining = remaining.slice(datatypeMatch[0].length);
+            matched = true;
+          }
+        }
+        
+        // Check for numbers
+        if (!matched) {
+          const numberMatch = remaining.match(/^\d+(\.\d+)?/);
+          if (numberMatch) {
+            tokens.push(`<span style="color: ${tokenColors.number};">${numberMatch[0]}</span>`);
+            remaining = remaining.slice(numberMatch[0].length);
+            matched = true;
+          }
+        }
+        
+        // Check for operators
+        if (!matched) {
+          const operatorMatch = remaining.match(/^([=<>!]+|[\+\-\*\/\%]|::|&&|\|\|)/);
+          if (operatorMatch) {
+            tokens.push(`<span style="color: ${tokenColors.operator};">${operatorMatch[0]}</span>`);
+            remaining = remaining.slice(operatorMatch[0].length);
+            matched = true;
+          }
+        }
+        
+        // If no match, take the next character as default text
+        if (!matched) {
+          tokens.push(remaining.charAt(0));
+          remaining = remaining.slice(1);
+        }
+      }
+      
+      return tokens.join('');
+    });
     
-    // 2. Strings (to avoid highlighting keywords inside strings)
-    html = html.replace(sqlPatterns.strings, `<span style="color: ${tokenColors.string};">$&</span>`);
-    
-    // 3. Keywords (SELECT, FROM, etc.) - Green #859900
-    html = html.replace(sqlPatterns.keywords, `<span style="color: ${tokenColors.keyword}; font-weight: 600;">$&</span>`);
-    
-    // 4. Functions (SUM(), AVG(), etc.) - Blue #268BD2
-    html = html.replace(sqlPatterns.functions, `<span style="color: ${tokenColors.function}; font-weight: 500;">$&</span>`);
-    
-    // 5. Data types (INT, VARCHAR, etc.) - Yellow #B58900
-    html = html.replace(sqlPatterns.datatypes, `<span style="color: ${tokenColors.datatype}; font-weight: 500;">$&</span>`);
-    
-    // 6. Numeric values - Orange #D33682
-    html = html.replace(sqlPatterns.numbers, `<span style="color: ${tokenColors.number};">$&</span>`);
-    
-    // 7. Operators (+, -, =, etc.) - Light Gray #839496
-    html = html.replace(sqlPatterns.operators, `<span style="color: ${tokenColors.operator};">$&</span>`);
-
-    return html;
+    return colorizedLines.join('<br>');
   }, [tokenColors]);
 
-  // Handle contenteditable input with real-time highlighting
+  // Handle contenteditable input - simple approach without real-time highlighting
   const handleInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement;
     const text = target.textContent || '';
     onChange(text);
-    
-    // Use a timeout to apply highlighting after the input event
-    setTimeout(() => {
-      if (target && text) {
-        const selection = window.getSelection();
-        let cursorPosition = 0;
-        
-        // Get cursor position
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          cursorPosition = range.startOffset;
-        }
-        
-        // Apply syntax highlighting
-        const colorized = colorizeText(text);
-        target.innerHTML = colorized;
-        
-        // Restore cursor position
-        if (selection && target.firstChild) {
-          try {
-            const range = document.createRange();
-            range.setStart(target.firstChild, Math.min(cursorPosition, target.textContent?.length || 0));
-            range.collapse(true);
-            selection.removeAllRanges();
-            selection.addRange(range);
-          } catch (error) {
-            // Place cursor at end if restoration fails
-            const range = document.createRange();
-            range.selectNodeContents(target);
-            range.collapse(false);
-            selection.removeAllRanges();
-            selection.addRange(range);
-          }
-        }
-      }
-    }, 0);
-  }, [onChange, colorizeText]);
+  }, [onChange]);
 
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -141,7 +173,7 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
     }
   }, [value, colorizeText, placeholder, tokenColors.comment]);
 
-  // Handle focus/blur for placeholder
+  // Handle focus/blur for placeholder and highlighting
   const handleFocus = useCallback(() => {
     setIsFocused(true);
     if (editorRef.current && !value) {
@@ -151,10 +183,17 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
 
   const handleBlur = useCallback(() => {
     setIsFocused(false);
-    if (editorRef.current && !value && placeholder) {
-      editorRef.current.innerHTML = `<span style="color: ${tokenColors.comment}; font-style: italic;">${placeholder}</span>`;
+    if (editorRef.current) {
+      const text = editorRef.current.textContent || '';
+      if (text) {
+        // Apply syntax highlighting when user finishes editing
+        const colorized = colorizeText(text);
+        editorRef.current.innerHTML = colorized;
+      } else if (placeholder) {
+        editorRef.current.innerHTML = `<span style="color: ${tokenColors.comment}; font-style: italic;">${placeholder}</span>`;
+      }
     }
-  }, [value, placeholder]);
+  }, [colorizeText, placeholder, tokenColors.comment]);
 
   return (
     <div className={`relative ${className || ''}`}>
