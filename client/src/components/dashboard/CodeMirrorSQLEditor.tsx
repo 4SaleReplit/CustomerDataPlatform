@@ -17,24 +17,79 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
   const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
   const [selectedSuggestion, setSelectedSuggestion] = useState(0);
 
-  // Complete SQL keywords for autocomplete
+  // Comprehensive Snowflake SQL keywords for autocomplete
   const sqlKeywords = [
-    // Primary keywords
-    'SELECT', 'FROM', 'WHERE', 'GROUP', 'BY', 'ORDER', 'HAVING', 'JOIN', 'INNER', 'LEFT', 'RIGHT', 'OUTER', 'FULL', 'ON', 'AS', 'AND', 'OR', 'NOT', 'IN', 'EXISTS', 'LIKE', 'BETWEEN', 'IS', 'UNION', 'ALL', 'WITH', 'RECURSIVE', 'OVER', 'PARTITION', 'WINDOW', 'USING', 'NATURAL', 'CROSS',
-    // DML keywords
-    'INSERT', 'INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE', 'MERGE',
-    // DDL keywords
-    'CREATE', 'ALTER', 'DROP', 'TRUNCATE', 'TABLE', 'INDEX', 'VIEW', 'DATABASE', 'SCHEMA', 'PROCEDURE', 'FUNCTION',
-    // Transaction control
-    'COMMIT', 'ROLLBACK', 'BEGIN', 'TRANSACTION', 'SAVEPOINT',
-    // Clause keywords
-    'DISTINCT', 'LIMIT', 'OFFSET', 'QUALIFY', 'CASE', 'WHEN', 'THEN', 'ELSE', 'END', 'NULL', 'ASC', 'DESC', 'NULLS', 'FIRST', 'LAST',
-    // Functions
-    'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'UPPER', 'LOWER', 'LENGTH', 'SUBSTRING', 'TRIM', 'COALESCE', 'ISNULL', 'IFNULL', 'IFF', 'CAST', 'CONVERT', 'DATEPART', 'YEAR', 'MONTH', 'DAY', 'NOW', 'CURRENT_TIMESTAMP', 'CURRENT_DATE', 'CURRENT_TIME', 'EXTRACT', 'CONCAT', 'REPLACE', 'ROUND', 'FLOOR', 'CEIL', 'ABS', 'POWER', 'SQRT', 'LOG', 'EXP', 'SIGN', 'RAND', 'ROW_NUMBER', 'RANK', 'DENSE_RANK', 'LAG', 'LEAD', 'FIRST_VALUE', 'LAST_VALUE', 'NTILE', 'PERCENTILE_CONT', 'PERCENTILE_DISC', 'APPROX_COUNT_DISTINCT', 'TO_CHAR', 'TO_DATE', 'TO_NUMBER', 'SPLIT', 'ARRAY_AGG', 'OBJECT_CONSTRUCT', 'PARSE_JSON', 'GET', 'GET_PATH', 'FLATTEN',
-    // Data types
-    'VARCHAR', 'CHAR', 'STRING', 'TEXT', 'NUMBER', 'INTEGER', 'INT', 'BIGINT', 'SMALLINT', 'TINYINT', 'DECIMAL', 'NUMERIC', 'FLOAT', 'REAL', 'DOUBLE', 'MONEY', 'SMALLMONEY', 'BIT', 'BOOLEAN', 'BOOL', 'DATE', 'TIME', 'DATETIME', 'DATETIME2', 'TIMESTAMP', 'TIMESTAMPTZ', 'TIMESTAMPLTZ', 'TIMESTAMPNTZ', 'BINARY', 'VARBINARY', 'ARRAY', 'OBJECT', 'VARIANT', 'GEOGRAPHY', 'GEOMETRY', 'JSON', 'XML', 'UUID', 'SERIAL', 'AUTOINCREMENT',
-    // Boolean values
-    'TRUE', 'FALSE'
+    // Core DML Keywords
+    'SELECT', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY', 'HAVING', 'LIMIT', 'INSERT INTO', 'UPDATE', 'DELETE', 'MERGE', 'TRUNCATE',
+    
+    // DDL Keywords
+    'CREATE', 'ALTER', 'DROP', 'RENAME', 'DESCRIBE', 'TABLE', 'VIEW', 'SCHEMA', 'DATABASE',
+    
+    // Join Keywords
+    'JOIN', 'INNER JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'FULL OUTER JOIN', 'ON', 'USING',
+    
+    // Logical and Comparison
+    'AS', 'DISTINCT', 'CASE', 'WHEN', 'THEN', 'ELSE', 'END', 'AND', 'OR', 'NOT', 'IN', 'IS', 'NULL', 'IS NULL', 'IS NOT NULL', 'LIKE', 'ILIKE', 'BETWEEN',
+    
+    // Set Operations
+    'UNION', 'UNION ALL', 'INTERSECT', 'EXCEPT',
+    
+    // Window Functions Keywords
+    'OVER', 'PARTITION BY', 'QUALIFY',
+    
+    // Data Types
+    'VARCHAR', 'STRING', 'TEXT', 'CHAR', 'CHARACTER', 'NUMBER', 'DECIMAL', 'NUMERIC', 'INT', 'INTEGER', 'BIGINT', 'SMALLINT', 'TINYINT', 'BYTEINT', 'FLOAT', 'DOUBLE', 'BOOLEAN', 'DATE', 'DATETIME', 'TIME', 'TIMESTAMP', 'TIMESTAMP_LTZ', 'TIMESTAMP_NTZ', 'TIMESTAMP_TZ', 'VARIANT', 'OBJECT', 'ARRAY', 'GEOGRAPHY', 'GEOMETRY', 'BINARY', 'VARBINARY',
+    
+    // Aggregate Functions
+    'AVG', 'COUNT', 'SUM', 'MIN', 'MAX', 'LISTAGG', 'ARRAY_AGG', 'OBJECT_AGG', 'APPROX_COUNT_DISTINCT', 'MEDIAN',
+    
+    // Window Functions
+    'ROW_NUMBER', 'RANK', 'DENSE_RANK', 'LEAD', 'LAG', 'FIRST_VALUE', 'LAST_VALUE', 'NTILE', 'PERCENT_RANK', 'CUME_DIST',
+    
+    // String Functions
+    'CONCAT', 'LOWER', 'UPPER', 'TRIM', 'LTRIM', 'RTRIM', 'SUBSTRING', 'REPLACE', 'SPLIT', 'INITCAP', 'LENGTH', 'LEFT', 'RIGHT', 'LPAD', 'RPAD', 'REVERSE', 'TRANSLATE',
+    
+    // Date and Time Functions
+    'CURRENT_DATE', 'CURRENT_TIMESTAMP', 'DATE_TRUNC', 'DATEDIFF', 'DATEADD', 'TO_DATE', 'TO_TIMESTAMP', 'EXTRACT', 'YEAR', 'MONTH', 'DAY', 'HOUR', 'MINUTE', 'SECOND', 'DAYOFWEEK', 'DAYOFYEAR', 'WEEK', 'QUARTER',
+    
+    // Numeric Functions
+    'ABS', 'ROUND', 'CEIL', 'FLOOR', 'RANDOM', 'SQRT', 'POWER', 'LOG', 'LN', 'EXP', 'SIN', 'COS', 'TAN', 'SIGN', 'MOD', 'GREATEST', 'LEAST',
+    
+    // Conversion Functions
+    'CAST', 'TRY_CAST', 'TO_VARCHAR', 'TO_NUMBER', 'TO_JSON', 'TO_XML', 'PARSE_JSON', 'PARSE_XML',
+    
+    // Conditional Functions
+    'COALESCE', 'NULLIF', 'IFF', 'ZEROIFNULL', 'NVL', 'NVL2', 'DECODE',
+    
+    // JSON Functions
+    'GET', 'GET_PATH', 'FLATTEN', 'OBJECT_CONSTRUCT', 'OBJECT_INSERT', 'ARRAY_CONSTRUCT', 'ARRAY_INSERT', 'ARRAY_APPEND', 'ARRAY_PREPEND', 'ARRAY_CAT', 'ARRAY_COMPACT', 'ARRAY_CONTAINS', 'ARRAY_POSITION', 'ARRAY_SIZE', 'ARRAY_SLICE', 'ARRAY_TO_STRING', 'ARRAY_UNIQUE_AGG',
+    
+    // Hash Functions
+    'MD5', 'SHA1', 'SHA2', 'HASH',
+    
+    // Encoding Functions
+    'BASE64_ENCODE', 'BASE64_DECODE', 'HEX_ENCODE', 'HEX_DECODE',
+    
+    // Regular Expression Functions
+    'REGEXP', 'REGEXP_LIKE', 'REGEXP_REPLACE', 'REGEXP_SUBSTR', 'REGEXP_COUNT', 'RLIKE',
+    
+    // System Functions
+    'CURRENT_USER', 'CURRENT_ROLE', 'CURRENT_DATABASE', 'CURRENT_SCHEMA', 'CURRENT_SESSION', 'CURRENT_WAREHOUSE', 'CURRENT_REGION', 'CURRENT_ACCOUNT',
+    
+    // Snowflake Specific Functions
+    'SNOWFLAKE_SAMPLE', 'GENERATOR', 'SEQ1', 'SEQ2', 'SEQ4', 'SEQ8', 'UNIFORM', 'NORMAL', 'ZIPF',
+    
+    // Geospatial Functions
+    'ST_AREA', 'ST_ASGEOJSON', 'ST_ASWKT', 'ST_BUFFER', 'ST_CENTROID', 'ST_CONTAINS', 'ST_DISTANCE', 'ST_INTERSECTS', 'ST_LENGTH', 'ST_POINT', 'ST_POLYGON', 'ST_WITHIN',
+    
+    // Constants and Literals
+    'TRUE', 'FALSE', 'PI',
+    
+    // Order and Null Handling
+    'ASC', 'DESC', 'NULLS FIRST', 'NULLS LAST',
+    
+    // Common CTEs and Advanced
+    'WITH', 'RECURSIVE', 'LATERAL'
   ];
 
   // Comprehensive SQL syntax highlighting color scheme

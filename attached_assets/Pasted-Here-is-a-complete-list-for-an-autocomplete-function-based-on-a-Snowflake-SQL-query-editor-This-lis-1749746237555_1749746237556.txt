@@ -1,0 +1,282 @@
+Here is a complete list for an autocomplete function based on a Snowflake SQL query editor. This list is broken down into logical categories to make it easier to implement and manage.
+
+Keywords
+Keywords are the foundational words in SQL that specify the actions to be performed. A robust autocomplete should suggest these whenever a new word is started.
+
+Data Manipulation Language (DML)
+SELECT
+INSERT
+UPDATE
+DELETE
+MERGE
+TRUNCATE
+Data Definition Language (DDL)
+CREATE
+ALTER
+DROP
+RENAME
+DESCRIBE
+Clauses and Operators
+FROM
+WHERE
+GROUP BY
+ORDER BY
+HAVING
+LIMIT
+JOIN
+INNER JOIN
+LEFT JOIN
+RIGHT JOIN
+FULL OUTER JOIN
+ON
+AS
+DISTINCT
+UNION
+UNION ALL
+CASE
+WHEN
+THEN
+ELSE
+END
+AND
+OR
+NOT
+IN
+BETWEEN
+LIKE
+IS NULL
+IS NOT NULL
+Functions
+Snowflake has a rich library of functions. Your autocomplete should be context-aware, suggesting aggregate functions after a GROUP BY clause, for instance.
+
+Aggregate Functions
+AVG()
+COUNT()
+MAX()
+MIN()
+SUM()
+ARRAY_AGG()
+OBJECT_AGG()
+Window Functions
+ROW_NUMBER()
+RANK()
+DENSE_RANK()
+LEAD()
+LAG()
+FIRST_VALUE()
+LAST_VALUE()
+String Functions
+CONCAT()
+LOWER()
+UPPER()
+TRIM()
+SUBSTRING()
+REPLACE()
+SPLIT()
+Date and Time Functions
+CURRENT_DATE()
+CURRENT_TIMESTAMP()
+DATE_TRUNC()
+DATEDIFF()
+DATEADD()
+Conversion Functions
+CAST()
+TO_VARCHAR()
+TO_NUMBER()
+TO_TIMESTAMP()
+TRY_CAST()
+Data Types
+These should be suggested when creating or altering tables, or when casting data.
+
+Numeric Types
+NUMBER
+DECIMAL
+NUMERIC
+INT
+INTEGER
+BIGINT
+SMALLINT
+TINYINT
+BYTEINT
+FLOAT
+DOUBLE
+String Types
+VARCHAR
+CHAR
+CHARACTER
+STRING
+TEXT
+Date and Time Types
+DATE
+DATETIME
+TIME
+TIMESTAMP
+TIMESTAMP_LTZ
+TIMESTAMP_NTZ
+TIMESTAMP_TZ
+Other Types
+BOOLEAN
+BINARY
+VARBINARY
+GEOGRAPHY
+GEOMETRY
+ARRAY
+OBJECT
+VARIANT
+Database Objects
+This part of the autocomplete is dynamic and must be populated by querying the database's information schema.
+
+Tables and Views: After a FROM or JOIN clause, the autocomplete should suggest a list of tables and views available in the current database and schema.
+Columns: When in a SELECT, WHERE, ORDER BY, or GROUP BY clause, the autocomplete should suggest column names from the tables specified in the FROM clause.
+Schemas: When writing a fully qualified object name (e.g., my_schema.my_table), the autocomplete should suggest available schemas.
+Databases: Your editor could allow switching between databases, and the autocomplete should suggest the available databases. Here's a complete list for an autocomplete function based on a Snowflake SQL query editor, broken down into logical categories.
+❄️ Snowflake SQL Autocomplete List
+This list is designed to provide comprehensive suggestions in a query editor, enhancing productivity and accuracy when writing Snowflake SQL.
+
+Keywords
+Keywords are the foundational building blocks of any SQL query. This list includes common and Snowflake-specific keywords.
+
+SELECT
+FROM
+WHERE
+GROUP BY
+ORDER BY
+HAVING
+LIMIT
+INSERT INTO
+UPDATE
+DELETE
+CREATE
+ALTER
+DROP
+TABLE
+VIEW
+SCHEMA
+DATABASE
+JOIN
+INNER JOIN
+LEFT JOIN
+RIGHT JOIN
+FULL OUTER JOIN
+ON
+AS
+DISTINCT
+CASE
+WHEN
+THEN
+ELSE
+END
+AND
+OR
+NOT
+IN
+IS
+NULL
+LIKE
+ILIKE
+QUALIFY
+OVER
+PARTITION BY
+Data Types
+These are the essential data types for defining columns and casting data in Snowflake.
+
+VARCHAR
+STRING
+TEXT
+NUMBER
+DECIMAL
+NUMERIC
+INT
+INTEGER
+BIGINT
+SMALLINT
+FLOAT
+DOUBLE
+BOOLEAN
+DATE
+DATETIME
+TIME
+TIMESTAMP
+TIMESTAMP_LTZ
+TIMESTAMP_NTZ
+TIMESTAMP_TZ
+VARIANT
+OBJECT
+ARRAY
+GEOGRAPHY
+GEOMETRY
+BINARY
+Functions
+Snowflake offers a rich set of functions. This list is categorized by their common use cases.
+
+Aggregate Functions
+AVG()
+COUNT()
+SUM()
+MIN()
+MAX()
+LISTAGG()
+ARRAY_AGG()
+APPROX_COUNT_DISTINCT()
+MEDIAN()
+String Functions
+CONCAT()
+LOWER()
+UPPER()
+TRIM()
+LTRIM()
+RTRIM()
+SUBSTRING()
+REPLACE()
+SPLIT()
+INITCAP()
+LENGTH()
+Date and Time Functions
+CURRENT_DATE()
+CURRENT_TIMESTAMP()
+DATE_TRUNC()
+DATEDIFF()
+DATEADD()
+TO_DATE()
+TO_TIMESTAMP()
+EXTRACT()
+YEAR()
+MONTH()
+DAY()
+Numeric Functions
+ABS()
+ROUND()
+CEIL()
+FLOOR()
+RANDOM()
+Conversion Functions
+CAST()
+TRY_CAST()
+TO_VARCHAR()
+TO_NUMBER()
+TO_JSON()
+Conditional Functions
+COALESCE()
+NULLIF()
+IFF()
+ZEROIFNULL()
+NVL()
+Window Functions
+ROW_NUMBER()
+RANK()
+DENSE_RANK()
+LEAD()
+LAG()
+FIRST_VALUE()
+LAST_VALUE()
+Context-Aware Autocomplete
+For a truly intelligent editor, the autocomplete should be context-aware.
+
+Table and Column Names: After a FROM or JOIN clause, the editor should suggest available table names within the current database and schema. After a table is specified, it should suggest the column names of that table in SELECT, WHERE, GROUP BY, and ORDER BY clauses.
+
+To implement this, you would need to query the INFORMATION_SCHEMA:
+For tables: SELECT TABLE_NAME FROM YOUR_DATABASE.INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'YOUR_SCHEMA';
+For columns: SELECT COLUMN_NAME FROM YOUR_DATABASE.INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'YOUR_TABLE';
+Schema and Database Names: When using fully qualified object names (e.g., mydatabase.myschema.mytable), the editor should suggest available databases and schemas.
+
+This comprehensive list provides a solid foundation for a powerful and helpful autocomplete feature in a Snowflake SQL query editor.
