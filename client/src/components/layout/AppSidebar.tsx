@@ -44,7 +44,7 @@ const navigation = [
 ];
 
 export function AppSidebar() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   
@@ -63,6 +63,7 @@ export function AppSidebar() {
   const handleLogout = () => {
     if (logout) {
       logout();
+      setLocation('/login');
     }
   };
 

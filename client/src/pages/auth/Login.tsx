@@ -52,11 +52,11 @@ export default function Login() {
           localStorage.removeItem('saved_password');
         }
         
-        setLocation('/');
         toast({
           title: "Login Successful",
           description: "Welcome back to the platform!",
         });
+        // Let the authentication flow handle the redirect
       } else {
         toast({
           title: "Login Failed",

@@ -109,8 +109,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem('platform_user');
-    // Force redirect to login page
-    window.location.href = '/login';
   };
 
   const isAuthenticated = user !== null;

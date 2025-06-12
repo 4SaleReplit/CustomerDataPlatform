@@ -31,25 +31,10 @@ import RoleManagement from "./pages/RoleManagement";
 
 const AppRouter = () => {
   const [location] = useLocation();
-  const { isAuthenticated } = useUser();
+  const { user } = useUser();
   const isAuthRoute = location === '/login' || location === '/register';
 
-  // If not authenticated and not on auth route, redirect to login
-  if (!isAuthenticated && !isAuthRoute) {
-    return (
-      <Switch>
-        <Route path="/login" component={Login} />
-        <Route component={() => { window.location.href = '/login'; return null; }} />
-      </Switch>
-    );
-  }
-
-  // If authenticated and on auth route, redirect to dashboard
-  if (isAuthenticated && isAuthRoute) {
-    window.location.href = '/';
-    return null;
-  }
-
+  // Show auth routes
   if (isAuthRoute) {
     return (
       <Switch>
@@ -59,6 +44,12 @@ const AppRouter = () => {
     );
   }
 
+  // If no user, show login
+  if (!user) {
+    return <Login />;
+  }
+
+  // Show main app
   return (
     <Layout>
       <Switch>
