@@ -12,6 +12,8 @@ import { DataStudioSQL } from "./pages/DataStudioSQL";
 import { DataStudioFiles } from "./pages/DataStudioFiles";
 import { DataStudioLineage } from "./pages/DataStudioLineage";
 import { DataStudioDataExplorer } from "./pages/DataStudioDataExplorer";
+import { DataStudioDashboards } from "./pages/DataStudioDashboards";
+import { DataStudioExplores } from "./pages/DataStudioExplores";
 import Users from "./pages/Users";
 import UserProfile from "./pages/UserProfile";
 import Cohorts from "./pages/Cohorts";
@@ -61,6 +63,8 @@ const AppRouter = () => {
         {/* Main App Routes */}
         <Route path="/" component={Dashboard} />
         <Route path="/data-studio" component={DataStudio} />
+        <Route path="/data-studio/dashboards" component={DataStudioDashboards} />
+        <Route path="/data-studio/explores" component={DataStudioExplores} />
         <Route path="/data-studio/sql" component={DataStudioSQL} />
         <Route path="/data-studio/files" component={DataStudioFiles} />
         <Route path="/data-studio/lineage" component={DataStudioLineage} />
