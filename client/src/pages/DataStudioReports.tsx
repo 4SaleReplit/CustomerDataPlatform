@@ -187,51 +187,66 @@ export function DataStudioReports() {
       }
 
       const allSlides = Object.values(presentationData) as any[];
-      const dataQueries: Array<{ slideId: string; elementId: string; query: string }> = [];
+      const dataQueries: Array<{ slideId: string; elementId: string; query: string; elementType: string; title: string }> = [];
+      
+      console.log('Starting refresh for report:', reportId);
+      console.log('Found slides:', allSlides.length);
       
       // Extract all actual queries from slide elements
-      allSlides.forEach(slide => {
+      allSlides.forEach((slide, slideIndex) => {
+        console.log(`Processing slide ${slideIndex + 1}:`, slide.title || slide.id);
         if (slide?.elements) {
-          slide.elements.forEach((element: any) => {
+          console.log(`  Found ${slide.elements.length} elements`);
+          slide.elements.forEach((element: any, elementIndex: number) => {
             let query = null;
             
             // Debug: Log element structure for troubleshooting
             if (element.type === 'chart' || element.type === 'table' || element.type === 'metric') {
-              console.log('Analyzing element:', {
+              console.log(`  Element ${elementIndex + 1}:`, {
                 type: element.type,
                 id: element.id,
-                dataSource: element.dataSource,
-                content: element.content,
-                query: element.query
+                title: element.title || element.content?.title || 'Untitled',
+                hasDataSource: !!element.dataSource,
+                hasContentQuery: !!element.content?.query,
+                hasDirectQuery: !!element.query
               });
               
               // Standard location
               if (element.dataSource?.query) {
                 query = element.dataSource.query;
+                console.log('    Query found in dataSource');
               }
               // Alternative location for metrics
               else if (element.content?.query) {
                 query = element.content.query;
+                console.log('    Query found in content');
               }
               // Another possible location
               else if (element.query) {
                 query = element.query;
+                console.log('    Query found in element.query');
               }
               
               if (query) {
-                console.log('Found query:', query);
+                console.log('    Adding query:', query.substring(0, 50) + '...');
                 dataQueries.push({
                   slideId: slide.id,
                   elementId: element.id,
-                  query: query
+                  query: query,
+                  elementType: element.type,
+                  title: element.title || element.content?.title || `${element.type} visualization`
                 });
               } else {
-                console.log('No query found for element:', element.type, element.id);
+                console.log('    No query found for element:', element.type, element.id);
               }
             }
           });
+        } else {
+          console.log(`  Slide has no elements`);
         }
       });
+
+      console.log(`Total queries found: ${dataQueries.length}`);
 
       const totalQueries = dataQueries.length;
       
@@ -245,9 +260,22 @@ export function DataStudioReports() {
         [reportId]: { current: 0, total: totalQueries, startTime }
       }));
 
+      // Group queries by type for better reporting
+      const queryByType = dataQueries.reduce((acc, query) => {
+        acc[query.elementType] = (acc[query.elementType] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      console.log('Query breakdown by type:', queryByType);
+
       // Execute each actual query
+      let successCount = 0;
+      let failureCount = 0;
+      
       for (let i = 0; i < dataQueries.length; i++) {
         const queryInfo = dataQueries[i];
+        
+        console.log(`Executing query ${i + 1}/${totalQueries} for ${queryInfo.elementType}: ${queryInfo.title}`);
         
         try {
           // Execute the actual query
@@ -261,11 +289,16 @@ export function DataStudioReports() {
             })
           });
 
-          if (!response.ok) {
-            console.warn(`Failed to refresh query for element ${queryInfo.elementId}`);
+          if (response.ok) {
+            successCount++;
+            console.log(`  ✓ Success for ${queryInfo.title}`);
+          } else {
+            failureCount++;
+            console.warn(`  ✗ Failed for ${queryInfo.title}:`, response.status);
           }
         } catch (error) {
-          console.warn(`Error executing query for element ${queryInfo.elementId}:`, error);
+          failureCount++;
+          console.warn(`  ✗ Error for ${queryInfo.title}:`, error);
         }
         
         // Update progress
@@ -279,17 +312,29 @@ export function DataStudioReports() {
         }));
 
         // Small delay between queries
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
 
       const endTime = Date.now();
       const totalTime = ((endTime - startTime) / 1000).toFixed(2);
 
+      // Create detailed description
+      const typeDescriptions = Object.entries(queryByType)
+        .map(([type, count]) => `${count} ${type}${count > 1 ? 's' : ''}`)
+        .join(', ');
+
+      const resultDescription = failureCount > 0 
+        ? `Refreshed ${successCount}/${totalQueries} queries (${failureCount} failed) including ${typeDescriptions} in ${totalTime} seconds`
+        : `Successfully refreshed ${totalQueries} ${totalQueries === 1 ? 'query' : 'queries'} including ${typeDescriptions} in ${totalTime} seconds`;
+
+      console.log('Refresh completed:', { successCount, failureCount, totalTime });
+
       // Show success toast
       toast({
-        title: "Report Data Refreshed",
-        description: `Successfully refreshed ${totalQueries} ${totalQueries === 1 ? 'query' : 'queries'} in ${totalTime} seconds`,
-        duration: 5000,
+        title: failureCount > 0 ? "Report Partially Refreshed" : "Report Data Refreshed",
+        description: resultDescription,
+        variant: failureCount > 0 ? "destructive" : "default",
+        duration: 8000,
       });
 
     } catch (error) {
