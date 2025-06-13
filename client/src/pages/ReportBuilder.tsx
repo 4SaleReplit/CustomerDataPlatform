@@ -101,6 +101,8 @@ export default function ReportBuilder() {
     refreshInterval: 300000, // 5 minutes
     refreshOnLoad: true
   });
+  const [visualizationType, setVisualizationType] = useState('table');
+  const [metricStyle, setMetricStyle] = useState('gradient');
 
   // Drag and drop for slide reordering
   const [draggedSlideIndex, setDraggedSlideIndex] = useState<number | null>(null);
@@ -1818,49 +1820,85 @@ export default function ReportBuilder() {
             
             <div className="w-96 flex flex-col min-h-0">
               <div className="mb-3">
-                <Label className="text-sm font-medium">Query Results</Label>
-                <div className="mt-1 p-3 bg-gray-50 rounded border min-h-32 max-h-48 overflow-auto">
+                <Label className="text-sm font-medium">Visualization Preview</Label>
+                <div className="mt-1 p-3 bg-white rounded border min-h-32 max-h-48 overflow-auto">
                   {isExecutingQuery ? (
                     <div className="flex items-center justify-center h-24">
                       <RefreshCw className="h-5 w-5 animate-spin mr-2" />
                       <span className="text-sm text-gray-600">Executing query...</span>
                     </div>
                   ) : queryResults ? (
-                    <div className="space-y-2">
-                      <div className="text-xs text-gray-600">
+                    <div className="space-y-3">
+                      <div className="text-xs text-gray-600 pb-2 border-b">
                         {queryResults.length} rows returned
                       </div>
-                      {queryResults.length > 0 && (
-                        <div className="overflow-auto">
-                          <table className="text-xs w-full border-collapse">
-                            <thead>
-                              <tr className="border-b bg-gray-100">
-                                {Object.keys(queryResults[0]).map((column) => (
-                                  <th key={column} className="text-left p-1 font-medium border-r">
-                                    {column}
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {queryResults.slice(0, 5).map((row, index) => (
-                                <tr key={index} className="border-b hover:bg-gray-50">
-                                  {Object.values(row).map((value, cellIndex) => (
-                                    <td key={cellIndex} className="p-1 border-r">
-                                      {String(value).length > 20 
-                                        ? String(value).substring(0, 20) + '...' 
-                                        : String(value)}
-                                    </td>
-                                  ))}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                          {queryResults.length > 5 && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              ... and {queryResults.length - 5} more rows
+                      
+                      {/* Metric Card Preview */}
+                      {queryResults.length > 0 && Object.keys(queryResults[0]).length === 1 && (
+                        <div className="space-y-2">
+                          <div className="text-xs font-medium text-gray-700">Metric Card Preview:</div>
+                          {metricStyle === 'gradient' && (
+                            <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-3 rounded-lg border border-blue-200">
+                              <div className="text-xs text-blue-600 mb-1">{currentTitle || 'Metric Title'}</div>
+                              <div className="text-xl font-bold text-blue-800">
+                                {String(Object.values(queryResults[0])[0] || '0').toLocaleString()}
+                              </div>
                             </div>
                           )}
+                          {metricStyle === 'solid' && (
+                            <div className="bg-green-500 text-white p-3 rounded-lg">
+                              <div className="text-xs opacity-90 mb-1">{currentTitle || 'Metric Title'}</div>
+                              <div className="text-xl font-bold">
+                                {String(Object.values(queryResults[0])[0] || '0').toLocaleString()}
+                              </div>
+                            </div>
+                          )}
+                          {metricStyle === 'minimal' && (
+                            <div className="bg-white border-2 border-gray-200 p-3 rounded-lg">
+                              <div className="text-xs text-gray-600 mb-1">{currentTitle || 'Metric Title'}</div>
+                              <div className="text-xl font-bold text-gray-900">
+                                {String(Object.values(queryResults[0])[0] || '0').toLocaleString()}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Table Data Preview */}
+                      {queryResults.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="text-xs font-medium text-gray-700">Data Preview:</div>
+                          <div className="overflow-auto">
+                            <table className="text-xs w-full border-collapse">
+                              <thead>
+                                <tr className="border-b bg-gray-100">
+                                  {Object.keys(queryResults[0]).map((column) => (
+                                    <th key={column} className="text-left p-1 font-medium border-r">
+                                      {column}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {queryResults.slice(0, 3).map((row, index) => (
+                                  <tr key={index} className="border-b hover:bg-gray-50">
+                                    {Object.values(row).map((value, cellIndex) => (
+                                      <td key={cellIndex} className="p-1 border-r">
+                                        {String(value).length > 15 
+                                          ? String(value).substring(0, 15) + '...' 
+                                          : String(value)}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                            {queryResults.length > 3 && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                ... and {queryResults.length - 3} more rows
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1874,8 +1912,11 @@ export default function ReportBuilder() {
               
               <div className="space-y-4">
                 <div>
-                  <Label className="text-sm font-medium">Chart Type</Label>
-                  <Select defaultValue="table">
+                  <Label className="text-sm font-medium">Visualization Type</Label>
+                  <Select 
+                    value={visualizationType} 
+                    onValueChange={setVisualizationType}
+                  >
                     <SelectTrigger className="mt-1">
                       <SelectValue />
                     </SelectTrigger>
