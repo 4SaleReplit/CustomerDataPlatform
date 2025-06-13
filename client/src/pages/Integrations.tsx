@@ -556,78 +556,86 @@ const IntegrationCard = memo(({ integration, template, getStatusBadge, handleCon
         )}
         
         {/* Database-specific metadata */}
-        {integration.metadata && typeof integration.metadata === 'object' && Object.keys(integration.metadata).length > 0 && (
+        {integration.metadata && typeof integration.metadata === 'object' && (
           <div className="mt-3 pt-3 border-t border-gray-200">
             <div className="text-xs font-semibold text-gray-600 mb-2">
               {integration.type === 'postgresql' ? 'DATABASE METRICS' : 
                integration.type === 'snowflake' ? 'WAREHOUSE METRICS' : 'DATA METRICS'}
             </div>
             <div className="space-y-1">
-              {/* PostgreSQL specific metrics */}
-              {integration.type === 'postgresql' && (
-                <>
-                  {(integration.metadata as any).tableCount && (
-                    <div className="flex justify-between">
-                      <span>Tables:</span>
-                      <span className="font-medium text-blue-600">{(integration.metadata as any).tableCount}</span>
-                    </div>
-                  )}
-                  {(integration.metadata as any).userTables && (integration.metadata as any).views && (
-                    <div className="flex justify-between">
-                      <span>User/Views:</span>
-                      <span className="font-medium text-blue-600">{(integration.metadata as any).userTables}/{(integration.metadata as any).views}</span>
-                    </div>
-                  )}
-                  {(integration.metadata as any).size && (
-                    <div className="flex justify-between">
-                      <span>Size:</span>
-                      <span className="font-medium text-green-600">{(integration.metadata as any).size}</span>
-                    </div>
-                  )}
-                  {(integration.metadata as any).schemas && Array.isArray((integration.metadata as any).schemas) && (
-                    <div className="flex justify-between">
-                      <span>Schemas:</span>
-                      <span className="font-medium text-purple-600">{(integration.metadata as any).schemas.length}</span>
-                    </div>
-                  )}
-                </>
-              )}
-              
-              {/* Snowflake specific metrics */}
-              {integration.type === 'snowflake' && (
-                <>
-                  {(integration.metadata as any).tableCount && (
-                    <div className="flex justify-between">
-                      <span>Tables:</span>
-                      <span className="font-medium text-blue-600">{(integration.metadata as any).tableCount}</span>
-                    </div>
-                  )}
-                  {(integration.metadata as any).viewCount && (
-                    <div className="flex justify-between">
-                      <span>Views:</span>
-                      <span className="font-medium text-blue-600">{(integration.metadata as any).viewCount}</span>
-                    </div>
-                  )}
-                  {(integration.metadata as any).sizeGB && (
-                    <div className="flex justify-between">
-                      <span>Size:</span>
-                      <span className="font-medium text-green-600">{(integration.metadata as any).sizeGB} GB</span>
-                    </div>
-                  )}
-                  {(integration.metadata as any).warehouse && (
-                    <div className="flex justify-between">
-                      <span>Warehouse:</span>
-                      <span className="font-medium text-purple-600">{(integration.metadata as any).warehouse}</span>
-                    </div>
-                  )}
-                  {(integration.metadata as any).schemas && Array.isArray((integration.metadata as any).schemas) && (
-                    <div className="flex justify-between">
-                      <span>Schemas:</span>
-                      <span className="font-medium text-purple-600">{(integration.metadata as any).schemas.length}</span>
-                    </div>
-                  )}
-                </>
-              )}
+              {(() => {
+                const metadata = integration.metadata as any;
+                
+                if (integration.type === 'postgresql') {
+                  return (
+                    <>
+                      {metadata?.tableCount && (
+                        <div className="flex justify-between">
+                          <span>Tables:</span>
+                          <span className="font-medium text-blue-600">{metadata.tableCount}</span>
+                        </div>
+                      )}
+                      {metadata?.userTables && metadata?.views && (
+                        <div className="flex justify-between">
+                          <span>User/Views:</span>
+                          <span className="font-medium text-blue-600">{metadata.userTables}/{metadata.views}</span>
+                        </div>
+                      )}
+                      {metadata?.size && (
+                        <div className="flex justify-between">
+                          <span>Size:</span>
+                          <span className="font-medium text-green-600">{metadata.size}</span>
+                        </div>
+                      )}
+                      {metadata?.schemas && Array.isArray(metadata.schemas) && (
+                        <div className="flex justify-between">
+                          <span>Schemas:</span>
+                          <span className="font-medium text-purple-600">{metadata.schemas.length}</span>
+                        </div>
+                      )}
+                    </>
+                  );
+                }
+                
+                if (integration.type === 'snowflake') {
+                  return (
+                    <>
+                      {metadata?.tableCount && (
+                        <div className="flex justify-between">
+                          <span>Tables:</span>
+                          <span className="font-medium text-blue-600">{metadata.tableCount}</span>
+                        </div>
+                      )}
+                      {metadata?.viewCount && (
+                        <div className="flex justify-between">
+                          <span>Views:</span>
+                          <span className="font-medium text-blue-600">{metadata.viewCount}</span>
+                        </div>
+                      )}
+                      {metadata?.sizeGB && (
+                        <div className="flex justify-between">
+                          <span>Size:</span>
+                          <span className="font-medium text-green-600">{metadata.sizeGB} GB</span>
+                        </div>
+                      )}
+                      {metadata?.warehouse && (
+                        <div className="flex justify-between">
+                          <span>Warehouse:</span>
+                          <span className="font-medium text-purple-600">{metadata.warehouse}</span>
+                        </div>
+                      )}
+                      {metadata?.schemas && Array.isArray(metadata.schemas) && (
+                        <div className="flex justify-between">
+                          <span>Schemas:</span>
+                          <span className="font-medium text-purple-600">{metadata.schemas.length}</span>
+                        </div>
+                      )}
+                    </>
+                  );
+                }
+                
+                return null;
+              })()}
             </div>
           </div>
         )}
