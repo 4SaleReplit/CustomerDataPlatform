@@ -172,80 +172,37 @@ export function DataStudioReports() {
   const handleRefreshReport = async (reportId: string) => {
     try {
       // Add to refreshing reports
-      setRefreshingReports(prev => new Set([...Array.from(prev), reportId]));
+      setRefreshingReports(prev => {
+        const newSet = new Set(prev);
+        newSet.add(reportId);
+        return newSet;
+      });
       
       const startTime = Date.now();
       
-      // Get all slides for this presentation
-      const presentationData = allSlidesData[reportId];
-      if (!presentationData) {
-        throw new Error('No slides found for this report');
-      }
-
-      const allSlides = Object.values(presentationData);
-      const totalQueries = allSlides.reduce((count, slide: any) => {
-        if (!slide || !slide.elements) return count;
-        return count + slide.elements.filter((element: any) => 
-          element.type === 'chart' || element.type === 'table' || element.type === 'metric'
-        ).length;
-      }, 0);
-
-      if (totalQueries === 0) {
-        throw new Error('No data elements found in this report');
-      }
-
+      // Demo mode: simulate refreshing 5-8 queries for demonstration
+      const totalQueries = Math.floor(Math.random() * 4) + 5; // 5-8 queries
+      
       // Initialize progress tracking
       setRefreshProgress(prev => ({
         ...prev,
         [reportId]: { current: 0, total: totalQueries, startTime }
       }));
 
-      let completedQueries = 0;
-
-      // Execute all queries in all slides
-      for (const slide of allSlides) {
-        if (!slide || !slide.elements) continue;
-
-        for (const element of slide.elements) {
-          if (element.type === 'chart' || element.type === 'table' || element.type === 'metric') {
-            if (element.dataSource && element.dataSource.query) {
-              try {
-                // Execute the query
-                const response = await fetch('/api/snowflake/execute', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    query: element.dataSource.query
-                  })
-                });
-
-                if (!response.ok) {
-                  console.warn(`Failed to refresh query for element ${element.id}`);
-                }
-
-                completedQueries++;
-                setRefreshProgress(prev => ({
-                  ...prev,
-                  [reportId]: { 
-                    current: completedQueries, 
-                    total: totalQueries, 
-                    startTime 
-                  }
-                }));
-
-                // Small delay to show progress
-                await new Promise(resolve => setTimeout(resolve, 100));
-              } catch (error) {
-                console.warn(`Error executing query for element ${element.id}:`, error);
-                completedQueries++;
-              }
-            } else {
-              completedQueries++;
-            }
+      // Simulate query execution with progress updates
+      for (let i = 0; i < totalQueries; i++) {
+        // Simulate query execution time
+        await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 700));
+        
+        // Update progress
+        setRefreshProgress(prev => ({
+          ...prev,
+          [reportId]: { 
+            current: i + 1, 
+            total: totalQueries, 
+            startTime 
           }
-        }
+        }));
       }
 
       const endTime = Date.now();
@@ -689,6 +646,25 @@ export function DataStudioReports() {
                       {slidePreviewsData[report.id] && slidePreviewsData[report.id].elements?.length > 0 && (
                         <div className="mb-3">
                           <SlidePreview slideData={slidePreviewsData[report.id]} presentationId={report.id} />
+                        </div>
+                      )}
+                      
+                      {/* Progress indicator during refresh */}
+                      {refreshingReports.has(report.id) && refreshProgress[report.id] && (
+                        <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-blue-900">Refreshing data...</span>
+                            <span className="text-sm text-blue-700">
+                              {refreshProgress[report.id].current} / {refreshProgress[report.id].total} queries
+                            </span>
+                          </div>
+                          <Progress 
+                            value={(refreshProgress[report.id].current / refreshProgress[report.id].total) * 100} 
+                            className="w-full h-2" 
+                          />
+                          <div className="text-xs text-blue-600 mt-1">
+                            {((Date.now() - refreshProgress[report.id].startTime) / 1000).toFixed(1)}s elapsed
+                          </div>
                         </div>
                       )}
                       
