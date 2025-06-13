@@ -191,6 +191,8 @@ export function ReportBuilder() {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [resizeHandle, setResizeHandle] = useState<string | null>(null);
+  const [draggedSlideIndex, setDraggedSlideIndex] = useState<number | null>(null);
+  const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
   const [isExecutingQuery, setIsExecutingQuery] = useState(false);
   const [queryResults, setQueryResults] = useState<any>(null);
   const [currentEditingElement, setCurrentEditingElement] = useState<string | null>(null);
@@ -1314,6 +1316,8 @@ export function ReportBuilder() {
     if (!files || files.length === 0 || !currentReport) return;
 
     try {
+      const newSlides: Slide[] = [];
+      
       // Process each selected image file
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -1324,7 +1328,50 @@ export function ReportBuilder() {
           continue;
         }
 
-        await addImageSlideToCurrentReport(file);
+        const imageUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        
+        const newSlide: Slide = {
+          id: `slide-${Date.now()}-${i}`,
+          name: `${file.name.replace(/\.[^/.]+$/, '')}`,
+          elements: [
+            {
+              id: `image-${Date.now()}-${i}`,
+              type: 'image',
+              x: 0,
+              y: 0,
+              width: 1920,
+              height: 1080,
+              content: imageUrl,
+              style: {
+                fontSize: 16,
+                fontWeight: 'normal',
+                textAlign: 'center',
+                color: '#000000',
+                backgroundColor: 'transparent',
+                fontFamily: 'Arial'
+              }
+            }
+          ],
+          backgroundColor: '#ffffff'
+        };
+        
+        newSlides.push(newSlide);
+      }
+      
+      if (newSlides.length > 0) {
+        // Add all new slides to the current report
+        const updatedSlides = [...currentReport.slides, ...newSlides];
+        const updatedReport = { ...currentReport, slides: updatedSlides };
+        setCurrentReport(updatedReport);
+        updateReportInList(updatedReport);
+        
+        // Switch to the first new slide
+        setCurrentSlideIndex(currentReport.slides.length);
       }
     } catch (error) {
       console.error('Error adding PNG slides:', error);
@@ -1604,6 +1651,47 @@ export function ReportBuilder() {
 
   const updateReportInList = (updatedReport: Report) => {
     setReports(reports.map(r => r.id === updatedReport.id ? updatedReport : r));
+  };
+
+  const handleSlideDragStart = (e: React.DragEvent, slideIndex: number) => {
+    setDraggedSlideIndex(slideIndex);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleSlideDragOver = (e: React.DragEvent, slideIndex: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDropTargetIndex(slideIndex);
+  };
+
+  const handleSlideDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedSlideIndex === null || !currentReport) return;
+
+    const newSlides = [...currentReport.slides];
+    const draggedSlide = newSlides[draggedSlideIndex];
+    
+    // Remove the dragged slide from its original position
+    newSlides.splice(draggedSlideIndex, 1);
+    
+    // Insert it at the new position
+    newSlides.splice(dropIndex, 0, draggedSlide);
+    
+    const updatedReport = { ...currentReport, slides: newSlides };
+    setCurrentReport(updatedReport);
+    updateReportInList(updatedReport);
+    
+    // Update current slide index
+    if (currentSlideIndex === draggedSlideIndex) {
+      setCurrentSlideIndex(dropIndex);
+    } else if (draggedSlideIndex < currentSlideIndex && dropIndex >= currentSlideIndex) {
+      setCurrentSlideIndex(currentSlideIndex - 1);
+    } else if (draggedSlideIndex > currentSlideIndex && dropIndex <= currentSlideIndex) {
+      setCurrentSlideIndex(currentSlideIndex + 1);
+    }
+    
+    setDraggedSlideIndex(null);
+    setDropTargetIndex(null);
   };
 
   const handleCanvasClick = (e: React.MouseEvent) => {
@@ -2120,10 +2208,10 @@ export function ReportBuilder() {
 
   // Designer View
   return (
-    <div className="h-full flex bg-gray-50">
-      {/* Left Sidebar - Design Panel */}
-      <div className="w-80 border-r bg-white shadow-sm">
-        <div className="p-4 border-b">
+    <div className="h-full flex flex-col bg-gray-50">
+      {/* Top Toolbar */}
+      <div className="bg-white border-b shadow-sm p-4">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button 
               variant="ghost" 
@@ -2137,9 +2225,51 @@ export function ReportBuilder() {
               <p className="text-sm text-gray-600">{currentReport?.name}</p>
             </div>
           </div>
+          
+          {/* Canvas Controls */}
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setShowGrid(!showGrid)}
+              className={showGrid ? 'bg-blue-100' : ''}
+            >
+              <Grid className="h-4 w-4 mr-1" />
+              Grid
+            </Button>
+            {selectedElement && (
+              <>
+                <Separator orientation="vertical" className="h-6" />
+                <Button variant="ghost" size="sm" onClick={() => selectedElement && deleteElement(selectedElement)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm">
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+            
+            <Separator orientation="vertical" className="h-6" />
+            <Button variant="ghost" size="sm" onClick={() => setZoom(Math.max(25, zoom - 25))}>
+              <ZoomOut className="h-4 w-4" />
+            </Button>
+            <span className="text-sm w-16 text-center bg-white border rounded px-2 py-1">
+              {zoom}%
+            </span>
+            <Button variant="ghost" size="sm" onClick={() => setZoom(Math.min(200, zoom + 25))}>
+              <ZoomIn className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-        
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Canvas and Left Sidebar */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left Sidebar - Design Panel */}
+          <div className="w-80 border-r bg-white shadow-sm">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
           <TabsList className="grid w-full grid-cols-5 mx-4 mt-4">
             <TabsTrigger value="elements" className="text-xs">Elements</TabsTrigger>
             <TabsTrigger value="templates" className="text-xs">Templates</TabsTrigger>
@@ -2977,53 +3107,213 @@ export function ReportBuilder() {
             </div>
           </TabsContent>
         </Tabs>
-      </div>
-
-      {/* Main Canvas Area */}
-      <div className="flex-1 flex flex-col bg-white">
-        {/* Top Toolbar */}
-        <div className="border-b p-3 flex items-center justify-between bg-white shadow-sm">
-          <div className="flex items-center gap-2">
-            <div className="text-lg font-semibold text-gray-700">
-              {currentReport?.name}
-            </div>
-            <Badge variant="secondary" className="text-xs">
-              Slide {currentSlideIndex + 1} of {currentReport?.slides.length}
-            </Badge>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <Save className="h-4 w-4 mr-2" />
-              Save
-            </Button>
-            <Button variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh Data
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setPreviewMode(!previewMode)}>
-              <Eye className="h-4 w-4 mr-2" />
-              {previewMode ? 'Edit' : 'Preview'}
-            </Button>
-            <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-              <Send className="h-4 w-4 mr-2" />
-              Publish
-            </Button>
+          {/* Main Canvas Area */}
+          <div className="flex-1 flex flex-col bg-white">
+            {/* Canvas */}
+            <div className="flex-1 overflow-auto bg-gray-100 p-8 flex items-center justify-center">
+              <div 
+                ref={canvasRef}
+                className="bg-white shadow-2xl relative border"
+                style={{
+                  width: (1920 * (zoom / 100)) / 2,
+                  height: (1080 * (zoom / 100)) / 2,
+                  background: currentSlide?.backgroundColor || '#ffffff',
+                  backgroundImage: showGrid ? 'url("data:image/svg+xml,%3Csvg width="30" height="30" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="%23e5e7eb" fill-opacity="0.3"%3E%3Ccircle cx="1" cy="1" r="1"/%3E%3C/g%3E%3C/svg%3E")' : 'none'
+                }}
+                onClick={handleCanvasClick}
+              >
+                {currentSlide?.elements.map(renderElement)}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Canvas Controls */}
-        <div className="border-b p-2 flex items-center justify-between bg-gray-50">
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setShowGrid(!showGrid)}
-              className={showGrid ? 'bg-blue-100' : ''}
-            >
-              <Grid className="h-4 w-4 mr-1" />
-              Grid
-            </Button>
+        {/* Bottom Slide Navigator */}
+        <div className="bg-white border-t shadow-sm p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold">Slides</h3>
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={() => {
+                if (!currentReport) return;
+                const newSlide: Slide = {
+                  id: Date.now().toString(),
+                  name: `Slide ${currentReport.slides.length + 1}`,
+                  elements: [],
+                  backgroundColor: '#ffffff'
+                };
+                const updatedSlides = [...currentReport.slides, newSlide];
+                const updatedReport = { ...currentReport, slides: updatedSlides };
+                setCurrentReport(updatedReport);
+                updateReportInList(updatedReport);
+                setCurrentSlideIndex(updatedSlides.length - 1);
+              }} className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="h-4 w-4 mr-1" />
+                Add Slide
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => pngUploaderRef.current?.click()}>
+                <Image className="h-4 w-4 mr-1" />
+                Add Images
+              </Button>
+              <input
+                type="file"
+                ref={pngUploaderRef}
+                accept=".png,.jpg,.jpeg"
+                onChange={handlePngUpload}
+                multiple
+                className="hidden"
+              />
+            </div>
+          </div>
+          
+          {/* Horizontal Scrollable Slide Thumbnails */}
+          <div className="overflow-x-auto">
+            <div className="flex gap-3 pb-2 min-w-max">
+              {currentReport?.slides.map((slide, index) => (
+                <div
+                  key={slide.id}
+                  className={`flex-shrink-0 cursor-pointer rounded-lg border-2 transition-all duration-200 ${
+                    index === currentSlideIndex
+                      ? 'border-blue-500 bg-blue-50 shadow-md'
+                      : draggedSlideIndex === index
+                      ? 'border-blue-300 bg-blue-25 scale-105 shadow-lg'
+                      : dropTargetIndex === index && draggedSlideIndex !== null
+                      ? 'border-green-400 bg-green-50'
+                      : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                  }`}
+                  style={{
+                    width: '160px',
+                    height: '90px',
+                    background: slide.backgroundColor || '#ffffff'
+                  }}
+                  draggable
+                  onDragStart={(e) => handleSlideDragStart(e, index)}
+                  onDragOver={(e) => handleSlideDragOver(e, index)}
+                  onDrop={(e) => handleSlideDrop(e, index)}
+                  onDragLeave={() => setDropTargetIndex(null)}
+                  onClick={() => setCurrentSlideIndex(index)}
+                >
+                  {/* Slide Thumbnail Content */}
+                  <div className="w-full h-full p-1 rounded-lg overflow-hidden">
+                    <div className="w-full h-full relative bg-white rounded border">
+                      {slide.elements.map((element) => (
+                        <div
+                          key={element.id}
+                          className="absolute"
+                          style={{
+                            left: `${(element.x / 1920) * 100}%`,
+                            top: `${(element.y / 1080) * 100}%`,
+                            width: `${(element.width / 1920) * 100}%`,
+                            height: `${(element.height / 1080) * 100}%`,
+                            fontSize: '6px',
+                            overflow: 'hidden'
+                          }}
+                        >
+                          {element.type === 'text' && (
+                            <div className="text-xs truncate" style={{ color: element.style.color }}>
+                              {typeof element.content === 'string' ? element.content : 'Text'}
+                            </div>
+                          )}
+                          {element.type === 'image' && (
+                            <img 
+                              src={element.content as string}
+                              alt="thumbnail"
+                              className="w-full h-full object-cover rounded"
+                            />
+                          )}
+                          {element.type === 'chart' && (
+                            <div className="w-full h-full bg-blue-100 rounded flex items-center justify-center">
+                              <BarChart3 className="w-3 h-3 text-blue-600" />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Slide Number */}
+                  <div className="absolute top-1 left-1 bg-black bg-opacity-60 text-white text-xs px-1 rounded">
+                    {index + 1}
+                  </div>
+                  
+                  {/* Slide Name */}
+                  <div className="absolute bottom-1 left-1 right-1 bg-black bg-opacity-60 text-white text-xs px-1 rounded truncate">
+                    {slide.name}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Sidebar - Properties Panel */}
+      <div className="w-80 border-l bg-white shadow-sm flex flex-col">
+        <div className="p-4 border-b">
+          <h3 className="font-semibold">Properties</h3>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-4">
+          {selectedElement ? (
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium">Element Type</Label>
+                <div className="mt-1 text-sm text-gray-600 capitalize">
+                  {currentSlide?.elements.find(e => e.id === selectedElement)?.type || 'Unknown'}
+                </div>
+              </div>
+              
+              <div>
+                <Label className="text-sm font-medium">Position & Size</Label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <div>
+                    <Label className="text-xs">X</Label>
+                    <Input 
+                      type="number" 
+                      className="h-8"
+                      value={currentSlide?.elements.find(e => e.id === selectedElement)?.x || 0}
+                      onChange={(e) => updateElement(selectedElement, { x: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Y</Label>
+                    <Input 
+                      type="number" 
+                      className="h-8"
+                      value={currentSlide?.elements.find(e => e.id === selectedElement)?.y || 0}
+                      onChange={(e) => updateElement(selectedElement, { y: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Width</Label>
+                    <Input 
+                      type="number" 
+                      className="h-8"
+                      value={currentSlide?.elements.find(e => e.id === selectedElement)?.width || 0}
+                      onChange={(e) => updateElement(selectedElement, { width: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Height</Label>
+                    <Input 
+                      type="number" 
+                      className="h-8"
+                      value={currentSlide?.elements.find(e => e.id === selectedElement)?.height || 0}
+                      onChange={(e) => updateElement(selectedElement, { height: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center text-gray-500 mt-8">
+              <MousePointer className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+              <p className="text-sm">Select an element to view properties</p>
+            </div>
+          )}
+        </div>
+      </div>
             {selectedElement && (
               <>
                 <Separator orientation="vertical" className="h-6" />
