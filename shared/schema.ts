@@ -240,6 +240,8 @@ export const presentations = pgTable("presentations", {
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   slideIds: uuid("slide_ids").array(),
+  previewImageId: uuid("preview_image_id").references(() => uploadedImages.id),
+  lastRefreshed: timestamp("last_refreshed", { withTimezone: true }),
   createdBy: varchar("created_by", { length: 255 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),

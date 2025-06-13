@@ -342,6 +342,16 @@ export function DataStudioReports() {
 
       console.log('Refresh completed:', { successCount, failureCount, totalTime });
 
+      // Generate and save updated preview image after successful refresh
+      if (successCount > 0) {
+        try {
+          await generateAndSavePreviewImage(reportId);
+          console.log('Preview image updated for report:', reportId);
+        } catch (error) {
+          console.warn('Failed to update preview image:', error);
+        }
+      }
+
       // Show success toast
       toast({
         title: failureCount > 0 ? "Report Partially Refreshed" : "Report Data Refreshed",
@@ -378,6 +388,65 @@ export function DataStudioReports() {
   // Slide thumbnail generator and cache
   const [thumbnailCache, setThumbnailCache] = useState<Record<string, string>>({});
   const slideRenderRef = useRef<HTMLDivElement>(null);
+
+  // Generate and save persistent preview image for a report
+  const generateAndSavePreviewImage = async (reportId: string): Promise<void> => {
+    const presentationData = allSlidesData[reportId];
+    if (!presentationData?.slides?.length) {
+      throw new Error('No slides found for preview generation');
+    }
+
+    // Use first slide with content for preview, or first slide if none have content
+    const slideWithContent = presentationData.slides.find((slide: any) => 
+      slide?.elements?.some((el: any) => el.type === 'chart' || el.type === 'table' || el.type === 'metric')
+    ) || presentationData.slides[0];
+
+    if (!slideWithContent) {
+      throw new Error('No suitable slide found for preview');
+    }
+
+    // Generate thumbnail
+    const thumbnailDataUrl = await generateThumbnail(slideWithContent, slideWithContent.id);
+    if (!thumbnailDataUrl) {
+      throw new Error('Failed to generate thumbnail');
+    }
+
+    // Convert data URL to blob
+    const response = await fetch(thumbnailDataUrl);
+    const blob = await response.blob();
+
+    // Create form data for upload
+    const formData = new FormData();
+    formData.append('file', blob, `report-preview-${reportId}-${Date.now()}.png`);
+
+    // Upload image
+    const uploadResponse = await fetch('/api/upload-image', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error('Failed to upload preview image');
+    }
+
+    const uploadedImage = await uploadResponse.json();
+
+    // Update presentation with preview image ID and refresh timestamp
+    const updateResponse = await fetch(`/api/presentations/${reportId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        previewImageId: uploadedImage.id,
+        lastRefreshed: new Date().toISOString()
+      })
+    });
+
+    if (!updateResponse.ok) {
+      throw new Error('Failed to update presentation with preview image');
+    }
+  };
 
   // Generate thumbnail from slide data
   const generateThumbnail = async (slideData: any, slideId: string): Promise<string | null> => {

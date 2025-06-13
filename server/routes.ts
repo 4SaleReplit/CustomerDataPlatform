@@ -2453,6 +2453,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/presentations/:id", async (req, res) => {
+    try {
+      // Allow partial updates including preview image and refresh timestamp
+      const allowedFields = ['previewImageId', 'lastRefreshed', 'title', 'description'];
+      const updates: any = {};
+      
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          updates[field] = req.body[field];
+        }
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No valid fields to update" });
+      }
+
+      const presentation = await storage.updatePresentation(req.params.id, updates);
+      if (!presentation) {
+        return res.status(404).json({ error: "Presentation not found" });
+      }
+      res.json(presentation);
+    } catch (error) {
+      console.error("Patch presentation error:", error);
+      res.status(500).json({ error: "Failed to patch presentation" });
+    }
+  });
+
   app.delete("/api/presentations/:id", async (req, res) => {
     try {
       const success = await storage.deletePresentation(req.params.id);
