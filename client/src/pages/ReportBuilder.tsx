@@ -52,7 +52,11 @@ interface SlideElement {
     fontWeight?: string;
     fontFamily?: string;
     fontStyle?: string;
-    textAlign?: 'left' | 'center' | 'right';
+    textAlign?: 'left' | 'center' | 'right' | 'justify';
+    textDecoration?: 'none' | 'underline' | 'overline' | 'line-through';
+    textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+    letterSpacing?: string;
+    lineHeight?: string;
     color?: string;
     backgroundColor?: string;
   };
@@ -563,8 +567,15 @@ export default function ReportBuilder() {
       content: type === 'text' ? 'New text element' : type === 'chart' ? { type: 'bar', data: [] } : '',
       style: {
         fontSize: 16,
-        color: '#000000',
+        fontFamily: 'Inter',
+        fontWeight: 'normal',
+        fontStyle: 'normal',
         textAlign: 'left',
+        textDecoration: 'none',
+        textTransform: 'none',
+        letterSpacing: 'normal',
+        lineHeight: '1.4',
+        color: '#000000',
         backgroundColor: type === 'shape' ? '#e5e7eb' : 'transparent'
       }
     };
@@ -795,6 +806,13 @@ export default function ReportBuilder() {
           width: (element.width * (zoom / 100)) / 1.5,
           height: (element.height * (zoom / 100)) / 1.5,
           fontSize: element.style.fontSize ? `${(element.style.fontSize * (zoom / 100)) / 1.5}px` : '12px',
+          fontFamily: element.style.fontFamily || 'Inter',
+          fontWeight: element.style.fontWeight || 'normal',
+          fontStyle: element.style.fontStyle || 'normal',
+          textDecoration: element.style.textDecoration || 'none',
+          textTransform: (element.style.textTransform as any) || 'none',
+          letterSpacing: element.style.letterSpacing || 'normal',
+          lineHeight: element.style.lineHeight || '1.4',
           color: element.style.color,
           textAlign: element.style.textAlign,
           backgroundColor: element.style.backgroundColor,
@@ -1739,58 +1757,267 @@ export default function ReportBuilder() {
                     </div>
                   </div>
 
-                  {currentSlide?.elements.find(e => e.id === selectedElement)?.type === 'text' && (
+                  {(currentSlide?.elements.find(e => e.id === selectedElement)?.type === 'text' || 
+                    currentSlide?.elements.find(e => e.id === selectedElement)?.type === 'metric') && (
                     <>
+                      {/* Font Family */}
                       <div>
-                        <Label className="text-sm font-medium">Font Size</Label>
-                        <Input 
-                          type="number" 
-                          className="mt-1 h-8"
-                          value={currentSlide?.elements.find(e => e.id === selectedElement)?.style.fontSize || 16}
-                          onChange={(e) => updateElement(selectedElement, { 
-                            style: { 
-                              ...currentSlide?.elements.find(e => e.id === selectedElement)?.style, 
-                              fontSize: parseInt(e.target.value) || 16 
-                            }
-                          })}
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label className="text-sm font-medium">Text Color</Label>
-                        <Input 
-                          type="color" 
-                          className="mt-1 h-8 w-full"
-                          value={currentSlide?.elements.find(e => e.id === selectedElement)?.style.color || '#000000'}
-                          onChange={(e) => updateElement(selectedElement, { 
-                            style: { 
-                              ...currentSlide?.elements.find(e => e.id === selectedElement)?.style, 
-                              color: e.target.value 
-                            }
-                          })}
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label className="text-sm font-medium">Text Align</Label>
+                        <Label className="text-sm font-medium">Font Family</Label>
                         <Select 
-                          value={currentSlide?.elements.find(e => e.id === selectedElement)?.style.textAlign || 'left'}
+                          value={currentSlide?.elements.find(e => e.id === selectedElement)?.style.fontFamily || 'Inter'}
                           onValueChange={(value) => updateElement(selectedElement, { 
                             style: { 
                               ...currentSlide?.elements.find(e => e.id === selectedElement)?.style, 
-                              textAlign: value as 'left' | 'center' | 'right'
-                            }
+                              fontFamily: value 
+                            } 
                           })}
                         >
                           <SelectTrigger className="mt-1 h-8">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="left">Left</SelectItem>
-                            <SelectItem value="center">Center</SelectItem>
-                            <SelectItem value="right">Right</SelectItem>
+                            <SelectItem value="Inter">Inter (Default)</SelectItem>
+                            <SelectItem value="Arial">Arial</SelectItem>
+                            <SelectItem value="Helvetica">Helvetica</SelectItem>
+                            <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                            <SelectItem value="Georgia">Georgia</SelectItem>
+                            <SelectItem value="Verdana">Verdana</SelectItem>
+                            <SelectItem value="Tahoma">Tahoma</SelectItem>
+                            <SelectItem value="Courier New">Courier New</SelectItem>
+                            <SelectItem value="Monaco">Monaco</SelectItem>
+                            <SelectItem value="Roboto">Roboto</SelectItem>
+                            <SelectItem value="Open Sans">Open Sans</SelectItem>
+                            <SelectItem value="Lato">Lato</SelectItem>
+                            <SelectItem value="Montserrat">Montserrat</SelectItem>
+                            <SelectItem value="Poppins">Poppins</SelectItem>
+                            <SelectItem value="Source Sans Pro">Source Sans Pro</SelectItem>
                           </SelectContent>
                         </Select>
+                      </div>
+
+                      {/* Font Size and Weight */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-sm font-medium">Font Size</Label>
+                          <Input 
+                            type="number" 
+                            className="mt-1 h-8"
+                            value={currentSlide?.elements.find(e => e.id === selectedElement)?.style.fontSize || 16}
+                            onChange={(e) => updateElement(selectedElement, { 
+                              style: { 
+                                ...currentSlide?.elements.find(e => e.id === selectedElement)?.style, 
+                                fontSize: parseInt(e.target.value) || 16 
+                              }
+                            })}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Font Weight</Label>
+                          <Select 
+                            value={currentSlide?.elements.find(e => e.id === selectedElement)?.style.fontWeight || 'normal'}
+                            onValueChange={(value) => updateElement(selectedElement, { 
+                              style: { 
+                                ...currentSlide?.elements.find(e => e.id === selectedElement)?.style, 
+                                fontWeight: value 
+                              } 
+                            })}
+                          >
+                            <SelectTrigger className="mt-1 h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="100">Thin (100)</SelectItem>
+                              <SelectItem value="200">Extra Light (200)</SelectItem>
+                              <SelectItem value="300">Light (300)</SelectItem>
+                              <SelectItem value="normal">Normal (400)</SelectItem>
+                              <SelectItem value="500">Medium (500)</SelectItem>
+                              <SelectItem value="600">Semi Bold (600)</SelectItem>
+                              <SelectItem value="bold">Bold (700)</SelectItem>
+                              <SelectItem value="800">Extra Bold (800)</SelectItem>
+                              <SelectItem value="900">Black (900)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* Font Style and Text Decoration */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-sm font-medium">Font Style</Label>
+                          <Select 
+                            value={currentSlide?.elements.find(e => e.id === selectedElement)?.style.fontStyle || 'normal'}
+                            onValueChange={(value) => updateElement(selectedElement, { 
+                              style: { 
+                                ...currentSlide?.elements.find(e => e.id === selectedElement)?.style, 
+                                fontStyle: value 
+                              } 
+                            })}
+                          >
+                            <SelectTrigger className="mt-1 h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="normal">Normal</SelectItem>
+                              <SelectItem value="italic">Italic</SelectItem>
+                              <SelectItem value="oblique">Oblique</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Text Decoration</Label>
+                          <Select 
+                            value={currentSlide?.elements.find(e => e.id === selectedElement)?.style.textDecoration || 'none'}
+                            onValueChange={(value) => updateElement(selectedElement, { 
+                              style: { 
+                                ...currentSlide?.elements.find(e => e.id === selectedElement)?.style, 
+                                textDecoration: value as 'none' | 'underline' | 'overline' | 'line-through'
+                              } 
+                            })}
+                          >
+                            <SelectTrigger className="mt-1 h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              <SelectItem value="underline">Underline</SelectItem>
+                              <SelectItem value="overline">Overline</SelectItem>
+                              <SelectItem value="line-through">Strike Through</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* Text Color and Background */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-sm font-medium">Text Color</Label>
+                          <Input 
+                            type="color" 
+                            className="mt-1 h-8 w-full"
+                            value={currentSlide?.elements.find(e => e.id === selectedElement)?.style.color || '#000000'}
+                            onChange={(e) => updateElement(selectedElement, { 
+                              style: { 
+                                ...currentSlide?.elements.find(e => e.id === selectedElement)?.style, 
+                                color: e.target.value 
+                              }
+                            })}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Background</Label>
+                          <Input 
+                            type="color" 
+                            className="mt-1 h-8 w-full"
+                            value={currentSlide?.elements.find(e => e.id === selectedElement)?.style.backgroundColor || '#ffffff'}
+                            onChange={(e) => updateElement(selectedElement, { 
+                              style: { 
+                                ...currentSlide?.elements.find(e => e.id === selectedElement)?.style, 
+                                backgroundColor: e.target.value 
+                              }
+                            })}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Text Alignment and Line Height */}
+                      {currentSlide?.elements.find(e => e.id === selectedElement)?.type === 'text' && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-sm font-medium">Text Align</Label>
+                            <Select 
+                              value={currentSlide?.elements.find(e => e.id === selectedElement)?.style.textAlign || 'left'}
+                              onValueChange={(value) => updateElement(selectedElement, { 
+                                style: { 
+                                  ...currentSlide?.elements.find(e => e.id === selectedElement)?.style, 
+                                  textAlign: value as 'left' | 'center' | 'right'
+                                }
+                              })}
+                            >
+                              <SelectTrigger className="mt-1 h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="left">Left</SelectItem>
+                                <SelectItem value="center">Center</SelectItem>
+                                <SelectItem value="right">Right</SelectItem>
+                                <SelectItem value="justify">Justify</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium">Line Height</Label>
+                            <Select 
+                              value={currentSlide?.elements.find(e => e.id === selectedElement)?.style.lineHeight || '1.4'}
+                              onValueChange={(value) => updateElement(selectedElement, { 
+                                style: { 
+                                  ...currentSlide?.elements.find(e => e.id === selectedElement)?.style, 
+                                  lineHeight: value 
+                                } 
+                              })}
+                            >
+                              <SelectTrigger className="mt-1 h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1">Tight (1.0)</SelectItem>
+                                <SelectItem value="1.2">Snug (1.2)</SelectItem>
+                                <SelectItem value="1.4">Normal (1.4)</SelectItem>
+                                <SelectItem value="1.6">Relaxed (1.6)</SelectItem>
+                                <SelectItem value="2">Loose (2.0)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Letter Spacing and Text Transform */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-sm font-medium">Letter Spacing</Label>
+                          <Select 
+                            value={currentSlide?.elements.find(e => e.id === selectedElement)?.style.letterSpacing || 'normal'}
+                            onValueChange={(value) => updateElement(selectedElement, { 
+                              style: { 
+                                ...currentSlide?.elements.find(e => e.id === selectedElement)?.style, 
+                                letterSpacing: value 
+                              } 
+                            })}
+                          >
+                            <SelectTrigger className="mt-1 h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="-0.05em">Tighter</SelectItem>
+                              <SelectItem value="-0.025em">Tight</SelectItem>
+                              <SelectItem value="normal">Normal</SelectItem>
+                              <SelectItem value="0.025em">Wide</SelectItem>
+                              <SelectItem value="0.05em">Wider</SelectItem>
+                              <SelectItem value="0.1em">Widest</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Text Transform</Label>
+                          <Select 
+                            value={currentSlide?.elements.find(e => e.id === selectedElement)?.style.textTransform || 'none'}
+                            onValueChange={(value) => updateElement(selectedElement, { 
+                              style: { 
+                                ...currentSlide?.elements.find(e => e.id === selectedElement)?.style, 
+                                textTransform: value 
+                              } 
+                            })}
+                          >
+                            <SelectTrigger className="mt-1 h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              <SelectItem value="uppercase">UPPERCASE</SelectItem>
+                              <SelectItem value="lowercase">lowercase</SelectItem>
+                              <SelectItem value="capitalize">Capitalize</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </>
                   )}
