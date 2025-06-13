@@ -28,7 +28,8 @@ import {
   RefreshCw,
   GripVertical,
   Settings,
-  FileText
+  FileText,
+  Save
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { CodeMirrorSQLEditor } from '@/components/dashboard/CodeMirrorSQLEditor';
