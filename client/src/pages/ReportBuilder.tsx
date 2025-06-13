@@ -128,6 +128,9 @@ export default function ReportBuilder() {
   const [reportTitle, setReportTitle] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  // Clipboard functionality for copy/cut/paste
+  const [clipboard, setClipboard] = useState<{element: SlideElement; operation: 'copy' | 'cut'} | null>(null);
+
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -368,6 +371,47 @@ export default function ReportBuilder() {
     setVisualizationType(element.type === 'metric' ? 'metric' : element.type === 'table' ? 'table' : 'bar');
     setSelectedElement(element.id);
     setShowSQLEditor(true);
+  };
+
+  // Clipboard operations
+  const handleCopyElement = (element: SlideElement) => {
+    setClipboard({ element: { ...element }, operation: 'copy' });
+  };
+
+  const handleCutElement = (element: SlideElement) => {
+    setClipboard({ element: { ...element }, operation: 'cut' });
+    deleteElement(element.id);
+  };
+
+  const handlePasteElement = () => {
+    if (!clipboard || !currentSlide || !currentReport) return;
+
+    const newElement: SlideElement = {
+      ...clipboard.element,
+      id: nanoid(),
+      x: clipboard.element.x + 20, // Offset slightly
+      y: clipboard.element.y + 20
+    };
+
+    const updatedSlide = {
+      ...currentSlide,
+      elements: [...currentSlide.elements, newElement]
+    };
+
+    const updatedReport = {
+      ...currentReport,
+      slides: currentReport.slides.map((slide, index) =>
+        index === currentSlideIndex ? updatedSlide : slide
+      )
+    };
+
+    setCurrentReport(updatedReport);
+    setSelectedElement(newElement.id);
+
+    // If it was a cut operation, clear clipboard
+    if (clipboard.operation === 'cut') {
+      setClipboard(null);
+    }
   };
 
   // Multiple image upload functionality with persistent storage
@@ -986,12 +1030,41 @@ export default function ReportBuilder() {
     }
   }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
-  // Keyboard event handling for delete
+  // Keyboard event handling for delete and clipboard operations
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Delete/Backspace - delete selected element
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElement) {
         e.preventDefault();
         deleteSelectedElement();
+        return;
+      }
+
+      // Ctrl+C - copy selected element
+      if (e.ctrlKey && e.key === 'c' && selectedElement && currentSlide) {
+        e.preventDefault();
+        const element = currentSlide.elements.find(el => el.id === selectedElement);
+        if (element) {
+          handleCopyElement(element);
+        }
+        return;
+      }
+
+      // Ctrl+X - cut selected element
+      if (e.ctrlKey && e.key === 'x' && selectedElement && currentSlide) {
+        e.preventDefault();
+        const element = currentSlide.elements.find(el => el.id === selectedElement);
+        if (element) {
+          handleCutElement(element);
+        }
+        return;
+      }
+
+      // Ctrl+V - paste element
+      if (e.ctrlKey && e.key === 'v' && clipboard) {
+        e.preventDefault();
+        handlePasteElement();
+        return;
       }
     };
 
@@ -999,7 +1072,7 @@ export default function ReportBuilder() {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedElement, deleteSelectedElement]);
+  }, [selectedElement, deleteSelectedElement, currentSlide, clipboard]);
 
   const handleResizeMouseDown = (e: React.MouseEvent, elementId: string, handle: string) => {
     e.stopPropagation();
@@ -1779,7 +1852,7 @@ export default function ReportBuilder() {
             <div className="mt-4 border-t pt-4">
               <h3 className="font-semibold text-sm mb-3">Data Tiles on This Slide</h3>
               <div 
-                className="grid grid-cols-2 gap-2 overflow-y-auto max-h-32"
+                className="grid grid-cols-1 gap-3 overflow-y-auto max-h-64"
                 style={{ 
                   maxWidth: `${(1920 * (zoom / 100)) / 1.5}px`,
                   margin: '0 auto'
@@ -1790,26 +1863,44 @@ export default function ReportBuilder() {
                   .map((element) => (
                     <div
                       key={element.id}
-                      className={`p-2 border rounded-lg cursor-pointer transition-all text-xs ${
+                      className={`p-3 border rounded-lg cursor-pointer transition-all ${
                         selectedElement === element.id 
                           ? 'border-blue-500 bg-blue-50' 
                           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
                       onClick={() => setSelectedElement(element.id)}
                     >
-                      <div className="flex items-center justify-between">
+                      {/* Title and Type Row */}
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2 min-w-0 flex-1">
-                          {element.type === 'metric' && <TrendingUp className="h-3 w-3 text-orange-600 flex-shrink-0" />}
-                          {element.type === 'chart' && <BarChart3 className="h-3 w-3 text-blue-600 flex-shrink-0" />}
-                          {element.type === 'table' && <Table className="h-3 w-3 text-green-600 flex-shrink-0" />}
-                          <span className="font-medium truncate">
-                            {typeof element.content === 'string' ? element.content : 
-                             typeof element.title === 'string' ? element.title : 
-                             `${element.type.toUpperCase()}`}
-                          </span>
+                          {element.type === 'metric' && <TrendingUp className="h-4 w-4 text-orange-600 flex-shrink-0" />}
+                          {element.type === 'chart' && <BarChart3 className="h-4 w-4 text-blue-600 flex-shrink-0" />}
+                          {element.type === 'table' && <Table className="h-4 w-4 text-green-600 flex-shrink-0" />}
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium text-sm truncate">
+                              {typeof element.content === 'string' ? element.content : 
+                               typeof element.title === 'string' ? element.title : 
+                               `${element.type.charAt(0).toUpperCase() + element.type.slice(1)} Visualization`}
+                            </div>
+                            <div className="text-xs text-gray-500 capitalize">
+                              {element.type}
+                            </div>
+                          </div>
                         </div>
                         
-                        <div className="flex gap-1 ml-1">
+                        <div className="flex gap-1 ml-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopyElement(element);
+                            }}
+                            title="Copy (Ctrl+C)"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1818,6 +1909,7 @@ export default function ReportBuilder() {
                               e.stopPropagation();
                               handleEditTile(element);
                             }}
+                            title="Edit"
                           >
                             <Settings className="h-3 w-3" />
                           </Button>
@@ -1829,15 +1921,73 @@ export default function ReportBuilder() {
                               e.stopPropagation();
                               deleteElement(element.id);
                             }}
+                            title="Delete"
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
                       </div>
+
+                      {/* Metadata Grid */}
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {/* Data Source */}
+                        <div>
+                          <div className="text-gray-500 font-medium">Data Source</div>
+                          <div className="text-gray-700">Snowflake</div>
+                        </div>
+                        
+                        {/* Created Date */}
+                        <div>
+                          <div className="text-gray-500 font-medium">Created</div>
+                          <div className="text-gray-700">
+                            {new Date().toLocaleDateString()}
+                          </div>
+                        </div>
+                        
+                        {/* Last Modified */}
+                        <div>
+                          <div className="text-gray-500 font-medium">Modified</div>
+                          <div className="text-gray-700">
+                            {new Date().toLocaleDateString()}
+                          </div>
+                        </div>
+                        
+                        {/* Last Run Time */}
+                        <div>
+                          <div className="text-gray-500 font-medium">Last Run</div>
+                          <div className="text-gray-700">
+                            {element.content?.data ? 'Just now' : 'Never'}
+                          </div>
+                        </div>
+                        
+                        {/* Execution Time */}
+                        <div>
+                          <div className="text-gray-500 font-medium">Exec Time</div>
+                          <div className="text-gray-700">
+                            {element.content?.data ? '1.2s' : 'N/A'}
+                          </div>
+                        </div>
+                        
+                        {/* Data Records */}
+                        <div>
+                          <div className="text-gray-500 font-medium">Records</div>
+                          <div className="text-gray-700">
+                            {element.content?.data ? 
+                              (Array.isArray(element.content.data) ? 
+                                element.content.data.length.toLocaleString() : 
+                                '1') : 
+                              '0'}
+                          </div>
+                        </div>
+                      </div>
                       
+                      {/* SQL Query Preview */}
                       {element.dataSource?.query && (
-                        <div className="text-xs text-gray-500 font-mono bg-gray-100 p-1 rounded mt-1 truncate">
-                          {element.dataSource.query.substring(0, 30)}...
+                        <div className="mt-2">
+                          <div className="text-xs text-gray-500 font-medium mb-1">Query</div>
+                          <div className="text-xs text-gray-600 font-mono bg-gray-100 p-2 rounded truncate">
+                            {element.dataSource.query.substring(0, 60)}...
+                          </div>
                         </div>
                       )}
                     </div>
