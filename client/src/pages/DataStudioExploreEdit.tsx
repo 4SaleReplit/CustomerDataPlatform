@@ -14,13 +14,13 @@ import {
   ArrowLeft,
   BarChart3,
   LineChart,
-  PieChart,
+  PieChart as LucidePieChart,
   Database,
   TrendingUp,
   Eye
 } from 'lucide-react';
 import { CodeMirrorSQLEditor } from '@/components/dashboard/CodeMirrorSQLEditor';
-import { BarChart, Bar, LineChart as RechartsLineChart, Line, PieChart as RechartsPieChart, Cell, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { BarChart, Bar, LineChart as RechartsLineChart, Line, PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
 interface Explore {
   id: string;
@@ -77,7 +77,7 @@ export function DataStudioExploreEdit() {
     switch (type) {
       case 'line': return <LineChart className="h-5 w-5" />;
       case 'bar': return <BarChart3 className="h-5 w-5" />;
-      case 'pie': return <PieChart className="h-5 w-5" />;
+      case 'pie': return <LucidePieChart className="h-5 w-5" />;
       case 'number': return <TrendingUp className="h-5 w-5" />;
       default: return <Database className="h-5 w-5" />;
     }
@@ -233,6 +233,42 @@ export function DataStudioExploreEdit() {
                   <Tooltip />
                   <Line type="monotone" dataKey={secondCol} stroke="#3B82F6" strokeWidth={2} />
                 </RechartsLineChart>
+              </ResponsiveContainer>
+            </div>
+          );
+        }
+        break;
+        
+      case 'pie':
+        if (queryResults.columns?.length >= 2) {
+          const COLORS = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#F97316'];
+          const pieData = data.map((item: any, index: number) => ({
+            name: item[firstCol],
+            value: parseFloat(item[secondCol]) || 0,
+            fill: COLORS[index % COLORS.length]
+          }));
+          
+          return (
+            <div className="h-96">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsPieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {pieData.map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </RechartsPieChart>
               </ResponsiveContainer>
             </div>
           );
