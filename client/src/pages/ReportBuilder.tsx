@@ -1215,31 +1215,30 @@ export default function ReportBuilder() {
                   <div className="flex items-center gap-2">
                     <GripVertical className="h-3 w-3 text-gray-400" />
                     <div 
-                      className="w-32 h-24 rounded border bg-white shadow-sm flex-shrink-0"
-                      style={{ background: slide.backgroundColor || '#ffffff' }}
+                      className="w-32 h-18 rounded border bg-white shadow-sm flex-shrink-0"
+                      style={{ 
+                        background: slide.backgroundColor || '#ffffff',
+                        aspectRatio: '16/9'
+                      }}
                     >
                       <div className="w-full h-full rounded overflow-hidden relative">
-                        {slide.elements.length > 0 && (
-                          <div className="relative w-full h-full">
-                            {slide.elements.slice(0, 3).map((element, idx) => (
-                              <div
-                                key={element.id}
-                                className="absolute"
-                                style={{
-                                  left: `${(element.x / 1920) * 100}%`,
-                                  top: `${(element.y / 1080) * 100}%`,
-                                  width: `${Math.min((element.width / 1920) * 100, 40)}%`,
-                                  height: `${Math.min((element.height / 1080) * 100, 40)}%`,
-                                  backgroundColor: element.type === 'text' ? 'transparent' : element.type === 'chart' ? '#dbeafe' : '#f3f4f6',
-                                  fontSize: '1px',
-                                  backgroundImage: element.type === 'image' ? `url(${element.content})` : 'none',
-                                  backgroundSize: 'cover',
-                                  backgroundPosition: 'center'
-                                }}
-                              />
-                            ))}
-                          </div>
-                        )}
+                        {slide.elements.map((element, idx) => (
+                          <div
+                            key={element.id}
+                            className="absolute"
+                            style={{
+                              left: `${(element.x / 1920) * 100}%`,
+                              top: `${(element.y / 1080) * 100}%`,
+                              width: `${(element.width / 1920) * 100}%`,
+                              height: `${(element.height / 1080) * 100}%`,
+                              backgroundColor: element.type === 'text' ? 'transparent' : element.type === 'chart' ? '#dbeafe' : element.type === 'shape' ? '#f3f4f6' : 'transparent',
+                              fontSize: '1px',
+                              backgroundImage: element.type === 'image' ? `url(${element.content})` : 'none',
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center'
+                            }}
+                          />
+                        ))}
                       </div>
                     </div>
                     <div className="min-w-0">
