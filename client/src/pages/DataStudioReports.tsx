@@ -180,8 +180,36 @@ export function DataStudioReports() {
       
       const startTime = Date.now();
       
-      // Demo mode: simulate refreshing 5-8 queries for demonstration
-      const totalQueries = Math.floor(Math.random() * 4) + 5; // 5-8 queries
+      // Get all slides for this presentation to find actual queries
+      const presentationData = allSlidesData[reportId];
+      if (!presentationData) {
+        throw new Error('No slides found for this report');
+      }
+
+      const allSlides = Object.values(presentationData) as any[];
+      const dataQueries: Array<{ slideId: string; elementId: string; query: string }> = [];
+      
+      // Extract all actual queries from slide elements
+      allSlides.forEach(slide => {
+        if (slide?.elements) {
+          slide.elements.forEach((element: any) => {
+            if ((element.type === 'chart' || element.type === 'table' || element.type === 'metric') 
+                && element.dataSource?.query) {
+              dataQueries.push({
+                slideId: slide.id,
+                elementId: element.id,
+                query: element.dataSource.query
+              });
+            }
+          });
+        }
+      });
+
+      const totalQueries = dataQueries.length;
+      
+      if (totalQueries === 0) {
+        throw new Error('No data queries found in this report');
+      }
       
       // Initialize progress tracking
       setRefreshProgress(prev => ({
@@ -189,10 +217,28 @@ export function DataStudioReports() {
         [reportId]: { current: 0, total: totalQueries, startTime }
       }));
 
-      // Simulate query execution with progress updates
-      for (let i = 0; i < totalQueries; i++) {
-        // Simulate query execution time
-        await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 700));
+      // Execute each actual query
+      for (let i = 0; i < dataQueries.length; i++) {
+        const queryInfo = dataQueries[i];
+        
+        try {
+          // Execute the actual query
+          const response = await fetch('/api/snowflake/execute', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              query: queryInfo.query
+            })
+          });
+
+          if (!response.ok) {
+            console.warn(`Failed to refresh query for element ${queryInfo.elementId}`);
+          }
+        } catch (error) {
+          console.warn(`Error executing query for element ${queryInfo.elementId}:`, error);
+        }
         
         // Update progress
         setRefreshProgress(prev => ({
@@ -203,6 +249,9 @@ export function DataStudioReports() {
             startTime 
           }
         }));
+
+        // Small delay between queries
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
 
       const endTime = Date.now();
@@ -211,7 +260,7 @@ export function DataStudioReports() {
       // Show success toast
       toast({
         title: "Report Data Refreshed",
-        description: `Successfully refreshed ${totalQueries} queries in ${totalTime} seconds`,
+        description: `Successfully refreshed ${totalQueries} ${totalQueries === 1 ? 'query' : 'queries'} in ${totalTime} seconds`,
         duration: 5000,
       });
 
