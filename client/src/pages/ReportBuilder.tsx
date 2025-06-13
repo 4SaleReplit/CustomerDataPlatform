@@ -935,6 +935,15 @@ export default function ReportBuilder() {
                 </div>
               </div>
             )}
+            {element.content?.style === 'valueOnly' && (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="text-3xl font-bold text-gray-900">
+                  {element.content?.data && element.content.data.length > 0 
+                    ? String(Object.values(element.content.data[0])[0] || '0').toLocaleString()
+                    : '0'}
+                </div>
+              </div>
+            )}
           </div>
         )}
         {element.type === 'shape' && (
@@ -1077,29 +1086,53 @@ export default function ReportBuilder() {
     
     // Create the element with query configuration and results
     const elementId = nanoid();
-    const newElement: SlideElement = {
-      id: elementId,
-      type: visualizationType === 'metric' ? 'metric' : visualizationType === 'table' ? 'table' : 'chart',
-      x: 100,
-      y: 100,
-      width: visualizationType === 'metric' ? 250 : 400,
-      height: visualizationType === 'metric' ? 150 : 300,
-      content: {
-        type: visualizationType,
-        title: currentTitle,
-        query: currentQuery,
-        data: queryResults,
-        columns: queryResults.length > 0 ? Object.keys(queryResults[0]) : [],
-        style: visualizationType === 'metric' ? metricStyle : undefined
-      },
-      style: {
-        fontSize: 14,
-        fontWeight: 'normal',
-        fontFamily: 'Inter',
-        color: '#000000',
-        backgroundColor: '#ffffff'
-      }
-    };
+    let newElement: SlideElement;
+    
+    // For "Value Only" metric style, create a text element instead
+    if (visualizationType === 'metric' && metricStyle === 'valueOnly') {
+      const value = queryResults.length > 0 ? String(Object.values(queryResults[0])[0] || '0') : '0';
+      newElement = {
+        id: elementId,
+        type: 'text',
+        x: 100,
+        y: 100,
+        width: 200,
+        height: 80,
+        content: value.toLocaleString(),
+        style: {
+          fontSize: 48,
+          fontWeight: 'bold',
+          fontFamily: 'Inter',
+          color: '#000000',
+          backgroundColor: 'transparent',
+          textAlign: 'left'
+        }
+      };
+    } else {
+      newElement = {
+        id: elementId,
+        type: visualizationType === 'metric' ? 'metric' : visualizationType === 'table' ? 'table' : 'chart',
+        x: 100,
+        y: 100,
+        width: visualizationType === 'metric' ? 250 : 400,
+        height: visualizationType === 'metric' ? 150 : 300,
+        content: {
+          type: visualizationType,
+          title: currentTitle,
+          query: currentQuery,
+          data: queryResults,
+          columns: queryResults.length > 0 ? Object.keys(queryResults[0]) : [],
+          style: visualizationType === 'metric' ? metricStyle : undefined
+        },
+        style: {
+          fontSize: 14,
+          fontWeight: 'normal',
+          fontFamily: 'Inter',
+          color: '#000000',
+          backgroundColor: '#ffffff'
+        }
+      };
+    }
 
     // Add element to current slide
     if (currentSlide) {
@@ -1884,6 +1917,14 @@ export default function ReportBuilder() {
                               </div>
                             </div>
                           )}
+                          {metricStyle === 'valueOnly' && (
+                            <div className="bg-transparent p-2">
+                              <div className="text-3xl font-bold text-gray-900">
+                                {String(Object.values(queryResults[0])[0] || '0').toLocaleString()}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">Value only - editable as text</div>
+                            </div>
+                          )}
                         </div>
                       )}
                       
@@ -1965,6 +2006,7 @@ export default function ReportBuilder() {
                         <SelectItem value="gradient">Gradient Blue</SelectItem>
                         <SelectItem value="solid">Solid Green</SelectItem>
                         <SelectItem value="minimal">Minimal White</SelectItem>
+                        <SelectItem value="valueOnly">Value Only</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
