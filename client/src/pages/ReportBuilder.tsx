@@ -157,104 +157,134 @@ export default function ReportBuilder() {
   };
 
   // Multiple image upload functionality
-  const addImageSlideToCurrentReport = async (file: File) => {
+  const addImageSlideToCurrentReport = async (file: File): Promise<void> => {
     if (!currentReport) return;
 
-    try {
-      // Create a new slide for the image
-      const imageUrl = URL.createObjectURL(file);
-      
-      // Create an image element to get dimensions
-      const img = new Image();
-      img.onload = () => {
-        const canvasWidth = 1920;
-        const canvasHeight = 1080;
+    return new Promise((resolve, reject) => {
+      try {
+        // Create a new slide for the image
+        const imageUrl = URL.createObjectURL(file);
         
-        // Calculate scaling to fit image to canvas while maintaining aspect ratio
-        const imageAspect = img.width / img.height;
-        const canvasAspect = canvasWidth / canvasHeight;
-        
-        let elementWidth, elementHeight;
-        
-        if (imageAspect > canvasAspect) {
-          // Image is wider than canvas aspect ratio
-          elementWidth = canvasWidth;
-          elementHeight = canvasWidth / imageAspect;
-        } else {
-          // Image is taller than canvas aspect ratio
-          elementHeight = canvasHeight;
-          elementWidth = canvasHeight * imageAspect;
-        }
-        
-        // Center the image
-        const x = (canvasWidth - elementWidth) / 2;
-        const y = (canvasHeight - elementHeight) / 2;
+        // Create an image element to get dimensions
+        const img = new Image();
+        img.onload = () => {
+          const canvasWidth = 1920;
+          const canvasHeight = 1080;
+          
+          // Calculate scaling to fit image to canvas while maintaining aspect ratio
+          const imageAspect = img.width / img.height;
+          const canvasAspect = canvasWidth / canvasHeight;
+          
+          let elementWidth, elementHeight;
+          
+          if (imageAspect > canvasAspect) {
+            // Image is wider than canvas aspect ratio
+            elementWidth = canvasWidth;
+            elementHeight = canvasWidth / imageAspect;
+          } else {
+            // Image is taller than canvas aspect ratio
+            elementHeight = canvasHeight;
+            elementWidth = canvasHeight * imageAspect;
+          }
+          
+          // Center the image
+          const x = (canvasWidth - elementWidth) / 2;
+          const y = (canvasHeight - elementHeight) / 2;
 
-        const imageElement: SlideElement = {
-          id: nanoid(),
-          type: 'image',
-          x,
-          y,
-          width: elementWidth,
-          height: elementHeight,
-          content: imageUrl,
-          style: {}
+          const imageElement: SlideElement = {
+            id: nanoid(),
+            type: 'image',
+            x,
+            y,
+            width: elementWidth,
+            height: elementHeight,
+            content: imageUrl,
+            style: {}
+          };
+
+          const newSlide: Slide = {
+            id: nanoid(),
+            name: `${file.name.split('.')[0]}`,
+            elements: [imageElement],
+            backgroundColor: '#ffffff'
+          };
+
+          setCurrentReport(prevReport => {
+            if (!prevReport) return prevReport;
+            return {
+              ...prevReport,
+              slides: [...prevReport.slides, newSlide]
+            };
+          });
+          
+          resolve();
         };
-
-        const newSlide: Slide = {
-          id: nanoid(),
-          name: `${file.name.split('.')[0]}`,
-          elements: [imageElement],
-          backgroundColor: '#ffffff'
+        
+        img.onerror = () => {
+          console.error('Error loading image:', file.name);
+          reject(new Error(`Failed to load image: ${file.name}`));
         };
-
-        const updatedReport = {
-          ...currentReport,
-          slides: [...currentReport.slides, newSlide]
-        };
-
-        setCurrentReport(updatedReport);
-        setCurrentSlideIndex(updatedReport.slides.length - 1);
-      };
-      
-      img.src = imageUrl;
-    } catch (error) {
-      console.error('Error adding image slide:', error);
-    }
+        
+        img.src = imageUrl;
+      } catch (error) {
+        console.error('Error adding image slide:', error);
+        reject(error);
+      }
+    });
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files) return;
+    if (!files || files.length === 0) return;
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const fileType = file.type;
+    console.log(`Processing ${files.length} files...`);
 
-      if (fileType.startsWith('image/')) {
-        // For images, create separate slides
-        await addImageSlideToCurrentReport(file);
-      } else if (fileType === 'application/pdf') {
-        // Handle PDF
-        const slides = await parsePDFFile(file);
-        if (slides.length > 0 && currentReport) {
-          const updatedReport = {
-            ...currentReport,
-            slides: [...currentReport.slides, ...slides]
-          };
-          setCurrentReport(updatedReport);
-        }
-      } else if (fileType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
-        // Handle PPTX
-        const slides = await parsePPTXFile(file);
-        if (slides.length > 0 && currentReport) {
-          const updatedReport = {
-            ...currentReport,
-            slides: [...currentReport.slides, ...slides]
-          };
-          setCurrentReport(updatedReport);
+    try {
+      // Process files sequentially to avoid race conditions
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileType = file.type;
+        
+        console.log(`Processing file ${i + 1}/${files.length}: ${file.name} (${fileType})`);
+
+        if (fileType.startsWith('image/')) {
+          // For images, create separate slides
+          await addImageSlideToCurrentReport(file);
+          console.log(`Created slide for image: ${file.name}`);
+        } else if (fileType === 'application/pdf') {
+          // Handle PDF
+          const slides = await parsePDFFile(file);
+          if (slides.length > 0) {
+            setCurrentReport(prevReport => {
+              if (!prevReport) return prevReport;
+              return {
+                ...prevReport,
+                slides: [...prevReport.slides, ...slides]
+              };
+            });
+            console.log(`Added ${slides.length} slides from PDF: ${file.name}`);
+          }
+        } else if (fileType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
+          // Handle PPTX
+          const slides = await parsePPTXFile(file);
+          if (slides.length > 0) {
+            setCurrentReport(prevReport => {
+              if (!prevReport) return prevReport;
+              return {
+                ...prevReport,
+                slides: [...prevReport.slides, ...slides]
+              };
+            });
+            console.log(`Added ${slides.length} slides from PPTX: ${file.name}`);
+          }
+        } else {
+          console.warn(`Unsupported file type: ${fileType} for file: ${file.name}`);
         }
       }
+      
+      console.log('All files processed successfully');
+    } catch (error) {
+      console.error('Error processing files:', error);
     }
 
     // Reset file input
