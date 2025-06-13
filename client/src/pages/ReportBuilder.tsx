@@ -3314,23 +3314,172 @@ export function ReportBuilder() {
           )}
         </div>
       </div>
-            {selectedElement && (
-              <>
-                <Separator orientation="vertical" className="h-6" />
-                <Button variant="ghost" size="sm" onClick={() => selectedElement && deleteElement(selectedElement)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="sm">
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </>
-            )}
-          </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setZoom(Math.max(25, zoom - 25))}>
-              <ZoomOut className="h-4 w-4" />
+      {/* SQL Editor Dialog */}
+      <Dialog open={showSQLEditor} onOpenChange={setShowSQLEditor}>
+        <DialogContent className="max-w-6xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>SQL Query Editor & Configuration</DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex-1 flex gap-4 min-h-0">
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="mb-3">
+                <Label htmlFor="tile-title" className="text-sm font-medium">
+                  Visualization Title
+                </Label>
+                <Input
+                  id="tile-title"
+                  value={currentTitle}
+                  onChange={(e) => setCurrentTitle(e.target.value)}
+                  placeholder="Enter a title for this visualization"
+                  className="mt-1"
+                />
+              </div>
+              
+              <div className="flex items-center gap-2 mb-3">
+                <Button 
+                  onClick={executeQuery} 
+                  disabled={isExecutingQuery || !currentQuery.trim()}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {isExecutingQuery ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Running...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4 mr-2" />
+                      Run Query
+                    </>
+                  )}
+                </Button>
+                <Badge variant="secondary" className="text-xs">
+                  Press Ctrl+Enter to run
+                </Badge>
+              </div>
+              
+              <div className="flex-1 min-h-0">
+                <CodeMirrorSQLEditor
+                  value={currentQuery}
+                  onChange={setCurrentQuery}
+                  onExecute={executeQuery}
+                />
+              </div>
+            </div>
+            
+            <div className="w-96 flex flex-col min-h-0">
+              <div className="mb-3">
+                <Label className="text-sm font-medium">Query Results</Label>
+                <div className="mt-1 p-3 bg-gray-50 rounded border min-h-32 max-h-48 overflow-auto">
+                  {isExecutingQuery ? (
+                    <div className="flex items-center justify-center h-24">
+                      <RefreshCw className="h-5 w-5 animate-spin mr-2" />
+                      <span className="text-sm text-gray-600">Executing query...</span>
+                    </div>
+                  ) : queryResults ? (
+                    <div className="space-y-2">
+                      <div className="text-xs text-gray-600">
+                        {queryResults.length} rows returned
+                      </div>
+                      <div className="text-xs font-mono">
+                        {JSON.stringify(queryResults.slice(0, 3), null, 2)}
+                      </div>
+                      {queryResults.length > 3 && (
+                        <div className="text-xs text-gray-500">
+                          ... and {queryResults.length - 3} more rows
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500">
+                      No results yet. Run a query to see data.
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium">Chart Type</Label>
+                  <Select defaultValue="table">
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="table">Table</SelectItem>
+                      <SelectItem value="bar">Bar Chart</SelectItem>
+                      <SelectItem value="line">Line Chart</SelectItem>
+                      <SelectItem value="pie">Pie Chart</SelectItem>
+                      <SelectItem value="metric">Metric Card</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium">Refresh Settings</Label>
+                  <div className="mt-2 space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="auto-refresh"
+                        checked={refreshConfig.autoRefresh}
+                        onCheckedChange={(checked) => 
+                          setRefreshConfig(prev => ({ ...prev, autoRefresh: !!checked }))
+                        }
+                      />
+                      <Label htmlFor="auto-refresh" className="text-sm">Auto-refresh</Label>
+                    </div>
+                    
+                    {refreshConfig.autoRefresh && (
+                      <div>
+                        <Label className="text-xs">Refresh Interval (seconds)</Label>
+                        <Input 
+                          type="number" 
+                          className="mt-1 h-8"
+                          value={refreshConfig.refreshInterval / 1000}
+                          onChange={(e) => 
+                            setRefreshConfig(prev => ({ 
+                              ...prev, 
+                              refreshInterval: (parseInt(e.target.value) || 300) * 1000 
+                            }))
+                          }
+                          min="10"
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="refresh-on-load"
+                        checked={refreshConfig.refreshOnLoad}
+                        onCheckedChange={(checked) => 
+                          setRefreshConfig(prev => ({ ...prev, refreshOnLoad: !!checked }))
+                        }
+                      />
+                      <Label htmlFor="refresh-on-load" className="text-sm">Refresh on load</Label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-between pt-4 border-t">
+            <Button variant="outline" onClick={() => setShowSQLEditor(false)}>
+              Cancel
             </Button>
+            <Button 
+              onClick={saveQueryConfiguration} 
+              disabled={!currentQuery.trim() || !currentTitle.trim()}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Save Query & Configuration
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
             <span className="text-sm w-16 text-center bg-white border rounded px-2 py-1">
               {zoom}%
             </span>
