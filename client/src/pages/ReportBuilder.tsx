@@ -1164,10 +1164,10 @@ export default function ReportBuilder() {
         {/* Canvas Area */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Canvas */}
-          <div className="flex-1 overflow-hidden bg-white flex items-center justify-center">
+          <div className="bg-white flex justify-center" style={{ height: `${(1080 * (zoom / 100)) / 1.5 + 20}px` }}>
             <div 
               ref={canvasRef}
-              className="bg-white shadow-2xl relative border"
+              className="bg-white shadow-2xl relative border mt-2"
               style={{
                 width: (1920 * (zoom / 100)) / 1.5,
                 height: (1080 * (zoom / 100)) / 1.5,
