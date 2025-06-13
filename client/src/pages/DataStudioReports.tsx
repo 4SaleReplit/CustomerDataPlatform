@@ -186,7 +186,8 @@ export function DataStudioReports() {
         throw new Error('No slides found for this report');
       }
 
-      const allSlides = Object.values(presentationData) as any[];
+      // Access the slides array from the presentation data structure
+      const allSlides = presentationData.slides || [];
       const dataQueries: Array<{ slideId: string; elementId: string; query: string; elementType: string; title: string }> = [];
       
       console.log('Starting refresh for report:', reportId);
@@ -198,47 +199,59 @@ export function DataStudioReports() {
         if (slide?.elements) {
           console.log(`  Found ${slide.elements.length} elements`);
           slide.elements.forEach((element: any, elementIndex: number) => {
+            // Check ALL elements, not just data visualization types
+            console.log(`  Element ${elementIndex + 1}:`, {
+              type: element.type,
+              id: element.id,
+              title: element.title || element.content?.title || 'Untitled',
+              hasDataSource: !!element.dataSource,
+              hasContentQuery: !!element.content?.query,
+              hasDirectQuery: !!element.query,
+              contentType: element.content?.type,
+              fullContent: element.content
+            });
+
             let query = null;
             
-            // Debug: Log element structure for troubleshooting
+            // Check for queries in ALL elements that might have data
             if (element.type === 'chart' || element.type === 'table' || element.type === 'metric') {
-              console.log(`  Element ${elementIndex + 1}:`, {
-                type: element.type,
-                id: element.id,
-                title: element.title || element.content?.title || 'Untitled',
-                hasDataSource: !!element.dataSource,
-                hasContentQuery: !!element.content?.query,
-                hasDirectQuery: !!element.query
-              });
-              
-              // Standard location
+              // Standard location - dataSource.query
               if (element.dataSource?.query) {
                 query = element.dataSource.query;
                 console.log('    Query found in dataSource');
               }
-              // Alternative location for metrics
+              // Alternative location - content.query (common for metrics)
               else if (element.content?.query) {
                 query = element.content.query;
                 console.log('    Query found in content');
               }
-              // Another possible location
+              // Direct query property
               else if (element.query) {
                 query = element.query;
                 console.log('    Query found in element.query');
               }
+              // Sometimes queries are stored as strings in content for charts/tables
+              else if (typeof element.content === 'object' && element.content?.data && element.content?.query) {
+                query = element.content.query;
+                console.log('    Query found in content data object');
+              }
               
-              if (query) {
-                console.log('    Adding query:', query.substring(0, 50) + '...');
+              if (query && typeof query === 'string' && query.trim().toLowerCase().includes('select')) {
+                console.log('    Adding valid SQL query:', query.substring(0, 50) + '...');
                 dataQueries.push({
                   slideId: slide.id,
                   elementId: element.id,
-                  query: query,
+                  query: query.trim(),
                   elementType: element.type,
                   title: element.title || element.content?.title || `${element.type} visualization`
                 });
+              } else if (query) {
+                console.log('    Found query but not valid SQL:', typeof query, query);
               } else {
-                console.log('    No query found for element:', element.type, element.id);
+                console.log('    No query found for data element:', element.type, element.id);
               }
+            } else {
+              console.log('    Skipping non-data element:', element.type);
             }
           });
         } else {
