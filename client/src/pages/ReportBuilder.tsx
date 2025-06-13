@@ -85,6 +85,8 @@ export default function ReportBuilder() {
   const [zoom, setZoom] = useState(75);
   const [showGrid, setShowGrid] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeHandle, setResizeHandle] = useState<string>('');
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   
   // SQL Editor states
@@ -636,28 +638,92 @@ export default function ReportBuilder() {
   };
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (isDragging && selectedElement && currentSlide) {
+    if (selectedElement && currentSlide) {
       const deltaX = e.clientX - dragStart.x;
       const deltaY = e.clientY - dragStart.y;
       
       const element = currentSlide.elements.find(el => el.id === selectedElement);
-      if (element) {
+      if (!element) return;
+
+      if (isDragging) {
+        // Handle dragging/moving
         updateElement(selectedElement, {
           x: Math.max(0, element.x + deltaX / (zoom / 100)),
           y: Math.max(0, element.y + deltaY / (zoom / 100))
         });
+        setDragStart({ x: e.clientX, y: e.clientY });
+      } else if (isResizing && resizeHandle) {
+        // Handle resizing
+        const scaleFactor = zoom / 100;
+        const scaledDeltaX = deltaX / scaleFactor;
+        const scaledDeltaY = deltaY / scaleFactor;
+        
+        let newX = element.x;
+        let newY = element.y;
+        let newWidth = element.width;
+        let newHeight = element.height;
+
+        switch (resizeHandle) {
+          case 'nw':
+            newX += scaledDeltaX;
+            newY += scaledDeltaY;
+            newWidth -= scaledDeltaX;
+            newHeight -= scaledDeltaY;
+            break;
+          case 'ne':
+            newY += scaledDeltaY;
+            newWidth += scaledDeltaX;
+            newHeight -= scaledDeltaY;
+            break;
+          case 'sw':
+            newX += scaledDeltaX;
+            newWidth -= scaledDeltaX;
+            newHeight += scaledDeltaY;
+            break;
+          case 'se':
+            newWidth += scaledDeltaX;
+            newHeight += scaledDeltaY;
+            break;
+          case 'n':
+            newY += scaledDeltaY;
+            newHeight -= scaledDeltaY;
+            break;
+          case 's':
+            newHeight += scaledDeltaY;
+            break;
+          case 'w':
+            newX += scaledDeltaX;
+            newWidth -= scaledDeltaX;
+            break;
+          case 'e':
+            newWidth += scaledDeltaX;
+            break;
+        }
+
+        // Ensure minimum size
+        newWidth = Math.max(20, newWidth);
+        newHeight = Math.max(20, newHeight);
+        
+        updateElement(selectedElement, {
+          x: Math.max(0, newX),
+          y: Math.max(0, newY),
+          width: newWidth,
+          height: newHeight
+        });
+        
+        setDragStart({ x: e.clientX, y: e.clientY });
       }
-      
-      setDragStart({ x: e.clientX, y: e.clientY });
     }
-  }, [isDragging, selectedElement, currentSlide, dragStart, zoom]);
+  }, [isDragging, isResizing, selectedElement, currentSlide, dragStart, zoom, resizeHandle]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
+    setIsResizing(false);
+    setResizeHandle('');
   }, []);
 
   useEffect(() => {
-    if (isDragging) {
+    if (isDragging || isResizing) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       return () => {
@@ -665,7 +731,33 @@ export default function ReportBuilder() {
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
+
+  // Keyboard event handling for delete
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElement) {
+        e.preventDefault();
+        deleteSelectedElement();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedElement, deleteSelectedElement]);
+
+  const handleResizeMouseDown = (e: React.MouseEvent, elementId: string, handle: string) => {
+    e.stopPropagation();
+    setSelectedElement(elementId);
+    setIsResizing(true);
+    setResizeHandle(handle);
+    setDragStart({
+      x: e.clientX,
+      y: e.clientY
+    });
+  };
 
   const renderElement = (element: SlideElement) => {
     const isSelected = selectedElement === element.id;
@@ -716,6 +808,47 @@ export default function ReportBuilder() {
         )}
         {element.type === 'shape' && (
           <div className="w-full h-full rounded" />
+        )}
+        
+        {/* Resize Handles */}
+        {isSelected && (
+          <>
+            {/* Corner handles */}
+            <div
+              className="absolute -top-1 -left-1 w-3 h-3 bg-blue-500 border border-white cursor-nw-resize"
+              onMouseDown={(e) => handleResizeMouseDown(e, element.id, 'nw')}
+            />
+            <div
+              className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 border border-white cursor-ne-resize"
+              onMouseDown={(e) => handleResizeMouseDown(e, element.id, 'ne')}
+            />
+            <div
+              className="absolute -bottom-1 -left-1 w-3 h-3 bg-blue-500 border border-white cursor-sw-resize"
+              onMouseDown={(e) => handleResizeMouseDown(e, element.id, 'sw')}
+            />
+            <div
+              className="absolute -bottom-1 -right-1 w-3 h-3 bg-blue-500 border border-white cursor-se-resize"
+              onMouseDown={(e) => handleResizeMouseDown(e, element.id, 'se')}
+            />
+            
+            {/* Edge handles */}
+            <div
+              className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-blue-500 border border-white cursor-n-resize"
+              onMouseDown={(e) => handleResizeMouseDown(e, element.id, 'n')}
+            />
+            <div
+              className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-blue-500 border border-white cursor-s-resize"
+              onMouseDown={(e) => handleResizeMouseDown(e, element.id, 's')}
+            />
+            <div
+              className="absolute -left-1 top-1/2 transform -translate-y-1/2 w-3 h-3 bg-blue-500 border border-white cursor-w-resize"
+              onMouseDown={(e) => handleResizeMouseDown(e, element.id, 'w')}
+            />
+            <div
+              className="absolute -right-1 top-1/2 transform -translate-y-1/2 w-3 h-3 bg-blue-500 border border-white cursor-e-resize"
+              onMouseDown={(e) => handleResizeMouseDown(e, element.id, 'e')}
+            />
+          </>
         )}
       </div>
     );
