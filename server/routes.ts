@@ -2261,6 +2261,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Image upload endpoints
+  app.post("/api/upload-image", upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No image file provided" });
+      }
+
+      const imageData = {
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+        url: `/uploads/images/${req.file.filename}`,
+        uploadedBy: 'admin'
+      };
+
+      const validatedData = insertUploadedImageSchema.parse(imageData);
+      const uploadedImage = await storage.createUploadedImage(validatedData);
+      
+      res.status(201).json(uploadedImage);
+    } catch (error) {
+      console.error("Image upload error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to upload image" 
+      });
+    }
+  });
+
   app.post("/api/images/upload", upload.single('image'), async (req, res) => {
     try {
       if (!req.file) {
