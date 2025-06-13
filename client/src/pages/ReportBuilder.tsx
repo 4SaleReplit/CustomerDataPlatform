@@ -2003,7 +2003,7 @@ export default function ReportBuilder() {
                             onValueChange={(value) => updateElement(selectedElement, { 
                               style: { 
                                 ...currentSlide?.elements.find(e => e.id === selectedElement)?.style, 
-                                textTransform: value 
+                                textTransform: value as 'none' | 'uppercase' | 'lowercase' | 'capitalize'
                               } 
                             })}
                           >
