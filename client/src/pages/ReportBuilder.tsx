@@ -1040,7 +1040,7 @@ export default function ReportBuilder() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-w-0">
         {/* Left Panel - Tools & Templates */}
         <div className="w-80 bg-white border-r flex flex-col">
           <div className="p-4 border-b">
@@ -1162,9 +1162,9 @@ export default function ReportBuilder() {
         </div>
 
         {/* Canvas Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Canvas */}
-          <div className="overflow-auto bg-gray-100 p-4 flex items-center justify-center" style={{ height: 'calc(100vh - 350px)' }}>
+          <div className="overflow-auto bg-gray-100 p-4 flex items-center justify-center" style={{ height: 'calc(100vh - 240px)' }}>
             <div 
               ref={canvasRef}
               className="bg-white shadow-2xl relative border"
@@ -1181,7 +1181,7 @@ export default function ReportBuilder() {
           </div>
 
           {/* Bottom Slide Navigator */}
-          <div className="h-40 bg-white border-t p-4">
+          <div className="bg-white border-t p-4 pb-6">
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-semibold text-sm">Slides</h3>
               <Button size="sm" onClick={addSlide} className="bg-blue-600 hover:bg-blue-700">
@@ -1190,7 +1190,13 @@ export default function ReportBuilder() {
               </Button>
             </div>
             
-            <div className="flex gap-3 overflow-x-auto pb-2">
+            <div 
+              className="flex gap-3 overflow-x-auto pb-2"
+              style={{ 
+                maxWidth: `${(1920 * (zoom / 100)) / 1.5}px`,
+                margin: '0 auto'
+              }}
+            >
               {currentReport?.slides.map((slide, index) => (
                 <div
                   key={slide.id}
