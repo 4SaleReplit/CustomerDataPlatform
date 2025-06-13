@@ -266,7 +266,8 @@ export default function ReportBuilder() {
         }
       }
       
-      // Create presentation with saved slide IDs
+      // Determine if this is an update or create operation
+      const isExistingReport = !!presentationId;
       const presentationData = {
         title: reportTitle.trim(),
         description: `Presentation with ${slideIds.length} slides`,
@@ -274,13 +275,26 @@ export default function ReportBuilder() {
         createdBy: 'admin'
       };
 
-      const response = await fetch('/api/presentations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(presentationData)
-      });
+      let response;
+      if (isExistingReport) {
+        // Update existing presentation
+        response = await fetch(`/api/presentations/${presentationId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(presentationData)
+        });
+      } else {
+        // Create new presentation
+        response = await fetch('/api/presentations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(presentationData)
+        });
+      }
 
       if (response.ok) {
         const savedPresentation = await response.json();
@@ -292,7 +306,8 @@ export default function ReportBuilder() {
         setIsSaving(false);
         
         // Show success message
-        alert(`Report "${reportTitle}" saved successfully!`);
+        const action = isExistingReport ? 'updated' : 'saved';
+        alert(`Report "${reportTitle}" ${action} successfully!`);
       } else {
         console.error('Failed to save presentation');
         setIsSaving(false);
@@ -2505,7 +2520,7 @@ export default function ReportBuilder() {
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Save Report</DialogTitle>
+            <DialogTitle>{presentationId ? 'Update Report' : 'Save Report'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -2521,7 +2536,10 @@ export default function ReportBuilder() {
               />
             </div>
             <div className="text-sm text-gray-600">
-              This will save all {currentReport?.slides.length} slides with their content, styling, and positioning to your reports library.
+              {presentationId 
+                ? `This will update the existing report with all ${currentReport?.slides.length} slides and their current content.`
+                : `This will save all ${currentReport?.slides.length} slides with their content, styling, and positioning to your reports library.`
+              }
             </div>
           </div>
           <DialogFooter>
@@ -2537,7 +2555,7 @@ export default function ReportBuilder() {
               disabled={!reportTitle.trim() || isSaving}
               className="bg-green-600 hover:bg-green-700"
             >
-              {isSaving ? 'Saving...' : 'Save Report'}
+              {isSaving ? 'Saving...' : (presentationId ? 'Update Report' : 'Save Report')}
             </Button>
           </DialogFooter>
         </DialogContent>
