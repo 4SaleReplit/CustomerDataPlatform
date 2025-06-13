@@ -27,7 +27,8 @@ import {
   Grid3X3, 
   RefreshCw,
   GripVertical,
-  Settings
+  Settings,
+  FileText
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { CodeMirrorSQLEditor } from '@/components/CodeMirrorSQLEditor';
@@ -1042,120 +1043,148 @@ export default function ReportBuilder() {
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden min-w-0">
         {/* Left Panel - Tools & Templates */}
-        <div className="w-80 bg-white border-r flex flex-col">
-          <div className="p-4 border-b">
-            <h3 className="font-semibold text-sm mb-3">Elements</h3>
-            <div className="grid grid-cols-2 gap-2">
+        <div className="w-80 bg-white border-r flex flex-col shadow-sm">
+          <div className="p-4 border-b bg-gray-50">
+            <h3 className="font-bold text-sm mb-3 text-gray-800">Add Elements</h3>
+            <div className="grid grid-cols-2 gap-3">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => addElement('text')}
-                className="h-12 flex flex-col items-center gap-1"
+                className="h-14 flex flex-col items-center gap-1 hover:bg-blue-50 hover:border-blue-300 transition-colors"
               >
-                <Type className="h-4 w-4" />
-                <span className="text-xs">Text</span>
+                <Type className="h-5 w-5 text-blue-600" />
+                <span className="text-xs font-medium">Text</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => addElement('chart')}
-                className="h-12 flex flex-col items-center gap-1"
+                className="h-14 flex flex-col items-center gap-1 hover:bg-green-50 hover:border-green-300 transition-colors"
               >
-                <BarChart3 className="h-4 w-4" />
-                <span className="text-xs">Chart</span>
+                <BarChart3 className="h-5 w-5 text-green-600" />
+                <span className="text-xs font-medium">Chart</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => addElement('table')}
-                className="h-12 flex flex-col items-center gap-1"
+                className="h-14 flex flex-col items-center gap-1 hover:bg-purple-50 hover:border-purple-300 transition-colors"
               >
-                <Table className="h-4 w-4" />
-                <span className="text-xs">Table</span>
+                <Table className="h-5 w-5 text-purple-600" />
+                <span className="text-xs font-medium">Table</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => addElement('metric')}
-                className="h-12 flex flex-col items-center gap-1"
+                className="h-14 flex flex-col items-center gap-1 hover:bg-orange-50 hover:border-orange-300 transition-colors"
               >
-                <span className="text-lg font-bold">#</span>
-                <span className="text-xs">Metric</span>
+                <span className="text-lg font-bold text-orange-600">#</span>
+                <span className="text-xs font-medium">Metric</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => addElement('image')}
-                className="h-12 flex flex-col items-center gap-1"
+                className="h-14 flex flex-col items-center gap-1 hover:bg-pink-50 hover:border-pink-300 transition-colors"
               >
-                <ImageIcon className="h-4 w-4" />
-                <span className="text-xs">Image</span>
+                <ImageIcon className="h-5 w-5 text-pink-600" />
+                <span className="text-xs font-medium">Image</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => addElement('shape')}
-                className="h-12 flex flex-col items-center gap-1"
+                className="h-14 flex flex-col items-center gap-1 hover:bg-gray-50 hover:border-gray-400 transition-colors"
               >
-                <Square className="h-4 w-4" />
-                <span className="text-xs">Shape</span>
+                <Square className="h-5 w-5 text-gray-600" />
+                <span className="text-xs font-medium">Shape</span>
               </Button>
             </div>
           </div>
           
-          <div className="p-4 border-b">
-            <h3 className="font-semibold text-sm mb-3">Data</h3>
+          <div className="p-4 border-b bg-gray-50">
+            <h3 className="font-bold text-sm mb-3 text-gray-800">Data Sources</h3>
             <div className="space-y-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowSQLEditor(true)}
-                className="w-full justify-start"
+                className="w-full justify-start h-10 hover:bg-blue-50 hover:border-blue-300 transition-colors"
               >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Data Visualization
+                <BarChart3 className="h-4 w-4 mr-2 text-blue-600" />
+                <span className="font-medium">SQL Query Builder</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start h-10 hover:bg-green-50 hover:border-green-300 transition-colors"
+                onClick={() => {/* Add CSV import functionality */}}
+              >
+                <Table className="h-4 w-4 mr-2 text-green-600" />
+                <span className="font-medium">Import CSV Data</span>
               </Button>
             </div>
           </div>
           
-          <div className="p-4 border-b">
-            <h3 className="font-semibold text-sm mb-3">Upload</h3>
+          <div className="p-4 border-b bg-gray-50">
+            <h3 className="font-bold text-sm mb-3 text-gray-800">File Upload</h3>
             <div className="space-y-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full justify-start"
+                className="w-full justify-start h-10 hover:bg-purple-50 hover:border-purple-300 transition-colors"
               >
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Images
+                <Upload className="h-4 w-4 mr-2 text-purple-600" />
+                <span className="font-medium">Upload Images</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full justify-start"
+                className="w-full justify-start h-10 hover:bg-orange-50 hover:border-orange-300 transition-colors"
               >
-                <Upload className="h-4 w-4 mr-2" />
-                Upload PDF/PPTX
+                <FileText className="h-4 w-4 mr-2 text-orange-600" />
+                <span className="font-medium">Upload PDF/PPTX</span>
               </Button>
             </div>
           </div>
           
-          <div className="p-4">
-            <h3 className="font-semibold text-sm mb-3">Templates</h3>
+          <div className="p-4 bg-gray-50">
+            <h3 className="font-bold text-sm mb-3 text-gray-800">Quick Templates</h3>
             <div className="space-y-2">
-              <div className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                <div className="text-sm font-medium">Blank Slide</div>
-                <div className="text-xs text-gray-500">Start with empty canvas</div>
+              <div className="p-3 border rounded-lg cursor-pointer hover:bg-white hover:shadow-sm transition-all border-gray-200 bg-white">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-6 bg-gradient-to-r from-blue-100 to-blue-200 rounded border"></div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-800">Blank Slide</div>
+                    <div className="text-xs text-gray-500">Start with empty canvas</div>
+                  </div>
+                </div>
               </div>
-              <div className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                <div className="text-sm font-medium">Title Slide</div>
-                <div className="text-xs text-gray-500">Title and subtitle</div>
+              <div className="p-3 border rounded-lg cursor-pointer hover:bg-white hover:shadow-sm transition-all border-gray-200 bg-white">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-6 bg-gradient-to-r from-green-100 to-green-200 rounded border flex items-center justify-center">
+                    <Type className="h-2 w-2 text-green-600" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-800">Title Slide</div>
+                    <div className="text-xs text-gray-500">Title and subtitle layout</div>
+                  </div>
+                </div>
               </div>
-              <div className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                <div className="text-sm font-medium">Chart Layout</div>
-                <div className="text-xs text-gray-500">Chart with text</div>
+              <div className="p-3 border rounded-lg cursor-pointer hover:bg-white hover:shadow-sm transition-all border-gray-200 bg-white">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-6 bg-gradient-to-r from-purple-100 to-purple-200 rounded border flex items-center justify-center">
+                    <BarChart3 className="h-2 w-2 text-purple-600" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-800">Chart Layout</div>
+                    <div className="text-xs text-gray-500">Data visualization template</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
