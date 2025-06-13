@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,59 +71,31 @@ export function DataStudioReports() {
   const [showNewReport, setShowNewReport] = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
-  const reports: Report[] = [
-    {
-      id: '1',
-      name: 'Weekly Executive Summary',
-      description: 'High-level KPIs and trends for leadership team',
-      slides: 8,
-      schedule: 'weekly',
-      recipients: ['exec@company.com', 'board@company.com'],
-      lastSent: '2 days ago',
-      nextSend: 'in 5 days',
-      status: 'active',
-      createdBy: 'admin',
-      lastModified: '1 day ago'
-    },
-    {
-      id: '2',
-      name: 'Monthly Revenue Report',
-      description: 'Comprehensive revenue analysis and forecasting',
-      slides: 12,
-      schedule: 'monthly',
-      recipients: ['finance@company.com', 'cfo@company.com', 'investors@company.com'],
-      lastSent: '1 week ago',
-      nextSend: 'in 3 weeks',
-      status: 'active',
-      createdBy: 'finance_team',
-      lastModified: '3 days ago'
-    },
-    {
-      id: '3',
-      name: 'User Engagement Dashboard',
-      description: 'Daily user activity and engagement metrics',
-      slides: 6,
-      schedule: 'daily',
-      recipients: ['product@company.com', 'marketing@company.com'],
-      lastSent: '1 hour ago',
-      nextSend: 'in 23 hours',
-      status: 'active',
-      createdBy: 'product_team',
-      lastModified: '2 hours ago'
-    },
-    {
-      id: '4',
-      name: 'Campaign Performance Review',
-      description: 'Marketing campaign ROI and effectiveness analysis',
-      slides: 10,
-      schedule: 'manual',
-      recipients: ['marketing@company.com', 'growth@company.com'],
-      lastSent: '3 days ago',
-      status: 'draft',
-      createdBy: 'marketing_team',
-      lastModified: '1 hour ago'
+  // Fetch presentations from database
+  const { data: presentations = [], isLoading, error } = useQuery({
+    queryKey: ['/api/presentations'],
+    queryFn: async () => {
+      const response = await fetch('/api/presentations');
+      if (!response.ok) {
+        throw new Error('Failed to fetch presentations');
+      }
+      return response.json();
     }
-  ];
+  });
+
+  // Transform presentations to match Report interface
+  const reports: Report[] = presentations.map((presentation: any) => ({
+    id: presentation.id,
+    name: presentation.title,
+    description: presentation.description || 'Custom presentation created in Design Studio',
+    slides: presentation.slideIds?.length || 0,
+    schedule: 'manual' as const,
+    recipients: [],
+    lastSent: 'Never',
+    status: 'draft' as const,
+    createdBy: presentation.createdBy || 'admin',
+    lastModified: new Date(presentation.updatedAt || presentation.createdAt).toLocaleDateString()
+  }));
 
   const scheduledJobs: ScheduledJob[] = [
     {
@@ -269,8 +242,24 @@ export function DataStudioReports() {
           </TabsList>
 
           <TabsContent value="reports" className="space-y-4 mt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredReports.map((report) => (
+            {isLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-2 text-sm text-gray-600">Loading reports...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-8">
+                <p className="text-red-600">Failed to load reports</p>
+              </div>
+            ) : filteredReports.length === 0 ? (
+              <div className="text-center py-8">
+                <Presentation className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">No reports found</p>
+                <p className="text-sm text-gray-500">Create your first report in Design Studio</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredReports.map((report) => (
                 <Card key={report.id} className="hover:shadow-md transition-shadow cursor-pointer">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
@@ -357,8 +346,9 @@ export function DataStudioReports() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="scheduled" className="space-y-4 mt-4">

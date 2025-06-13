@@ -2426,6 +2426,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/presentations/:id", async (req, res) => {
+    try {
+      const presentation = await storage.getPresentation(req.params.id);
+      if (!presentation) {
+        return res.status(404).json({ error: "Presentation not found" });
+      }
+      res.json(presentation);
+    } catch (error) {
+      console.error("Get presentation error:", error);
+      res.status(500).json({ error: "Failed to fetch presentation" });
+    }
+  });
+
+  app.put("/api/presentations/:id", async (req, res) => {
+    try {
+      const validatedData = insertPresentationSchema.partial().parse(req.body);
+      const presentation = await storage.updatePresentation(req.params.id, validatedData);
+      if (!presentation) {
+        return res.status(404).json({ error: "Presentation not found" });
+      }
+      res.json(presentation);
+    } catch (error) {
+      console.error("Update presentation error:", error);
+      res.status(500).json({ error: "Failed to update presentation" });
+    }
+  });
+
+  app.delete("/api/presentations/:id", async (req, res) => {
+    try {
+      const success = await storage.deletePresentation(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Presentation not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Delete presentation error:", error);
+      res.status(500).json({ error: "Failed to delete presentation" });
+    }
+  });
+
   // Serve uploaded images statically
   app.use('/uploads', (req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
