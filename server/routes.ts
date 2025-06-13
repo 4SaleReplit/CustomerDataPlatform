@@ -6,9 +6,47 @@ import { snowflakeService } from "./services/snowflake";
 import * as BrazeModule from "./services/braze";
 import { 
   insertTeamSchema, insertDashboardTileInstanceSchema, insertCohortSchema, insertSegmentSchema,
-  insertRoleSchema, updateRoleSchema, insertPermissionSchema, insertRolePermissionSchema 
+  insertRoleSchema, updateRoleSchema, insertPermissionSchema, insertRolePermissionSchema,
+  insertUploadedImageSchema, insertSlideSchema, updateSlideSchema, insertPresentationSchema
 } from "@shared/schema";
 import bcrypt from "bcrypt";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import { nanoid } from "nanoid";
+
+// Configure multer for file uploads
+const storage_config = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(process.cwd(), 'uploads', 'images');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${nanoid()}-${Date.now()}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  }
+});
+
+const upload = multer({ 
+  storage: storage_config,
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  },
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes
@@ -2220,6 +2258,179 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: error instanceof Error ? error.message : "Failed to check user permission" 
       });
     }
+  });
+
+  // Image upload endpoints
+  app.post("/api/images/upload", upload.single('image'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No image file provided" });
+      }
+
+      const imageData = {
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+        url: `/uploads/images/${req.file.filename}`,
+        uploadedBy: 'admin' // TODO: Get from authenticated user session
+      };
+
+      const validatedData = insertUploadedImageSchema.parse(imageData);
+      const uploadedImage = await storage.createUploadedImage(validatedData);
+      
+      res.status(201).json(uploadedImage);
+    } catch (error) {
+      console.error("Image upload error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to upload image" 
+      });
+    }
+  });
+
+  app.get("/api/images", async (req, res) => {
+    try {
+      const images = await storage.getUploadedImages();
+      res.json(images);
+    } catch (error) {
+      console.error("Get images error:", error);
+      res.status(500).json({ error: "Failed to fetch images" });
+    }
+  });
+
+  app.get("/api/images/:id", async (req, res) => {
+    try {
+      const image = await storage.getUploadedImage(req.params.id);
+      if (!image) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+      res.json(image);
+    } catch (error) {
+      console.error("Get image error:", error);
+      res.status(500).json({ error: "Failed to fetch image" });
+    }
+  });
+
+  app.delete("/api/images/:id", async (req, res) => {
+    try {
+      const image = await storage.getUploadedImage(req.params.id);
+      if (!image) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+
+      // Delete file from filesystem
+      const filePath = path.join(process.cwd(), 'uploads', 'images', image.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+
+      const success = await storage.deleteUploadedImage(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Delete image error:", error);
+      res.status(500).json({ error: "Failed to delete image" });
+    }
+  });
+
+  // Slide management endpoints
+  app.get("/api/slides", async (req, res) => {
+    try {
+      const slides = await storage.getSlides();
+      res.json(slides);
+    } catch (error) {
+      console.error("Get slides error:", error);
+      res.status(500).json({ error: "Failed to fetch slides" });
+    }
+  });
+
+  app.get("/api/slides/:id", async (req, res) => {
+    try {
+      const slide = await storage.getSlide(req.params.id);
+      if (!slide) {
+        return res.status(404).json({ error: "Slide not found" });
+      }
+      res.json(slide);
+    } catch (error) {
+      console.error("Get slide error:", error);
+      res.status(500).json({ error: "Failed to fetch slide" });
+    }
+  });
+
+  app.post("/api/slides", async (req, res) => {
+    try {
+      const validatedData = insertSlideSchema.parse(req.body);
+      const slide = await storage.createSlide(validatedData);
+      res.status(201).json(slide);
+    } catch (error) {
+      console.error("Create slide error:", error);
+      res.status(400).json({ 
+        error: error instanceof Error ? error.message : "Failed to create slide" 
+      });
+    }
+  });
+
+  app.put("/api/slides/:id", async (req, res) => {
+    try {
+      const validatedData = updateSlideSchema.parse(req.body);
+      const slide = await storage.updateSlide(req.params.id, validatedData);
+      if (!slide) {
+        return res.status(404).json({ error: "Slide not found" });
+      }
+      res.json(slide);
+    } catch (error) {
+      console.error("Update slide error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to update slide" 
+      });
+    }
+  });
+
+  app.delete("/api/slides/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteSlide(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Slide not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Delete slide error:", error);
+      res.status(500).json({ error: "Failed to delete slide" });
+    }
+  });
+
+  // Presentation management endpoints
+  app.get("/api/presentations", async (req, res) => {
+    try {
+      const presentations = await storage.getPresentations();
+      res.json(presentations);
+    } catch (error) {
+      console.error("Get presentations error:", error);
+      res.status(500).json({ error: "Failed to fetch presentations" });
+    }
+  });
+
+  app.post("/api/presentations", async (req, res) => {
+    try {
+      const validatedData = insertPresentationSchema.parse(req.body);
+      const presentation = await storage.createPresentation(validatedData);
+      res.status(201).json(presentation);
+    } catch (error) {
+      console.error("Create presentation error:", error);
+      res.status(400).json({ 
+        error: error instanceof Error ? error.message : "Failed to create presentation" 
+      });
+    }
+  });
+
+  // Serve uploaded images statically
+  app.use('/uploads', (req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    next();
   });
 
   const httpServer = createServer(app);
