@@ -57,39 +57,39 @@ export function DataStudioExplores() {
   const explores: Explore[] = [
     {
       id: '1',
-      name: 'User Growth Trend',
-      description: 'Monthly user registration trends over time',
-      query: 'SELECT DATE_TRUNC(\'month\', created_at) as month, COUNT(*) as users FROM users GROUP BY month ORDER BY month',
-      visualizationType: 'line',
-      tags: ['users', 'growth', 'monthly'],
+      name: 'User Segmentation Overview',
+      description: 'Complete view of user segmentation data with listings and revenue metrics',
+      query: 'SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 LIMIT 100',
+      visualizationType: 'table',
+      tags: ['users', 'segmentation', 'overview'],
       createdBy: 'Sarah Chen',
       lastModified: '2 hours ago',
       isPublic: true,
-      icon: <LineChart className="h-6 w-6" />
+      icon: <Database className="h-6 w-6" />
     },
     {
       id: '2',
-      name: 'Revenue by Segment',
-      description: 'Revenue breakdown by customer segments',
-      query: 'SELECT segment, SUM(revenue) as total_revenue FROM customers GROUP BY segment',
-      visualizationType: 'bar',
-      tags: ['revenue', 'segments'],
+      name: 'Total Listings Count',
+      description: 'Sum of all listing counts across user segments',
+      query: 'SELECT SUM(TOTAL_LISTINGS_COUNT) as total_listings FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE TOTAL_LISTINGS_COUNT IS NOT NULL',
+      visualizationType: 'number',
+      tags: ['listings', 'metrics'],
       createdBy: 'Mike Johnson',
       lastModified: '1 day ago',
       isPublic: false,
-      icon: <BarChart3 className="h-6 w-6" />
+      icon: <TrendingUp className="h-6 w-6" />
     },
     {
       id: '3',
-      name: 'Total Active Users',
-      description: 'Current count of active users',
-      query: 'SELECT COUNT(*) as active_users FROM users WHERE status = \'active\'',
-      visualizationType: 'number',
-      tags: ['users', 'active'],
+      name: 'Listings by User Segment',
+      description: 'Distribution of listings across different user segments',
+      query: 'SELECT USER_SEGMENT, COUNT(*) as segment_count, AVG(TOTAL_LISTINGS_COUNT) as avg_listings FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE USER_SEGMENT IS NOT NULL GROUP BY USER_SEGMENT ORDER BY avg_listings DESC',
+      visualizationType: 'bar',
+      tags: ['segments', 'distribution'],
       createdBy: 'Emma Davis',
       lastModified: '3 hours ago',
       isPublic: true,
-      icon: <TrendingUp className="h-6 w-6" />
+      icon: <BarChart3 className="h-6 w-6" />
     }
   ];
 
@@ -225,7 +225,7 @@ export function DataStudioExplores() {
                     <CodeMirrorSQLEditor
                       value={newExploreQuery}
                       onChange={setNewExploreQuery}
-                      placeholder="SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 LIMIT 100"
+                      placeholder="SELECT USER_SEGMENT, COUNT(*) as user_count, AVG(TOTAL_LISTINGS_COUNT) as avg_listings FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE USER_SEGMENT IS NOT NULL GROUP BY USER_SEGMENT ORDER BY avg_listings DESC"
                       className="min-h-32"
                     />
                   </div>

@@ -53,11 +53,11 @@ export function DataStudioExploreEdit() {
   useEffect(() => {
     const mockExplore: Explore = {
       id: id || '1',
-      name: 'User Growth Trend',
-      description: 'Monthly user registration trends over time',
-      query: 'SELECT DATE_TRUNC(\'month\', created_at) as month, COUNT(*) as users FROM users GROUP BY month ORDER BY month',
-      visualizationType: 'line',
-      tags: ['users', 'growth', 'monthly'],
+      name: 'User Segmentation Analysis',
+      description: 'Analyze user segments and their listing patterns',
+      query: 'SELECT USER_SEGMENT, COUNT(*) as user_count, AVG(TOTAL_LISTINGS_COUNT) as avg_listings\nFROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4\nWHERE USER_SEGMENT IS NOT NULL\nGROUP BY USER_SEGMENT\nORDER BY avg_listings DESC',
+      visualizationType: 'bar',
+      tags: ['users', 'segments', 'listings'],
       createdBy: 'Sarah Chen',
       lastModified: '2 hours ago',
       isPublic: true
