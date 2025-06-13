@@ -193,8 +193,8 @@ export function DataStudioExplores() {
     try {
       console.log('Running query:', explore.query);
       
-      // Simulate API call to execute query
-      const response = await fetch('/api/sql/execute', {
+      // Execute query using Snowflake API
+      const response = await fetch('/api/snowflake/query', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -223,7 +223,7 @@ export function DataStudioExplores() {
     try {
       console.log('Running query:', query);
       
-      const response = await fetch('/api/sql/execute', {
+      const response = await fetch('/api/snowflake/query', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -317,9 +317,30 @@ export function DataStudioExplores() {
                   <Label htmlFor="explore-tags">Tags (comma separated)</Label>
                   <Input id="explore-tags" placeholder="users, revenue, monthly" />
                 </div>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setShowNewExplore(false)}>Cancel</Button>
-                  <Button onClick={() => setShowNewExplore(false)}>Create Explore</Button>
+                <div className="flex justify-between pt-4">
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline"
+                      onClick={() => handleExecuteQueryFromEditor(newExploreQuery)}
+                      disabled={isExecuting}
+                    >
+                      {isExecuting ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                          Testing...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-4 w-4 mr-2" />
+                          Test Query
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setShowNewExplore(false)}>Cancel</Button>
+                    <Button onClick={() => setShowNewExplore(false)}>Create Explore</Button>
+                  </div>
                 </div>
               </div>
             </DialogContent>
