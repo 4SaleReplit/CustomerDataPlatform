@@ -139,7 +139,7 @@ export function DataStudioExploreEdit() {
     if (hasNumericColumns && queryResults.columns?.length >= 2) {
       options.push({ value: 'bar', label: 'Bar Chart', icon: BarChart3 });
       options.push({ value: 'line', label: 'Line Chart', icon: LineChart });
-      options.push({ value: 'pie', label: 'Pie Chart', icon: PieChart });
+      options.push({ value: 'pie', label: 'Pie Chart', icon: LucidePieChart });
     }
     
     if (queryResults.rows?.length === 1 && queryResults.columns?.length === 1 && hasNumericColumns) {
