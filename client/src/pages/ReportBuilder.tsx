@@ -787,11 +787,11 @@ export default function ReportBuilder() {
           isSelected ? 'border-blue-500 shadow-lg' : 'border-transparent hover:border-gray-300'
         }`}
         style={{
-          left: (element.x * (zoom / 100)) / 2,
-          top: (element.y * (zoom / 100)) / 2,
-          width: (element.width * (zoom / 100)) / 2,
-          height: (element.height * (zoom / 100)) / 2,
-          fontSize: element.style.fontSize ? `${(element.style.fontSize * (zoom / 100)) / 2}px` : '12px',
+          left: (element.x * (zoom / 100)) / 1.5,
+          top: (element.y * (zoom / 100)) / 1.5,
+          width: (element.width * (zoom / 100)) / 1.5,
+          height: (element.height * (zoom / 100)) / 1.5,
+          fontSize: element.style.fontSize ? `${(element.style.fontSize * (zoom / 100)) / 1.5}px` : '12px',
           color: element.style.color,
           textAlign: element.style.textAlign,
           backgroundColor: element.style.backgroundColor,
