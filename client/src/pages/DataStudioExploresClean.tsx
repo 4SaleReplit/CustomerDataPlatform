@@ -70,7 +70,7 @@ export function DataStudioExplores() {
     {
       id: '2',
       name: 'Total Listings Count',
-      description: 'Sum of all listing counts across user segments',
+      description: 'Sum of all listing counts across all users',
       query: 'SELECT SUM(TOTAL_LISTINGS_COUNT) as total_listings FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE TOTAL_LISTINGS_COUNT IS NOT NULL',
       visualizationType: 'number',
       tags: ['listings', 'metrics'],
@@ -81,11 +81,11 @@ export function DataStudioExplores() {
     },
     {
       id: '3',
-      name: 'Listings by User Segment',
-      description: 'Distribution of listings across different user segments',
-      query: 'SELECT USER_SEGMENT, COUNT(*) as segment_count, AVG(TOTAL_LISTINGS_COUNT) as avg_listings FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE USER_SEGMENT IS NOT NULL GROUP BY USER_SEGMENT ORDER BY avg_listings DESC',
+      name: 'Listings by User Type',
+      description: 'Distribution of listings across different user types',
+      query: 'SELECT USER_TYPE, COUNT(*) as user_count, AVG(TOTAL_LISTINGS_COUNT) as avg_listings FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE USER_TYPE IS NOT NULL GROUP BY USER_TYPE ORDER BY avg_listings DESC',
       visualizationType: 'bar',
-      tags: ['segments', 'distribution'],
+      tags: ['user_type', 'distribution'],
       createdBy: 'Emma Davis',
       lastModified: '3 hours ago',
       isPublic: true,
@@ -225,7 +225,7 @@ export function DataStudioExplores() {
                     <CodeMirrorSQLEditor
                       value={newExploreQuery}
                       onChange={setNewExploreQuery}
-                      placeholder="SELECT USER_SEGMENT, COUNT(*) as user_count, AVG(TOTAL_LISTINGS_COUNT) as avg_listings FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE USER_SEGMENT IS NOT NULL GROUP BY USER_SEGMENT ORDER BY avg_listings DESC"
+                      placeholder="SELECT USER_TYPE, COUNT(*) as user_count, AVG(TOTAL_LISTINGS_COUNT) as avg_listings FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE USER_TYPE IS NOT NULL GROUP BY USER_TYPE ORDER BY avg_listings DESC"
                       className="min-h-32"
                     />
                   </div>

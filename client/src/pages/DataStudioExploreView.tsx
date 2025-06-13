@@ -38,9 +38,9 @@ export function DataStudioExploreView() {
   useEffect(() => {
     const mockExplore: Explore = {
       id: id || '1',
-      name: 'User Segmentation Analysis',
-      description: 'Analyze user segments and their listing patterns',
-      query: 'SELECT USER_SEGMENT, COUNT(*) as user_count, AVG(TOTAL_LISTINGS_COUNT) as avg_listings\nFROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4\nWHERE USER_SEGMENT IS NOT NULL\nGROUP BY USER_SEGMENT\nORDER BY avg_listings DESC',
+      name: 'User Type Analysis',
+      description: 'Analyze user types and their listing patterns',
+      query: 'SELECT USER_TYPE, COUNT(*) as user_count, AVG(TOTAL_LISTINGS_COUNT) as avg_listings\nFROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4\nWHERE USER_TYPE IS NOT NULL\nGROUP BY USER_TYPE\nORDER BY avg_listings DESC',
       visualizationType: 'bar',
       tags: ['users', 'segments', 'listings'],
       createdBy: 'Sarah Chen',
