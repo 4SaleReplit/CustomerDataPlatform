@@ -60,22 +60,27 @@ export function PresentationModal({ presentationId, isOpen, onClose }: Presentat
       // Find all elements with SQL queries across all slides
       const refreshPromises = slides.map(async (slide: any) => {
         const elementsWithQueries = slide.elements?.filter(
-          (element: any) => element.type === 'query' && element.dataSource?.query
+          (element: any) => (element.type === 'query' && element.dataSource?.query) ||
+                           (element.type === 'metric' && element.content?.query)
         ) || [];
 
         for (const element of elementsWithQueries) {
           try {
+            const query = element.type === 'metric' ? element.content.query : element.dataSource.query;
+            
             const response = await fetch('/api/snowflake/query', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                query: element.dataSource.query
-              })
+              body: JSON.stringify({ query })
             });
             
             if (response.ok) {
               const data = await response.json();
-              element.data = data.rows || [];
+              if (element.type === 'metric') {
+                element.content.data = data.rows || [];
+              } else {
+                element.data = data.rows || [];
+              }
             }
           } catch (error) {
             console.error('Failed to refresh data for element:', element.id, error);
@@ -152,6 +157,8 @@ export function PresentationModal({ presentationId, isOpen, onClose }: Presentat
 
   const currentSlide = slides[currentSlideIndex];
 
+
+
   const renderSlideElement = (element: any) => {
     const style = {
       position: 'absolute' as const,
@@ -190,6 +197,20 @@ export function PresentationModal({ presentationId, isOpen, onClose }: Presentat
           />
         );
       
+      case 'metric':
+        const metricData = element.content?.data;
+        const metricValue = metricData && metricData.length > 0 ? Object.values(metricData[0])[0] : 'No data';
+        return (
+          <div key={element.id} style={style} className="bg-white border rounded-lg shadow-sm p-3 text-center">
+            <div className="text-xs font-medium text-gray-600 mb-1">
+              {element.content?.title || 'Metric'}
+            </div>
+            <div className="text-lg font-bold text-blue-600">
+              {typeof metricValue === 'number' ? metricValue.toLocaleString() : (metricValue as string)}
+            </div>
+          </div>
+        );
+      
       case 'query':
         if (element.data && Array.isArray(element.data)) {
           return (
@@ -226,6 +247,7 @@ export function PresentationModal({ presentationId, isOpen, onClose }: Presentat
         );
       
       default:
+        console.log('Unknown element type:', element.type, element);
         return null;
     }
   };
