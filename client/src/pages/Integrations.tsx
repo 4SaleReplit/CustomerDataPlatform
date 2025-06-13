@@ -1118,97 +1118,18 @@ export default function Integrations() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-6">
         {integrations.map((integration: Integration) => {
           const template = integrationTemplates[integration.type];
           return (
-            <Card key={integration.id} className="card hover:shadow-lg transition-all duration-300 group">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
-                      {template?.icon}
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg font-semibold group-hover:text-blue-600 transition-colors">
-                        {integration.name}
-                      </CardTitle>
-                      <div className="text-sm text-muted-foreground">
-                        {integration.type.charAt(0).toUpperCase() + integration.type.slice(1)}
-                      </div>
-                    </div>
-                  </div>
-                  {getStatusBadge(integration.status)}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {/* Compact connection info */}
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <div className="flex justify-between">
-                    <span>Created:</span>
-                    <span>{new Date(integration.createdAt).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Updated:</span>
-                    <span>{new Date(integration.updatedAt).toLocaleString()}</span>
-                  </div>
-                  {integration.metadata?.lastTested && (
-                    <div className="flex justify-between">
-                      <span>Last tested:</span>
-                      <span>{new Date(integration.metadata.lastTested).toLocaleString()}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Snowflake specific info - compact */}
-                {integration.type === 'snowflake' && (
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-blue-50 p-2 rounded border border-blue-100">
-                      <div className="font-medium text-blue-900">Database</div>
-                      <div className="text-blue-700 truncate">{integration.credentials.database}</div>
-                    </div>
-                    <div className="bg-green-50 p-2 rounded border border-green-100">
-                      <div className="font-medium text-green-900">Warehouse</div>
-                      <div className="text-green-700 truncate">{integration.credentials.warehouse}</div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex space-x-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => handleConfigureIntegration(integration)}
-                    className="flex-1 text-xs"
-                  >
-                    <Settings className="h-3 w-3 mr-1" />
-                    Edit
-                  </Button>
-                  <Button 
-                    variant="default" 
-                    size="sm"
-                    onClick={() => testConnectionMutation.mutate(integration.id)}
-                    disabled={testConnectionMutation.isPending || integration.status === 'paused'}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs"
-                  >
-                    {testConnectionMutation.isPending ? (
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    ) : (
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                    )}
-                    Test
-                  </Button>
-                  <Button 
-                    variant={integration.status === 'paused' ? 'default' : 'secondary'}
-                    size="sm"
-                    onClick={() => handlePauseToggle(integration)}
-                    className="text-xs"
-                  >
-                    {integration.status === 'paused' ? 'Resume' : 'Pause'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <IntegrationCard
+              key={integration.id}
+              integration={integration}
+              template={template}
+              getStatusBadge={getStatusBadge}
+              handleConfigureIntegration={handleConfigureIntegration}
+              deleteIntegrationMutation={deleteIntegrationMutation}
+            />
           );
         })}
       </div>
