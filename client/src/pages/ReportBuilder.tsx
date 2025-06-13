@@ -259,27 +259,17 @@ export function ReportBuilder() {
         
         const img = document.createElement('img');
         img.onload = () => {
-          // Calculate dimensions to fit in canvas while maintaining aspect ratio
-          const maxWidth = 700;
-          const maxHeight = 500;
-          const aspectRatio = img.width / img.height;
+          // Fill the entire canvas (1920x1080) with the image
+          const canvasWidth = 1920;
+          const canvasHeight = 1080;
           
-          let imageWidth = img.width;
-          let imageHeight = img.height;
+          // Use full canvas dimensions
+          const imageWidth = canvasWidth;
+          const imageHeight = canvasHeight;
           
-          if (imageWidth > maxWidth) {
-            imageWidth = maxWidth;
-            imageHeight = imageWidth / aspectRatio;
-          }
-          
-          if (imageHeight > maxHeight) {
-            imageHeight = maxHeight;
-            imageWidth = imageHeight * aspectRatio;
-          }
-          
-          // Center the image on the canvas
-          const x = (800 - imageWidth) / 2;
-          const y = (600 - imageHeight) / 2;
+          // Position at top-left corner to fill entire canvas
+          const x = 0;
+          const y = 0;
           
           const newSlide: Slide = {
             id: `slide-${Date.now()}`,
@@ -336,27 +326,17 @@ export function ReportBuilder() {
           // Create a new image element to get dimensions
           const img = new window.Image();
           img.onload = () => {
-            // Calculate dimensions to fit in canvas (800x600) while maintaining aspect ratio
-            const maxWidth = 700;
-            const maxHeight = 500;
-            const aspectRatio = img.width / img.height;
+            // Fill the entire canvas (1920x1080) with the image
+            const canvasWidth = 1920;
+            const canvasHeight = 1080;
             
-            let imageWidth = img.width;
-            let imageHeight = img.height;
+            // Use full canvas dimensions
+            const imageWidth = canvasWidth;
+            const imageHeight = canvasHeight;
             
-            if (imageWidth > maxWidth) {
-              imageWidth = maxWidth;
-              imageHeight = imageWidth / aspectRatio;
-            }
-            
-            if (imageHeight > maxHeight) {
-              imageHeight = maxHeight;
-              imageWidth = imageHeight * aspectRatio;
-            }
-            
-            // Center the image on the canvas
-            const x = (800 - imageWidth) / 2;
-            const y = (600 - imageHeight) / 2;
+            // Position at top-left corner to fill entire canvas
+            const x = 0;
+            const y = 0;
             
             const slide: Slide = {
               id: `slide-${Date.now()}`,
@@ -1643,8 +1623,8 @@ export function ReportBuilder() {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    const offsetX = e.clientX - rect.left - (element.x * zoom / 100);
-    const offsetY = e.clientY - rect.top - (element.y * zoom / 100);
+    const offsetX = e.clientX - rect.left - ((element.x * zoom / 100) / 2);
+    const offsetY = e.clientY - rect.top - ((element.y * zoom / 100) / 2);
 
     setDragOffset({ x: offsetX, y: offsetY });
 
@@ -1799,10 +1779,10 @@ export function ReportBuilder() {
         key={element.id}
         className={`absolute select-none group ${isSelected ? 'border-2 border-blue-500 shadow-lg' : 'border-2 border-transparent hover:border-blue-300'} ${isDragging && selectedElement === element.id ? 'shadow-2xl z-50' : ''}`}
         style={{
-          left: element.x * (zoom / 100),
-          top: element.y * (zoom / 100),
-          width: element.width * (zoom / 100),
-          height: element.height * (zoom / 100),
+          left: (element.x * (zoom / 100)) / 2,
+          top: (element.y * (zoom / 100)) / 2,
+          width: (element.width * (zoom / 100)) / 2,
+          height: (element.height * (zoom / 100)) / 2,
           fontSize: Math.max(8, (element.style.fontSize || 16) * (zoom / 100)),
           color: element.style.color || '#000000',
           backgroundColor: element.style.backgroundColor || 'transparent',
@@ -3076,8 +3056,8 @@ export function ReportBuilder() {
             ref={canvasRef}
             className="bg-white shadow-2xl relative border"
             style={{
-              width: 1000 * (zoom / 100),
-              height: 700 * (zoom / 100),
+              width: (1920 * (zoom / 100)) / 2,
+              height: (1080 * (zoom / 100)) / 2,
               background: currentSlide?.backgroundColor || '#ffffff',
               backgroundImage: showGrid ? 'url("data:image/svg+xml,%3Csvg width="30" height="30" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="%23e5e7eb" fill-opacity="0.3"%3E%3Ccircle cx="1" cy="1" r="1"/%3E%3C/g%3E%3C/svg%3E")' : 'none'
             }}
