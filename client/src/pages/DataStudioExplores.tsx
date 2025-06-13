@@ -62,7 +62,6 @@ export function DataStudioExplores() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [showNewExplore, setShowNewExplore] = useState(false);
-  const [showEditExplore, setShowEditExplore] = useState(false);
   const [newExploreQuery, setNewExploreQuery] = useState('');
 
   // Function to render visualization preview based on type
@@ -341,89 +340,9 @@ export function DataStudioExplores() {
     }
   };
 
-  const handleViewExplore = (explore: Explore) => {
-    setSelectedExplore(explore);
-    setActiveTab('view');
-  };
-
-  const handleEditExplore = (explore: Explore) => {
-    setSelectedExplore(explore);
-    setEditExploreQuery(explore.query);
-    setQueryResults(null);
-    setShowEditExplore(true);
-  };
-
-  const handleSaveExplore = () => {
-    if (selectedExplore) {
-      // Update the explore with new query and data
-      const updatedExplore = {
-        ...selectedExplore,
-        query: editExploreQuery
-      };
-      // Here you would typically make an API call to save the explore
-      console.log('Saving explore:', updatedExplore);
-      setSelectedExplore(updatedExplore);
-      setShowEditExplore(false);
-    }
-  };
-
   const handleRunQuery = async (explore: Explore) => {
-    setIsExecuting(true);
-    setQueryResults(null);
-    
-    try {
-      console.log('Running query:', explore.query);
-      
-      // Execute query using Snowflake API
-      const response = await fetch('/api/snowflake/query', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query: explore.query }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      setQueryResults(result);
-    } catch (error) {
-      console.error('Query execution failed:', error);
-      setQueryResults({ error: 'Query execution failed. Please check your query syntax and try again.' });
-    } finally {
-      setIsExecuting(false);
-    }
-  };
-
-  const handleExecuteQueryFromEditor = async (query: string) => {
-    setIsExecuting(true);
-    setQueryResults(null);
-    
-    try {
-      console.log('Running query:', query);
-      
-      const response = await fetch('/api/snowflake/query', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      setQueryResults(result);
-    } catch (error) {
-      console.error('Query execution failed:', error);
-      setQueryResults({ error: 'Query execution failed. Please check your query syntax and try again.' });
-    } finally {
-      setIsExecuting(false);
-    }
+    console.log('Running query for explore:', explore.name);
+    // This would typically open the explore view page or execute inline
   };
 
   const handleDuplicateExplore = (explore: Explore) => {
@@ -557,18 +476,7 @@ export function DataStudioExplores() {
       </div>
 
       <div className="flex-1 p-4">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="explores">All Explores</TabsTrigger>
-            <TabsTrigger value="metrics">Quick Metrics</TabsTrigger>
-            {selectedExplore && (
-              <TabsTrigger value="view">
-                View: {selectedExplore.name}
-              </TabsTrigger>
-            )}
-          </TabsList>
-
-          <TabsContent value="explores" className="space-y-4 mt-4">
+        <div className="space-y-4 mt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredExplores.map((explore) => (
                 <Card key={explore.id} className="hover:shadow-md transition-shadow cursor-pointer">

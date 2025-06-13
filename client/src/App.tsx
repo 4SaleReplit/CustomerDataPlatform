@@ -13,7 +13,7 @@ import { DataStudioFiles } from "./pages/DataStudioFiles";
 import { DataStudioLineage } from "./pages/DataStudioLineage";
 import { DataStudioDataExplorer } from "./pages/DataStudioDataExplorer";
 import { DataStudioDashboards } from "./pages/DataStudioDashboards";
-import { DataStudioExplores } from "./pages/DataStudioExplores";
+import { DataStudioExplores } from "./pages/DataStudioExploresClean";
 import { DataStudioExploreView } from "./pages/DataStudioExploreView";
 import { DataStudioExploreEdit } from "./pages/DataStudioExploreEdit";
 import { DataStudioReports } from "./pages/DataStudioReports";
