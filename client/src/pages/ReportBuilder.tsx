@@ -257,7 +257,7 @@ export function ReportBuilder() {
       reader.onload = (e) => {
         const imageUrl = e.target?.result as string;
         
-        const img = new Image();
+        const img = document.createElement('img');
         img.onload = () => {
           // Calculate dimensions to fit in canvas while maintaining aspect ratio
           const maxWidth = 700;
@@ -334,7 +334,7 @@ export function ReportBuilder() {
           const imageUrl = e.target?.result as string;
           
           // Create a new image element to get dimensions
-          const img = new Image();
+          const img = new window.Image();
           img.onload = () => {
             // Calculate dimensions to fit in canvas (800x600) while maintaining aspect ratio
             const maxWidth = 700;
@@ -1330,20 +1330,25 @@ export function ReportBuilder() {
   };
 
   const handlePngUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !currentReport) return;
-
-    const fileExtension = file.name.toLowerCase().split('.').pop();
-    if (!fileExtension || !['png', 'jpg', 'jpeg'].includes(fileExtension)) {
-      alert('Please select a valid image file (.png, .jpg, .jpeg)');
-      return;
-    }
+    const files = event.target.files;
+    if (!files || files.length === 0 || !currentReport) return;
 
     try {
-      await addImageSlideToCurrentReport(file);
+      // Process each selected image file
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileExtension = file.name.toLowerCase().split('.').pop();
+        
+        if (!fileExtension || !['png', 'jpg', 'jpeg'].includes(fileExtension)) {
+          console.warn(`Skipping ${file.name}: not a valid image file`);
+          continue;
+        }
+
+        await addImageSlideToCurrentReport(file);
+      }
     } catch (error) {
-      console.error('Error adding PNG slide:', error);
-      alert('Failed to add image slide. Please try again.');
+      console.error('Error adding PNG slides:', error);
+      alert('Failed to add some image slides. Please try again.');
     } finally {
       // Reset file input
       event.target.value = '';
@@ -1993,22 +1998,7 @@ export function ReportBuilder() {
                 Upload File
               </Button>
 
-              <input
-                type="file"
-                ref={pngUploaderRef}
-                accept=".png,.jpg,.jpeg"
-                onChange={handlePngUpload}
-                className="hidden"
-              />
-              <Button 
-                onClick={() => pngUploaderRef.current?.click()} 
-                className="bg-green-600 hover:bg-green-700"
-                disabled={!currentReport}
-                title={currentReport ? "Add PNG/JPG as new slide to current presentation" : "Open a presentation first"}
-              >
-                <Image className="h-4 w-4 mr-2" />
-                Add PNG Slide
-              </Button>
+
 
               <Button onClick={createNewReport} className="bg-blue-600 hover:bg-blue-700">
                 <Plus className="h-4 w-4 mr-2" />
@@ -2180,6 +2170,298 @@ export function ReportBuilder() {
 
           <TabsContent value="elements" className="px-4 pb-4 h-full overflow-y-auto">
             <div className="space-y-6 mt-4">
+              {/* Slide Management */}
+              <div>
+                <h4 className="font-medium mb-3 text-sm uppercase tracking-wide">Slide Management</h4>
+                <div className="space-y-2">
+                  <Button
+                    onClick={() => {
+                      if (!currentReport) return;
+                      const newSlide: Slide = {
+                        id: Date.now().toString(),
+                        name: `Slide ${currentReport.slides.length + 1}`,
+                        elements: [],
+                        backgroundColor: '#ffffff'
+                      };
+                      const updatedSlides = [...currentReport.slides, newSlide];
+                      const updatedReport = { ...currentReport, slides: updatedSlides };
+                      setCurrentReport(updatedReport);
+                      updateReportInList(updatedReport);
+                      setCurrentSlideIndex(updatedSlides.length - 1);
+                    }}
+                    className="w-full justify-start"
+                    variant="outline"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add New Slide
+                  </Button>
+                  
+                  <input
+                    type="file"
+                    ref={pngUploaderRef}
+                    accept=".png,.jpg,.jpeg"
+                    onChange={handlePngUpload}
+                    multiple
+                    className="hidden"
+                  />
+                  <Button
+                    onClick={() => pngUploaderRef.current?.click()}
+                    className="w-full justify-start"
+                    variant="outline"
+                    disabled={!currentReport}
+                  >
+                    <Image className="h-4 w-4 mr-2" />
+                    Add PNG as Slide
+                  </Button>
+                  
+                  <Button
+                    onClick={() => {
+                      if (!currentReport || currentReport.slides.length <= 1) return;
+                      const newSlides = [...currentReport.slides];
+                      const duplicatedSlide = {
+                        ...newSlides[currentSlideIndex],
+                        id: Date.now().toString(),
+                        name: `${newSlides[currentSlideIndex].name} Copy`,
+                        elements: newSlides[currentSlideIndex].elements.map(el => ({
+                          ...el,
+                          id: `${Date.now()}-${Math.random()}`
+                        }))
+                      };
+                      newSlides.splice(currentSlideIndex + 1, 0, duplicatedSlide);
+                      const updatedReport = { ...currentReport, slides: newSlides };
+                      setCurrentReport(updatedReport);
+                      updateReportInList(updatedReport);
+                      setCurrentSlideIndex(currentSlideIndex + 1);
+                    }}
+                    className="w-full justify-start"
+                    variant="outline"
+                    disabled={!currentReport || currentReport.slides.length <= 1}
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Duplicate Current Slide
+                  </Button>
+                  
+                  <Button
+                    onClick={() => {
+                      if (!currentReport || currentReport.slides.length <= 1) return;
+                      const newSlides = [...currentReport.slides];
+                      newSlides.splice(currentSlideIndex, 1);
+                      const updatedReport = { ...currentReport, slides: newSlides };
+                      setCurrentReport(updatedReport);
+                      updateReportInList(updatedReport);
+                      setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1));
+                    }}
+                    className="w-full justify-start"
+                    variant="outline"
+                    disabled={!currentReport || currentReport.slides.length <= 1}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Current Slide
+                  </Button>
+                </div>
+              </div>
+
+              {/* Layout Presets */}
+              <div>
+                <h4 className="font-medium mb-3 text-sm uppercase tracking-wide">Layout Presets</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    className="h-16 flex flex-col gap-1"
+                    onClick={() => {
+                      if (!currentReport) return;
+                      const titleElement: SlideElement = {
+                        id: `${Date.now()}`,
+                        type: 'text',
+                        x: 100,
+                        y: 50,
+                        width: 600,
+                        height: 80,
+                        content: 'Slide Title',
+                        style: { fontSize: 36, fontWeight: 'bold', textAlign: 'left', color: '#000000', backgroundColor: 'transparent' }
+                      };
+                      const updatedSlides = [...currentReport.slides];
+                      updatedSlides[currentSlideIndex].elements = [titleElement];
+                      const updatedReport = { ...currentReport, slides: updatedSlides };
+                      setCurrentReport(updatedReport);
+                      updateReportInList(updatedReport);
+                    }}
+                  >
+                    <Type className="h-5 w-5" />
+                    <span className="text-xs">Title Only</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-16 flex flex-col gap-1"
+                    onClick={() => {
+                      if (!currentReport) return;
+                      const elements: SlideElement[] = [
+                        {
+                          id: `${Date.now()}-1`,
+                          type: 'text',
+                          x: 50,
+                          y: 50,
+                          width: 300,
+                          height: 60,
+                          content: 'Title',
+                          style: { fontSize: 28, fontWeight: 'bold', textAlign: 'left', color: '#000000', backgroundColor: 'transparent' }
+                        },
+                        {
+                          id: `${Date.now()}-2`,
+                          type: 'chart',
+                          x: 400,
+                          y: 50,
+                          width: 350,
+                          height: 300,
+                          content: { chartType: 'bar', title: 'Chart' },
+                          style: { fontSize: 16, fontWeight: 'normal', textAlign: 'left', color: '#000000', backgroundColor: 'transparent' }
+                        }
+                      ];
+                      const updatedSlides = [...currentReport.slides];
+                      updatedSlides[currentSlideIndex].elements = elements;
+                      const updatedReport = { ...currentReport, slides: updatedSlides };
+                      setCurrentReport(updatedReport);
+                      updateReportInList(updatedReport);
+                    }}
+                  >
+                    <BarChart3 className="h-5 w-5" />
+                    <span className="text-xs">Title + Chart</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-16 flex flex-col gap-1"
+                    onClick={() => {
+                      if (!currentReport) return;
+                      const elements: SlideElement[] = [
+                        {
+                          id: `${Date.now()}-1`,
+                          type: 'metric',
+                          x: 60,
+                          y: 80,
+                          width: 160,
+                          height: 120,
+                          content: { title: 'KPI 1', label: 'Metric', value: '100', change: '+5%' },
+                          style: { fontSize: 16, fontWeight: 'normal', textAlign: 'left', color: '#000000', backgroundColor: 'transparent' }
+                        },
+                        {
+                          id: `${Date.now()}-2`,
+                          type: 'metric',
+                          x: 240,
+                          y: 80,
+                          width: 160,
+                          height: 120,
+                          content: { title: 'KPI 2', label: 'Metric', value: '200', change: '+10%' },
+                          style: { fontSize: 16, fontWeight: 'normal', textAlign: 'left', color: '#000000', backgroundColor: 'transparent' }
+                        },
+                        {
+                          id: `${Date.now()}-3`,
+                          type: 'metric',
+                          x: 420,
+                          y: 80,
+                          width: 160,
+                          height: 120,
+                          content: { title: 'KPI 3', label: 'Metric', value: '300', change: '+15%' },
+                          style: { fontSize: 16, fontWeight: 'normal', textAlign: 'left', color: '#000000', backgroundColor: 'transparent' }
+                        },
+                        {
+                          id: `${Date.now()}-4`,
+                          type: 'metric',
+                          x: 600,
+                          y: 80,
+                          width: 160,
+                          height: 120,
+                          content: { title: 'KPI 4', label: 'Metric', value: '400', change: '+20%' },
+                          style: { fontSize: 16, fontWeight: 'normal', textAlign: 'left', color: '#000000', backgroundColor: 'transparent' }
+                        }
+                      ];
+                      const updatedSlides = [...currentReport.slides];
+                      updatedSlides[currentSlideIndex].elements = elements;
+                      const updatedReport = { ...currentReport, slides: updatedSlides };
+                      setCurrentReport(updatedReport);
+                      updateReportInList(updatedReport);
+                    }}
+                  >
+                    <TrendingUp className="h-5 w-5" />
+                    <span className="text-xs">KPI Dashboard</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-16 flex flex-col gap-1"
+                    onClick={() => {
+                      if (!currentReport) return;
+                      const elements: SlideElement[] = [
+                        {
+                          id: `${Date.now()}-1`,
+                          type: 'text',
+                          x: 50,
+                          y: 50,
+                          width: 300,
+                          height: 60,
+                          content: 'Title',
+                          style: { fontSize: 28, fontWeight: 'bold', textAlign: 'left', color: '#000000', backgroundColor: 'transparent' }
+                        },
+                        {
+                          id: `${Date.now()}-2`,
+                          type: 'chart',
+                          x: 400,
+                          y: 50,
+                          width: 350,
+                          height: 200,
+                          content: { chartType: 'line', title: 'Trend' },
+                          style: { fontSize: 16, fontWeight: 'normal', textAlign: 'left', color: '#000000', backgroundColor: 'transparent' }
+                        },
+                        {
+                          id: `${Date.now()}-3`,
+                          type: 'text',
+                          x: 50,
+                          y: 120,
+                          width: 300,
+                          height: 200,
+                          content: 'Add your content here...',
+                          style: { fontSize: 16, fontWeight: 'normal', textAlign: 'left', color: '#000000', backgroundColor: 'transparent' }
+                        }
+                      ];
+                      const updatedSlides = [...currentReport.slides];
+                      updatedSlides[currentSlideIndex].elements = elements;
+                      const updatedReport = { ...currentReport, slides: updatedSlides };
+                      setCurrentReport(updatedReport);
+                      updateReportInList(updatedReport);
+                    }}
+                  >
+                    <FileText className="h-5 w-5" />
+                    <span className="text-xs">Text + Chart</span>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Design Tools */}
+              <div>
+                <h4 className="font-medium mb-3 text-sm uppercase tracking-wide">Design Tools</h4>
+                <div className="space-y-2">
+                  <Button
+                    onClick={() => {
+                      if (!currentReport) return;
+                      const newSlide: Slide = {
+                        id: Date.now().toString(),
+                        name: `Slide ${currentReport.slides.length + 1}`,
+                        elements: [],
+                        backgroundColor: '#ffffff'
+                      };
+                      const updatedSlides = [...currentReport.slides, newSlide];
+                      const updatedReport = { ...currentReport, slides: updatedSlides };
+                      setCurrentReport(updatedReport);
+                      updateReportInList(updatedReport);
+                      setCurrentSlideIndex(updatedSlides.length - 1);
+                    }}
+                    className="w-full justify-start"
+                    variant="outline"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add New Slide
+                  </Button>
+                </div>
+              </div>
+
               {/* Text Elements */}
               <div>
                 <h4 className="font-medium mb-3 text-sm uppercase tracking-wide">Text</h4>
