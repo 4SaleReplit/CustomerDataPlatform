@@ -161,81 +161,108 @@ export function DataStudioReports() {
     }
   };
 
-  // Generate slide thumbnail using canvas
-  const generateSlideThumbnail = (slideData: any): string | null => {
-    if (!slideData || !slideData.elements?.length) {
-      return null;
-    }
-
-    try {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return null;
-
-      // Set canvas size for thumbnail (16:9 aspect ratio)
-      canvas.width = 320;
-      canvas.height = 180;
-
-      // Fill background
-      ctx.fillStyle = slideData.backgroundColor || '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Scale factor to fit slide content in thumbnail
-      const scaleX = canvas.width / 800; // Assuming slide width is 800px
-      const scaleY = canvas.height / 450; // Assuming slide height is 450px
-
-      // Render elements
-      slideData.elements.forEach((element: any) => {
-        const x = (element.x || 0) * scaleX;
-        const y = (element.y || 0) * scaleY;
-        const width = (element.width || 100) * scaleX;
-        const height = (element.height || 50) * scaleY;
-
-        if (element.type === 'text') {
-          ctx.fillStyle = element.color || '#000000';
-          ctx.font = `${Math.max(8, (element.fontSize || 14) * Math.min(scaleX, scaleY))}px Arial`;
-          ctx.fillText(element.content || 'Text', x, y + height/2);
-        } else if (element.type === 'chart' || element.type === 'table') {
-          // Draw a simple rectangle for charts/tables
-          ctx.fillStyle = element.type === 'chart' ? '#3b82f6' : '#10b981';
-          ctx.fillRect(x, y, width, height);
-          ctx.fillStyle = '#ffffff';
-          ctx.font = `${Math.max(6, 10 * Math.min(scaleX, scaleY))}px Arial`;
-          ctx.textAlign = 'center';
-          ctx.fillText(element.type.toUpperCase(), x + width/2, y + height/2);
-          ctx.textAlign = 'start';
-        } else if (element.type === 'shape') {
-          ctx.fillStyle = element.backgroundColor || '#e5e7eb';
-          ctx.fillRect(x, y, width, height);
-        }
-      });
-
-      return canvas.toDataURL('image/png');
-    } catch (error) {
-      console.error('Error generating slide thumbnail:', error);
-      return null;
-    }
-  };
-
-  // Slide preview component
+  // Enhanced slide preview component that renders actual slide content
   const SlidePreview = ({ slideData }: { slideData: any }) => {
     if (!slideData || !slideData.elements?.length) {
       return null; // Return null for empty slides
     }
 
-    const thumbnailUrl = generateSlideThumbnail(slideData);
-    
-    if (!thumbnailUrl) {
-      return null;
-    }
-
     return (
-      <div className="w-full h-20 bg-white rounded border border-gray-200 overflow-hidden">
-        <img 
-          src={thumbnailUrl} 
-          alt="Slide preview" 
-          className="w-full h-full object-cover"
-        />
+      <div className="w-full h-20 bg-white rounded border border-gray-200 overflow-hidden relative">
+        <div 
+          className="w-full h-full transform scale-[0.2] origin-top-left"
+          style={{ 
+            width: '500%', 
+            height: '500%',
+            backgroundColor: slideData.backgroundColor || '#ffffff'
+          }}
+        >
+          {slideData.elements.map((element: any, index: number) => {
+            const style = {
+              position: 'absolute' as const,
+              left: `${element.x || 0}px`,
+              top: `${element.y || 0}px`,
+              width: `${element.width || 100}px`,
+              height: `${element.height || 50}px`,
+              fontSize: `${element.fontSize || 14}px`,
+              color: element.color || '#000000',
+              backgroundColor: element.backgroundColor || 'transparent',
+              fontWeight: element.fontWeight || 'normal',
+              textAlign: element.textAlign || 'left',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: element.textAlign === 'center' ? 'center' : 'flex-start',
+              padding: '4px',
+              boxSizing: 'border-box' as const,
+              overflow: 'hidden',
+              wordBreak: 'break-word' as const
+            };
+
+            if (element.type === 'text') {
+              return (
+                <div key={index} style={style}>
+                  {element.content || 'Text'}
+                </div>
+              );
+            } else if (element.type === 'chart') {
+              return (
+                <div key={index} style={{
+                  ...style,
+                  backgroundColor: '#3b82f6',
+                  color: '#ffffff',
+                  justifyContent: 'center',
+                  fontSize: '12px'
+                }}>
+                  CHART
+                </div>
+              );
+            } else if (element.type === 'table') {
+              return (
+                <div key={index} style={{
+                  ...style,
+                  backgroundColor: '#10b981',
+                  color: '#ffffff',
+                  justifyContent: 'center',
+                  fontSize: '12px'
+                }}>
+                  TABLE
+                </div>
+              );
+            } else if (element.type === 'metric') {
+              return (
+                <div key={index} style={{
+                  ...style,
+                  backgroundColor: '#f59e0b',
+                  color: '#ffffff',
+                  justifyContent: 'center',
+                  fontSize: '12px'
+                }}>
+                  METRIC
+                </div>
+              );
+            } else if (element.type === 'image') {
+              return (
+                <div key={index} style={{
+                  ...style,
+                  backgroundColor: '#e5e7eb',
+                  justifyContent: 'center',
+                  fontSize: '10px',
+                  color: '#6b7280'
+                }}>
+                  IMG
+                </div>
+              );
+            } else if (element.type === 'shape') {
+              return (
+                <div key={index} style={{
+                  ...style,
+                  borderRadius: element.borderRadius ? `${element.borderRadius}px` : '0px'
+                }} />
+              );
+            }
+            return null;
+          })}
+        </div>
       </div>
     );
   };
