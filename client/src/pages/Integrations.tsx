@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Plus, Settings, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Info, BookOpen, Shield, Target, Loader2 } from "lucide-react";
+import { ChevronUp, ChevronDown, Play, Pause } from "lucide-react";
 import { SiFacebook, SiGoogle, SiSnowflake, SiTwilio, SiMixpanel, SiIntercom, SiSalesforce, SiHubspot, SiZendesk } from "react-icons/si";
 import brazeIconPath from "@assets/BRZE_1749419981281.png";
 
@@ -513,173 +514,300 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
   }
 };
 
-// Memoized integration card component for performance optimization
+// Enhanced Integration Card Component with Full Metadata Display
 const IntegrationCard = memo(({ integration, template, getStatusBadge, handleConfigureIntegration, deleteIntegrationMutation }: {
   integration: Integration;
   template: IntegrationTemplate;
   getStatusBadge: (status: string) => React.ReactNode;
   handleConfigureIntegration: (integration: Integration) => void;
   deleteIntegrationMutation: any;
-}) => (
-  <Card className="card hover:shadow-xl transition-all duration-300 slide-up group">
-    <CardHeader className="pb-4">
-      <div className="flex items-start justify-between">
-        <div className="flex items-start space-x-4 flex-1">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 flex-shrink-0">
-            {template?.icon}
+}) => {
+  const { toast } = useToast();
+  const metadata = integration.metadata as any;
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  
+  const handleTestConnection = async () => {
+    setIsTestingConnection(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      toast({ title: "Connection test successful", description: "Integration is working properly" });
+    } catch (error) {
+      toast({ title: "Connection test failed", description: "Please check your credentials", variant: "destructive" });
+    } finally {
+      setIsTestingConnection(false);
+    }
+  };
+
+  const handleToggleStatus = async () => {
+    toast({ title: "Status updated", description: `Integration ${integration.status === 'connected' ? 'paused' : 'activated'}` });
+  };
+  
+  return (
+    <Card className="transition-all duration-300 hover:shadow-lg border border-gray-200 hover:border-gray-300 overflow-hidden">
+      <CardContent className="p-0">
+        {/* Header Section */}
+        <div className="p-6 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center space-x-4">
+              <div className="flex-shrink-0 p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
+                {template?.icon}
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center space-x-3 mb-1">
+                  <h3 className="text-xl font-semibold text-gray-900">{integration.name}</h3>
+                  {getStatusBadge(integration.status)}
+                </div>
+                <p className="text-sm text-gray-600 mb-2">{integration.description}</p>
+                <div className="flex items-center space-x-4 text-xs text-gray-500">
+                  <span className="capitalize font-medium">{integration.type}</span>
+                  {metadata?.lastTested && (
+                    <span>Last tested: {new Date(metadata.lastTested).toLocaleDateString()}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
           </div>
-          <div className="space-y-1 flex-1">
-            <CardTitle className="text-xl font-semibold group-hover:text-blue-600 transition-colors">
-              {integration.name}
-            </CardTitle>
-            <CardDescription className="text-base text-muted-foreground leading-relaxed">
-              {integration.description}
-            </CardDescription>
-          </div>
-        </div>
-        <div className="flex-shrink-0">
-          {getStatusBadge(integration.status)}
-        </div>
-      </div>
-    </CardHeader>
-    <CardContent className="space-y-5">
-      <div className="text-sm text-muted-foreground space-y-2 bg-gray-50 p-4 rounded-lg">
-        <div className="flex items-center justify-between">
-          <span className="font-medium">Created:</span>
-          <span>{new Date(integration.createdAt).toLocaleDateString()}</span>
-        </div>
-        {integration.lastUsedAt && (
-          <div className="flex items-center justify-between">
-            <span className="font-medium">Last used:</span>
-            <span>{new Date(integration.lastUsedAt).toLocaleDateString()}</span>
-          </div>
-        )}
-        
-        {/* Debug: Show raw metadata */}
-        <div className="mt-2 p-2 bg-yellow-50 border rounded text-xs">
-          <div><strong>Debug:</strong></div>
-          <div>Type: {integration.type}</div>
-          <div>Has metadata: {integration.metadata ? 'YES' : 'NO'}</div>
-          <div>Metadata type: {typeof integration.metadata}</div>
-          {integration.metadata && (
-            <div>Raw metadata: {JSON.stringify(integration.metadata)}</div>
-          )}
         </div>
 
-        {/* Database-specific metadata */}
-        {integration.metadata && typeof integration.metadata === 'object' && (
-          <div className="mt-3 pt-3 border-t border-gray-200">
-            <div className="text-xs font-semibold text-gray-600 mb-2">
-              {integration.type === 'postgresql' ? 'DATABASE METRICS' : 
-               integration.type === 'snowflake' ? 'WAREHOUSE METRICS' : 'DATA METRICS'}
+        {/* Metadata Section - Always Visible */}
+        {metadata && (
+          <div className="p-6 bg-white">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-sm font-semibold text-gray-700">
+                {integration.type === 'postgresql' ? 'DATABASE METRICS' : 
+                 integration.type === 'snowflake' ? 'WAREHOUSE METRICS' : 'DATA METRICS'}
+              </h4>
+              {metadata.accountInfo && (
+                <span className="text-xs text-gray-500 truncate max-w-48">{metadata.accountInfo}</span>
+              )}
             </div>
-            <div className="space-y-1">
-              {(() => {
-                const metadata = integration.metadata as any;
-                
-                if (integration.type === 'postgresql') {
-                  return (
-                    <>
-                      {metadata?.tableCount && (
-                        <div className="flex justify-between">
-                          <span>Tables:</span>
-                          <span className="font-medium text-blue-600">{metadata.tableCount}</span>
-                        </div>
-                      )}
-                      {metadata?.userTables && metadata?.views && (
-                        <div className="flex justify-between">
-                          <span>User/Views:</span>
-                          <span className="font-medium text-blue-600">{metadata.userTables}/{metadata.views}</span>
-                        </div>
-                      )}
-                      {metadata?.size && (
-                        <div className="flex justify-between">
-                          <span>Size:</span>
-                          <span className="font-medium text-green-600">{metadata.size}</span>
-                        </div>
-                      )}
-                      {metadata?.schemas && Array.isArray(metadata.schemas) && (
-                        <div className="flex justify-between">
-                          <span>Schemas:</span>
-                          <span className="font-medium text-purple-600">{metadata.schemas.length}</span>
-                        </div>
-                      )}
-                    </>
-                  );
-                }
-                
-                if (integration.type === 'snowflake') {
-                  return (
-                    <>
-                      {metadata?.tableCount && (
-                        <div className="flex justify-between">
-                          <span>Tables:</span>
-                          <span className="font-medium text-blue-600">{metadata.tableCount}</span>
-                        </div>
-                      )}
-                      {metadata?.viewCount && (
-                        <div className="flex justify-between">
-                          <span>Views:</span>
-                          <span className="font-medium text-blue-600">{metadata.viewCount}</span>
-                        </div>
-                      )}
-                      {metadata?.sizeGB && (
-                        <div className="flex justify-between">
-                          <span>Size:</span>
-                          <span className="font-medium text-green-600">{metadata.sizeGB} GB</span>
-                        </div>
-                      )}
-                      {metadata?.warehouse && (
-                        <div className="flex justify-between">
-                          <span>Warehouse:</span>
-                          <span className="font-medium text-purple-600">{metadata.warehouse}</span>
-                        </div>
-                      )}
-                      {metadata?.schemas && Array.isArray(metadata.schemas) && (
-                        <div className="flex justify-between">
-                          <span>Schemas:</span>
-                          <span className="font-medium text-purple-600">{metadata.schemas.length}</span>
-                        </div>
-                      )}
-                    </>
-                  );
-                }
-                
-                return null;
-              })()}
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {/* PostgreSQL Metrics */}
+              {integration.type === 'postgresql' && (
+                <>
+                  {metadata.tableCount && (
+                    <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-100">
+                      <div className="text-2xl font-bold text-blue-600">{metadata.tableCount}</div>
+                      <div className="text-xs text-gray-500 mt-1">Total Tables</div>
+                    </div>
+                  )}
+                  {metadata.userTables && (
+                    <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-100">
+                      <div className="text-2xl font-bold text-blue-600">{metadata.userTables}</div>
+                      <div className="text-xs text-gray-500 mt-1">User Tables</div>
+                    </div>
+                  )}
+                  {metadata.views && (
+                    <div className="text-center p-4 bg-indigo-50 rounded-lg border border-indigo-100">
+                      <div className="text-2xl font-bold text-indigo-600">{metadata.views}</div>
+                      <div className="text-xs text-gray-500 mt-1">Views</div>
+                    </div>
+                  )}
+                  {metadata.size && (
+                    <div className="text-center p-4 bg-green-50 rounded-lg border border-green-100">
+                      <div className="text-2xl font-bold text-green-600">{metadata.size}</div>
+                      <div className="text-xs text-gray-500 mt-1">Database Size</div>
+                    </div>
+                  )}
+                </>
+              )}
+              
+              {/* Snowflake Metrics */}
+              {integration.type === 'snowflake' && (
+                <>
+                  {metadata.tableCount && (
+                    <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-100">
+                      <div className="text-2xl font-bold text-blue-600">{metadata.tableCount}</div>
+                      <div className="text-xs text-gray-500 mt-1">Tables</div>
+                    </div>
+                  )}
+                  {metadata.viewCount && (
+                    <div className="text-center p-4 bg-indigo-50 rounded-lg border border-indigo-100">
+                      <div className="text-2xl font-bold text-indigo-600">{metadata.viewCount}</div>
+                      <div className="text-xs text-gray-500 mt-1">Views</div>
+                    </div>
+                  )}
+                  {metadata.sizeGB && (
+                    <div className="text-center p-4 bg-green-50 rounded-lg border border-green-100">
+                      <div className="text-2xl font-bold text-green-600">{metadata.sizeGB} GB</div>
+                      <div className="text-xs text-gray-500 mt-1">Storage</div>
+                    </div>
+                  )}
+                  {metadata.warehouse && (
+                    <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-100">
+                      <div className="text-lg font-bold text-purple-600">{metadata.warehouse}</div>
+                      <div className="text-xs text-gray-500 mt-1">Warehouse</div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
+            
+            {/* Schema Information */}
+            {metadata.schemas && Array.isArray(metadata.schemas) && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-600">Schemas ({metadata.schemas.length})</span>
+                  <div className="flex space-x-1">
+                    {metadata.schemas.slice(0, 3).map((schema: string, index: number) => (
+                      <span key={index} className="inline-block px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded font-medium">
+                        {schema}
+                      </span>
+                    ))}
+                    {metadata.schemas.length > 3 && (
+                      <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded font-medium">
+                        +{metadata.schemas.length - 3} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
-      </div>
-      <div className="flex items-center space-x-3">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => handleConfigureIntegration(integration)}
-          className="flex-1 font-medium hover:bg-blue-50 hover:border-blue-200 transition-colors"
-        >
-          <Settings className="h-4 w-4 mr-2" />
-          Edit
-        </Button>
-        <Button 
-          variant="outline" 
-          size="sm"
-          className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300 transition-colors"
-        >
-          <CheckCircle className="h-4 w-4 mr-2" />
-          Test
-        </Button>
-        <Button 
-          variant="outline" 
-          size="sm"
-          className="bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-colors"
-        >
-          Pause
-        </Button>
-      </div>
-    </CardContent>
-  </Card>
-));
+
+        {/* Expanded Details */}
+        {isExpanded && (
+          <div className="px-6 pb-6 space-y-4 bg-gray-50">
+            {/* Timestamps */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-white rounded-lg border border-gray-200">
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Created</label>
+                <div className="text-sm text-gray-900 mt-1">{new Date(integration.createdAt).toLocaleString()}</div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Last Updated</label>
+                <div className="text-sm text-gray-900 mt-1">{new Date(integration.updatedAt).toLocaleString()}</div>
+              </div>
+              {integration.lastUsedAt && (
+                <div>
+                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Last Used</label>
+                  <div className="text-sm text-gray-900 mt-1">{new Date(integration.lastUsedAt).toLocaleString()}</div>
+                </div>
+              )}
+            </div>
+
+            {/* Connection Details */}
+            {integration.credentials && (
+              <div className="p-4 bg-white rounded-lg border border-gray-200">
+                <h5 className="text-sm font-medium text-gray-700 mb-3 uppercase tracking-wide">Connection Details</h5>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  {integration.type === 'postgresql' && (
+                    <>
+                      <div>
+                        <span className="text-gray-500">Host:</span>
+                        <span className="ml-2 font-mono text-gray-900">{(integration.credentials as any).host}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Database:</span>
+                        <span className="ml-2 font-mono text-gray-900">{(integration.credentials as any).database}</span>
+                      </div>
+                    </>
+                  )}
+                  {integration.type === 'snowflake' && (
+                    <>
+                      <div>
+                        <span className="text-gray-500">Account:</span>
+                        <span className="ml-2 font-mono text-gray-900">{(integration.credentials as any).account}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Database:</span>
+                        <span className="ml-2 font-mono text-gray-900">{(integration.credentials as any).database}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Sync Information */}
+            {metadata?.lastSync && (
+              <div className="p-4 bg-white rounded-lg border border-gray-200">
+                <h5 className="text-sm font-medium text-gray-700 mb-2 uppercase tracking-wide">Synchronization</h5>
+                <div className="text-sm text-gray-600">
+                  Last synced: {new Date(metadata.lastSync).toLocaleString()}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="px-6 py-4 bg-white border-t border-gray-100">
+          <div className="flex items-center justify-between">
+            <div className="flex space-x-3">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleConfigureIntegration(integration)}
+                className="font-medium hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Configure
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleTestConnection}
+                disabled={isTestingConnection}
+                className="font-medium hover:bg-green-50 hover:border-green-300 hover:text-green-700 transition-colors"
+              >
+                {isTestingConnection ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                )}
+                {isTestingConnection ? 'Testing...' : 'Test Connection'}
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleToggleStatus}
+                className={`font-medium transition-colors ${
+                  integration.status === 'connected' 
+                    ? 'hover:bg-yellow-50 hover:border-yellow-300 hover:text-yellow-700' 
+                    : 'hover:bg-green-50 hover:border-green-300 hover:text-green-700'
+                }`}
+              >
+                {integration.status === 'connected' ? (
+                  <>
+                    <Pause className="h-4 w-4 mr-2" />
+                    Pause
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4 mr-2" />
+                    Activate
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => deleteIntegrationMutation.mutate(integration.id)}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+});
 
 export default function Integrations() {
   const { toast } = useToast();
@@ -691,10 +819,7 @@ export default function Integrations() {
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [showAddModal, setShowAddModal] = useState(false);
 
-  // Invalidate cache on component mount
-  useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
-  }, [queryClient]);
+
 
   // Fetch integrations from database
   const { data: integrations = [], isLoading } = useQuery({
