@@ -890,6 +890,126 @@ export default function ReportBuilder() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
+        {/* Left Panel - Tools & Templates */}
+        <div className="w-80 bg-white border-r flex flex-col">
+          <div className="p-4 border-b">
+            <h3 className="font-semibold text-sm mb-3">Elements</h3>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => addElement('text')}
+                className="h-12 flex flex-col items-center gap-1"
+              >
+                <Type className="h-4 w-4" />
+                <span className="text-xs">Text</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => addElement('chart')}
+                className="h-12 flex flex-col items-center gap-1"
+              >
+                <BarChart3 className="h-4 w-4" />
+                <span className="text-xs">Chart</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => addElement('table')}
+                className="h-12 flex flex-col items-center gap-1"
+              >
+                <Table className="h-4 w-4" />
+                <span className="text-xs">Table</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => addElement('metric')}
+                className="h-12 flex flex-col items-center gap-1"
+              >
+                <span className="text-lg font-bold">#</span>
+                <span className="text-xs">Metric</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => addElement('image')}
+                className="h-12 flex flex-col items-center gap-1"
+              >
+                <ImageIcon className="h-4 w-4" />
+                <span className="text-xs">Image</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => addElement('shape')}
+                className="h-12 flex flex-col items-center gap-1"
+              >
+                <Square className="h-4 w-4" />
+                <span className="text-xs">Shape</span>
+              </Button>
+            </div>
+          </div>
+          
+          <div className="p-4 border-b">
+            <h3 className="font-semibold text-sm mb-3">Data</h3>
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSQLEditor(true)}
+                className="w-full justify-start"
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Data Visualization
+              </Button>
+            </div>
+          </div>
+          
+          <div className="p-4 border-b">
+            <h3 className="font-semibold text-sm mb-3">Upload</h3>
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full justify-start"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Images
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full justify-start"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Upload PDF/PPTX
+              </Button>
+            </div>
+          </div>
+          
+          <div className="p-4">
+            <h3 className="font-semibold text-sm mb-3">Templates</h3>
+            <div className="space-y-2">
+              <div className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <div className="text-sm font-medium">Blank Slide</div>
+                <div className="text-xs text-gray-500">Start with empty canvas</div>
+              </div>
+              <div className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <div className="text-sm font-medium">Title Slide</div>
+                <div className="text-xs text-gray-500">Title and subtitle</div>
+              </div>
+              <div className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <div className="text-sm font-medium">Chart Layout</div>
+                <div className="text-xs text-gray-500">Chart with text</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Canvas Area */}
         <div className="flex-1 flex flex-col">
           {/* Canvas */}
