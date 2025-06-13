@@ -248,296 +248,80 @@ export function ReportBuilder() {
     openDesigner(newReport.id);
   };
 
-  const createWBRTemplate = () => {
-    const wbrSlides: Slide[] = [
-      // Title Slide
-      {
-        id: 'wbr-title',
-        name: 'Title',
-        backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        elements: [
-          {
-            id: 'title-main',
-            type: 'text',
-            x: 100,
-            y: 180,
-            width: 600,
-            height: 90,
-            content: 'Weekly Business Review',
-            style: { fontSize: 52, fontWeight: 'bold', textAlign: 'center', color: '#ffffff', backgroundColor: 'transparent' }
-          },
-          {
-            id: 'title-sub',
-            type: 'text',
-            x: 100,
-            y: 290,
-            width: 600,
-            height: 50,
-            content: 'Week Ending: ' + new Date().toLocaleDateString(),
-            style: { fontSize: 24, textAlign: 'center', color: '#f3f4f6', backgroundColor: 'transparent' }
-          },
-          {
-            id: 'title-prepared',
-            type: 'text',
-            x: 100,
-            y: 420,
-            width: 600,
-            height: 30,
-            content: 'Prepared by: Analytics Team',
-            style: { fontSize: 16, textAlign: 'center', color: '#d1d5db', backgroundColor: 'transparent' }
-          }
-        ]
-      },
-      // Executive Summary
-      {
-        id: 'wbr-summary',
-        name: 'Executive Summary',
-        backgroundColor: '#ffffff',
-        elements: [
-          {
-            id: 'summary-title',
-            type: 'text',
-            x: 60,
-            y: 40,
-            width: 680,
-            height: 60,
-            content: 'Executive Summary',
-            style: { fontSize: 42, fontWeight: 'bold', color: '#1f2937', backgroundColor: 'transparent' }
-          },
-          {
-            id: 'summary-subtitle',
-            type: 'text',
-            x: 60,
-            y: 100,
-            width: 680,
-            height: 30,
-            content: 'Key Performance Indicators',
-            style: { fontSize: 18, color: '#6b7280', backgroundColor: 'transparent' }
-          },
-          {
-            id: 'metric-revenue',
-            type: 'metric',
-            x: 60,
-            y: 150,
-            width: 160,
-            height: 110,
-            content: { title: 'Weekly Revenue', label: 'Revenue', value: '0', change: '+0%' },
-            style: { backgroundColor: 'transparent' }
-          },
-          {
-            id: 'metric-customers',
-            type: 'metric',
-            x: 240,
-            y: 150,
-            width: 160,
-            height: 110,
-            content: { title: 'New Customers', label: 'Customers', value: '0', change: '+0%' },
-            style: { backgroundColor: 'transparent' }
-          },
-          {
-            id: 'metric-users',
-            type: 'metric',
-            x: 420,
-            y: 150,
-            width: 160,
-            height: 110,
-            content: { title: 'Active Users', label: 'Users', value: '0', change: '+0%' },
-            style: { backgroundColor: 'transparent' }
-          },
-          {
-            id: 'metric-conversion',
-            type: 'metric',
-            x: 600,
-            y: 150,
-            width: 160,
-            height: 110,
-            content: { title: 'Conversion Rate', label: 'Conversion', value: '0%', change: '+0%' },
-            style: { backgroundColor: 'transparent' }
-          },
-          {
-            id: 'summary-insights',
-            type: 'text',
-            x: 60,
-            y: 290,
-            width: 700,
-            height: 80,
-            content: 'Weekly Highlights:\n• [Add key achievement or milestone]\n• [Note any significant changes or trends]\n• [Highlight areas of focus for next week]',
-            style: { fontSize: 14, color: '#374151', backgroundColor: 'transparent' }
-          }
-        ]
-      },
-      // Performance Trends
-      {
-        id: 'wbr-trends',
-        name: 'Performance Trends',
-        backgroundColor: '#ffffff',
-        elements: [
-          {
-            id: 'trends-title',
-            type: 'text',
-            x: 60,
-            y: 40,
-            width: 680,
-            height: 60,
-            content: 'Performance Trends',
-            style: { fontSize: 38, fontWeight: 'bold', color: '#1f2937', backgroundColor: 'transparent' }
-          },
-          {
-            id: 'trends-chart',
-            type: 'chart',
-            x: 60,
-            y: 120,
-            width: 700,
-            height: 250,
-            content: { title: 'Weekly Performance Metrics', chartType: 'line', query: '' },
-            style: { backgroundColor: 'transparent' }
-          },
-          {
-            id: 'trends-insights',
-            type: 'text',
-            x: 60,
-            y: 390,
-            width: 700,
-            height: 100,
-            content: 'Key Observations:\n• [Trend analysis point 1]\n• [Trend analysis point 2]\n• [Action items based on trends]',
-            style: { fontSize: 14, color: '#374151', backgroundColor: 'transparent' }
-          }
-        ]
-      },
-      // Customer Metrics
-      {
-        id: 'wbr-customers',
-        name: 'Customer Metrics',
-        backgroundColor: '#ffffff',
-        elements: [
-          {
-            id: 'customers-title',
-            type: 'text',
-            x: 60,
-            y: 40,
-            width: 680,
-            height: 60,
-            content: 'Customer Analytics',
-            style: { fontSize: 38, fontWeight: 'bold', color: '#1f2937', backgroundColor: 'transparent' }
-          },
-          {
-            id: 'customer-acquisition',
-            type: 'metric',
-            x: 60,
-            y: 120,
-            width: 170,
-            height: 120,
-            content: { title: 'New Acquisitions', label: 'New This Week', value: '0', change: '+0%' },
-            style: { backgroundColor: 'transparent' }
-          },
-          {
-            id: 'customer-retention',
-            type: 'metric',
-            x: 250,
-            y: 120,
-            width: 170,
-            height: 120,
-            content: { title: 'Retention Rate', label: 'Retention', value: '0%', change: '+0%' },
-            style: { backgroundColor: 'transparent' }
-          },
-          {
-            id: 'customer-churn',
-            type: 'metric',
-            x: 440,
-            y: 120,
-            width: 170,
-            height: 120,
-            content: { title: 'Churn Rate', label: 'Churn', value: '0%', change: '+0%' },
-            style: { backgroundColor: 'transparent' }
-          },
-          {
-            id: 'customer-ltv',
-            type: 'metric',
-            x: 630,
-            y: 120,
-            width: 170,
-            height: 120,
-            content: { title: 'Avg. LTV', label: 'Customer LTV', value: '$0', change: '+0%' },
-            style: { backgroundColor: 'transparent' }
-          },
-          {
-            id: 'customer-table',
-            type: 'table',
-            x: 60,
-            y: 270,
-            width: 740,
-            height: 230,
-            content: { title: 'Customer Segment Performance', query: '' },
-            style: { backgroundColor: 'transparent' }
-          }
-        ]
-      },
-      // Action Items & Next Steps
-      {
-        id: 'wbr-actions',
-        name: 'Action Items',
-        backgroundColor: '#ffffff',
-        elements: [
-          {
-            id: 'actions-title',
-            type: 'text',
-            x: 60,
-            y: 40,
-            width: 680,
-            height: 60,
-            content: 'Action Items & Next Steps',
-            style: { fontSize: 38, fontWeight: 'bold', color: '#1f2937', backgroundColor: 'transparent' }
-          },
-          {
-            id: 'actions-priorities',
-            type: 'text',
-            x: 60,
-            y: 120,
-            width: 340,
-            height: 200,
-            content: 'This Week\'s Priorities:\n\n• [Priority item 1]\n• [Priority item 2]\n• [Priority item 3]\n• [Priority item 4]',
-            style: { fontSize: 16, color: '#374151', backgroundColor: 'transparent' }
-          },
-          {
-            id: 'actions-focus',
-            type: 'text',
-            x: 420,
-            y: 120,
-            width: 340,
-            height: 200,
-            content: 'Areas of Focus:\n\n• [Focus area 1]\n• [Focus area 2]\n• [Focus area 3]\n• [Focus area 4]',
-            style: { fontSize: 16, color: '#374151', backgroundColor: 'transparent' }
-          },
-          {
-            id: 'actions-goals',
-            type: 'text',
-            x: 60,
-            y: 340,
-            width: 700,
-            height: 120,
-            content: 'Next Week Goals:\n• [Goal 1 with owner and deadline]\n• [Goal 2 with owner and deadline]\n• [Goal 3 with owner and deadline]',
-            style: { fontSize: 14, color: '#374151', backgroundColor: '#f9fafb' }
-          }
-        ]
-      }
-    ];
+  const addImageSlideToCurrentReport = async (file: File) => {
+    if (!currentReport) return;
 
-    const wbrReport: Report = {
-      id: Date.now().toString(),
-      name: 'Weekly Business Review',
-      description: 'Comprehensive WBR template with editable visualizations',
-      lastModified: 'Just now',
-      status: 'draft',
-      slides: wbrSlides,
-      settings: {
-        schedule: 'weekly',
-        recipients: [],
-        autoRefresh: true
-      }
-    };
-
-    setReports([wbrReport, ...reports]);
-    openDesigner(wbrReport.id);
+    try {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageUrl = e.target?.result as string;
+        
+        const img = new Image();
+        img.onload = () => {
+          // Calculate dimensions to fit in canvas while maintaining aspect ratio
+          const maxWidth = 700;
+          const maxHeight = 500;
+          const aspectRatio = img.width / img.height;
+          
+          let imageWidth = img.width;
+          let imageHeight = img.height;
+          
+          if (imageWidth > maxWidth) {
+            imageWidth = maxWidth;
+            imageHeight = imageWidth / aspectRatio;
+          }
+          
+          if (imageHeight > maxHeight) {
+            imageHeight = maxHeight;
+            imageWidth = imageHeight * aspectRatio;
+          }
+          
+          // Center the image on the canvas
+          const x = (800 - imageWidth) / 2;
+          const y = (600 - imageHeight) / 2;
+          
+          const newSlide: Slide = {
+            id: `slide-${Date.now()}`,
+            name: `${file.name.replace(/\.[^/.]+$/, '')}`,
+            elements: [
+              {
+                id: `image-${Date.now()}`,
+                type: 'image',
+                x: Math.round(x),
+                y: Math.round(y),
+                width: Math.round(imageWidth),
+                height: Math.round(imageHeight),
+                content: imageUrl,
+                style: {
+                  fontSize: 16,
+                  fontWeight: 'normal',
+                  textAlign: 'center',
+                  color: '#000000',
+                  backgroundColor: 'transparent',
+                  fontFamily: 'Arial'
+                }
+              }
+            ],
+            backgroundColor: '#ffffff'
+          };
+          
+          // Add the new slide to the current report
+          const updatedSlides = [...currentReport.slides, newSlide];
+          const updatedReport = { ...currentReport, slides: updatedSlides };
+          setCurrentReport(updatedReport);
+          updateReportInList(updatedReport);
+          
+          // Switch to the new slide
+          setCurrentSlideIndex(updatedSlides.length - 1);
+        };
+        
+        img.src = imageUrl;
+      };
+      
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error adding image slide:', error);
+    }
   };
 
   // Image parsing function
@@ -2178,10 +1962,7 @@ export function ReportBuilder() {
                 <Upload className="h-4 w-4 mr-2" />
                 Upload File
               </Button>
-              <Button onClick={createWBRTemplate} className="bg-green-600 hover:bg-green-700">
-                <FileText className="h-4 w-4 mr-2" />
-                WBR Template
-              </Button>
+
               <Button onClick={createNewReport} className="bg-blue-600 hover:bg-blue-700">
                 <Plus className="h-4 w-4 mr-2" />
                 New Report
