@@ -375,22 +375,31 @@ export default function ReportBuilder() {
 
   // Clipboard operations
   const handleCopyElement = (element: SlideElement) => {
-    setClipboard({ element: { ...element }, operation: 'copy' });
+    // Create a deep copy to avoid reference issues
+    const elementCopy = JSON.parse(JSON.stringify(element));
+    setClipboard({ element: elementCopy, operation: 'copy' });
   };
 
   const handleCutElement = (element: SlideElement) => {
-    setClipboard({ element: { ...element }, operation: 'cut' });
+    // Create a deep copy to avoid reference issues
+    const elementCopy = JSON.parse(JSON.stringify(element));
+    setClipboard({ element: elementCopy, operation: 'cut' });
     deleteElement(element.id);
   };
 
   const handlePasteElement = () => {
     if (!clipboard || !currentSlide || !currentReport) return;
 
+    // Create a completely new element with deep copy of content
     const newElement: SlideElement = {
-      ...clipboard.element,
-      id: nanoid(),
+      ...JSON.parse(JSON.stringify(clipboard.element)), // Deep copy all properties
+      id: nanoid(), // New unique ID
       x: clipboard.element.x + 20, // Offset slightly
-      y: clipboard.element.y + 20
+      y: clipboard.element.y + 20,
+      // Ensure content is deeply copied
+      content: clipboard.element.content ? JSON.parse(JSON.stringify(clipboard.element.content)) : clipboard.element.content,
+      dataSource: clipboard.element.dataSource ? JSON.parse(JSON.stringify(clipboard.element.dataSource)) : clipboard.element.dataSource,
+      style: clipboard.element.style ? JSON.parse(JSON.stringify(clipboard.element.style)) : clipboard.element.style
     };
 
     const updatedSlide = {
