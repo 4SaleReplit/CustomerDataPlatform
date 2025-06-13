@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import html2canvas from 'html2canvas';
 import { PresentationModal } from '@/components/PresentationModal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -161,108 +162,139 @@ export function DataStudioReports() {
     }
   };
 
-  // Enhanced slide preview component that renders actual slide content
-  const SlidePreview = ({ slideData }: { slideData: any }) => {
+  // Slide thumbnail generator and cache
+  const [thumbnailCache, setThumbnailCache] = useState<Record<string, string>>({});
+  const slideRenderRef = useRef<HTMLDivElement>(null);
+
+  // Generate thumbnail from slide data
+  const generateThumbnail = async (slideData: any, slideId: string): Promise<string | null> => {
     if (!slideData || !slideData.elements?.length) {
-      return null; // Return null for empty slides
+      return null;
+    }
+
+    try {
+      // Create a temporary container for rendering
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.top = '-9999px';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.width = '800px';
+      tempContainer.style.height = '450px';
+      tempContainer.style.backgroundColor = slideData.backgroundColor || '#ffffff';
+      document.body.appendChild(tempContainer);
+
+      // Render slide elements
+      slideData.elements.forEach((element: any) => {
+        const elementDiv = document.createElement('div');
+        elementDiv.style.position = 'absolute';
+        elementDiv.style.left = `${element.x || 0}px`;
+        elementDiv.style.top = `${element.y || 0}px`;
+        elementDiv.style.width = `${element.width || 100}px`;
+        elementDiv.style.height = `${element.height || 50}px`;
+        elementDiv.style.fontSize = `${element.fontSize || 14}px`;
+        elementDiv.style.color = element.color || '#000000';
+        elementDiv.style.backgroundColor = element.backgroundColor || 'transparent';
+        elementDiv.style.fontWeight = element.fontWeight || 'normal';
+        elementDiv.style.textAlign = element.textAlign || 'left';
+        elementDiv.style.display = 'flex';
+        elementDiv.style.alignItems = 'center';
+        elementDiv.style.justifyContent = element.textAlign === 'center' ? 'center' : 'flex-start';
+        elementDiv.style.padding = '4px';
+        elementDiv.style.boxSizing = 'border-box';
+        elementDiv.style.overflow = 'hidden';
+        elementDiv.style.wordBreak = 'break-word';
+
+        if (element.type === 'text') {
+          elementDiv.textContent = element.content || 'Text';
+        } else if (element.type === 'chart') {
+          elementDiv.style.backgroundColor = '#3b82f6';
+          elementDiv.style.color = '#ffffff';
+          elementDiv.style.justifyContent = 'center';
+          elementDiv.textContent = 'CHART';
+        } else if (element.type === 'table') {
+          elementDiv.style.backgroundColor = '#10b981';
+          elementDiv.style.color = '#ffffff';
+          elementDiv.style.justifyContent = 'center';
+          elementDiv.textContent = 'TABLE';
+        } else if (element.type === 'metric') {
+          elementDiv.style.backgroundColor = '#f59e0b';
+          elementDiv.style.color = '#ffffff';
+          elementDiv.style.justifyContent = 'center';
+          elementDiv.textContent = element.content || 'METRIC';
+        } else if (element.type === 'shape') {
+          elementDiv.style.borderRadius = element.borderRadius ? `${element.borderRadius}px` : '0px';
+        }
+
+        tempContainer.appendChild(elementDiv);
+      });
+
+      // Generate thumbnail using html2canvas
+      const canvas = await html2canvas(tempContainer, {
+        width: 800,
+        height: 450,
+        scale: 0.4, // Scale down for thumbnail
+        useCORS: true,
+        allowTaint: false
+      });
+
+      // Cleanup
+      document.body.removeChild(tempContainer);
+
+      // Convert to data URL
+      return canvas.toDataURL('image/png');
+    } catch (error) {
+      console.error('Error generating thumbnail:', error);
+      return null;
+    }
+  };
+
+  // Generate thumbnails for all slides
+  useEffect(() => {
+    const generateThumbnails = async () => {
+      if (!slidePreviewsData || Object.keys(slidePreviewsData).length === 0) return;
+
+      const newThumbnails: Record<string, string> = {};
+      
+      for (const [presentationId, slideData] of Object.entries(slidePreviewsData)) {
+        if (slideData && !thumbnailCache[presentationId]) {
+          const thumbnail = await generateThumbnail(slideData, presentationId);
+          if (thumbnail) {
+            newThumbnails[presentationId] = thumbnail;
+          }
+        }
+      }
+
+      if (Object.keys(newThumbnails).length > 0) {
+        setThumbnailCache(prev => ({ ...prev, ...newThumbnails }));
+      }
+    };
+
+    generateThumbnails();
+  }, [slidePreviewsData]);
+
+  // Slide preview component
+  const SlidePreview = ({ slideData, presentationId }: { slideData: any; presentationId: string }) => {
+    if (!slideData || !slideData.elements?.length) {
+      return null;
+    }
+
+    const thumbnailUrl = thumbnailCache[presentationId];
+    
+    if (!thumbnailUrl) {
+      return (
+        <div className="w-full h-20 bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+          <div className="text-xs text-gray-500">Generating preview...</div>
+        </div>
+      );
     }
 
     return (
-      <div className="w-full h-20 bg-white rounded border border-gray-200 overflow-hidden relative">
-        <div 
-          className="w-full h-full transform scale-[0.2] origin-top-left"
-          style={{ 
-            width: '500%', 
-            height: '500%',
-            backgroundColor: slideData.backgroundColor || '#ffffff'
-          }}
-        >
-          {slideData.elements.map((element: any, index: number) => {
-            const style = {
-              position: 'absolute' as const,
-              left: `${element.x || 0}px`,
-              top: `${element.y || 0}px`,
-              width: `${element.width || 100}px`,
-              height: `${element.height || 50}px`,
-              fontSize: `${element.fontSize || 14}px`,
-              color: element.color || '#000000',
-              backgroundColor: element.backgroundColor || 'transparent',
-              fontWeight: element.fontWeight || 'normal',
-              textAlign: element.textAlign || 'left',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: element.textAlign === 'center' ? 'center' : 'flex-start',
-              padding: '4px',
-              boxSizing: 'border-box' as const,
-              overflow: 'hidden',
-              wordBreak: 'break-word' as const
-            };
-
-            if (element.type === 'text') {
-              return (
-                <div key={index} style={style}>
-                  {element.content || 'Text'}
-                </div>
-              );
-            } else if (element.type === 'chart') {
-              return (
-                <div key={index} style={{
-                  ...style,
-                  backgroundColor: '#3b82f6',
-                  color: '#ffffff',
-                  justifyContent: 'center',
-                  fontSize: '12px'
-                }}>
-                  CHART
-                </div>
-              );
-            } else if (element.type === 'table') {
-              return (
-                <div key={index} style={{
-                  ...style,
-                  backgroundColor: '#10b981',
-                  color: '#ffffff',
-                  justifyContent: 'center',
-                  fontSize: '12px'
-                }}>
-                  TABLE
-                </div>
-              );
-            } else if (element.type === 'metric') {
-              return (
-                <div key={index} style={{
-                  ...style,
-                  backgroundColor: '#f59e0b',
-                  color: '#ffffff',
-                  justifyContent: 'center',
-                  fontSize: '12px'
-                }}>
-                  METRIC
-                </div>
-              );
-            } else if (element.type === 'image') {
-              return (
-                <div key={index} style={{
-                  ...style,
-                  backgroundColor: '#e5e7eb',
-                  justifyContent: 'center',
-                  fontSize: '10px',
-                  color: '#6b7280'
-                }}>
-                  IMG
-                </div>
-              );
-            } else if (element.type === 'shape') {
-              return (
-                <div key={index} style={{
-                  ...style,
-                  borderRadius: element.borderRadius ? `${element.borderRadius}px` : '0px'
-                }} />
-              );
-            }
-            return null;
-          })}
-        </div>
+      <div className="w-full h-20 bg-white rounded border border-gray-200 overflow-hidden">
+        <img 
+          src={thumbnailUrl} 
+          alt="Slide preview" 
+          className="w-full h-full object-cover"
+        />
       </div>
     );
   };
@@ -535,7 +567,7 @@ export function DataStudioReports() {
                       {/* Slide Preview - only show if there's content */}
                       {slidePreviewsData[report.id] && slidePreviewsData[report.id].elements?.length > 0 && (
                         <div className="mb-3">
-                          <SlidePreview slideData={slidePreviewsData[report.id]} />
+                          <SlidePreview slideData={slidePreviewsData[report.id]} presentationId={report.id} />
                         </div>
                       )}
                       
