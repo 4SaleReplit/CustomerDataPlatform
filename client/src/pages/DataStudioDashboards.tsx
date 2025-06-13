@@ -66,11 +66,12 @@ export function DataStudioDashboards() {
   ];
 
   const dashboards: Dashboard[] = [
-    { id: '1', name: 'Customer Acquisition Funnel', description: 'Track user journey from signup to conversion', folderId: '1', folderName: 'Marketing Dashboards', tileCount: 8, lastModified: '2 hours ago', createdBy: 'admin', isPublic: true },
-    { id: '2', name: 'Revenue Overview', description: 'Monthly revenue trends and forecasts', folderId: '3', folderName: 'Financial Reports', tileCount: 6, lastModified: '1 day ago', createdBy: 'finance_team', isPublic: false },
-    { id: '3', name: 'User Engagement Metrics', description: 'Daily and weekly user activity patterns', folderId: '2', folderName: 'Product Analytics', tileCount: 12, lastModified: '3 hours ago', createdBy: 'product_team', isPublic: true },
-    { id: '4', name: 'Campaign Performance', description: 'Marketing campaign ROI and effectiveness', folderId: '1', folderName: 'Marketing Dashboards', tileCount: 10, lastModified: '1 week ago', createdBy: 'marketing_team', isPublic: true },
-    { id: '5', name: 'Executive KPIs', description: 'Key performance indicators for leadership', folderId: '4', folderName: 'Executive Summary', tileCount: 5, lastModified: '12 hours ago', createdBy: 'admin', isPublic: false },
+    { id: '1', name: 'Marketing Performance', description: 'Campaign ROI and user acquisition metrics', folderId: '1', folderName: 'Marketing Dashboards', tileCount: 12, lastModified: '2 hours ago', createdBy: 'John Doe', isPublic: true },
+    { id: '2', name: 'User Behavior Analytics', description: 'Engagement patterns and retention analysis', folderId: '2', folderName: 'Product Analytics', tileCount: 8, lastModified: '1 day ago', createdBy: 'Jane Smith', isPublic: false },
+    { id: '3', name: 'Revenue Dashboard', description: 'Sales performance and financial KPIs', folderId: '3', folderName: 'Financial Reports', tileCount: 15, lastModified: '3 hours ago', createdBy: 'Mike Johnson', isPublic: true },
+    { id: '4', name: 'Customer Segmentation', description: 'User demographics and behavior segments', folderId: '1', folderName: 'Marketing Dashboards', tileCount: 6, lastModified: '5 hours ago', createdBy: 'Sarah Wilson', isPublic: false },
+    { id: '5', name: 'Product Usage Metrics', description: 'Feature adoption and user engagement', folderId: '2', folderName: 'Product Analytics', tileCount: 10, lastModified: '2 days ago', createdBy: 'Tom Brown', isPublic: true },
+    { id: '6', name: 'Executive Overview', description: 'High-level business metrics and trends', folderId: '4', folderName: 'Executive Summary', tileCount: 20, lastModified: '6 hours ago', createdBy: 'Lisa Davis', isPublic: true }
   ];
 
   const filteredDashboards = dashboards.filter(dashboard => {
@@ -124,13 +125,17 @@ export function DataStudioDashboards() {
                     <Textarea id="folder-description" placeholder="Enter folder description" />
                   </div>
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setShowNewFolder(false)}>Cancel</Button>
-                    <Button onClick={handleCreateFolder}>Create Folder</Button>
+                    <Button variant="outline" onClick={() => setShowNewFolder(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleCreateFolder}>
+                      Create Folder
+                    </Button>
                   </div>
                 </div>
               </DialogContent>
             </Dialog>
-
+            
             <Dialog open={showNewDashboard} onOpenChange={setShowNewDashboard}>
               <DialogTrigger asChild>
                 <Button size="sm">
@@ -148,17 +153,16 @@ export function DataStudioDashboards() {
                     <Input id="dashboard-name" placeholder="Enter dashboard name" />
                   </div>
                   <div>
-                    <Label htmlFor="dashboard-description">Description</Label>
+                    <Label htmlFor="dashboard-description">Description (optional)</Label>
                     <Textarea id="dashboard-description" placeholder="Enter dashboard description" />
                   </div>
                   <div>
                     <Label htmlFor="dashboard-folder">Folder</Label>
                     <Select>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a folder" />
+                        <SelectValue placeholder="Select a folder (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="root">Root (No folder)</SelectItem>
                         {folders.map((folder) => (
                           <SelectItem key={folder.id} value={folder.id}>
                             {folder.name}
@@ -168,8 +172,12 @@ export function DataStudioDashboards() {
                     </Select>
                   </div>
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setShowNewDashboard(false)}>Cancel</Button>
-                    <Button onClick={handleCreateDashboard}>Create Dashboard</Button>
+                    <Button variant="outline" onClick={() => setShowNewDashboard(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleCreateDashboard}>
+                      Create Dashboard
+                    </Button>
                   </div>
                 </div>
               </DialogContent>
@@ -224,53 +232,68 @@ export function DataStudioDashboards() {
         <div>
           <h3 className="text-lg font-semibold mb-3">Folders</h3>
           <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4' : 'space-y-2'}>
-            {folders.map((folder) => (
-              <Card key={folder.id} className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3 flex-1">
-                      <Folder className="h-8 w-8 text-blue-500 flex-shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <h4 className="font-medium truncate">{folder.name}</h4>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {folder.dashboardCount} dashboards • {folder.lastModified}
-                        </p>
-                        {folder.description && (
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                            {folder.description}
+            {folders.map((folder) => {
+              const isSelected = selectedFolder === folder.id;
+              return (
+                <Card 
+                  key={folder.id} 
+                  className={`hover:shadow-md transition-all cursor-pointer ${
+                    isSelected ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950' : ''
+                  }`}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div 
+                        className="flex items-center gap-3 flex-1"
+                        onClick={() => setSelectedFolder(selectedFolder === folder.id ? null : folder.id)}
+                      >
+                        <Folder className={`h-8 w-8 flex-shrink-0 ${
+                          isSelected ? 'text-blue-600' : 'text-blue-500'
+                        }`} />
+                        <div className="min-w-0 flex-1">
+                          <h4 className={`font-medium truncate ${
+                            isSelected ? 'text-blue-900 dark:text-blue-100' : ''
+                          }`}>{folder.name}</h4>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {folder.dashboardCount} dashboards • {folder.lastModified}
                           </p>
-                        )}
+                          {folder.description && (
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                              {folder.description}
+                            </p>
+                          )}
+                        </div>
                       </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Open
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Settings className="h-4 w-4 mr-2" />
+                            Settings
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-600">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem>
-                          <Eye className="h-4 w-4 mr-2" />
-                          Open
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Settings className="h-4 w-4 mr-2" />
-                          Settings
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
 
@@ -300,22 +323,20 @@ export function DataStudioDashboards() {
                             <Badge variant="secondary" className="text-xs">Public</Badge>
                           )}
                         </div>
-                        {dashboard.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                            {dashboard.description}
-                          </p>
-                        )}
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                          {dashboard.description}
+                        </p>
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           <span>{dashboard.tileCount} tiles</span>
-                          <span>by {dashboard.createdBy}</span>
+                          <span>•</span>
                           <span>{dashboard.lastModified}</span>
+                          <span>•</span>
+                          <span>{dashboard.createdBy}</span>
                         </div>
                         {dashboard.folderName && (
-                          <div className="mt-2">
-                            <Badge variant="outline" className="text-xs">
-                              <Folder className="h-3 w-3 mr-1" />
-                              {dashboard.folderName}
-                            </Badge>
+                          <div className="flex items-center gap-1 mt-2">
+                            <Folder className="h-3 w-3" />
+                            <span className="text-xs text-muted-foreground">{dashboard.folderName}</span>
                           </div>
                         )}
                       </div>
@@ -338,10 +359,6 @@ export function DataStudioDashboards() {
                         <DropdownMenuItem>
                           <Copy className="h-4 w-4 mr-2" />
                           Duplicate
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Settings className="h-4 w-4 mr-2" />
-                          Settings
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-red-600">
                           <Trash2 className="h-4 w-4 mr-2" />

@@ -67,7 +67,7 @@ const navigation = [
       { name: 'Design Studio', href: '/reports/designer', icon: Edit3 }
     ]
   },
-  { name: 'Ask Amplitude', href: '/ask', icon: Shield },
+
   { 
     name: 'Marketing Analytics', 
     href: '/marketing', 
