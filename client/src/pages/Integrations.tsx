@@ -541,11 +541,11 @@ const IntegrationCard = memo(({ integration, template, getStatusBadge, handleCon
   <Card className="card hover:shadow-xl transition-all duration-300 slide-up group">
     <CardHeader className="pb-4">
       <div className="flex items-start justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
+        <div className="flex items-start space-x-4 flex-1">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 flex-shrink-0">
             {template?.icon}
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1 flex-1">
             <CardTitle className="text-xl font-semibold group-hover:text-blue-600 transition-colors">
               {integration.name}
             </CardTitle>
@@ -554,7 +554,9 @@ const IntegrationCard = memo(({ integration, template, getStatusBadge, handleCon
             </CardDescription>
           </div>
         </div>
-        {getStatusBadge(integration.status)}
+        <div className="flex-shrink-0">
+          {getStatusBadge(integration.status)}
+        </div>
       </div>
     </CardHeader>
     <CardContent className="space-y-5">
@@ -641,7 +643,7 @@ const IntegrationCard = memo(({ integration, template, getStatusBadge, handleCon
           </div>
         )}
       </div>
-      <div className="flex space-x-3">
+      <div className="flex items-center space-x-3">
         <Button 
           variant="outline" 
           size="sm" 
@@ -649,15 +651,22 @@ const IntegrationCard = memo(({ integration, template, getStatusBadge, handleCon
           className="flex-1 font-medium hover:bg-blue-50 hover:border-blue-200 transition-colors"
         >
           <Settings className="h-4 w-4 mr-2" />
-          Configure
+          Edit
         </Button>
         <Button 
-          variant="destructive" 
+          variant="outline" 
           size="sm"
-          onClick={() => deleteIntegrationMutation.mutate(integration.id)}
-          className="hover:bg-red-600 transition-colors"
+          className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300 transition-colors"
         >
-          <Trash2 className="h-4 w-4" />
+          <CheckCircle className="h-4 w-4 mr-2" />
+          Test
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm"
+          className="bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-colors"
+        >
+          Pause
         </Button>
       </div>
     </CardContent>
