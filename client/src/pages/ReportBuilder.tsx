@@ -1329,6 +1329,27 @@ export function ReportBuilder() {
     }
   };
 
+  const handlePngUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !currentReport) return;
+
+    const fileExtension = file.name.toLowerCase().split('.').pop();
+    if (!fileExtension || !['png', 'jpg', 'jpeg'].includes(fileExtension)) {
+      alert('Please select a valid image file (.png, .jpg, .jpeg)');
+      return;
+    }
+
+    try {
+      await addImageSlideToCurrentReport(file);
+    } catch (error) {
+      console.error('Error adding PNG slide:', error);
+      alert('Failed to add image slide. Please try again.');
+    } finally {
+      // Reset file input
+      event.target.value = '';
+    }
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
