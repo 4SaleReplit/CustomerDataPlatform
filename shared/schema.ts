@@ -209,6 +209,42 @@ export const integrations = pgTable("integrations", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
 });
 
+// Uploaded images for presentations
+export const uploadedImages = pgTable("uploaded_images", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  filename: varchar("filename", { length: 255 }).notNull(),
+  originalName: varchar("original_name", { length: 255 }).notNull(),
+  mimeType: varchar("mime_type", { length: 100 }).notNull(),
+  size: integer("size").notNull(),
+  url: text("url").notNull(),
+  uploadedBy: varchar("uploaded_by", { length: 255 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+// Individual slides with elements and styling
+export const slides = pgTable("slides", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: varchar("title", { length: 255 }).notNull(),
+  elements: jsonb("elements").notNull().default('[]'), // Array of slide elements with positioning and styling
+  backgroundImage: uuid("background_image").references(() => uploadedImages.id),
+  backgroundColor: varchar("background_color", { length: 7 }).default('#ffffff'),
+  order: integer("order").notNull().default(0),
+  createdBy: varchar("created_by", { length: 255 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
+// Presentations containing multiple slides
+export const presentations = pgTable("presentations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  slideIds: uuid("slide_ids").array(),
+  createdBy: varchar("created_by", { length: 255 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -272,6 +308,29 @@ export const insertIntegrationSchema = createInsertSchema(integrations).omit({
   updatedAt: true,
 });
 
+export const insertUploadedImageSchema = createInsertSchema(uploadedImages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSlideSchema = createInsertSchema(slides).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateSlideSchema = createInsertSchema(slides).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
+export const insertPresentationSchema = createInsertSchema(presentations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Type exports
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -292,6 +351,13 @@ export type InsertCampaignJob = z.infer<typeof insertCampaignJobSchema>;
 export type CampaignJob = typeof campaignJobs.$inferSelect;
 export type InsertIntegration = z.infer<typeof insertIntegrationSchema>;
 export type Integration = typeof integrations.$inferSelect;
+export type InsertUploadedImage = z.infer<typeof insertUploadedImageSchema>;
+export type UploadedImage = typeof uploadedImages.$inferSelect;
+export type InsertSlide = z.infer<typeof insertSlideSchema>;
+export type UpdateSlide = z.infer<typeof updateSlideSchema>;
+export type Slide = typeof slides.$inferSelect;
+export type InsertPresentation = z.infer<typeof insertPresentationSchema>;
+export type Presentation = typeof presentations.$inferSelect;
 
 // Role and permission schemas
 export const insertRoleSchema = createInsertSchema(roles).omit({

@@ -111,6 +111,26 @@ export interface IStorage {
   removePermissionFromRole(roleId: string, permissionId: string): Promise<boolean>;
   getUserPermissions(userId: string): Promise<Permission[]>;
   checkUserPermission(userId: string, resource: string, action: string): Promise<boolean>;
+  
+  // Image management
+  getUploadedImages(): Promise<UploadedImage[]>;
+  getUploadedImage(id: string): Promise<UploadedImage | undefined>;
+  createUploadedImage(image: InsertUploadedImage): Promise<UploadedImage>;
+  deleteUploadedImage(id: string): Promise<boolean>;
+  
+  // Slide management
+  getSlides(): Promise<Slide[]>;
+  getSlide(id: string): Promise<Slide | undefined>;
+  createSlide(slide: InsertSlide): Promise<Slide>;
+  updateSlide(id: string, updates: UpdateSlide): Promise<Slide | undefined>;
+  deleteSlide(id: string): Promise<boolean>;
+  
+  // Presentation management
+  getPresentations(): Promise<Presentation[]>;
+  getPresentation(id: string): Promise<Presentation | undefined>;
+  createPresentation(presentation: InsertPresentation): Promise<Presentation>;
+  updatePresentation(id: string, updates: Partial<InsertPresentation>): Promise<Presentation | undefined>;
+  deletePresentation(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
