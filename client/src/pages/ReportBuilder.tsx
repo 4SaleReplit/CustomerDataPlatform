@@ -204,6 +204,7 @@ export function ReportBuilder() {
   const [showUploader, setShowUploader] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
+  const pngUploaderRef = useRef<HTMLInputElement>(null);
   const currentSlide = currentReport?.slides[currentSlideIndex];
 
   // Auto-create new report when accessing designer route
@@ -1340,6 +1341,14 @@ export function ReportBuilder() {
 
     setIsUploading(true);
     try {
+      // For PNG/JPG files, if we have a current report, add as new slide
+      if (['png', 'jpg', 'jpeg'].includes(fileExtension) && currentReport) {
+        await addImageSlideToCurrentReport(file);
+        setShowUploader(false);
+        return;
+      }
+
+      // For other file types or when no current report, create new report
       let slides: Slide[] = [];
       
       if (fileExtension === 'pptx') {
@@ -1961,6 +1970,23 @@ export function ReportBuilder() {
               <Button onClick={() => setShowUploader(true)} className="bg-purple-600 hover:bg-purple-700">
                 <Upload className="h-4 w-4 mr-2" />
                 Upload File
+              </Button>
+
+              <input
+                type="file"
+                ref={pngUploaderRef}
+                accept=".png,.jpg,.jpeg"
+                onChange={handlePngUpload}
+                className="hidden"
+              />
+              <Button 
+                onClick={() => pngUploaderRef.current?.click()} 
+                className="bg-green-600 hover:bg-green-700"
+                disabled={!currentReport}
+                title={currentReport ? "Add PNG/JPG as new slide to current presentation" : "Open a presentation first"}
+              >
+                <Image className="h-4 w-4 mr-2" />
+                Add PNG Slide
               </Button>
 
               <Button onClick={createNewReport} className="bg-blue-600 hover:bg-blue-700">
