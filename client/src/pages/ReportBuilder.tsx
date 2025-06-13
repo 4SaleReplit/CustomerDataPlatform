@@ -349,6 +349,28 @@ export default function ReportBuilder() {
     setCurrentSlideIndex(updatedReport.slides.length - 1);
   };
 
+  const deleteSlide = (slideIndex: number) => {
+    if (!currentReport || currentReport.slides.length <= 1) return; // Prevent deleting last slide
+
+    const updatedSlides = currentReport.slides.filter((_, index) => index !== slideIndex);
+    
+    const updatedReport = {
+      ...currentReport,
+      slides: updatedSlides
+    };
+
+    setCurrentReport(updatedReport);
+    
+    // Adjust current slide index if necessary
+    if (slideIndex <= currentSlideIndex && currentSlideIndex > 0) {
+      setCurrentSlideIndex(currentSlideIndex - 1);
+    } else if (slideIndex < currentSlideIndex) {
+      setCurrentSlideIndex(currentSlideIndex - 1);
+    } else if (currentSlideIndex >= updatedSlides.length) {
+      setCurrentSlideIndex(updatedSlides.length - 1);
+    }
+  };
+
   // Handle editing a tile from the tiles panel
   const handleEditTile = (element: SlideElement) => {
     // Get query from various possible locations
@@ -1546,36 +1568,6 @@ export default function ReportBuilder() {
             Save Slides
           </Button>
 
-          {/* Element Tools */}
-          <Separator orientation="vertical" className="h-6" />
-          <Button variant="ghost" size="sm" onClick={() => addElement('text')}>
-            <Type className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowSQLEditor(true)}>
-            <BarChart3 className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => addElement('table')}>
-            <Table className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => addElement('image')}>
-            <ImageIcon className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => addElement('shape')}>
-            <Square className="h-4 w-4" />
-          </Button>
-
-          {selectedElement && (
-            <>
-              <Separator orientation="vertical" className="h-6" />
-              <Button variant="ghost" size="sm" onClick={() => selectedElement && deleteElement(selectedElement)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm">
-                <Copy className="h-4 w-4" />
-              </Button>
-            </>
-          )}
-
           {/* View Controls */}
           <Separator orientation="vertical" className="h-6" />
           <Button variant="ghost" size="sm" onClick={() => setShowGrid(!showGrid)}>
@@ -1811,13 +1803,28 @@ export default function ReportBuilder() {
                   onDragStart={(e) => handleSlideDragStart(e, index)}
                   onDragOver={(e) => handleSlideDragOver(e, index)}
                   onDrop={(e) => handleSlideDrop(e, index)}
-                  className={`flex-shrink-0 p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                  className={`flex-shrink-0 p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 relative group ${
                     index === currentSlideIndex
                       ? 'border-blue-500 bg-blue-50 shadow-md'
                       : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                   } ${dragOverSlideIndex === index ? 'border-green-400 bg-green-50' : ''}`}
                   onClick={() => setCurrentSlideIndex(index)}
                 >
+                  {/* Delete Button - appears on hover */}
+                  {currentReport?.slides.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute -top-2 -right-2 h-6 w-6 p-0 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteSlide(index);
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                  
                   <div className="flex items-center gap-2">
                     <GripVertical className="h-3 w-3 text-gray-400" />
                     <div 
