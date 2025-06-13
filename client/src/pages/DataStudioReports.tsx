@@ -29,11 +29,12 @@ import {
   Eye,
   MoreHorizontal,
   Presentation,
-  Image,
+  Image as ImageIcon,
   BarChart3,
   PieChart,
   LineChart,
-  TrendingUp
+  TrendingUp,
+  Table
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -89,6 +90,36 @@ export function DataStudioReports() {
     }
   });
 
+  // Fetch first slides for preview thumbnails
+  const { data: slidePreviewsData = {} } = useQuery({
+    queryKey: ['/api/slide-previews', presentations],
+    queryFn: async () => {
+      if (!presentations.length) return {};
+      
+      const slidePreviewPromises = presentations.map(async (presentation: any) => {
+        if (!presentation.slideIds?.length) return { presentationId: presentation.id, slide: null };
+        
+        try {
+          const response = await fetch(`/api/slides/${presentation.slideIds[0]}`);
+          if (response.ok) {
+            const slide = await response.json();
+            return { presentationId: presentation.id, slide };
+          }
+        } catch (error) {
+          console.error('Failed to fetch slide preview:', error);
+        }
+        return { presentationId: presentation.id, slide: null };
+      });
+      
+      const results = await Promise.all(slidePreviewPromises);
+      return results.reduce((acc, result) => {
+        acc[result.presentationId] = result.slide;
+        return acc;
+      }, {} as Record<string, any>);
+    },
+    enabled: presentations.length > 0
+  });
+
   // Handle delete report
   const handleDeleteReport = async (reportId: string, reportName: string) => {
     if (!confirm(`Are you sure you want to delete the report "${reportName}"? This action cannot be undone.`)) {
@@ -110,6 +141,70 @@ export function DataStudioReports() {
       console.error('Delete report error:', error);
       alert('Failed to delete report. Please try again.');
     }
+  };
+
+  // Slide preview component
+  const SlidePreview = ({ slideData }: { slideData: any }) => {
+    if (!slideData || !slideData.elements?.length) {
+      return (
+        <div className="w-full h-24 bg-gray-100 rounded border-2 border-dashed border-gray-300 flex items-center justify-center">
+          <div className="text-center">
+            <Presentation className="h-6 w-6 text-gray-400 mx-auto mb-1" />
+            <span className="text-xs text-gray-500">Empty Slide</span>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="w-full h-24 bg-white rounded border border-gray-200 relative overflow-hidden">
+        <div 
+          className="w-full h-full relative"
+          style={{ backgroundColor: slideData.backgroundColor || '#ffffff' }}
+        >
+          {slideData.elements.map((element: any, index: number) => {
+            const scaleFactor = 0.15; // Scale down for thumbnail
+            const style = {
+              position: 'absolute' as const,
+              left: `${element.x * scaleFactor}px`,
+              top: `${element.y * scaleFactor}px`,
+              width: `${element.width * scaleFactor}px`,
+              height: `${element.height * scaleFactor}px`,
+              fontSize: `${Math.max(8, (element.fontSize || 14) * scaleFactor)}px`,
+              color: element.color || '#000000',
+              backgroundColor: element.backgroundColor || 'transparent'
+            };
+
+            if (element.type === 'text') {
+              return (
+                <div key={index} style={style} className="truncate text-xs">
+                  {element.content || 'Text'}
+                </div>
+              );
+            } else if (element.type === 'chart') {
+              return (
+                <div key={index} style={style} className="flex items-center justify-center bg-blue-50 border border-blue-200 rounded">
+                  <BarChart3 className="h-3 w-3 text-blue-600" />
+                </div>
+              );
+            } else if (element.type === 'table') {
+              return (
+                <div key={index} style={style} className="flex items-center justify-center bg-green-50 border border-green-200 rounded">
+                  <FileText className="h-3 w-3 text-green-600" />
+                </div>
+              );
+            } else if (element.type === 'image') {
+              return (
+                <div key={index} style={style} className="flex items-center justify-center bg-gray-50 border border-gray-200 rounded">
+                  <ImageIcon className="h-3 w-3 text-gray-600" />
+                </div>
+              );
+            }
+            return null;
+          })}
+        </div>
+      </div>
+    );
   };
 
   // Transform presentations to match Report interface
@@ -361,6 +456,11 @@ export function DataStudioReports() {
                       </div>
                     </CardHeader>
                     <CardContent>
+                      {/* Slide Preview */}
+                      <div className="mb-3">
+                        <SlidePreview slideData={slidePreviewsData[report.id]} />
+                      </div>
+                      
                       <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                         {report.description}
                       </p>
