@@ -342,6 +342,34 @@ export default function ReportBuilder() {
     setCurrentSlideIndex(updatedReport.slides.length - 1);
   };
 
+  // Handle editing a tile from the tiles panel
+  const handleEditTile = (element: SlideElement) => {
+    // Get query from various possible locations
+    let query = '';
+    if (element.dataSource?.query) {
+      query = element.dataSource.query;
+    } else if (element.content?.query) {
+      query = element.content.query;
+    } else if ((element as any).query) {
+      query = (element as any).query;
+    }
+
+    // Get title from various possible locations
+    let title = '';
+    if (typeof element.content === 'string') {
+      title = element.content;
+    } else if (element.title) {
+      title = element.title;
+    }
+
+    // Set the SQL editor state
+    setCurrentQuery(query);
+    setCurrentTitle(title);
+    setVisualizationType(element.type === 'metric' ? 'metric' : element.type === 'table' ? 'table' : 'bar');
+    setSelectedElement(element.id);
+    setShowSQLEditor(true);
+  };
+
   // Multiple image upload functionality with persistent storage
   const addImageSlideToCurrentReport = async (file: File): Promise<void> => {
     if (!currentReport) return;
@@ -1015,6 +1043,13 @@ export default function ReportBuilder() {
           backgroundRepeat: 'no-repeat'
         }}
         onMouseDown={(e) => handleElementMouseDown(e, element.id)}
+        onDoubleClick={(e) => {
+          // Double-click to edit visualizations
+          if (element.type === 'chart' || element.type === 'table' || element.type === 'metric') {
+            e.stopPropagation();
+            handleEditTile(element);
+          }
+        }}
       >
         {element.type === 'text' && (
           <div className="p-2 w-full h-full overflow-hidden">
@@ -1642,96 +1677,7 @@ export default function ReportBuilder() {
             </div>
           </div>
           
-          {/* Data Tiles Preview for Current Slide */}
-          <div className="flex-1 p-4 overflow-y-auto">
-            <h3 className="font-bold text-sm mb-3 text-gray-800">Data Tiles on This Slide</h3>
-            <div className="space-y-2">
-              {currentSlide?.elements
-                .filter(element => element.type === 'chart' || element.type === 'table' || element.type === 'metric')
-                .map((element) => (
-                  <div
-                    key={element.id}
-                    className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                      selectedElement === element.id 
-                        ? 'border-blue-500 bg-blue-50' 
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                    onClick={() => setSelectedElement(element.id)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          {element.type === 'metric' && <TrendingUp className="h-4 w-4 text-orange-600" />}
-                          {element.type === 'chart' && <BarChart3 className="h-4 w-4 text-blue-600" />}
-                          {element.type === 'table' && <Table className="h-4 w-4 text-green-600" />}
-                          <span className="font-medium text-sm truncate">
-                            {typeof element.content === 'string' ? element.content : 
-                             typeof element.title === 'string' ? element.title : 
-                             `${element.type.toUpperCase()} Element`}
-                          </span>
-                        </div>
-                        
-                        {element.dataSource?.query && (
-                          <div className="text-xs text-gray-500 font-mono bg-gray-100 p-1 rounded mt-1 truncate">
-                            {element.dataSource.query.substring(0, 50)}...
-                          </div>
-                        )}
-                        
-                        <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
-                          <span>Position: {Math.round(element.x)}, {Math.round(element.y)}</span>
-                          <span>Size: {Math.round(element.width)} × {Math.round(element.height)}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex gap-1 ml-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Open tile edit dialog
-                            if (element.dataSource?.query) {
-                              setCurrentQuery(element.dataSource.query);
-                              setCurrentTitle(
-                                typeof element.content === 'string' ? element.content : 
-                                typeof element.title === 'string' ? element.title : 
-                                ''
-                              );
-                              setVisualizationType(element.type === 'metric' ? 'metric' : element.type === 'table' ? 'table' : 'bar');
-                              setShowSQLEditor(true);
-                            }
-                          }}
-                        >
-                          <Settings className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteElement(element.id);
-                          }}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              }
-              
-              {(!currentSlide?.elements || 
-                currentSlide.elements.filter(el => el.type === 'chart' || el.type === 'table' || el.type === 'metric').length === 0) && (
-                <div className="text-center py-6 text-gray-400">
-                  <BarChart3 className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No data tiles on this slide</p>
-                  <p className="text-xs mt-1">Add metrics, charts, or tables to see them here</p>
-                </div>
-              )}
-            </div>
-          </div>
+
 
         </div>
 
@@ -1827,6 +1773,85 @@ export default function ReportBuilder() {
                   </div>
                 </div>
               ))}
+            </div>
+            
+            {/* Data Tiles Panel - Below Slides */}
+            <div className="mt-4 border-t pt-4">
+              <h3 className="font-semibold text-sm mb-3">Data Tiles on This Slide</h3>
+              <div 
+                className="grid grid-cols-2 gap-2 overflow-y-auto max-h-32"
+                style={{ 
+                  maxWidth: `${(1920 * (zoom / 100)) / 1.5}px`,
+                  margin: '0 auto'
+                }}
+              >
+                {currentSlide?.elements
+                  .filter(element => element.type === 'chart' || element.type === 'table' || element.type === 'metric')
+                  .map((element) => (
+                    <div
+                      key={element.id}
+                      className={`p-2 border rounded-lg cursor-pointer transition-all text-xs ${
+                        selectedElement === element.id 
+                          ? 'border-blue-500 bg-blue-50' 
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                      onClick={() => setSelectedElement(element.id)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          {element.type === 'metric' && <TrendingUp className="h-3 w-3 text-orange-600 flex-shrink-0" />}
+                          {element.type === 'chart' && <BarChart3 className="h-3 w-3 text-blue-600 flex-shrink-0" />}
+                          {element.type === 'table' && <Table className="h-3 w-3 text-green-600 flex-shrink-0" />}
+                          <span className="font-medium truncate">
+                            {typeof element.content === 'string' ? element.content : 
+                             typeof element.title === 'string' ? element.title : 
+                             `${element.type.toUpperCase()}`}
+                          </span>
+                        </div>
+                        
+                        <div className="flex gap-1 ml-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditTile(element);
+                            }}
+                          >
+                            <Settings className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteElement(element.id);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {element.dataSource?.query && (
+                        <div className="text-xs text-gray-500 font-mono bg-gray-100 p-1 rounded mt-1 truncate">
+                          {element.dataSource.query.substring(0, 30)}...
+                        </div>
+                      )}
+                    </div>
+                  ))
+                }
+                
+                {(!currentSlide?.elements || 
+                  currentSlide.elements.filter(el => el.type === 'chart' || el.type === 'table' || el.type === 'metric').length === 0) && (
+                  <div className="col-span-2 text-center py-4 text-gray-400">
+                    <BarChart3 className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                    <p className="text-xs">No data tiles on this slide</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
