@@ -29,6 +29,7 @@ import {
   Trash2,
   MoreHorizontal
 } from 'lucide-react';
+import { CodeMirrorSQLEditor } from '@/components/dashboard/CodeMirrorSQLEditor';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,6 +64,8 @@ export function DataStudioExplores() {
   const [showEditExplore, setShowEditExplore] = useState(false);
   const [selectedExplore, setSelectedExplore] = useState<Explore | null>(null);
   const [activeTab, setActiveTab] = useState('explores');
+  const [newExploreQuery, setNewExploreQuery] = useState('');
+  const [editExploreQuery, setEditExploreQuery] = useState('');
 
   // Sample explores data
   const explores: Explore[] = [
@@ -177,6 +180,7 @@ export function DataStudioExplores() {
 
   const handleEditExplore = (explore: Explore) => {
     setSelectedExplore(explore);
+    setEditExploreQuery(explore.query);
     setShowEditExplore(true);
   };
 
@@ -244,11 +248,14 @@ export function DataStudioExplores() {
                 </div>
                 <div>
                   <Label htmlFor="explore-query">SQL Query</Label>
-                  <Textarea 
-                    id="explore-query" 
-                    placeholder="SELECT * FROM..." 
-                    className="min-h-32 font-mono"
-                  />
+                  <div className="mt-2">
+                    <CodeMirrorSQLEditor
+                      value={newExploreQuery}
+                      onChange={setNewExploreQuery}
+                      placeholder="SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 LIMIT 100"
+                      className="min-h-32"
+                    />
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="explore-tags">Tags (comma separated)</Label>
@@ -472,19 +479,24 @@ export function DataStudioExplores() {
                       <CardTitle>SQL Query</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="bg-muted/50 p-4 rounded-lg font-mono text-sm">
-                        <pre className="whitespace-pre-wrap">{selectedExplore.query}</pre>
+                      <div className="mb-4">
+                        <CodeMirrorSQLEditor
+                          value={selectedExplore.query}
+                          onChange={() => {}} // Read-only in view mode
+                          placeholder=""
+                          className="min-h-32"
+                        />
                       </div>
-                      <div className="flex items-center gap-4 mt-4">
-                        <Button>
+                      <div className="flex items-center gap-4">
+                        <Button onClick={() => handleRunQuery(selectedExplore)}>
                           <Play className="h-4 w-4 mr-2" />
                           Execute Query
                         </Button>
-                        <Button variant="outline">
+                        <Button variant="outline" onClick={() => handleEditExplore(selectedExplore)}>
                           <Settings className="h-4 w-4 mr-2" />
                           Edit Query
                         </Button>
-                        <Button variant="outline">
+                        <Button variant="outline" onClick={() => navigator.clipboard.writeText(selectedExplore.query)}>
                           <Copy className="h-4 w-4 mr-2" />
                           Copy Query
                         </Button>
@@ -561,12 +573,14 @@ export function DataStudioExplores() {
                 </div>
                 <div>
                   <Label htmlFor="edit-explore-query">SQL Query</Label>
-                  <Textarea 
-                    id="edit-explore-query" 
-                    defaultValue={selectedExplore.query}
-                    placeholder="SELECT * FROM..." 
-                    className="min-h-32 font-mono"
-                  />
+                  <div className="mt-2">
+                    <CodeMirrorSQLEditor
+                      value={editExploreQuery}
+                      onChange={setEditExploreQuery}
+                      placeholder="SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 LIMIT 100"
+                      className="min-h-32"
+                    />
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="edit-explore-tags">Tags (comma separated)</Label>
