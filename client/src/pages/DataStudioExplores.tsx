@@ -70,6 +70,176 @@ export function DataStudioExplores() {
   const [queryResults, setQueryResults] = useState<any>(null);
   const [previewData, setPreviewData] = useState<any>(null);
 
+  // Function to render visualization preview based on type
+  const renderVisualizationPreview = (explore: Explore) => {
+    const mockData = [
+      { name: 'Jan', value: 400 },
+      { name: 'Feb', value: 300 },
+      { name: 'Mar', value: 600 },
+      { name: 'Apr', value: 800 },
+      { name: 'May', value: 500 }
+    ];
+
+    switch (explore.visualizationType) {
+      case 'line':
+        return (
+          <div className="h-32 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded flex items-center justify-center relative overflow-hidden">
+            <div className="absolute inset-0 flex items-end justify-around p-2">
+              {[40, 30, 60, 80, 50].map((height, i) => (
+                <div key={i} className="w-1 bg-blue-500 rounded-t" style={{ height: `${height}%` }} />
+              ))}
+            </div>
+            <LineChart className="h-8 w-8 text-blue-600 z-10" />
+          </div>
+        );
+      case 'bar':
+        return (
+          <div className="h-32 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded flex items-center justify-center relative overflow-hidden">
+            <div className="absolute inset-0 flex items-end justify-around p-2">
+              {[60, 40, 80, 70, 50].map((height, i) => (
+                <div key={i} className="w-3 bg-green-500 rounded-t" style={{ height: `${height}%` }} />
+              ))}
+            </div>
+            <BarChart3 className="h-8 w-8 text-green-600 z-10" />
+          </div>
+        );
+      case 'pie':
+        return (
+          <div className="h-32 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded flex items-center justify-center relative overflow-hidden">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full border-8 border-purple-500 border-r-purple-300 border-b-purple-300" />
+            </div>
+            <PieChart className="h-8 w-8 text-purple-600 z-10" />
+          </div>
+        );
+      case 'number':
+        return (
+          <div className="h-32 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded flex items-center justify-center flex-col">
+            <div className="text-2xl font-bold text-orange-600">1,234</div>
+            <div className="text-sm text-orange-500">Total Count</div>
+          </div>
+        );
+      default:
+        return (
+          <div className="h-32 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20 rounded flex items-center justify-center">
+            <Database className="h-8 w-8 text-gray-500" />
+          </div>
+        );
+    }
+  };
+
+  // Function to render actual data visualization from query results
+  const renderDataVisualization = (visualizationType: string, data: any) => {
+    if (!data || !data.rows || !data.columns) {
+      return <div className="flex items-center justify-center h-full">No data available</div>;
+    }
+
+    // Transform data for recharts format
+    const transformedData = data.rows.slice(0, 50).map((row: any[]) => {
+      const item: any = {};
+      data.columns.forEach((col: any, index: number) => {
+        const colName = col.name || col;
+        item[colName] = row[index];
+      });
+      return item;
+    });
+
+    const firstCol = data.columns[0]?.name || data.columns[0];
+    const secondCol = data.columns[1]?.name || data.columns[1];
+
+    switch (visualizationType) {
+      case 'line':
+        return (
+          <div className="w-full h-full p-4">
+            <div className="w-full h-80 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50 rounded-lg p-4 flex items-center justify-center">
+              <div className="text-center">
+                <LineChart className="h-16 w-16 text-blue-600 mx-auto mb-4" />
+                <p className="text-lg font-semibold text-blue-800 dark:text-blue-200">Line Chart</p>
+                <p className="text-sm text-blue-600 dark:text-blue-300">
+                  {data.rows.length} data points • {firstCol} vs {secondCol}
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      
+      case 'bar':
+        return (
+          <div className="w-full h-full p-4">
+            <div className="w-full h-80 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50 rounded-lg p-4 flex items-center justify-center">
+              <div className="text-center">
+                <BarChart3 className="h-16 w-16 text-green-600 mx-auto mb-4" />
+                <p className="text-lg font-semibold text-green-800 dark:text-green-200">Bar Chart</p>
+                <p className="text-sm text-green-600 dark:text-green-300">
+                  {data.rows.length} categories • {firstCol} vs {secondCol}
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      
+      case 'pie':
+        return (
+          <div className="w-full h-full p-4">
+            <div className="w-full h-80 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50 rounded-lg p-4 flex items-center justify-center">
+              <div className="text-center">
+                <PieChart className="h-16 w-16 text-purple-600 mx-auto mb-4" />
+                <p className="text-lg font-semibold text-purple-800 dark:text-purple-200">Pie Chart</p>
+                <p className="text-sm text-purple-600 dark:text-purple-300">
+                  {data.rows.length} segments • {firstCol}
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      
+      case 'number':
+        const value = data.rows[0]?.[0];
+        return (
+          <div className="w-full h-full p-4">
+            <div className="w-full h-80 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/50 dark:to-orange-900/50 rounded-lg p-4 flex items-center justify-center flex-col">
+              <div className="text-6xl font-bold text-orange-600 mb-4">
+                {typeof value === 'number' ? value.toLocaleString() : value}
+              </div>
+              <p className="text-lg font-semibold text-orange-800 dark:text-orange-200">{firstCol}</p>
+              <p className="text-sm text-orange-600 dark:text-orange-300">From {data.rows.length} records</p>
+            </div>
+          </div>
+        );
+      
+      case 'table':
+      default:
+        return (
+          <div className="w-full h-full p-4">
+            <div className="overflow-auto max-h-80 border rounded-lg">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-muted/50 sticky top-0">
+                    {data.columns.map((col: any, idx: number) => (
+                      <th key={idx} className="border-b border-border p-3 text-left font-semibold text-sm">
+                        {col.name || col}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.rows.slice(0, 20).map((row: any[], rowIdx: number) => (
+                    <tr key={rowIdx} className="hover:bg-muted/25">
+                      {row.map((cell, cellIdx) => (
+                        <td key={cellIdx} className="border-b border-border p-3 text-sm">
+                          {cell?.toString() || '-'}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+    }
+  };
+
   // Sample explores data
   const explores: Explore[] = [
     {
@@ -462,6 +632,12 @@ export function DataStudioExplores() {
                       <span>by {explore.createdBy}</span>
                       <span>{explore.lastModified}</span>
                     </div>
+                    
+                    {/* Visualization Preview */}
+                    <div className="mt-3 mb-3">
+                      {renderVisualizationPreview(explore)}
+                    </div>
+                    
                     <div className="mt-3 p-2 bg-muted/50 rounded text-xs font-mono">
                       {explore.query.length > 60 ? `${explore.query.substring(0, 60)}...` : explore.query}
                     </div>
@@ -553,15 +729,37 @@ export function DataStudioExplores() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="h-96 flex items-center justify-center border-2 border-dashed border-muted-foreground/25 rounded-lg">
-                        <div className="text-center">
-                          <div className="text-6xl mb-4">
-                            {getVisualizationIcon(selectedExplore.visualizationType)}
+                      {isExecuting ? (
+                        <div className="h-96 flex items-center justify-center">
+                          <div className="text-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                            <p className="text-lg font-medium">Generating Visualization...</p>
+                            <p className="text-muted-foreground">Processing query results</p>
                           </div>
-                          <p className="text-lg font-medium">Visualization Preview</p>
-                          <p className="text-muted-foreground">Run query to see visualization</p>
                         </div>
-                      </div>
+                      ) : queryResults && queryResults.rows && queryResults.columns ? (
+                        <div className="h-96">
+                          {renderDataVisualization(selectedExplore.visualizationType, queryResults)}
+                        </div>
+                      ) : (
+                        <div className="h-96 flex items-center justify-center border-2 border-dashed border-muted-foreground/25 rounded-lg">
+                          <div className="text-center">
+                            <div className="text-6xl mb-4">
+                              {getVisualizationIcon(selectedExplore.visualizationType)}
+                            </div>
+                            <p className="text-lg font-medium">Visualization Preview</p>
+                            <p className="text-muted-foreground">Run query to see visualization</p>
+                            <Button 
+                              className="mt-4" 
+                              onClick={() => handleRunQuery(selectedExplore)}
+                              disabled={isExecuting}
+                            >
+                              <Play className="h-4 w-4 mr-2" />
+                              Run Query
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
