@@ -19,7 +19,7 @@ interface Integration {
   name: string;
   type: string;
   description: string;
-  status: 'connected' | 'disconnected' | 'testing' | 'error';
+  status: 'connected' | 'disconnected' | 'testing' | 'error' | 'paused';
   credentials: Record<string, any>;
   metadata?: {
     accountInfo?: string;
@@ -751,10 +751,20 @@ export default function Integrations() {
         return <Badge className="status-error px-3 py-1 text-xs font-medium"><XCircle className="h-3 w-3 mr-1" />Error</Badge>;
       case 'testing':
         return <Badge className="status-warning px-3 py-1 text-xs font-medium"><Clock className="h-3 w-3 mr-1" />Testing</Badge>;
+      case 'paused':
+        return <Badge className="bg-orange-100 text-orange-800 border border-orange-200 px-3 py-1 text-xs font-medium"><Clock className="h-3 w-3 mr-1" />Paused</Badge>;
       default:
         return <Badge className="bg-gray-100 text-gray-700 border border-gray-200 px-3 py-1 text-xs font-medium"><AlertTriangle className="h-3 w-3 mr-1" />Disconnected</Badge>;
     }
   }, []);
+
+  const handlePauseToggle = (integration: Integration) => {
+    const newStatus = integration.status === 'paused' ? 'connected' : 'paused';
+    updateIntegrationMutation.mutate({
+      id: integration.id,
+      data: { status: newStatus }
+    });
+  };
 
   const renderField = (field: IntegrationField, value: any, onChange: (value: any) => void) => {
     switch (field.type) {
@@ -812,86 +822,58 @@ export default function Integrations() {
         </Button>
       </div>
 
-      <div className="grid-responsive">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {integrations.map((integration: Integration) => {
           const template = integrationTemplates[integration.type];
           return (
-            <Card key={integration.id} className="card hover:shadow-xl transition-all duration-300 slide-up group">
-              <CardHeader className="pb-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
+            <Card key={integration.id} className="card hover:shadow-lg transition-all duration-300 group">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
                       {template?.icon}
                     </div>
-                    <div className="space-y-1">
-                      <CardTitle className="text-xl font-semibold group-hover:text-blue-600 transition-colors">
+                    <div>
+                      <CardTitle className="text-lg font-semibold group-hover:text-blue-600 transition-colors">
                         {integration.name}
                       </CardTitle>
-                      <CardDescription className="text-base text-muted-foreground leading-relaxed">
-                        {integration.description}
-                      </CardDescription>
+                      <div className="text-sm text-muted-foreground">
+                        {integration.type.charAt(0).toUpperCase() + integration.type.slice(1)}
+                      </div>
                     </div>
                   </div>
                   {getStatusBadge(integration.status)}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-5">
-                {/* Enhanced metadata display for Snowflake */}
-                {integration.type === 'snowflake' && integration.metadata && (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                        <div className="font-medium text-blue-900 mb-1">Database</div>
-                        <div className="text-blue-700">{integration.credentials.database || 'N/A'}</div>
-                      </div>
-                      <div className="bg-green-50 p-3 rounded-lg border border-green-100">
-                        <div className="font-medium text-green-900 mb-1">Records</div>
-                        <div className="text-green-700">{integration.metadata.recordCount?.toLocaleString() || 'N/A'}</div>
-                      </div>
-                    </div>
-                    
-                    {integration.metadata.dataAvailable && (
-                      <div className="bg-gray-50 p-3 rounded-lg border">
-                        <div className="font-medium text-gray-900 mb-2">Available Tables</div>
-                        <div className="flex flex-wrap gap-2">
-                          {integration.metadata.dataAvailable.slice(0, 3).map((table: string) => (
-                            <Badge key={table} variant="secondary" className="text-xs">
-                              {table}
-                            </Badge>
-                          ))}
-                          {integration.metadata.dataAvailable.length > 3 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{integration.metadata.dataAvailable.length - 3} more
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    )}
+              <CardContent className="space-y-3">
+                {/* Compact connection info */}
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div className="flex justify-between">
+                    <span>Created:</span>
+                    <span>{new Date(integration.createdAt).toLocaleString()}</span>
                   </div>
-                )}
-
-                {/* Standard metadata for other integrations */}
-                {integration.type !== 'snowflake' && (
-                  <div className="text-sm text-muted-foreground space-y-2 bg-gray-50 p-4 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">Created:</span>
-                      <span>{new Date(integration.createdAt).toLocaleDateString()}</span>
-                    </div>
-                    {integration.lastUsedAt && (
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">Last used:</span>
-                        <span>{new Date(integration.lastUsedAt).toLocaleDateString()}</span>
-                      </div>
-                    )}
+                  <div className="flex justify-between">
+                    <span>Updated:</span>
+                    <span>{new Date(integration.updatedAt).toLocaleString()}</span>
                   </div>
-                )}
-
-                {/* Connection status and last tested info */}
-                {integration.metadata?.lastTested && (
-                  <div className="text-xs text-muted-foreground bg-gray-50 p-2 rounded border">
-                    <div className="flex items-center justify-between">
+                  {integration.metadata?.lastTested && (
+                    <div className="flex justify-between">
                       <span>Last tested:</span>
                       <span>{new Date(integration.metadata.lastTested).toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Snowflake specific info - compact */}
+                {integration.type === 'snowflake' && (
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-blue-50 p-2 rounded border border-blue-100">
+                      <div className="font-medium text-blue-900">Database</div>
+                      <div className="text-blue-700 truncate">{integration.credentials.database}</div>
+                    </div>
+                    <div className="bg-green-50 p-2 rounded border border-green-100">
+                      <div className="font-medium text-green-900">Warehouse</div>
+                      <div className="text-green-700 truncate">{integration.credentials.warehouse}</div>
                     </div>
                   </div>
                 )}
@@ -901,32 +883,32 @@ export default function Integrations() {
                     variant="outline" 
                     size="sm" 
                     onClick={() => handleConfigureIntegration(integration)}
-                    className="flex-1 font-medium hover:bg-blue-50 hover:border-blue-200 transition-colors"
+                    className="flex-1 text-xs"
                   >
-                    <Settings className="h-4 w-4 mr-2" />
+                    <Settings className="h-3 w-3 mr-1" />
                     Edit
                   </Button>
                   <Button 
                     variant="default" 
                     size="sm"
                     onClick={() => testConnectionMutation.mutate(integration.id)}
-                    disabled={testConnectionMutation.isPending}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                    disabled={testConnectionMutation.isPending || integration.status === 'paused'}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs"
                   >
                     {testConnectionMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                     ) : (
-                      <CheckCircle className="h-4 w-4 mr-2" />
+                      <CheckCircle className="h-3 w-3 mr-1" />
                     )}
                     Test
                   </Button>
                   <Button 
-                    variant="destructive" 
+                    variant={integration.status === 'paused' ? 'default' : 'secondary'}
                     size="sm"
-                    onClick={() => deleteIntegrationMutation.mutate(integration.id)}
-                    className="hover:bg-red-600 transition-colors"
+                    onClick={() => handlePauseToggle(integration)}
+                    className="text-xs"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    {integration.status === 'paused' ? 'Resume' : 'Pause'}
                   </Button>
                 </div>
               </CardContent>
@@ -1116,6 +1098,22 @@ export default function Integrations() {
                   </Button>
                   <Button onClick={handleSaveIntegration} className="flex-1">
                     Save Configuration
+                  </Button>
+                </div>
+                
+                <div className="pt-4 border-t">
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => deleteIntegrationMutation.mutate(selectedIntegration.id)}
+                    disabled={deleteIntegrationMutation.isPending}
+                    className="w-full"
+                  >
+                    {deleteIntegrationMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4 mr-2" />
+                    )}
+                    Delete Integration
                   </Button>
                 </div>
               </div>
