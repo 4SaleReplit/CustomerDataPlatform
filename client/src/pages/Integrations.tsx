@@ -231,6 +231,41 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
       'Store and analyze cross-platform user data'
     ]
   },
+  postgresql: {
+    name: 'PostgreSQL',
+    description: 'Relational database for data storage and analytics',
+    icon: <div className="h-6 w-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-xs">PG</div>,
+    color: 'bg-blue-600',
+    fields: [
+      { key: 'host', label: 'Host', type: 'text', required: true, placeholder: 'localhost' },
+      { key: 'port', label: 'Port', type: 'number', required: true, placeholder: '5432' },
+      { key: 'database', label: 'Database', type: 'text', required: true, placeholder: 'mydatabase' },
+      { key: 'username', label: 'Username', type: 'text', required: true },
+      { key: 'password', label: 'Password', type: 'password', required: true },
+      { key: 'ssl', label: 'SSL Mode', type: 'select', required: true, options: ['require', 'prefer', 'allow', 'disable'] }
+    ],
+    setupGuide: {
+      title: 'Configure PostgreSQL Connection',
+      steps: [
+        'Ensure PostgreSQL server is running and accessible',
+        'Create a dedicated user account with appropriate permissions',
+        'Grant necessary database permissions (SELECT, INSERT, UPDATE, DELETE)',
+        'Configure SSL settings based on your security requirements',
+        'Test connection using provided credentials'
+      ]
+    },
+    permissions: {
+      required: ['CONNECT', 'SELECT', 'INSERT', 'UPDATE', 'DELETE on tables'],
+      documentation: 'Create user in PostgreSQL → Grant permissions → Configure SSL → Test connection'
+    },
+    useCases: [
+      'Store and query customer data',
+      'Manage user sessions and authentication',
+      'Analytics and reporting data storage',
+      'Real-time data processing',
+      'Application state persistence'
+    ]
+  },
   clevertap: {
     name: 'CleverTap',
     description: 'Customer engagement and analytics platform',

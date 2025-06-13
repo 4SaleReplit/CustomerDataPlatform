@@ -1435,6 +1435,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/integrations/postgresql/test", async (req, res) => {
+    try {
+      const { host, port, database, username, password, ssl } = req.body;
+      
+      if (!host || !port || !database || !username || !password) {
+        return res.status(400).json({ 
+          error: "Missing required fields: host, port, database, username, password" 
+        });
+      }
+
+      // Test PostgreSQL connection
+      const { Pool } = await import('pg');
+      const pool = new Pool({
+        host,
+        port: parseInt(port),
+        database,
+        user: username,
+        password,
+        ssl: ssl === 'require' ? { rejectUnauthorized: false } : false,
+        connectionTimeoutMillis: 5000
+      });
+
+      const client = await pool.connect();
+      const result = await client.query('SELECT version() as version, current_database() as database');
+      client.release();
+      await pool.end();
+
+      res.json({ 
+        success: true, 
+        message: "PostgreSQL connection successful",
+        databaseInfo: result.rows[0]
+      });
+    } catch (error: any) {
+      console.error("PostgreSQL test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || "Failed to connect to PostgreSQL database"
+      });
+    }
+  });
+
   // Generic test endpoint for other integrations
   app.post("/api/integrations/:type/test", async (req, res) => {
     try {
@@ -1739,6 +1780,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case 'snowflake':
           const snowflakeResult = await snowflakeService.executeQuery("SELECT 1 as test");
           testResult = { success: snowflakeResult.success, error: snowflakeResult.error };
+          break;
+        case 'postgresql':
+          try {
+            const { Pool } = await import('pg');
+            const creds = integration.credentials as any;
+            const pool = new Pool({
+              host: creds.host,
+              port: parseInt(creds.port),
+              database: creds.database,
+              user: creds.username,
+              password: creds.password,
+              ssl: creds.ssl === 'require' ? { rejectUnauthorized: false } : false,
+              connectionTimeoutMillis: 5000
+            });
+            
+            const client = await pool.connect();
+            await client.query('SELECT 1 as test');
+            client.release();
+            await pool.end();
+            
+            testResult = { success: true, message: "PostgreSQL connection successful" };
+          } catch (error: any) {
+            testResult = { success: false, error: error.message || "PostgreSQL connection failed" };
+          }
           break;
         default:
           testResult = { success: true, message: "Connection test passed" };
