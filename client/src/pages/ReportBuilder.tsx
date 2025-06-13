@@ -95,6 +95,7 @@ interface Report {
 
 export default function ReportBuilder() {
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   const [currentReport, setCurrentReport] = useState<Report | null>(null);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
@@ -307,6 +308,9 @@ export default function ReportBuilder() {
       if (response.ok) {
         const savedPresentation = await response.json();
         console.log('Presentation saved successfully:', savedPresentation.id);
+        
+        // Invalidate cache to refresh reports list
+        queryClient.invalidateQueries({ queryKey: ['/api/presentations'] });
         
         // Reset dialog state
         setShowSaveDialog(false);
