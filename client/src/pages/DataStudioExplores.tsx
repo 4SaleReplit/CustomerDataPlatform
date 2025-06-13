@@ -68,6 +68,7 @@ export function DataStudioExplores() {
   const [editExploreQuery, setEditExploreQuery] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
   const [queryResults, setQueryResults] = useState<any>(null);
+  const [previewData, setPreviewData] = useState<any>(null);
 
   // Sample explores data
   const explores: Explore[] = [
@@ -183,7 +184,22 @@ export function DataStudioExplores() {
   const handleEditExplore = (explore: Explore) => {
     setSelectedExplore(explore);
     setEditExploreQuery(explore.query);
+    setQueryResults(null);
     setShowEditExplore(true);
+  };
+
+  const handleSaveExplore = () => {
+    if (selectedExplore) {
+      // Update the explore with new query and data
+      const updatedExplore = {
+        ...selectedExplore,
+        query: editExploreQuery
+      };
+      // Here you would typically make an API call to save the explore
+      console.log('Saving explore:', updatedExplore);
+      setSelectedExplore(updatedExplore);
+      setShowEditExplore(false);
+    }
   };
 
   const handleRunQuery = async (explore: Explore) => {
@@ -794,7 +810,7 @@ export function DataStudioExplores() {
                     <Button variant="outline" onClick={() => setShowEditExplore(false)}>
                       Cancel
                     </Button>
-                    <Button onClick={() => setShowEditExplore(false)}>
+                    <Button onClick={handleSaveExplore}>
                       Save Changes
                     </Button>
                   </div>
