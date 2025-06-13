@@ -129,6 +129,10 @@ export default function ReportBuilder() {
   const [reportTitle, setReportTitle] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  // Delete slide confirmation dialog state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [slideToDelete, setSlideToDelete] = useState<number | null>(null);
+
   // Clipboard functionality for copy/cut/paste
   const [clipboard, setClipboard] = useState<{element: SlideElement; operation: 'copy' | 'cut'} | null>(null);
 
@@ -349,10 +353,17 @@ export default function ReportBuilder() {
     setCurrentSlideIndex(updatedReport.slides.length - 1);
   };
 
-  const deleteSlide = (slideIndex: number) => {
+  const handleDeleteSlideClick = (slideIndex: number) => {
     if (!currentReport || currentReport.slides.length <= 1) return; // Prevent deleting last slide
+    
+    setSlideToDelete(slideIndex);
+    setShowDeleteDialog(true);
+  };
 
-    const updatedSlides = currentReport.slides.filter((_, index) => index !== slideIndex);
+  const confirmDeleteSlide = () => {
+    if (slideToDelete === null || !currentReport) return;
+
+    const updatedSlides = currentReport.slides.filter((_, index) => index !== slideToDelete);
     
     const updatedReport = {
       ...currentReport,
@@ -362,13 +373,22 @@ export default function ReportBuilder() {
     setCurrentReport(updatedReport);
     
     // Adjust current slide index if necessary
-    if (slideIndex <= currentSlideIndex && currentSlideIndex > 0) {
+    if (slideToDelete <= currentSlideIndex && currentSlideIndex > 0) {
       setCurrentSlideIndex(currentSlideIndex - 1);
-    } else if (slideIndex < currentSlideIndex) {
+    } else if (slideToDelete < currentSlideIndex) {
       setCurrentSlideIndex(currentSlideIndex - 1);
     } else if (currentSlideIndex >= updatedSlides.length) {
       setCurrentSlideIndex(updatedSlides.length - 1);
     }
+
+    // Reset dialog state
+    setShowDeleteDialog(false);
+    setSlideToDelete(null);
+  };
+
+  const cancelDeleteSlide = () => {
+    setShowDeleteDialog(false);
+    setSlideToDelete(null);
   };
 
   // Handle editing a tile from the tiles panel
@@ -1818,7 +1838,7 @@ export default function ReportBuilder() {
                       className="absolute -top-2 -right-2 h-6 w-6 p-0 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
                       onClick={(e) => {
                         e.stopPropagation();
-                        deleteSlide(index);
+                        handleDeleteSlideClick(index);
                       }}
                     >
                       <Trash2 className="h-3 w-3" />
@@ -2837,6 +2857,41 @@ export default function ReportBuilder() {
               className="bg-green-600 hover:bg-green-700"
             >
               {isSaving ? 'Saving...' : (presentationId ? 'Update Report' : 'Save Report')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Slide Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Slide</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-sm text-gray-600">
+              Are you sure you want to delete slide {slideToDelete !== null ? slideToDelete + 1 : ''}? This action cannot be undone.
+            </div>
+            {slideToDelete !== null && currentReport?.slides[slideToDelete] && (
+              <div className="text-sm text-gray-500">
+                <strong>Slide:</strong> {currentReport.slides[slideToDelete].name}
+                <br />
+                <strong>Elements:</strong> {currentReport.slides[slideToDelete].elements.length} element{currentReport.slides[slideToDelete].elements.length !== 1 ? 's' : ''}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={cancelDeleteSlide}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={confirmDeleteSlide}
+              variant="destructive"
+            >
+              Delete Slide
             </Button>
           </DialogFooter>
         </DialogContent>
