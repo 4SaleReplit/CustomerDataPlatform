@@ -51,6 +51,11 @@ interface SlideElement {
   width: number;
   height: number;
   content: any;
+  title?: string;
+  dataSource?: {
+    query?: string;
+    table?: string;
+  };
   style: {
     fontSize?: number;
     fontWeight?: string;
@@ -1053,7 +1058,14 @@ export default function ReportBuilder() {
               ) : element.content.type === 'metric' ? (
                 <div className="flex flex-col items-center justify-center h-full">
                   <div className="text-lg font-bold text-blue-600">
-                    {element.content.data[0] ? Object.values(element.content.data[0])[0] : 'N/A'}
+                    {(() => {
+                      try {
+                        const value = element.content.data[0] ? Object.values(element.content.data[0])[0] : 'N/A';
+                        return typeof value === 'object' ? JSON.stringify(value) : String(value || 'N/A');
+                      } catch {
+                        return 'N/A';
+                      }
+                    })()}
                   </div>
                   <div className="text-xs text-gray-500">Metric Value</div>
                 </div>
@@ -1653,7 +1665,9 @@ export default function ReportBuilder() {
                           {element.type === 'chart' && <BarChart3 className="h-4 w-4 text-blue-600" />}
                           {element.type === 'table' && <Table className="h-4 w-4 text-green-600" />}
                           <span className="font-medium text-sm truncate">
-                            {element.content || element.title || `${element.type.toUpperCase()} Element`}
+                            {typeof element.content === 'string' ? element.content : 
+                             typeof element.title === 'string' ? element.title : 
+                             `${element.type.toUpperCase()} Element`}
                           </span>
                         </div>
                         
@@ -1679,7 +1693,11 @@ export default function ReportBuilder() {
                             // Open tile edit dialog
                             if (element.dataSource?.query) {
                               setCurrentQuery(element.dataSource.query);
-                              setCurrentTitle(element.content || element.title || '');
+                              setCurrentTitle(
+                                typeof element.content === 'string' ? element.content : 
+                                typeof element.title === 'string' ? element.title : 
+                                ''
+                              );
                               setVisualizationType(element.type === 'metric' ? 'metric' : element.type === 'table' ? 'table' : 'bar');
                               setShowSQLEditor(true);
                             }
