@@ -8,6 +8,9 @@ import {
   roles,
   permissions,
   rolePermissions,
+  uploadedImages,
+  slides,
+  presentations,
   type User, 
   type InsertUser, 
   type Team, 
@@ -32,7 +35,14 @@ import {
   type Permission,
   type InsertPermission,
   type RolePermission,
-  type InsertRolePermission
+  type InsertRolePermission,
+  type UploadedImage,
+  type InsertUploadedImage,
+  type Slide,
+  type InsertSlide,
+  type UpdateSlide,
+  type Presentation,
+  type InsertPresentation
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, or, and, desc } from "drizzle-orm";
@@ -586,6 +596,84 @@ export class DatabaseStorage implements IStorage {
   async checkUserPermission(userId: string, resource: string, action: string): Promise<boolean> {
     const userPermissions = await this.getUserPermissions(userId);
     return userPermissions.some(p => p.resource === resource && p.action === action);
+  }
+
+  // Image management methods
+  async getUploadedImages(): Promise<UploadedImage[]> {
+    return await db.select().from(uploadedImages).orderBy(desc(uploadedImages.createdAt));
+  }
+
+  async getUploadedImage(id: string): Promise<UploadedImage | undefined> {
+    const [image] = await db.select().from(uploadedImages).where(eq(uploadedImages.id, id));
+    return image || undefined;
+  }
+
+  async createUploadedImage(insertImage: InsertUploadedImage): Promise<UploadedImage> {
+    const [image] = await db.insert(uploadedImages).values(insertImage).returning();
+    return image;
+  }
+
+  async deleteUploadedImage(id: string): Promise<boolean> {
+    const result = await db.delete(uploadedImages).where(eq(uploadedImages.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Slide management methods
+  async getSlides(): Promise<Slide[]> {
+    return await db.select().from(slides).orderBy(slides.order, desc(slides.createdAt));
+  }
+
+  async getSlide(id: string): Promise<Slide | undefined> {
+    const [slide] = await db.select().from(slides).where(eq(slides.id, id));
+    return slide || undefined;
+  }
+
+  async createSlide(insertSlide: InsertSlide): Promise<Slide> {
+    const [slide] = await db.insert(slides).values(insertSlide).returning();
+    return slide;
+  }
+
+  async updateSlide(id: string, updates: UpdateSlide): Promise<Slide | undefined> {
+    const [slide] = await db
+      .update(slides)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(slides.id, id))
+      .returning();
+    return slide || undefined;
+  }
+
+  async deleteSlide(id: string): Promise<boolean> {
+    const result = await db.delete(slides).where(eq(slides.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Presentation management methods
+  async getPresentations(): Promise<Presentation[]> {
+    return await db.select().from(presentations).orderBy(desc(presentations.createdAt));
+  }
+
+  async getPresentation(id: string): Promise<Presentation | undefined> {
+    const [presentation] = await db.select().from(presentations).where(eq(presentations.id, id));
+    return presentation || undefined;
+  }
+
+  async createPresentation(insertPresentation: InsertPresentation): Promise<Presentation> {
+    const [presentation] = await db.insert(presentations).values(insertPresentation).returning();
+    return presentation;
+  }
+
+  async updatePresentation(id: string, updates: Partial<InsertPresentation>): Promise<Presentation | undefined> {
+    const [presentation] = await db
+      .update(presentations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(presentations.id, id))
+      .returning();
+    return presentation || undefined;
+  }
+
+  async deletePresentation(id: string): Promise<boolean> {
+    const result = await db.delete(presentations).where(eq(presentations.id, id));
+    return result.rowCount > 0;
   }
 }
 
