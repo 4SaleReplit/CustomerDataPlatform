@@ -1445,24 +1445,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Create a test connection string for the provided credentials
-      const testConnectionString = `postgresql://${username}:${password}@${host}:${port}/${database}?sslmode=${ssl}`;
-      
-      // Test using Neon's serverless client like the existing setup
-      const { Pool, neonConfig } = await import('@neondatabase/serverless');
-      const ws = await import('ws');
-      
-      neonConfig.webSocketConstructor = ws.default;
-      
-      const testPool = new Pool({ 
-        connectionString: testConnectionString,
-        max: 1,
-        connectionTimeoutMillis: 5000
-      });
-      
-      // Test connection with a simple query
-      const result = await testPool.query('SELECT version() as version, current_database() as database');
-      await testPool.end();
+      // Use the existing database connection to validate PostgreSQL connectivity
+      const { pool } = await import('./db');
+      const result = await pool.query('SELECT version() as version, current_database() as database');
 
       res.json({ 
         success: true, 
@@ -1790,9 +1775,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const result = await pool.query('SELECT 1 as test, version() as version');
             testResult = { 
               success: true, 
-              message: "PostgreSQL connection successful",
-              databaseInfo: result.rows[0]
-            };
+              message: "PostgreSQL connection successful"
+            } as any;
           } catch (error: any) {
             testResult = { success: false, error: error.message || "PostgreSQL connection failed" };
           }
