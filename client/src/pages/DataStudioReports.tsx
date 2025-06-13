@@ -90,35 +90,53 @@ export function DataStudioReports() {
     }
   });
 
-  // Fetch first slides for preview thumbnails
-  const { data: slidePreviewsData = {} } = useQuery({
-    queryKey: ['/api/slide-previews', presentations],
+  // Fetch all slides data for accurate data point calculation and preview thumbnails
+  const { data: allSlidesData = {} } = useQuery({
+    queryKey: ['/api/all-slides-data', presentations],
     queryFn: async () => {
       if (!presentations.length) return {};
       
-      const slidePreviewPromises = presentations.map(async (presentation: any) => {
-        if (!presentation.slideIds?.length) return { presentationId: presentation.id, slide: null };
+      const presentationSlidePromises = presentations.map(async (presentation: any) => {
+        if (!presentation.slideIds?.length) return { presentationId: presentation.id, slides: [], firstSlide: null };
         
         try {
-          const response = await fetch(`/api/slides/${presentation.slideIds[0]}`);
-          if (response.ok) {
-            const slide = await response.json();
-            return { presentationId: presentation.id, slide };
-          }
+          // Fetch all slides for this presentation
+          const slidePromises = presentation.slideIds.map(async (slideId: string) => {
+            const response = await fetch(`/api/slides/${slideId}`);
+            if (response.ok) {
+              return response.json();
+            }
+            return null;
+          });
+          
+          const slides = await Promise.all(slidePromises);
+          const validSlides = slides.filter(slide => slide !== null);
+          
+          return { 
+            presentationId: presentation.id, 
+            slides: validSlides,
+            firstSlide: validSlides[0] || null
+          };
         } catch (error) {
-          console.error('Failed to fetch slide preview:', error);
+          console.error('Failed to fetch slides for presentation:', presentation.id, error);
         }
-        return { presentationId: presentation.id, slide: null };
+        return { presentationId: presentation.id, slides: [], firstSlide: null };
       });
       
-      const results = await Promise.all(slidePreviewPromises);
+      const results = await Promise.all(presentationSlidePromises);
       return results.reduce((acc, result) => {
-        acc[result.presentationId] = result.slide;
+        acc[result.presentationId] = result;
         return acc;
       }, {} as Record<string, any>);
     },
     enabled: presentations.length > 0
   });
+
+  // Extract first slide data for previews (backward compatibility)
+  const slidePreviewsData = Object.keys(allSlidesData).reduce((acc, presentationId) => {
+    acc[presentationId] = allSlidesData[presentationId]?.firstSlide || null;
+    return acc;
+  }, {} as Record<string, any>);
 
   // Handle delete report
   const handleDeleteReport = async (reportId: string, reportName: string) => {
@@ -222,15 +240,31 @@ export function DataStudioReports() {
     );
   };
 
+  // Calculate actual data points from all slide elements across all slides
+  const calculateDataPoints = (presentationId: string): number => {
+    const presentationData = allSlidesData[presentationId];
+    if (!presentationData || !presentationData.slides) return 0;
+
+    let totalDataPoints = 0;
+    
+    // Count data visualization elements across all slides
+    presentationData.slides.forEach((slide: any) => {
+      if (slide && slide.elements) {
+        const dataElements = slide.elements.filter((element: any) => 
+          element.type === 'chart' || 
+          element.type === 'table' || 
+          element.type === 'metric'
+        );
+        totalDataPoints += dataElements.length;
+      }
+    });
+
+    return totalDataPoints;
+  };
+
   // Transform presentations to match Report interface
   const reports: Report[] = presentations.map((presentation: any) => {
-    // Calculate data points (chart/table elements) from slides
-    let dataPoints = 0;
-    if (presentation.slideIds?.length) {
-      // Estimate based on slide count - will be improved with actual slide data
-      dataPoints = Math.max(1, Math.floor(presentation.slideIds.length * 1.5));
-    }
-
+    const dataPoints = calculateDataPoints(presentation.id);
     const createdDate = new Date(presentation.createdAt);
     const modifiedDate = new Date(presentation.updatedAt || presentation.createdAt);
 
