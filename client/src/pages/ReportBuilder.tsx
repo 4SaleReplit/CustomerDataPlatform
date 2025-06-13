@@ -787,11 +787,11 @@ export default function ReportBuilder() {
           isSelected ? 'border-blue-500 shadow-lg' : 'border-transparent hover:border-gray-300'
         }`}
         style={{
-          left: (element.x * (zoom / 100)) / 1.0,
-          top: (element.y * (zoom / 100)) / 1.0,
-          width: (element.width * (zoom / 100)) / 1.0,
-          height: (element.height * (zoom / 100)) / 1.0,
-          fontSize: element.style.fontSize ? `${(element.style.fontSize * (zoom / 100)) / 1.0}px` : '12px',
+          left: (element.x * (zoom / 100)) / 1.5,
+          top: (element.y * (zoom / 100)) / 1.5,
+          width: (element.width * (zoom / 100)) / 1.5,
+          height: (element.height * (zoom / 100)) / 1.5,
+          fontSize: element.style.fontSize ? `${(element.style.fontSize * (zoom / 100)) / 1.5}px` : '12px',
           color: element.style.color,
           textAlign: element.style.textAlign,
           backgroundColor: element.style.backgroundColor,
@@ -1164,13 +1164,13 @@ export default function ReportBuilder() {
         {/* Canvas Area */}
         <div className="flex-1 flex flex-col">
           {/* Canvas */}
-          <div className="overflow-auto bg-gray-100 p-2 flex items-center justify-center" style={{ height: 'calc(100vh - 320px)' }}>
+          <div className="overflow-auto bg-gray-100 p-4 flex items-center justify-center" style={{ height: 'calc(100vh - 350px)' }}>
             <div 
               ref={canvasRef}
               className="bg-white shadow-2xl relative border"
               style={{
-                width: (1920 * (zoom / 100)) / 1.0,
-                height: (1080 * (zoom / 100)) / 1.0,
+                width: (1920 * (zoom / 100)) / 1.5,
+                height: (1080 * (zoom / 100)) / 1.5,
                 background: currentSlide?.backgroundColor || '#ffffff',
                 backgroundImage: showGrid ? 'url("data:image/svg+xml,%3Csvg width="30" height="30" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="%23e5e7eb" fill-opacity="0.3"%3E%3Ccircle cx="1" cy="1" r="1"/%3E%3C/g%3E%3C/svg%3E")' : 'none'
               }}
