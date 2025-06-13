@@ -14,25 +14,8 @@ import { Plus, Settings, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Inf
 import { SiFacebook, SiGoogle, SiSnowflake, SiTwilio, SiMixpanel, SiIntercom, SiSalesforce, SiHubspot, SiZendesk } from "react-icons/si";
 import brazeIconPath from "@assets/BRZE_1749419981281.png";
 
-interface Integration {
-  id: string;
-  name: string;
-  type: string;
-  description: string;
-  status: 'connected' | 'disconnected' | 'testing' | 'error' | 'paused';
-  credentials: Record<string, any>;
-  metadata?: {
-    accountInfo?: string;
-    dataAvailable?: string[];
-    lastSync?: string;
-    recordCount?: number;
-    version?: string;
-    lastTested?: string;
-  };
-  createdAt: string;
-  lastUsedAt?: string;
-  updatedAt: string;
-}
+// Use the actual Integration type from schema
+import type { Integration } from '@shared/schema';
 
 interface IntegrationField {
   key: string;
@@ -572,15 +555,8 @@ const IntegrationCard = memo(({ integration, template, getStatusBadge, handleCon
           </div>
         )}
         
-        {/* Debug metadata */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="text-xs text-gray-400 bg-yellow-50 p-2 rounded">
-            Metadata: {integration.metadata ? JSON.stringify(Object.keys(integration.metadata)) : 'null'}
-          </div>
-        )}
-        
-        {/* Database-specific metadata - Always show if integration has metadata */}
-        {integration.metadata && Object.keys(integration.metadata).length > 0 && (
+        {/* Database-specific metadata */}
+        {integration.metadata && typeof integration.metadata === 'object' && Object.keys(integration.metadata).length > 0 && (
           <div className="mt-3 pt-3 border-t border-gray-200">
             <div className="text-xs font-semibold text-gray-600 mb-2">
               {integration.type === 'postgresql' ? 'DATABASE METRICS' : 
