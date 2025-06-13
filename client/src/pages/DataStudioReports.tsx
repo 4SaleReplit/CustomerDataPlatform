@@ -277,11 +277,11 @@ export function DataStudioReports() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => window.location.href = `/reports/presentation/${report.id}`}>
                               <Eye className="h-4 w-4 mr-2" />
                               Preview
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => window.location.href = `/design-studio?reportId=${report.id}`}>
+                            <DropdownMenuItem onClick={() => window.location.href = `/design-studio?presentationId=${report.id}`}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit in Design Studio
                             </DropdownMenuItem>
