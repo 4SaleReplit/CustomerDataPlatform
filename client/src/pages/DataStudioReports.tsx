@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { PresentationModal } from '@/components/PresentationModal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,6 +71,8 @@ export function DataStudioReports() {
   const [activeTab, setActiveTab] = useState('reports');
   const [showNewReport, setShowNewReport] = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [showPresentationModal, setShowPresentationModal] = useState(false);
+  const [selectedPresentationId, setSelectedPresentationId] = useState<string>('');
 
   // Fetch presentations from database
   const { data: presentations = [], isLoading, error } = useQuery({
@@ -277,7 +280,10 @@ export function DataStudioReports() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent>
-                            <DropdownMenuItem onClick={() => window.location.href = `/reports/presentation/${report.id}`}>
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedPresentationId(report.id);
+                              setShowPresentationModal(true);
+                            }}>
                               <Eye className="h-4 w-4 mr-2" />
                               Preview
                             </DropdownMenuItem>
@@ -438,6 +444,16 @@ export function DataStudioReports() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Presentation Modal */}
+      <PresentationModal
+        presentationId={selectedPresentationId}
+        isOpen={showPresentationModal}
+        onClose={() => {
+          setShowPresentationModal(false);
+          setSelectedPresentationId('');
+        }}
+      />
     </div>
   );
 }
