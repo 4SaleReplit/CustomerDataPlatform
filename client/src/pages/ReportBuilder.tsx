@@ -1164,7 +1164,7 @@ export default function ReportBuilder() {
         {/* Canvas Area */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Canvas */}
-          <div className="flex-1 overflow-auto bg-gray-100 p-4 flex items-center justify-center">
+          <div className="flex-1 overflow-auto bg-gray-100 p-2 flex items-center justify-center">
             <div 
               ref={canvasRef}
               className="bg-white shadow-2xl relative border"
