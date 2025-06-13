@@ -904,15 +904,37 @@ export default function ReportBuilder() {
           </div>
         )}
         {element.type === 'metric' && (
-          <div className="p-2 w-full h-full bg-white border border-green-200 rounded flex flex-col items-center justify-center">
-            <div className="text-lg font-bold text-green-700">
-              {element.content?.data && element.content.data.length > 0 
-                ? Object.values(element.content.data[0])[0] 
-                : element.content?.value || '123'}
-            </div>
-            <div className="text-xs text-gray-600 mt-1">
-              {element.content?.title || 'Metric'}
-            </div>
+          <div className="w-full h-full rounded overflow-hidden">
+            {element.content?.style === 'gradient' && (
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-3 rounded-lg border border-blue-200 w-full h-full flex flex-col justify-center">
+                <div className="text-xs text-blue-600 mb-1">{element.content?.title || 'Metric'}</div>
+                <div className="text-xl font-bold text-blue-800">
+                  {element.content?.data && element.content.data.length > 0 
+                    ? String(Object.values(element.content.data[0])[0] || '0').toLocaleString()
+                    : '0'}
+                </div>
+              </div>
+            )}
+            {element.content?.style === 'solid' && (
+              <div className="bg-green-500 text-white p-3 rounded-lg w-full h-full flex flex-col justify-center">
+                <div className="text-xs opacity-90 mb-1">{element.content?.title || 'Metric'}</div>
+                <div className="text-xl font-bold">
+                  {element.content?.data && element.content.data.length > 0 
+                    ? String(Object.values(element.content.data[0])[0] || '0').toLocaleString()
+                    : '0'}
+                </div>
+              </div>
+            )}
+            {(element.content?.style === 'minimal' || !element.content?.style) && (
+              <div className="bg-white border-2 border-gray-200 p-3 rounded-lg w-full h-full flex flex-col justify-center">
+                <div className="text-xs text-gray-600 mb-1">{element.content?.title || 'Metric'}</div>
+                <div className="text-xl font-bold text-gray-900">
+                  {element.content?.data && element.content.data.length > 0 
+                    ? String(Object.values(element.content.data[0])[0] || '0').toLocaleString()
+                    : '0'}
+                </div>
+              </div>
+            )}
           </div>
         )}
         {element.type === 'shape' && (
@@ -1057,17 +1079,18 @@ export default function ReportBuilder() {
     const elementId = nanoid();
     const newElement: SlideElement = {
       id: elementId,
-      type: 'chart',
+      type: visualizationType === 'metric' ? 'metric' : visualizationType === 'table' ? 'table' : 'chart',
       x: 100,
       y: 100,
-      width: 400,
-      height: 300,
+      width: visualizationType === 'metric' ? 250 : 400,
+      height: visualizationType === 'metric' ? 150 : 300,
       content: {
-        type: 'table', // Default to table view
+        type: visualizationType,
         title: currentTitle,
         query: currentQuery,
         data: queryResults,
-        columns: queryResults.length > 0 ? Object.keys(queryResults[0]) : []
+        columns: queryResults.length > 0 ? Object.keys(queryResults[0]) : [],
+        style: visualizationType === 'metric' ? metricStyle : undefined
       },
       style: {
         fontSize: 14,
@@ -1929,6 +1952,23 @@ export default function ReportBuilder() {
                     </SelectContent>
                   </Select>
                 </div>
+                
+                {/* Metric Card Style Selection */}
+                {visualizationType === 'metric' && queryResults && queryResults.length > 0 && Object.keys(queryResults[0]).length === 1 && (
+                  <div>
+                    <Label className="text-sm font-medium">Metric Card Style</Label>
+                    <Select value={metricStyle} onValueChange={setMetricStyle}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="gradient">Gradient Blue</SelectItem>
+                        <SelectItem value="solid">Solid Green</SelectItem>
+                        <SelectItem value="minimal">Minimal White</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 
                 <div>
                   <Label className="text-sm font-medium">Refresh Settings</Label>
