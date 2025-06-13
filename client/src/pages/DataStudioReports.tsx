@@ -193,13 +193,41 @@ export function DataStudioReports() {
       allSlides.forEach(slide => {
         if (slide?.elements) {
           slide.elements.forEach((element: any) => {
-            if ((element.type === 'chart' || element.type === 'table' || element.type === 'metric') 
-                && element.dataSource?.query) {
-              dataQueries.push({
-                slideId: slide.id,
-                elementId: element.id,
-                query: element.dataSource.query
+            let query = null;
+            
+            // Debug: Log element structure for troubleshooting
+            if (element.type === 'chart' || element.type === 'table' || element.type === 'metric') {
+              console.log('Analyzing element:', {
+                type: element.type,
+                id: element.id,
+                dataSource: element.dataSource,
+                content: element.content,
+                query: element.query
               });
+              
+              // Standard location
+              if (element.dataSource?.query) {
+                query = element.dataSource.query;
+              }
+              // Alternative location for metrics
+              else if (element.content?.query) {
+                query = element.content.query;
+              }
+              // Another possible location
+              else if (element.query) {
+                query = element.query;
+              }
+              
+              if (query) {
+                console.log('Found query:', query);
+                dataQueries.push({
+                  slideId: slide.id,
+                  elementId: element.id,
+                  query: query
+                });
+              } else {
+                console.log('No query found for element:', element.type, element.id);
+              }
             }
           });
         }
