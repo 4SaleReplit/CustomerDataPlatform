@@ -31,7 +31,7 @@ import {
   FileText
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
-import { CodeMirrorSQLEditor } from '@/components/CodeMirrorSQLEditor';
+import { CodeMirrorSQLEditor } from '@/components/dashboard/CodeMirrorSQLEditor';
 import { apiRequest } from '@/lib/queryClient';
 import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
@@ -1315,6 +1315,175 @@ export default function ReportBuilder() {
                   </div>
                 )}
 
+                {/* Chart/Visualization Element Configuration */}
+                {currentSlide?.elements.find(e => e.id === selectedElement)?.type === 'chart' && (
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Chart Configuration</Label>
+                    
+                    <div>
+                      <Label className="text-xs">Chart Type</Label>
+                      <Select 
+                        value={currentSlide?.elements.find(e => e.id === selectedElement)?.content?.type || 'bar'}
+                        onValueChange={(value) => updateElement(selectedElement, { 
+                          content: { 
+                            ...currentSlide?.elements.find(e => e.id === selectedElement)?.content, 
+                            type: value 
+                          }
+                        })}
+                      >
+                        <SelectTrigger className="mt-1 h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="bar">Bar Chart</SelectItem>
+                          <SelectItem value="line">Line Chart</SelectItem>
+                          <SelectItem value="pie">Pie Chart</SelectItem>
+                          <SelectItem value="table">Data Table</SelectItem>
+                          <SelectItem value="metric">Metric Card</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label className="text-xs">SQL Query</Label>
+                      <Textarea 
+                        className="mt-1 min-h-16 font-mono text-xs"
+                        value={currentSlide?.elements.find(e => e.id === selectedElement)?.content?.query || ''}
+                        onChange={(e) => updateElement(selectedElement, { 
+                          content: { 
+                            ...currentSlide?.elements.find(e => e.id === selectedElement)?.content, 
+                            query: e.target.value 
+                          }
+                        })}
+                        placeholder="SELECT column1, column2 FROM table WHERE condition"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-xs">Title</Label>
+                      <Input 
+                        className="mt-1 h-8"
+                        value={currentSlide?.elements.find(e => e.id === selectedElement)?.content?.title || ''}
+                        onChange={(e) => updateElement(selectedElement, { 
+                          content: { 
+                            ...currentSlide?.elements.find(e => e.id === selectedElement)?.content, 
+                            title: e.target.value 
+                          }
+                        })}
+                        placeholder="Chart title"
+                      />
+                    </div>
+
+                    <Button 
+                      size="sm" 
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      onClick={() => {
+                        // Execute query and update chart data
+                        const element = currentSlide?.elements.find(e => e.id === selectedElement);
+                        if (element?.content?.query) {
+                          setCurrentQuery(element.content.query);
+                          setCurrentTitle(element.content.title || '');
+                          setShowSQLEditor(true);
+                        }
+                      }}
+                    >
+                      <Settings className="h-3 w-3 mr-1" />
+                      Edit Query & Data
+                    </Button>
+                  </div>
+                )}
+
+                {/* Table Element Configuration */}
+                {currentSlide?.elements.find(e => e.id === selectedElement)?.type === 'table' && (
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Table Configuration</Label>
+                    
+                    <div>
+                      <Label className="text-xs">SQL Query</Label>
+                      <Textarea 
+                        className="mt-1 min-h-16 font-mono text-xs"
+                        value={currentSlide?.elements.find(e => e.id === selectedElement)?.content?.query || ''}
+                        onChange={(e) => updateElement(selectedElement, { 
+                          content: { 
+                            ...currentSlide?.elements.find(e => e.id === selectedElement)?.content, 
+                            query: e.target.value 
+                          }
+                        })}
+                        placeholder="SELECT * FROM table LIMIT 100"
+                      />
+                    </div>
+
+                    <Button 
+                      size="sm" 
+                      className="w-full bg-purple-600 hover:bg-purple-700"
+                      onClick={() => {
+                        const element = currentSlide?.elements.find(e => e.id === selectedElement);
+                        if (element?.content?.query) {
+                          setCurrentQuery(element.content.query);
+                          setCurrentTitle(element.content.title || 'Data Table');
+                          setShowSQLEditor(true);
+                        }
+                      }}
+                    >
+                      <Settings className="h-3 w-3 mr-1" />
+                      Configure Data Source
+                    </Button>
+                  </div>
+                )}
+
+                {/* Metric Element Configuration */}
+                {currentSlide?.elements.find(e => e.id === selectedElement)?.type === 'metric' && (
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Metric Configuration</Label>
+                    
+                    <div>
+                      <Label className="text-xs">Metric Title</Label>
+                      <Input 
+                        className="mt-1 h-8"
+                        value={currentSlide?.elements.find(e => e.id === selectedElement)?.content?.title || ''}
+                        onChange={(e) => updateElement(selectedElement, { 
+                          content: { 
+                            ...currentSlide?.elements.find(e => e.id === selectedElement)?.content, 
+                            title: e.target.value 
+                          }
+                        })}
+                        placeholder="Total Sales"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-xs">SQL Query (should return single value)</Label>
+                      <Textarea 
+                        className="mt-1 min-h-16 font-mono text-xs"
+                        value={currentSlide?.elements.find(e => e.id === selectedElement)?.content?.query || ''}
+                        onChange={(e) => updateElement(selectedElement, { 
+                          content: { 
+                            ...currentSlide?.elements.find(e => e.id === selectedElement)?.content, 
+                            query: e.target.value 
+                          }
+                        })}
+                        placeholder="SELECT COUNT(*) as value FROM table"
+                      />
+                    </div>
+
+                    <Button 
+                      size="sm" 
+                      className="w-full bg-orange-600 hover:bg-orange-700"
+                      onClick={() => {
+                        const element = currentSlide?.elements.find(e => e.id === selectedElement);
+                        if (element?.content?.query) {
+                          setCurrentQuery(element.content.query);
+                          setCurrentTitle(element.content.title || 'Metric');
+                          setShowSQLEditor(true);
+                        }
+                      }}
+                    >
+                      <Settings className="h-3 w-3 mr-1" />
+                      Configure Metric Query
+                    </Button>
+                  </div>
+                )}
+
                 {/* Style controls */}
                 <div className="space-y-3">
                   <div>
@@ -1508,12 +1677,37 @@ export default function ReportBuilder() {
                       <div className="text-xs text-gray-600">
                         {queryResults.length} rows returned
                       </div>
-                      <div className="text-xs font-mono">
-                        {JSON.stringify(queryResults.slice(0, 3), null, 2)}
-                      </div>
-                      {queryResults.length > 3 && (
-                        <div className="text-xs text-gray-500">
-                          ... and {queryResults.length - 3} more rows
+                      {queryResults.length > 0 && (
+                        <div className="overflow-auto">
+                          <table className="text-xs w-full border-collapse">
+                            <thead>
+                              <tr className="border-b bg-gray-100">
+                                {Object.keys(queryResults[0]).map((column) => (
+                                  <th key={column} className="text-left p-1 font-medium border-r">
+                                    {column}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {queryResults.slice(0, 5).map((row, index) => (
+                                <tr key={index} className="border-b hover:bg-gray-50">
+                                  {Object.values(row).map((value, cellIndex) => (
+                                    <td key={cellIndex} className="p-1 border-r">
+                                      {String(value).length > 20 
+                                        ? String(value).substring(0, 20) + '...' 
+                                        : String(value)}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                          {queryResults.length > 5 && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              ... and {queryResults.length - 5} more rows
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
