@@ -15,7 +15,7 @@ import { DataStudioDataExplorer } from "./pages/DataStudioDataExplorer";
 import { DataStudioDashboards } from "./pages/DataStudioDashboards";
 import { DataStudioExplores } from "./pages/DataStudioExplores";
 import { DataStudioReports } from "./pages/DataStudioReports";
-import { ReportBuilder } from "./pages/ReportBuilder";
+import ReportBuilder from "./pages/ReportBuilder";
 import Users from "./pages/Users";
 import UserProfile from "./pages/UserProfile";
 import Cohorts from "./pages/Cohorts";
