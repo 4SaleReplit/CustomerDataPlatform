@@ -60,6 +60,8 @@ export function DataStudioExplores() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [showNewExplore, setShowNewExplore] = useState(false);
+  const [showEditExplore, setShowEditExplore] = useState(false);
+  const [selectedExplore, setSelectedExplore] = useState<Explore | null>(null);
   const [activeTab, setActiveTab] = useState('explores');
 
   // Sample explores data
@@ -168,6 +170,31 @@ export function DataStudioExplores() {
     }
   };
 
+  const handleViewExplore = (explore: Explore) => {
+    setSelectedExplore(explore);
+    setActiveTab('view');
+  };
+
+  const handleEditExplore = (explore: Explore) => {
+    setSelectedExplore(explore);
+    setShowEditExplore(true);
+  };
+
+  const handleRunQuery = (explore: Explore) => {
+    // Execute the query and show results
+    console.log('Running query:', explore.query);
+  };
+
+  const handleDuplicateExplore = (explore: Explore) => {
+    // Create a copy of the explore
+    console.log('Duplicating explore:', explore.name);
+  };
+
+  const handleDeleteExplore = (explore: Explore) => {
+    // Delete the explore
+    console.log('Deleting explore:', explore.name);
+  };
+
   return (
     <div className="h-full flex flex-col">
       <div className="border-b p-4">
@@ -269,6 +296,11 @@ export function DataStudioExplores() {
           <TabsList>
             <TabsTrigger value="explores">All Explores</TabsTrigger>
             <TabsTrigger value="metrics">Quick Metrics</TabsTrigger>
+            {selectedExplore && (
+              <TabsTrigger value="view">
+                View: {selectedExplore.name}
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="explores" className="space-y-4 mt-4">
@@ -291,23 +323,23 @@ export function DataStudioExplores() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleViewExplore(explore)}>
                             <Eye className="h-4 w-4 mr-2" />
                             View
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditExplore(explore)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDuplicateExplore(explore)}>
                             <Copy className="h-4 w-4 mr-2" />
                             Duplicate
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleRunQuery(explore)}>
                             <Play className="h-4 w-4 mr-2" />
                             Run Query
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600">
+                          <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteExplore(explore)}>
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
                           </DropdownMenuItem>
@@ -377,7 +409,207 @@ export function DataStudioExplores() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Explore View Tab */}
+          {selectedExplore && (
+            <TabsContent value="view" className="space-y-4 mt-4">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-xl font-bold">{selectedExplore.name}</h2>
+                  <p className="text-muted-foreground">{selectedExplore.description}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => handleEditExplore(selectedExplore)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                  <Button size="sm" onClick={() => handleRunQuery(selectedExplore)}>
+                    <Play className="h-4 w-4 mr-2" />
+                    Run Query
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setActiveTab('explores')}>
+                    Back to List
+                  </Button>
+                </div>
+              </div>
+
+              <Tabs defaultValue="visualization" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="visualization">Visualization</TabsTrigger>
+                  <TabsTrigger value="query">Query</TabsTrigger>
+                  <TabsTrigger value="data">Data</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="visualization" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        {getVisualizationIcon(selectedExplore.visualizationType)}
+                        {selectedExplore.visualizationType === 'line' && 'Line Chart'}
+                        {selectedExplore.visualizationType === 'bar' && 'Bar Chart'}
+                        {selectedExplore.visualizationType === 'pie' && 'Pie Chart'}
+                        {selectedExplore.visualizationType === 'table' && 'Data Table'}
+                        {selectedExplore.visualizationType === 'number' && 'Metric'}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-96 flex items-center justify-center border-2 border-dashed border-muted-foreground/25 rounded-lg">
+                        <div className="text-center">
+                          <div className="text-6xl mb-4">
+                            {getVisualizationIcon(selectedExplore.visualizationType)}
+                          </div>
+                          <p className="text-lg font-medium">Visualization Preview</p>
+                          <p className="text-muted-foreground">Run query to see visualization</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="query" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>SQL Query</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="bg-muted/50 p-4 rounded-lg font-mono text-sm">
+                        <pre className="whitespace-pre-wrap">{selectedExplore.query}</pre>
+                      </div>
+                      <div className="flex items-center gap-4 mt-4">
+                        <Button>
+                          <Play className="h-4 w-4 mr-2" />
+                          Execute Query
+                        </Button>
+                        <Button variant="outline">
+                          <Settings className="h-4 w-4 mr-2" />
+                          Edit Query
+                        </Button>
+                        <Button variant="outline">
+                          <Copy className="h-4 w-4 mr-2" />
+                          Copy Query
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="data" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Query Results</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-96 flex items-center justify-center border-2 border-dashed border-muted-foreground/25 rounded-lg">
+                        <div className="text-center">
+                          <Database className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                          <p className="text-lg font-medium">No Data</p>
+                          <p className="text-muted-foreground">Execute query to view results</p>
+                          <Button className="mt-4" onClick={() => handleRunQuery(selectedExplore)}>
+                            <Play className="h-4 w-4 mr-2" />
+                            Run Query
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </TabsContent>
+          )}
         </Tabs>
+
+        {/* Edit Explore Dialog */}
+        <Dialog open={showEditExplore} onOpenChange={setShowEditExplore}>
+          <DialogContent className="max-w-4xl max-h-[85vh] overflow-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Explore: {selectedExplore?.name}</DialogTitle>
+            </DialogHeader>
+            {selectedExplore && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-explore-name">Name</Label>
+                    <Input 
+                      id="edit-explore-name" 
+                      defaultValue={selectedExplore.name}
+                      placeholder="Enter explore name" 
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-explore-type">Visualization Type</Label>
+                    <Select defaultValue={selectedExplore.visualizationType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="line">Line Chart</SelectItem>
+                        <SelectItem value="bar">Bar Chart</SelectItem>
+                        <SelectItem value="pie">Pie Chart</SelectItem>
+                        <SelectItem value="table">Table</SelectItem>
+                        <SelectItem value="number">Metric</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="edit-explore-description">Description</Label>
+                  <Input 
+                    id="edit-explore-description" 
+                    defaultValue={selectedExplore.description}
+                    placeholder="Enter description" 
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-explore-query">SQL Query</Label>
+                  <Textarea 
+                    id="edit-explore-query" 
+                    defaultValue={selectedExplore.query}
+                    placeholder="SELECT * FROM..." 
+                    className="min-h-32 font-mono"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-explore-tags">Tags (comma separated)</Label>
+                  <Input 
+                    id="edit-explore-tags" 
+                    defaultValue={selectedExplore.tags.join(', ')}
+                    placeholder="users, revenue, monthly" 
+                  />
+                </div>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2">
+                    <input 
+                      type="checkbox" 
+                      defaultChecked={selectedExplore.isPublic}
+                      className="rounded"
+                    />
+                    <span className="text-sm">Make this explore public</span>
+                  </label>
+                </div>
+                <div className="flex justify-between pt-4">
+                  <div className="flex gap-2">
+                    <Button variant="outline">
+                      <Play className="h-4 w-4 mr-2" />
+                      Test Query
+                    </Button>
+                    <Button variant="outline">
+                      <Eye className="h-4 w-4 mr-2" />
+                      Preview
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setShowEditExplore(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={() => setShowEditExplore(false)}>
+                      Save Changes
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
