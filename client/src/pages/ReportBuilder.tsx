@@ -1852,7 +1852,7 @@ export default function ReportBuilder() {
             <div className="mt-4 border-t pt-4">
               <h3 className="font-semibold text-sm mb-3">Data Tiles on This Slide</h3>
               <div 
-                className="grid grid-cols-1 gap-3 overflow-y-auto max-h-64"
+                className="flex gap-3 overflow-x-auto pb-2"
                 style={{ 
                   maxWidth: `${(1920 * (zoom / 100)) / 1.5}px`,
                   margin: '0 auto'
@@ -1863,32 +1863,79 @@ export default function ReportBuilder() {
                   .map((element) => (
                     <div
                       key={element.id}
-                      className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                      className={`flex-shrink-0 p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
                         selectedElement === element.id 
-                          ? 'border-blue-500 bg-blue-50' 
-                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                          ? 'border-blue-500 bg-blue-50 shadow-md' 
+                          : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                       }`}
                       onClick={() => setSelectedElement(element.id)}
                     >
-                      {/* Title and Type Row */}
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          {element.type === 'metric' && <TrendingUp className="h-4 w-4 text-orange-600 flex-shrink-0" />}
-                          {element.type === 'chart' && <BarChart3 className="h-4 w-4 text-blue-600 flex-shrink-0" />}
-                          {element.type === 'table' && <Table className="h-4 w-4 text-green-600 flex-shrink-0" />}
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium text-sm truncate">
-                              {typeof element.content === 'string' ? element.content : 
-                               typeof element.title === 'string' ? element.title : 
-                               `${element.type.charAt(0).toUpperCase() + element.type.slice(1)} Visualization`}
-                            </div>
-                            <div className="text-xs text-gray-500 capitalize">
-                              {element.type}
-                            </div>
+                      <div className="flex items-center gap-2">
+                        {/* Icon */}
+                        <div className="flex-shrink-0">
+                          {element.type === 'metric' && <TrendingUp className="h-3 w-3 text-orange-600" />}
+                          {element.type === 'chart' && <BarChart3 className="h-3 w-3 text-blue-600" />}
+                          {element.type === 'table' && <Table className="h-3 w-3 text-green-600" />}
+                        </div>
+                        
+                        {/* Preview Card */}
+                        <div 
+                          className="w-32 h-18 rounded border bg-white shadow-sm flex-shrink-0"
+                          style={{ 
+                            background: element.type === 'metric' ? '#f0f9ff' : element.type === 'chart' ? '#dbeafe' : '#ecfdf5',
+                            aspectRatio: '16/9'
+                          }}
+                        >
+                          <div className="w-full h-full rounded overflow-hidden relative flex items-center justify-center">
+                            {element.type === 'metric' && (
+                              <div className="text-center">
+                                <div className="text-xs font-bold text-orange-600">
+                                  {element.content?.data && element.content.data.length > 0 
+                                    ? String(Object.values(element.content.data[0])[0] || '0')
+                                    : '0'}
+                                </div>
+                                <div className="text-xs text-gray-500">Metric</div>
+                              </div>
+                            )}
+                            {element.type === 'chart' && (
+                              <div className="text-center">
+                                <BarChart3 className="h-6 w-6 text-blue-500 mx-auto" />
+                                <div className="text-xs text-blue-700">Chart</div>
+                              </div>
+                            )}
+                            {element.type === 'table' && (
+                              <div className="text-center">
+                                <Table className="h-6 w-6 text-green-500 mx-auto" />
+                                <div className="text-xs text-green-700">Table</div>
+                              </div>
+                            )}
                           </div>
                         </div>
                         
-                        <div className="flex gap-1 ml-2">
+                        {/* Metadata */}
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-xs truncate">
+                            {typeof element.content === 'string' ? element.content : 
+                             typeof element.title === 'string' ? element.title : 
+                             `${element.type.charAt(0).toUpperCase() + element.type.slice(1)} Visualization`}
+                          </div>
+                          <div className="text-xs text-gray-500 capitalize mb-1">
+                            {element.type} • Snowflake
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            Records: {element.content?.data ? 
+                              (Array.isArray(element.content.data) ? 
+                                element.content.data.length.toLocaleString() : 
+                                '1') : 
+                              '0'}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            Last run: {element.content?.data ? 'Just now' : 'Never'}
+                          </div>
+                        </div>
+                        
+                        {/* Action Buttons */}
+                        <div className="flex flex-col gap-1 ml-2">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1927,69 +1974,6 @@ export default function ReportBuilder() {
                           </Button>
                         </div>
                       </div>
-
-                      {/* Metadata Grid */}
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        {/* Data Source */}
-                        <div>
-                          <div className="text-gray-500 font-medium">Data Source</div>
-                          <div className="text-gray-700">Snowflake</div>
-                        </div>
-                        
-                        {/* Created Date */}
-                        <div>
-                          <div className="text-gray-500 font-medium">Created</div>
-                          <div className="text-gray-700">
-                            {new Date().toLocaleDateString()}
-                          </div>
-                        </div>
-                        
-                        {/* Last Modified */}
-                        <div>
-                          <div className="text-gray-500 font-medium">Modified</div>
-                          <div className="text-gray-700">
-                            {new Date().toLocaleDateString()}
-                          </div>
-                        </div>
-                        
-                        {/* Last Run Time */}
-                        <div>
-                          <div className="text-gray-500 font-medium">Last Run</div>
-                          <div className="text-gray-700">
-                            {element.content?.data ? 'Just now' : 'Never'}
-                          </div>
-                        </div>
-                        
-                        {/* Execution Time */}
-                        <div>
-                          <div className="text-gray-500 font-medium">Exec Time</div>
-                          <div className="text-gray-700">
-                            {element.content?.data ? '1.2s' : 'N/A'}
-                          </div>
-                        </div>
-                        
-                        {/* Data Records */}
-                        <div>
-                          <div className="text-gray-500 font-medium">Records</div>
-                          <div className="text-gray-700">
-                            {element.content?.data ? 
-                              (Array.isArray(element.content.data) ? 
-                                element.content.data.length.toLocaleString() : 
-                                '1') : 
-                              '0'}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* SQL Query Preview */}
-                      {element.dataSource?.query && (
-                        <div className="mt-2">
-                          <div className="text-xs text-gray-500 font-medium mb-1">Query</div>
-                          <div className="text-xs text-gray-600 font-mono bg-gray-100 p-2 rounded truncate">
-                            {element.dataSource.query.substring(0, 60)}...
-                          </div>
-                        </div>
-                      )}
                     </div>
                   ))
                 }
