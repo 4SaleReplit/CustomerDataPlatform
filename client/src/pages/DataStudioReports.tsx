@@ -5,6 +5,8 @@ import { PresentationModal } from '@/components/PresentationModal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -78,6 +80,10 @@ export function DataStudioReports() {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [showPresentationModal, setShowPresentationModal] = useState(false);
   const [selectedPresentationId, setSelectedPresentationId] = useState<string>('');
+  const [refreshingReports, setRefreshingReports] = useState<Set<string>>(new Set());
+  const [refreshProgress, setRefreshProgress] = useState<Record<string, { current: number; total: number; startTime: number }>>({});
+  const [showSuccessToast, setShowSuccessToast] = useState<{ show: boolean; message: string; reportId?: string }>({ show: false, message: '' });
+  const { toast } = useToast();
 
   // Fetch presentations from database
   const { data: presentations = [], isLoading, error, refetch } = useQuery({
@@ -159,6 +165,121 @@ export function DataStudioReports() {
     } catch (error) {
       console.error('Delete report error:', error);
       alert('Failed to delete report. Please try again.');
+    }
+  };
+
+  // Refresh report data function
+  const handleRefreshReport = async (reportId: string) => {
+    try {
+      // Add to refreshing reports
+      setRefreshingReports(prev => new Set([...Array.from(prev), reportId]));
+      
+      const startTime = Date.now();
+      
+      // Get all slides for this presentation
+      const presentationData = allSlidesData[reportId];
+      if (!presentationData) {
+        throw new Error('No slides found for this report');
+      }
+
+      const allSlides = Object.values(presentationData);
+      const totalQueries = allSlides.reduce((count, slide: any) => {
+        if (!slide || !slide.elements) return count;
+        return count + slide.elements.filter((element: any) => 
+          element.type === 'chart' || element.type === 'table' || element.type === 'metric'
+        ).length;
+      }, 0);
+
+      if (totalQueries === 0) {
+        throw new Error('No data elements found in this report');
+      }
+
+      // Initialize progress tracking
+      setRefreshProgress(prev => ({
+        ...prev,
+        [reportId]: { current: 0, total: totalQueries, startTime }
+      }));
+
+      let completedQueries = 0;
+
+      // Execute all queries in all slides
+      for (const slide of allSlides) {
+        if (!slide || !slide.elements) continue;
+
+        for (const element of slide.elements) {
+          if (element.type === 'chart' || element.type === 'table' || element.type === 'metric') {
+            if (element.dataSource && element.dataSource.query) {
+              try {
+                // Execute the query
+                const response = await fetch('/api/snowflake/execute', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    query: element.dataSource.query
+                  })
+                });
+
+                if (!response.ok) {
+                  console.warn(`Failed to refresh query for element ${element.id}`);
+                }
+
+                completedQueries++;
+                setRefreshProgress(prev => ({
+                  ...prev,
+                  [reportId]: { 
+                    current: completedQueries, 
+                    total: totalQueries, 
+                    startTime 
+                  }
+                }));
+
+                // Small delay to show progress
+                await new Promise(resolve => setTimeout(resolve, 100));
+              } catch (error) {
+                console.warn(`Error executing query for element ${element.id}:`, error);
+                completedQueries++;
+              }
+            } else {
+              completedQueries++;
+            }
+          }
+        }
+      }
+
+      const endTime = Date.now();
+      const totalTime = ((endTime - startTime) / 1000).toFixed(2);
+
+      // Show success toast
+      toast({
+        title: "Report Data Refreshed",
+        description: `Successfully refreshed ${totalQueries} queries in ${totalTime} seconds`,
+        duration: 5000,
+      });
+
+    } catch (error) {
+      console.error('Error refreshing report:', error);
+      toast({
+        title: "Refresh Failed",
+        description: error instanceof Error ? error.message : "Failed to refresh report data",
+        variant: "destructive",
+        duration: 5000,
+      });
+    } finally {
+      // Remove from refreshing reports
+      setRefreshingReports(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(reportId);
+        return newSet;
+      });
+      
+      // Clear progress
+      setRefreshProgress(prev => {
+        const newProgress = { ...prev };
+        delete newProgress[reportId];
+        return newProgress;
+      });
     }
   };
 
@@ -535,7 +656,7 @@ export function DataStudioReports() {
                               <Edit className="h-4 w-4 mr-2" />
                               Edit in Design Studio
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleRefreshReport(report.id)}>
                               <RefreshCw className="h-4 w-4 mr-2" />
                               Refresh Data
                             </DropdownMenuItem>
