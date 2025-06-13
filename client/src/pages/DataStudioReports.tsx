@@ -260,92 +260,92 @@ export function DataStudioReports() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredReports.map((report) => (
-                <Card key={report.id} className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <Presentation className="h-5 w-5 text-blue-600" />
-                        <CardTitle className="text-base">{report.name}</CardTitle>
-                        <Badge className={`text-xs ${getStatusColor(report.status)}`}>
-                          {report.status}
-                        </Badge>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          <DropdownMenuItem>
-                            <Eye className="h-4 w-4 mr-2" />
-                            Preview
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => window.location.href = `/reports/builder/${report.id}`}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit Builder
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                            Refresh Data
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Send className="h-4 w-4 mr-2" />
-                            Send Now
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Copy className="h-4 w-4 mr-2" />
-                            Duplicate
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Settings className="h-4 w-4 mr-2" />
-                            Settings
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                      {report.description}
-                    </p>
-                    <div className="space-y-2 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-1">
-                          <Presentation className="h-3 w-3" />
-                          {report.slides} slides
-                        </span>
-                        <span className="flex items-center gap-1">
-                          {getScheduleIcon(report.schedule)}
-                          {report.schedule}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-1">
-                          <Users className="h-3 w-3" />
-                          {report.recipients.length} recipients
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {report.lastModified}
-                        </span>
-                      </div>
-                      {report.schedule !== 'manual' && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Last sent: {report.lastSent}</span>
-                          {report.nextSend && (
-                            <span className="text-green-600">Next: {report.nextSend}</span>
-                          )}
+                  <Card key={report.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          <Presentation className="h-5 w-5 text-blue-600" />
+                          <CardTitle className="text-base">{report.name}</CardTitle>
+                          <Badge className={`text-xs ${getStatusColor(report.status)}`}>
+                            {report.status}
+                          </Badge>
                         </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem>
+                              <Eye className="h-4 w-4 mr-2" />
+                              Preview
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => window.location.href = `/design-studio?reportId=${report.id}`}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit in Design Studio
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Refresh Data
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Send className="h-4 w-4 mr-2" />
+                              Send Now
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Copy className="h-4 w-4 mr-2" />
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Settings className="h-4 w-4 mr-2" />
+                              Settings
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-red-600">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                        {report.description}
+                      </p>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-1">
+                            <Presentation className="h-3 w-3" />
+                            {report.slides} slides
+                          </span>
+                          <span className="flex items-center gap-1">
+                            {getScheduleIcon(report.schedule)}
+                            {report.schedule}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {report.recipients.length} recipients
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {report.lastModified}
+                          </span>
+                        </div>
+                        {report.schedule !== 'manual' && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Last sent: {report.lastSent}</span>
+                            {report.nextSend && (
+                              <span className="text-green-600">Next: {report.nextSend}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}
