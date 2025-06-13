@@ -417,9 +417,9 @@ export function ReportBuilder() {
                   const pdfY = transform[5];
                   const fontSize = Math.abs(transform[0]) || item.height || 12;
                   
-                  // Convert PDF coordinates to canvas coordinates (800x600)
-                  const canvasX = Math.max(10, Math.min(780, (pdfX / viewport.width) * 800));
-                  const canvasY = Math.max(10, Math.min(580, ((viewport.height - pdfY) / viewport.height) * 600));
+                  // Convert PDF coordinates to canvas coordinates (1920x1080)
+                  const canvasX = Math.max(20, Math.min(1900, (pdfX / viewport.width) * 1920));
+                  const canvasY = Math.max(20, Math.min(1060, ((viewport.height - pdfY) / viewport.height) * 1080));
                   
                   // Calculate precise text dimensions
                   const charWidth = fontSize * 0.55; // More accurate character width
@@ -427,8 +427,8 @@ export function ReportBuilder() {
                   const textHeight = Math.max(fontSize + 6, fontSize * 1.4);
                   
                   // Ensure elements stay within canvas bounds
-                  const elementWidth = Math.min(textWidth, 800 - canvasX - 10);
-                  const elementHeight = Math.min(textHeight, 600 - canvasY - 10);
+                  const elementWidth = Math.min(textWidth, 1920 - canvasX - 20);
+                  const elementHeight = Math.min(textHeight, 1080 - canvasY - 20);
                   
                   // Extract font information from PDF
                   let fontFamily = 'Arial';
@@ -1643,8 +1643,8 @@ export function ReportBuilder() {
       const mouseY = (e.clientY - rect.top) * (100 / zoom);
 
       if (action === 'drag') {
-        const newX = Math.max(0, Math.min(1000 - element.width, mouseX - (dragOffset.x * 100 / zoom)));
-        const newY = Math.max(0, Math.min(700 - element.height, mouseY - (dragOffset.y * 100 / zoom)));
+        const newX = Math.max(0, Math.min(1920 - element.width, (mouseX * 2) - (dragOffset.x * 200 / zoom)));
+        const newY = Math.max(0, Math.min(1080 - element.height, (mouseY * 2) - (dragOffset.y * 200 / zoom)));
         
         updateElement(elementId, { x: newX, y: newY });
       } else if (action === 'resize') {
@@ -2689,12 +2689,12 @@ export function ReportBuilder() {
                       const titleElement: SlideElement = {
                         id: Date.now().toString(),
                         type: 'text',
-                        x: 100,
-                        y: 50,
-                        width: 600,
-                        height: 80,
+                        x: 200,
+                        y: 100,
+                        width: 1520,
+                        height: 160,
                         content: 'Slide Title',
-                        style: { fontSize: 36, fontWeight: 'bold', textAlign: 'left', color: '#000000', backgroundColor: 'transparent' }
+                        style: { fontSize: 72, fontWeight: 'bold', textAlign: 'left', color: '#000000', backgroundColor: 'transparent' }
                       };
                       const updatedSlides = [...currentReport.slides];
                       updatedSlides[currentSlideIndex].elements = [titleElement];
