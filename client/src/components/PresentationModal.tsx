@@ -191,7 +191,7 @@ export function PresentationModal({ presentationId, isOpen, onClose }: Presentat
         return (
           <img
             key={element.id}
-            src={element.src}
+            src={element.src || element.content}
             alt=""
             style={style}
             className="pointer-events-none object-cover"

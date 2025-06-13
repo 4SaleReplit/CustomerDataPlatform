@@ -6,9 +6,10 @@ interface CodeMirrorSQLEditorProps {
   placeholder?: string;
   className?: string;
   onExecute?: () => void;
+  readOnly?: boolean;
 }
 
-export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, onExecute }: CodeMirrorSQLEditorProps) {
+export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, onExecute, readOnly = false }: CodeMirrorSQLEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -1014,14 +1015,15 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
         <div
           ref={editorRef}
           className="codemirror-sql-editor"
-          contentEditable
+          contentEditable={!readOnly}
           suppressContentEditableWarning
-          onInput={handleInput}
-          onKeyDown={handleKeyDown}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
+          onInput={readOnly ? undefined : handleInput}
+          onKeyDown={readOnly ? undefined : handleKeyDown}
+          onFocus={readOnly ? undefined : handleFocus}
+          onBlur={readOnly ? undefined : handleBlur}
           data-placeholder={placeholder}
           spellCheck={false}
+          style={{ cursor: readOnly ? 'default' : 'text' }}
         />
       </div>
       
