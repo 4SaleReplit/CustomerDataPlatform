@@ -66,6 +66,8 @@ export function DataStudioExplores() {
   const [activeTab, setActiveTab] = useState('explores');
   const [newExploreQuery, setNewExploreQuery] = useState('');
   const [editExploreQuery, setEditExploreQuery] = useState('');
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [queryResults, setQueryResults] = useState<any>(null);
 
   // Sample explores data
   const explores: Explore[] = [
@@ -184,9 +186,63 @@ export function DataStudioExplores() {
     setShowEditExplore(true);
   };
 
-  const handleRunQuery = (explore: Explore) => {
-    // Execute the query and show results
-    console.log('Running query:', explore.query);
+  const handleRunQuery = async (explore: Explore) => {
+    setIsExecuting(true);
+    setQueryResults(null);
+    
+    try {
+      console.log('Running query:', explore.query);
+      
+      // Simulate API call to execute query
+      const response = await fetch('/api/sql/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: explore.query }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      setQueryResults(result);
+    } catch (error) {
+      console.error('Query execution failed:', error);
+      setQueryResults({ error: 'Query execution failed. Please check your query syntax and try again.' });
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  const handleExecuteQueryFromEditor = async (query: string) => {
+    setIsExecuting(true);
+    setQueryResults(null);
+    
+    try {
+      console.log('Running query:', query);
+      
+      const response = await fetch('/api/sql/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      setQueryResults(result);
+    } catch (error) {
+      console.error('Query execution failed:', error);
+      setQueryResults({ error: 'Query execution failed. Please check your query syntax and try again.' });
+    } finally {
+      setIsExecuting(false);
+    }
   };
 
   const handleDuplicateExplore = (explore: Explore) => {
@@ -488,9 +544,21 @@ export function DataStudioExplores() {
                         />
                       </div>
                       <div className="flex items-center gap-4">
-                        <Button onClick={() => handleRunQuery(selectedExplore)}>
-                          <Play className="h-4 w-4 mr-2" />
-                          Execute Query
+                        <Button 
+                          onClick={() => handleRunQuery(selectedExplore)} 
+                          disabled={isExecuting}
+                        >
+                          {isExecuting ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Executing...
+                            </>
+                          ) : (
+                            <>
+                              <Play className="h-4 w-4 mr-2" />
+                              Execute Query
+                            </>
+                          )}
                         </Button>
                         <Button variant="outline" onClick={() => handleEditExplore(selectedExplore)}>
                           <Settings className="h-4 w-4 mr-2" />
@@ -511,17 +579,94 @@ export function DataStudioExplores() {
                       <CardTitle>Query Results</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="h-96 flex items-center justify-center border-2 border-dashed border-muted-foreground/25 rounded-lg">
-                        <div className="text-center">
-                          <Database className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                          <p className="text-lg font-medium">No Data</p>
-                          <p className="text-muted-foreground">Execute query to view results</p>
-                          <Button className="mt-4" onClick={() => handleRunQuery(selectedExplore)}>
-                            <Play className="h-4 w-4 mr-2" />
-                            Run Query
-                          </Button>
+                      {isExecuting ? (
+                        <div className="h-96 flex items-center justify-center">
+                          <div className="text-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                            <p className="text-lg font-medium">Executing Query...</p>
+                            <p className="text-muted-foreground">Please wait while we process your query</p>
+                          </div>
                         </div>
-                      </div>
+                      ) : queryResults ? (
+                        queryResults.error ? (
+                          <div className="h-96 flex items-center justify-center">
+                            <div className="text-center">
+                              <div className="text-red-600 text-lg font-medium mb-2">Query Error</div>
+                              <p className="text-muted-foreground mb-4">{queryResults.error}</p>
+                              <Button onClick={() => handleRunQuery(selectedExplore)}>
+                                <Play className="h-4 w-4 mr-2" />
+                                Retry Query
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <div className="text-sm text-muted-foreground">
+                                {queryResults.rows?.length || 0} rows returned
+                              </div>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleRunQuery(selectedExplore)}
+                                disabled={isExecuting}
+                              >
+                                <Play className="h-4 w-4 mr-2" />
+                                Refresh
+                              </Button>
+                            </div>
+                            <div className="overflow-auto max-h-80 border rounded-lg">
+                              <table className="w-full border-collapse">
+                                <thead>
+                                  <tr className="bg-muted/50 sticky top-0">
+                                    {queryResults.columns?.map((col: string, idx: number) => (
+                                      <th key={idx} className="border-b border-border p-3 text-left font-semibold text-sm">
+                                        {col}
+                                      </th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {queryResults.rows?.slice(0, 100).map((row: any[], rowIdx: number) => (
+                                    <tr key={rowIdx} className="hover:bg-muted/25">
+                                      {row.map((cell, cellIdx) => (
+                                        <td key={cellIdx} className="border-b border-border p-3 text-sm">
+                                          {cell?.toString() || '-'}
+                                        </td>
+                                      ))}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )
+                      ) : (
+                        <div className="h-96 flex items-center justify-center border-2 border-dashed border-muted-foreground/25 rounded-lg">
+                          <div className="text-center">
+                            <Database className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                            <p className="text-lg font-medium">No Data</p>
+                            <p className="text-muted-foreground">Execute query to view results</p>
+                            <Button 
+                              className="mt-4" 
+                              onClick={() => handleRunQuery(selectedExplore)}
+                              disabled={isExecuting}
+                            >
+                              {isExecuting ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                  Running...
+                                </>
+                              ) : (
+                                <>
+                                  <Play className="h-4 w-4 mr-2" />
+                                  Run Query
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -602,9 +747,22 @@ export function DataStudioExplores() {
                 </div>
                 <div className="flex justify-between pt-4">
                   <div className="flex gap-2">
-                    <Button variant="outline">
-                      <Play className="h-4 w-4 mr-2" />
-                      Test Query
+                    <Button 
+                      variant="outline"
+                      onClick={() => handleExecuteQueryFromEditor(editExploreQuery)}
+                      disabled={isExecuting}
+                    >
+                      {isExecuting ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                          Testing...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-4 w-4 mr-2" />
+                          Test Query
+                        </>
+                      )}
                     </Button>
                     <Button variant="outline">
                       <Eye className="h-4 w-4 mr-2" />
