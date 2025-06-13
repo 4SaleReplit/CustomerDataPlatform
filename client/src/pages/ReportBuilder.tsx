@@ -124,9 +124,66 @@ export default function ReportBuilder() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Initialize with a default report
+  // Get URL parameters for loading existing presentations
+  const urlParams = new URLSearchParams(window.location.search);
+  const presentationId = urlParams.get('presentationId');
+
+  // Load existing presentation if presentationId is provided
+  const { data: existingPresentation } = useQuery({
+    queryKey: ['/api/presentations', presentationId],
+    queryFn: async () => {
+      if (!presentationId) return null;
+      const response = await fetch(`/api/presentations/${presentationId}`);
+      if (!response.ok) throw new Error('Failed to fetch presentation');
+      return response.json();
+    },
+    enabled: !!presentationId
+  });
+
+  // Load slides for existing presentation
+  const { data: existingSlides } = useQuery({
+    queryKey: ['/api/slides', existingPresentation?.slideIds],
+    queryFn: async () => {
+      if (!existingPresentation?.slideIds?.length) return [];
+      
+      const slidePromises = existingPresentation.slideIds.map(async (slideId: string) => {
+        const response = await fetch(`/api/slides/${slideId}`);
+        if (!response.ok) throw new Error(`Failed to fetch slide ${slideId}`);
+        return response.json();
+      });
+      
+      return Promise.all(slidePromises);
+    },
+    enabled: !!existingPresentation?.slideIds?.length
+  });
+
+  // Initialize with existing presentation or default report
   useEffect(() => {
-    if (!currentReport) {
+    if (existingPresentation && existingSlides && !currentReport) {
+      const reportSlides: Slide[] = existingSlides.map((slide: any) => ({
+        id: slide.id,
+        name: slide.title || `Slide ${existingSlides.indexOf(slide) + 1}`,
+        elements: slide.elements || [],
+        backgroundColor: slide.backgroundColor || '#ffffff'
+      }));
+
+      const report: Report = {
+        id: existingPresentation.id,
+        name: existingPresentation.title,
+        description: existingPresentation.description || '',
+        slides: reportSlides,
+        settings: {
+          schedule: 'manual',
+          recipients: [],
+          autoRefresh: false
+        },
+        status: 'draft'
+      };
+
+      setCurrentReport(report);
+      setReportTitle(existingPresentation.title);
+    } else if (!currentReport && !presentationId) {
+      // Create default report only if not loading existing presentation
       const defaultSlide: Slide = {
         id: nanoid(),
         name: 'Slide 1',
@@ -149,7 +206,7 @@ export default function ReportBuilder() {
 
       setCurrentReport(newReport);
     }
-  }, []);
+  }, [existingPresentation, existingSlides, currentReport, presentationId]);
 
   const currentSlide = currentReport?.slides[currentSlideIndex];
 
