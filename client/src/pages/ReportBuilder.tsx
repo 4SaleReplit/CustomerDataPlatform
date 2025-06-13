@@ -60,6 +60,7 @@ interface SlideElement {
     color?: string;
     backgroundColor?: string;
   };
+  uploadedImageId?: string;
 }
 
 interface Slide {
@@ -144,6 +145,52 @@ export default function ReportBuilder() {
 
   const currentSlide = currentReport?.slides[currentSlideIndex];
 
+  // Save slide functionality
+  const saveSlide = async (slide: Slide) => {
+    try {
+      const slideData = {
+        title: slide.name,
+        elements: slide.elements,
+        backgroundColor: slide.backgroundColor,
+        order: currentSlideIndex,
+        createdBy: 'admin'
+      };
+
+      const response = await fetch('/api/slides', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(slideData)
+      });
+
+      if (response.ok) {
+        const savedSlide = await response.json();
+        console.log('Slide saved successfully:', savedSlide.id);
+        return savedSlide;
+      } else {
+        console.error('Failed to save slide');
+      }
+    } catch (error) {
+      console.error('Error saving slide:', error);
+    }
+  };
+
+  // Save all slides
+  const saveAllSlides = async () => {
+    if (!currentReport?.slides) return;
+    
+    try {
+      for (let i = 0; i < currentReport.slides.length; i++) {
+        const slide = currentReport.slides[i];
+        await saveSlide(slide);
+      }
+      console.log('All slides saved successfully');
+    } catch (error) {
+      console.error('Error saving slides:', error);
+    }
+  };
+
   const addSlide = () => {
     if (!currentReport) return;
 
@@ -163,17 +210,30 @@ export default function ReportBuilder() {
     setCurrentSlideIndex(updatedReport.slides.length - 1);
   };
 
-  // Multiple image upload functionality
+  // Multiple image upload functionality with persistent storage
   const addImageSlideToCurrentReport = async (file: File): Promise<void> => {
     if (!currentReport) return;
 
-    return new Promise((resolve, reject) => {
-      try {
-        // Create a new slide for the image
-        const imageUrl = URL.createObjectURL(file);
-        
-        // Create an image element to get dimensions
-        const img = new Image();
+    try {
+      // Upload image to persistent storage
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('/api/images/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+
+      const uploadedImage = await response.json();
+      const imageUrl = uploadedImage.url;
+      
+      // Create an image element to get dimensions
+      const img = new Image();
+      return new Promise((resolve, reject) => {
         img.onload = () => {
           const canvasWidth = 1920;
           const canvasHeight = 1080;
@@ -194,7 +254,8 @@ export default function ReportBuilder() {
             width: elementWidth,
             height: elementHeight,
             content: imageUrl,
-            style: {}
+            style: {},
+            uploadedImageId: uploadedImage.id
           };
 
           const newSlide: Slide = {
@@ -221,11 +282,11 @@ export default function ReportBuilder() {
         };
         
         img.src = imageUrl;
-      } catch (error) {
-        console.error('Error adding image slide:', error);
-        reject(error);
-      }
-    });
+      });
+    } catch (error) {
+      console.error('Error adding image slide:', error);
+      throw error;
+    }
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1213,6 +1274,16 @@ export default function ReportBuilder() {
           >
             <Upload className="h-4 w-4 mr-2" />
             Upload Files
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={saveAllSlides}
+            className="bg-green-50 hover:bg-green-100 border-green-300"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            Save Slides
           </Button>
 
           {/* Element Tools */}
