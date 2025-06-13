@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,13 +63,7 @@ export function DataStudioExplores() {
   const [selectedType, setSelectedType] = useState<string>('all');
   const [showNewExplore, setShowNewExplore] = useState(false);
   const [showEditExplore, setShowEditExplore] = useState(false);
-  const [selectedExplore, setSelectedExplore] = useState<Explore | null>(null);
-  const [activeTab, setActiveTab] = useState('explores');
   const [newExploreQuery, setNewExploreQuery] = useState('');
-  const [editExploreQuery, setEditExploreQuery] = useState('');
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [queryResults, setQueryResults] = useState<any>(null);
-  const [previewData, setPreviewData] = useState<any>(null);
 
   // Function to render visualization preview based on type
   const renderVisualizationPreview = (explore: Explore) => {
@@ -593,14 +588,18 @@ export function DataStudioExplores() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
-                          <DropdownMenuItem onClick={() => handleViewExplore(explore)}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            View
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEditExplore(explore)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
+                          <Link href={`/data-studio/explores/${explore.id}`}>
+                            <DropdownMenuItem>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View
+                            </DropdownMenuItem>
+                          </Link>
+                          <Link href={`/data-studio/explores/${explore.id}/edit`}>
+                            <DropdownMenuItem>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                          </Link>
                           <DropdownMenuItem onClick={() => handleDuplicateExplore(explore)}>
                             <Copy className="h-4 w-4 mr-2" />
                             Duplicate
