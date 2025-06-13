@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -199,15 +200,42 @@ export function PresentationModal({ presentationId, isOpen, onClose }: Presentat
       
       case 'metric':
         const metricData = element.content?.data;
-        const metricValue = metricData && metricData.length > 0 ? Object.values(metricData[0])[0] : 'No data';
+        const metricValue = metricData && metricData.length > 0 ? Object.values(metricData[0])[0] : '0';
+        const metricStyle = element.content?.style || 'minimal';
+        
         return (
-          <div key={element.id} style={style} className="bg-white border rounded-lg shadow-sm p-3 text-center">
-            <div className="text-xs font-medium text-gray-600 mb-1">
-              {element.content?.title || 'Metric'}
-            </div>
-            <div className="text-lg font-bold text-blue-600">
-              {typeof metricValue === 'number' ? metricValue.toLocaleString() : (metricValue as string)}
-            </div>
+          <div key={element.id} style={style} className="w-full h-full rounded overflow-hidden">
+            {metricStyle === 'gradient' && (
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-3 rounded-lg border border-blue-200 w-full h-full flex flex-col justify-center">
+                <div className="text-xs text-blue-600 mb-1">{element.content?.title || 'Metric'}</div>
+                <div className="text-xl font-bold text-blue-800">
+                  {typeof metricValue === 'number' ? metricValue.toLocaleString() : String(metricValue)}
+                </div>
+              </div>
+            )}
+            {metricStyle === 'solid' && (
+              <div className="bg-green-500 text-white p-3 rounded-lg w-full h-full flex flex-col justify-center">
+                <div className="text-xs opacity-90 mb-1">{element.content?.title || 'Metric'}</div>
+                <div className="text-xl font-bold">
+                  {typeof metricValue === 'number' ? metricValue.toLocaleString() : String(metricValue)}
+                </div>
+              </div>
+            )}
+            {(metricStyle === 'minimal' || !metricStyle) && (
+              <div className="bg-white border-2 border-gray-200 p-3 rounded-lg w-full h-full flex flex-col justify-center">
+                <div className="text-xs text-gray-600 mb-1">{element.content?.title || 'Metric'}</div>
+                <div className="text-xl font-bold text-gray-900">
+                  {typeof metricValue === 'number' ? metricValue.toLocaleString() : String(metricValue)}
+                </div>
+              </div>
+            )}
+            {metricStyle === 'valueOnly' && (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="text-3xl font-bold text-gray-900">
+                  {typeof metricValue === 'number' ? metricValue.toLocaleString() : String(metricValue)}
+                </div>
+              </div>
+            )}
           </div>
         );
       
@@ -255,6 +283,10 @@ export function PresentationModal({ presentationId, isOpen, onClose }: Presentat
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl h-[90vh] p-0 overflow-hidden">
+        <VisuallyHidden>
+          <DialogTitle>Presentation Preview</DialogTitle>
+          <DialogDescription>Preview of presentation slides with navigation controls</DialogDescription>
+        </VisuallyHidden>
         <div className="h-full flex flex-col">
           {/* Header */}
           <div className="bg-white border-b px-6 py-3 flex items-center justify-between">
