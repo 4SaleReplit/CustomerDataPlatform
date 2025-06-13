@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
@@ -113,6 +113,11 @@ export default function ReportBuilder() {
   // Drag and drop for slide reordering
   const [draggedSlideIndex, setDraggedSlideIndex] = useState<number | null>(null);
   const [dragOverSlideIndex, setDragOverSlideIndex] = useState<number | null>(null);
+  
+  // Save dialog state
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [reportTitle, setReportTitle] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -177,18 +182,63 @@ export default function ReportBuilder() {
     }
   };
 
-  // Save all slides
+  // Save all slides and create presentation
   const saveAllSlides = async () => {
     if (!currentReport?.slides) return;
+    setShowSaveDialog(true);
+  };
+
+  // Handle the actual save process with title
+  const handleSaveReport = async () => {
+    if (!reportTitle.trim() || !currentReport?.slides) return;
     
+    setIsSaving(true);
     try {
+      // Save all slides first and collect their IDs
+      const slideIds: string[] = [];
+      
       for (let i = 0; i < currentReport.slides.length; i++) {
         const slide = currentReport.slides[i];
-        await saveSlide(slide);
+        const savedSlide = await saveSlide(slide);
+        if (savedSlide) {
+          slideIds.push(savedSlide.id);
+        }
       }
-      console.log('All slides saved successfully');
+      
+      // Create presentation with saved slide IDs
+      const presentationData = {
+        title: reportTitle.trim(),
+        description: `Presentation with ${slideIds.length} slides`,
+        slideIds: slideIds,
+        createdBy: 'admin'
+      };
+
+      const response = await fetch('/api/presentations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(presentationData)
+      });
+
+      if (response.ok) {
+        const savedPresentation = await response.json();
+        console.log('Presentation saved successfully:', savedPresentation.id);
+        
+        // Reset dialog state
+        setShowSaveDialog(false);
+        setReportTitle('');
+        setIsSaving(false);
+        
+        // Show success message
+        alert(`Report "${reportTitle}" saved successfully!`);
+      } else {
+        console.error('Failed to save presentation');
+        setIsSaving(false);
+      }
     } catch (error) {
-      console.error('Error saving slides:', error);
+      console.error('Error saving report:', error);
+      setIsSaving(false);
     }
   };
 
@@ -2371,6 +2421,48 @@ export default function ReportBuilder() {
               Save Query & Configuration
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Save Report Dialog */}
+      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Save Report</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="report-title" className="text-sm font-medium">
+                Report Title
+              </Label>
+              <Input
+                id="report-title"
+                value={reportTitle}
+                onChange={(e) => setReportTitle(e.target.value)}
+                placeholder="Enter report title..."
+                className="mt-1"
+              />
+            </div>
+            <div className="text-sm text-gray-600">
+              This will save all {currentReport?.slides.length} slides with their content, styling, and positioning to your reports library.
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowSaveDialog(false)}
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveReport}
+              disabled={!reportTitle.trim() || isSaving}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isSaving ? 'Saving...' : 'Save Report'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
