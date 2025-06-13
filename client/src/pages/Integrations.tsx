@@ -696,12 +696,57 @@ export default function Integrations() {
     }
   };
 
-  const handleTestConnection = () => {
-    if (selectedIntegration) {
-      setIsTestingConnection(true);
-      testConnectionMutation.mutate(selectedIntegration.id, {
-        onSettled: () => setIsTestingConnection(false)
+  const handleTestConnection = async () => {
+    if (!selectedIntegration) return;
+    
+    setIsTestingConnection(true);
+    try {
+      // Test with current form credentials instead of saved ones
+      const testCredentials = { ...formData };
+      
+      // Validate required fields
+      const template = integrationTemplates[selectedIntegration.type];
+      const missingFields = template?.fields.filter(field => 
+        field.required && !testCredentials[field.key]
+      ) || [];
+      
+      if (missingFields.length > 0) {
+        toast({
+          title: "Missing required fields",
+          description: `Please fill in: ${missingFields.map(f => f.label).join(', ')}`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const response = await fetch(`/api/integrations/${selectedIntegration.type}/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(testCredentials)
       });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: "Connection successful",
+          description: "Integration is working correctly with current credentials."
+        });
+      } else {
+        toast({
+          title: "Connection failed",
+          description: result.error || "Failed to connect with provided credentials.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Test failed",
+        description: "An error occurred while testing the connection.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsTestingConnection(false);
     }
   };
 
