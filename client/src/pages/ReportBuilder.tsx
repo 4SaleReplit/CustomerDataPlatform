@@ -28,6 +28,8 @@ import {
   Grid3X3, 
   RefreshCw,
   GripVertical,
+  TrendingUp,
+  PieChart,
   Settings,
   FileText,
   Save
@@ -1455,61 +1457,112 @@ export default function ReportBuilder() {
         {/* Left Panel - Tools & Templates */}
         <div className="w-80 bg-white border-r flex flex-col shadow-sm">
           <div className="p-4 border-b bg-gray-50">
-            <h3 className="font-bold text-sm mb-3 text-gray-800">Add Elements</h3>
-            <div className="grid grid-cols-2 gap-3">
+            <h3 className="font-bold text-sm mb-3 text-gray-800">Add Visualizations</h3>
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setVisualizationType('metric');
+                  setShowSQLEditor(true);
+                }}
+                className="w-full justify-start h-12 hover:bg-orange-50 hover:border-orange-300 transition-colors"
+              >
+                <span className="text-lg font-bold text-orange-600 mr-3">#</span>
+                <div className="text-left">
+                  <div className="text-sm font-medium">Metric Card</div>
+                  <div className="text-xs text-gray-500">KPI with SQL query</div>
+                </div>
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setVisualizationType('bar');
+                  setShowSQLEditor(true);
+                }}
+                className="w-full justify-start h-12 hover:bg-blue-50 hover:border-blue-300 transition-colors"
+              >
+                <BarChart3 className="h-5 w-5 text-blue-600 mr-3" />
+                <div className="text-left">
+                  <div className="text-sm font-medium">Bar Chart</div>
+                  <div className="text-xs text-gray-500">Compare categories</div>
+                </div>
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setVisualizationType('line');
+                  setShowSQLEditor(true);
+                }}
+                className="w-full justify-start h-12 hover:bg-green-50 hover:border-green-300 transition-colors"
+              >
+                <TrendingUp className="h-5 w-5 text-green-600 mr-3" />
+                <div className="text-left">
+                  <div className="text-sm font-medium">Line Chart</div>
+                  <div className="text-xs text-gray-500">Trends over time</div>
+                </div>
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setVisualizationType('pie');
+                  setShowSQLEditor(true);
+                }}
+                className="w-full justify-start h-12 hover:bg-purple-50 hover:border-purple-300 transition-colors"
+              >
+                <PieChart className="h-5 w-5 text-purple-600 mr-3" />
+                <div className="text-left">
+                  <div className="text-sm font-medium">Pie Chart</div>
+                  <div className="text-xs text-gray-500">Part-to-whole</div>
+                </div>
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setVisualizationType('table');
+                  setShowSQLEditor(true);
+                }}
+                className="w-full justify-start h-12 hover:bg-indigo-50 hover:border-indigo-300 transition-colors"
+              >
+                <Table className="h-5 w-5 text-indigo-600 mr-3" />
+                <div className="text-left">
+                  <div className="text-sm font-medium">Data Table</div>
+                  <div className="text-xs text-gray-500">Detailed records</div>
+                </div>
+              </Button>
+              
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => addElement('text')}
-                className="h-14 flex flex-col items-center gap-1 hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                className="w-full justify-start h-12 hover:bg-gray-50 hover:border-gray-300 transition-colors"
               >
-                <Type className="h-5 w-5 text-blue-600" />
-                <span className="text-xs font-medium">Text</span>
+                <Type className="h-5 w-5 text-gray-600 mr-3" />
+                <div className="text-left">
+                  <div className="text-sm font-medium">Text Element</div>
+                  <div className="text-xs text-gray-500">Labels & annotations</div>
+                </div>
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => addElement('chart')}
-                className="h-14 flex flex-col items-center gap-1 hover:bg-green-50 hover:border-green-300 transition-colors"
-              >
-                <BarChart3 className="h-5 w-5 text-green-600" />
-                <span className="text-xs font-medium">Chart</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => addElement('table')}
-                className="h-14 flex flex-col items-center gap-1 hover:bg-purple-50 hover:border-purple-300 transition-colors"
-              >
-                <Table className="h-5 w-5 text-purple-600" />
-                <span className="text-xs font-medium">Table</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => addElement('metric')}
-                className="h-14 flex flex-col items-center gap-1 hover:bg-orange-50 hover:border-orange-300 transition-colors"
-              >
-                <span className="text-lg font-bold text-orange-600">#</span>
-                <span className="text-xs font-medium">Metric</span>
-              </Button>
+              
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => addElement('image')}
-                className="h-14 flex flex-col items-center gap-1 hover:bg-pink-50 hover:border-pink-300 transition-colors"
+                className="w-full justify-start h-12 hover:bg-pink-50 hover:border-pink-300 transition-colors"
               >
-                <ImageIcon className="h-5 w-5 text-pink-600" />
-                <span className="text-xs font-medium">Image</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => addElement('shape')}
-                className="h-14 flex flex-col items-center gap-1 hover:bg-gray-50 hover:border-gray-400 transition-colors"
-              >
-                <Square className="h-5 w-5 text-gray-600" />
-                <span className="text-xs font-medium">Shape</span>
+                <ImageIcon className="h-5 w-5 text-pink-600 mr-3" />
+                <div className="text-left">
+                  <div className="text-sm font-medium">Image</div>
+                  <div className="text-xs text-gray-500">Upload files</div>
+                </div>
               </Button>
             </div>
           </div>
