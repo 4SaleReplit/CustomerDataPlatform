@@ -171,25 +171,13 @@ export default function ReportBuilder() {
           const canvasWidth = 1920;
           const canvasHeight = 1080;
           
-          // Calculate scaling to fit image to canvas while maintaining aspect ratio
-          const imageAspect = img.width / img.height;
-          const canvasAspect = canvasWidth / canvasHeight;
+          // Make image fill the entire canvas space
+          const elementWidth = canvasWidth;
+          const elementHeight = canvasHeight;
           
-          let elementWidth, elementHeight;
-          
-          if (imageAspect > canvasAspect) {
-            // Image is wider than canvas aspect ratio
-            elementWidth = canvasWidth;
-            elementHeight = canvasWidth / imageAspect;
-          } else {
-            // Image is taller than canvas aspect ratio
-            elementHeight = canvasHeight;
-            elementWidth = canvasHeight * imageAspect;
-          }
-          
-          // Center the image
-          const x = (canvasWidth - elementWidth) / 2;
-          const y = (canvasHeight - elementHeight) / 2;
+          // Position at canvas origin
+          const x = 0;
+          const y = 0;
 
           const imageElement: SlideElement = {
             id: nanoid(),
