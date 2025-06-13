@@ -836,19 +836,67 @@ export default function Integrations() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-5">
-                <div className="text-sm text-muted-foreground space-y-2 bg-gray-50 p-4 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">Created:</span>
-                    <span>{new Date(integration.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  {integration.lastUsedAt && (
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">Last used:</span>
-                      <span>{new Date(integration.lastUsedAt).toLocaleDateString()}</span>
+                {/* Enhanced metadata display for Snowflake */}
+                {integration.type === 'snowflake' && integration.metadata && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <div className="font-medium text-blue-900 mb-1">Database</div>
+                        <div className="text-blue-700">{integration.credentials.database || 'N/A'}</div>
+                      </div>
+                      <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                        <div className="font-medium text-green-900 mb-1">Records</div>
+                        <div className="text-green-700">{integration.metadata.recordCount?.toLocaleString() || 'N/A'}</div>
+                      </div>
                     </div>
-                  )}
-                </div>
-                <div className="flex space-x-3">
+                    
+                    {integration.metadata.dataAvailable && (
+                      <div className="bg-gray-50 p-3 rounded-lg border">
+                        <div className="font-medium text-gray-900 mb-2">Available Tables</div>
+                        <div className="flex flex-wrap gap-2">
+                          {integration.metadata.dataAvailable.slice(0, 3).map((table: string) => (
+                            <Badge key={table} variant="secondary" className="text-xs">
+                              {table}
+                            </Badge>
+                          ))}
+                          {integration.metadata.dataAvailable.length > 3 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{integration.metadata.dataAvailable.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Standard metadata for other integrations */}
+                {integration.type !== 'snowflake' && (
+                  <div className="text-sm text-muted-foreground space-y-2 bg-gray-50 p-4 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Created:</span>
+                      <span>{new Date(integration.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    {integration.lastUsedAt && (
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">Last used:</span>
+                        <span>{new Date(integration.lastUsedAt).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Connection status and last tested info */}
+                {integration.metadata?.lastTested && (
+                  <div className="text-xs text-muted-foreground bg-gray-50 p-2 rounded border">
+                    <div className="flex items-center justify-between">
+                      <span>Last tested:</span>
+                      <span>{new Date(integration.metadata.lastTested).toLocaleString()}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex space-x-2">
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -856,7 +904,21 @@ export default function Integrations() {
                     className="flex-1 font-medium hover:bg-blue-50 hover:border-blue-200 transition-colors"
                   >
                     <Settings className="h-4 w-4 mr-2" />
-                    Configure
+                    Edit
+                  </Button>
+                  <Button 
+                    variant="default" 
+                    size="sm"
+                    onClick={() => testConnectionMutation.mutate(integration.id)}
+                    disabled={testConnectionMutation.isPending}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {testConnectionMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                    )}
+                    Test
                   </Button>
                   <Button 
                     variant="destructive" 
