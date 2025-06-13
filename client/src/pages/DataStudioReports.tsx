@@ -143,66 +143,81 @@ export function DataStudioReports() {
     }
   };
 
+  // Generate slide thumbnail using canvas
+  const generateSlideThumbnail = (slideData: any): string | null => {
+    if (!slideData || !slideData.elements?.length) {
+      return null;
+    }
+
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+
+      // Set canvas size for thumbnail (16:9 aspect ratio)
+      canvas.width = 320;
+      canvas.height = 180;
+
+      // Fill background
+      ctx.fillStyle = slideData.backgroundColor || '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Scale factor to fit slide content in thumbnail
+      const scaleX = canvas.width / 800; // Assuming slide width is 800px
+      const scaleY = canvas.height / 450; // Assuming slide height is 450px
+
+      // Render elements
+      slideData.elements.forEach((element: any) => {
+        const x = (element.x || 0) * scaleX;
+        const y = (element.y || 0) * scaleY;
+        const width = (element.width || 100) * scaleX;
+        const height = (element.height || 50) * scaleY;
+
+        if (element.type === 'text') {
+          ctx.fillStyle = element.color || '#000000';
+          ctx.font = `${Math.max(8, (element.fontSize || 14) * Math.min(scaleX, scaleY))}px Arial`;
+          ctx.fillText(element.content || 'Text', x, y + height/2);
+        } else if (element.type === 'chart' || element.type === 'table') {
+          // Draw a simple rectangle for charts/tables
+          ctx.fillStyle = element.type === 'chart' ? '#3b82f6' : '#10b981';
+          ctx.fillRect(x, y, width, height);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = `${Math.max(6, 10 * Math.min(scaleX, scaleY))}px Arial`;
+          ctx.textAlign = 'center';
+          ctx.fillText(element.type.toUpperCase(), x + width/2, y + height/2);
+          ctx.textAlign = 'start';
+        } else if (element.type === 'shape') {
+          ctx.fillStyle = element.backgroundColor || '#e5e7eb';
+          ctx.fillRect(x, y, width, height);
+        }
+      });
+
+      return canvas.toDataURL('image/png');
+    } catch (error) {
+      console.error('Error generating slide thumbnail:', error);
+      return null;
+    }
+  };
+
   // Slide preview component
   const SlidePreview = ({ slideData }: { slideData: any }) => {
     if (!slideData || !slideData.elements?.length) {
-      return (
-        <div className="w-full h-24 bg-gray-100 rounded border-2 border-dashed border-gray-300 flex items-center justify-center">
-          <div className="text-center">
-            <Presentation className="h-6 w-6 text-gray-400 mx-auto mb-1" />
-            <span className="text-xs text-gray-500">Empty Slide</span>
-          </div>
-        </div>
-      );
+      return null; // Return null for empty slides
+    }
+
+    const thumbnailUrl = generateSlideThumbnail(slideData);
+    
+    if (!thumbnailUrl) {
+      return null;
     }
 
     return (
-      <div className="w-full h-24 bg-white rounded border border-gray-200 relative overflow-hidden">
-        <div 
-          className="w-full h-full relative"
-          style={{ backgroundColor: slideData.backgroundColor || '#ffffff' }}
-        >
-          {slideData.elements.map((element: any, index: number) => {
-            const scaleFactor = 0.15; // Scale down for thumbnail
-            const style = {
-              position: 'absolute' as const,
-              left: `${element.x * scaleFactor}px`,
-              top: `${element.y * scaleFactor}px`,
-              width: `${element.width * scaleFactor}px`,
-              height: `${element.height * scaleFactor}px`,
-              fontSize: `${Math.max(8, (element.fontSize || 14) * scaleFactor)}px`,
-              color: element.color || '#000000',
-              backgroundColor: element.backgroundColor || 'transparent'
-            };
-
-            if (element.type === 'text') {
-              return (
-                <div key={index} style={style} className="truncate text-xs">
-                  {element.content || 'Text'}
-                </div>
-              );
-            } else if (element.type === 'chart') {
-              return (
-                <div key={index} style={style} className="flex items-center justify-center bg-blue-50 border border-blue-200 rounded">
-                  <BarChart3 className="h-3 w-3 text-blue-600" />
-                </div>
-              );
-            } else if (element.type === 'table') {
-              return (
-                <div key={index} style={style} className="flex items-center justify-center bg-green-50 border border-green-200 rounded">
-                  <FileText className="h-3 w-3 text-green-600" />
-                </div>
-              );
-            } else if (element.type === 'image') {
-              return (
-                <div key={index} style={style} className="flex items-center justify-center bg-gray-50 border border-gray-200 rounded">
-                  <ImageIcon className="h-3 w-3 text-gray-600" />
-                </div>
-              );
-            }
-            return null;
-          })}
-        </div>
+      <div className="w-full h-20 bg-white rounded border border-gray-200 overflow-hidden">
+        <img 
+          src={thumbnailUrl} 
+          alt="Slide preview" 
+          className="w-full h-full object-cover"
+        />
       </div>
     );
   };
@@ -456,10 +471,12 @@ export function DataStudioReports() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      {/* Slide Preview */}
-                      <div className="mb-3">
-                        <SlidePreview slideData={slidePreviewsData[report.id]} />
-                      </div>
+                      {/* Slide Preview - only show if there's content */}
+                      {slidePreviewsData[report.id] && slidePreviewsData[report.id].elements?.length > 0 && (
+                        <div className="mb-3">
+                          <SlidePreview slideData={slidePreviewsData[report.id]} />
+                        </div>
+                      )}
                       
                       <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                         {report.description}
