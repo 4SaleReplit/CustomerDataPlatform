@@ -809,20 +809,108 @@ export default function ReportBuilder() {
           </div>
         )}
         {element.type === 'chart' && (
-          <div className="p-2 w-full h-full bg-blue-50 border border-blue-200 rounded flex items-center justify-center">
-            <BarChart3 className="h-8 w-8 text-blue-500" />
-            <span className="ml-2 text-sm text-blue-700">Chart</span>
+          <div className="p-2 w-full h-full bg-white border border-gray-200 rounded overflow-hidden">
+            {element.content?.title && (
+              <div className="text-xs font-semibold mb-1 truncate">{element.content.title}</div>
+            )}
+            {element.content?.data && element.content.data.length > 0 ? (
+              element.content.type === 'table' ? (
+                <div className="text-xs overflow-auto h-full">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        {element.content.columns?.slice(0, 3).map((col: string) => (
+                          <th key={col} className="border border-gray-200 px-1 py-0.5 text-left text-xs font-medium">
+                            {col.length > 8 ? col.substring(0, 8) + '...' : col}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {element.content.data.slice(0, 3).map((row: any, idx: number) => (
+                        <tr key={idx}>
+                          {element.content.columns?.slice(0, 3).map((col: string) => (
+                            <td key={col} className="border border-gray-200 px-1 py-0.5 text-xs">
+                              {String(row[col] || '').length > 8 ? String(row[col] || '').substring(0, 8) + '...' : String(row[col] || '')}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {element.content.data.length > 3 && (
+                    <div className="text-xs text-gray-500 mt-1">+{element.content.data.length - 3} more rows</div>
+                  )}
+                </div>
+              ) : element.content.type === 'metric' ? (
+                <div className="flex flex-col items-center justify-center h-full">
+                  <div className="text-lg font-bold text-blue-600">
+                    {element.content.data[0] ? Object.values(element.content.data[0])[0] : 'N/A'}
+                  </div>
+                  <div className="text-xs text-gray-500">Metric Value</div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <BarChart3 className="h-6 w-6 text-blue-500" />
+                  <span className="ml-1 text-xs text-blue-700">{element.content.type}</span>
+                </div>
+              )
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-400">
+                <BarChart3 className="h-6 w-6" />
+                <span className="ml-1 text-xs">No Data</span>
+              </div>
+            )}
           </div>
         )}
         {element.type === 'table' && (
-          <div className="p-2 w-full h-full bg-gray-50 border border-gray-200 rounded flex items-center justify-center">
-            <Table className="h-8 w-8 text-gray-500" />
-            <span className="ml-2 text-sm text-gray-700">Table</span>
+          <div className="p-2 w-full h-full bg-white border border-gray-200 rounded overflow-hidden">
+            {element.content?.data && element.content.data.length > 0 ? (
+              <div className="text-xs overflow-auto h-full">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      {element.content.columns?.slice(0, 3).map((col: string) => (
+                        <th key={col} className="border border-gray-200 px-1 py-0.5 text-left text-xs font-medium">
+                          {col.length > 8 ? col.substring(0, 8) + '...' : col}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {element.content.data.slice(0, 4).map((row: any, idx: number) => (
+                      <tr key={idx}>
+                        {element.content.columns?.slice(0, 3).map((col: string) => (
+                          <td key={col} className="border border-gray-200 px-1 py-0.5 text-xs">
+                            {String(row[col] || '').length > 8 ? String(row[col] || '').substring(0, 8) + '...' : String(row[col] || '')}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {element.content.data.length > 4 && (
+                  <div className="text-xs text-gray-500 mt-1">+{element.content.data.length - 4} more rows</div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-400">
+                <Table className="h-6 w-6" />
+                <span className="ml-1 text-xs">No Data</span>
+              </div>
+            )}
           </div>
         )}
         {element.type === 'metric' && (
-          <div className="p-2 w-full h-full bg-green-50 border border-green-200 rounded flex items-center justify-center">
-            <span className="text-2xl font-bold text-green-700">123</span>
+          <div className="p-2 w-full h-full bg-white border border-green-200 rounded flex flex-col items-center justify-center">
+            <div className="text-lg font-bold text-green-700">
+              {element.content?.data && element.content.data.length > 0 
+                ? Object.values(element.content.data[0])[0] 
+                : element.content?.value || '123'}
+            </div>
+            <div className="text-xs text-gray-600 mt-1">
+              {element.content?.title || 'Metric'}
+            </div>
           </div>
         )}
         {element.type === 'shape' && (
@@ -915,17 +1003,41 @@ export default function ReportBuilder() {
     
     setIsExecutingQuery(true);
     try {
-      const response = await apiRequest('/api/snowflake/query', {
+      console.log('Executing query:', currentQuery);
+      
+      const response = await fetch('/api/snowflake/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: currentQuery })
       });
       
+      console.log('Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
-        setQueryResults(data.results || []);
+        console.log('Query response data:', data);
+        
+        // Handle Snowflake response structure: { columns: [...], rows: [...] }
+        if (data.rows && data.columns) {
+          // Convert Snowflake rows format to expected results format
+          const results = data.rows.map((row: any[]) => {
+            const obj: any = {};
+            data.columns.forEach((col: any, index: number) => {
+              obj[col.name] = row[index];
+            });
+            return obj;
+          });
+          setQueryResults(results);
+          console.log('Query results set (from Snowflake):', results);
+        } else {
+          // Fallback for other formats
+          const results = data.results || data.data || data.rows || [];
+          setQueryResults(results);
+          console.log('Query results set (fallback):', results);
+        }
       } else {
-        console.error('Query execution failed');
+        const errorText = await response.text();
+        console.error('Query execution failed:', response.status, errorText);
         setQueryResults([]);
       }
     } catch (error) {
@@ -937,10 +1049,51 @@ export default function ReportBuilder() {
   };
 
   const saveQueryConfiguration = () => {
-    if (!currentQuery.trim() || !currentTitle.trim()) return;
+    if (!currentQuery.trim() || !currentTitle.trim() || !queryResults) return;
     
-    // Add a chart element with the query results
-    addElement('chart');
+    // Create the element with query configuration and results
+    const elementId = nanoid();
+    const newElement: SlideElement = {
+      id: elementId,
+      type: 'chart',
+      x: 100,
+      y: 100,
+      width: 400,
+      height: 300,
+      content: {
+        type: 'table', // Default to table view
+        title: currentTitle,
+        query: currentQuery,
+        data: queryResults,
+        columns: queryResults.length > 0 ? Object.keys(queryResults[0]) : []
+      },
+      style: {
+        fontSize: 14,
+        fontWeight: 'normal',
+        fontFamily: 'Inter',
+        color: '#000000',
+        backgroundColor: '#ffffff'
+      }
+    };
+
+    // Add element to current slide
+    if (currentSlide) {
+      const updatedSlide = {
+        ...currentSlide,
+        elements: [...currentSlide.elements, newElement]
+      };
+      
+      const updatedReport = {
+        ...currentReport,
+        slides: currentReport.slides.map(slide => 
+          slide.id === currentSlide.id ? updatedSlide : slide
+        )
+      };
+      
+      setCurrentReport(updatedReport);
+      setSelectedElement(elementId);
+    }
+    
     setShowSQLEditor(false);
     setQueryResults(null);
     setCurrentQuery('');
