@@ -874,7 +874,7 @@ export default function ReportBuilder() {
         {/* Canvas Area */}
         <div className="flex-1 flex flex-col">
           {/* Canvas */}
-          <div className="overflow-auto bg-gray-100 p-4 flex items-center justify-center" style={{ height: 'calc(100vh - 280px)' }}>
+          <div className="overflow-auto bg-gray-100 p-4 flex items-center justify-center" style={{ height: 'calc(100vh - 350px)' }}>
             <div 
               ref={canvasRef}
               className="bg-white shadow-2xl relative border"
@@ -891,7 +891,7 @@ export default function ReportBuilder() {
           </div>
 
           {/* Bottom Slide Navigator */}
-          <div className="h-32 bg-white border-t p-4">
+          <div className="h-40 bg-white border-t p-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-semibold text-sm">Slides</h3>
               <Button size="sm" onClick={addSlide} className="bg-blue-600 hover:bg-blue-700">
