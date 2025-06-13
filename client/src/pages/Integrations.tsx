@@ -514,17 +514,17 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
   }
 };
 
-// Enhanced Integration Card Component with Full Metadata Display
-const IntegrationCard = memo(({ integration, template, getStatusBadge, handleConfigureIntegration, deleteIntegrationMutation }: {
+// Compact Integration Card Component
+const IntegrationCard = memo(({ integration, template, getStatusBadge, handleConfigureIntegration, deleteIntegrationMutation, onPreview }: {
   integration: Integration;
   template: IntegrationTemplate;
   getStatusBadge: (status: string) => React.ReactNode;
   handleConfigureIntegration: (integration: Integration) => void;
   deleteIntegrationMutation: any;
+  onPreview: (integration: Integration) => void;
 }) => {
   const { toast } = useToast();
   const metadata = integration.metadata as any;
-  const [isExpanded, setIsExpanded] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   
   const handleTestConnection = async () => {
@@ -538,271 +538,109 @@ const IntegrationCard = memo(({ integration, template, getStatusBadge, handleCon
       setIsTestingConnection(false);
     }
   };
-
-  const handleToggleStatus = async () => {
-    toast({ title: "Status updated", description: `Integration ${integration.status === 'connected' ? 'paused' : 'activated'}` });
-  };
   
   return (
-    <Card className="transition-all duration-300 hover:shadow-lg border border-gray-200 hover:border-gray-300 overflow-hidden">
-      <CardContent className="p-0">
-        {/* Header Section */}
-        <div className="p-6 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center space-x-4">
-              <div className="flex-shrink-0 p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
-                {template?.icon}
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center space-x-3 mb-1">
-                  <h3 className="text-xl font-semibold text-gray-900">{integration.name}</h3>
-                  {getStatusBadge(integration.status)}
-                </div>
-                <p className="text-sm text-gray-600 mb-2">{integration.description}</p>
-                <div className="flex items-center space-x-4 text-xs text-gray-500">
-                  <span className="capitalize font-medium">{integration.type}</span>
-                  {metadata?.lastTested && (
-                    <span>Last tested: {new Date(metadata.lastTested).toLocaleDateString()}</span>
-                  )}
-                </div>
-              </div>
+    <Card className="transition-all duration-300 hover:shadow-lg border border-gray-200 hover:border-blue-300 cursor-pointer group h-full">
+      <CardContent className="p-4">
+        {/* Header with Icon, Name, and Status */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center space-x-3 flex-1">
+            <div className="flex-shrink-0 p-2 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
+              {template?.icon}
             </div>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </Button>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                {integration.name}
+              </h3>
+              <p className="text-xs text-gray-500 capitalize">{integration.type}</p>
+            </div>
           </div>
+          {getStatusBadge(integration.status)}
         </div>
 
-        {/* Metadata Section - Always Visible */}
+        {/* Core Metrics */}
         {metadata && (
-          <div className="p-6 bg-white">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-sm font-semibold text-gray-700">
-                {integration.type === 'postgresql' ? 'DATABASE METRICS' : 
-                 integration.type === 'snowflake' ? 'WAREHOUSE METRICS' : 'DATA METRICS'}
-              </h4>
-              {metadata.accountInfo && (
-                <span className="text-xs text-gray-500 truncate max-w-48">{metadata.accountInfo}</span>
-              )}
-            </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {/* PostgreSQL Metrics */}
+          <div className="mb-4">
+            <div className="grid grid-cols-2 gap-2 text-xs">
               {integration.type === 'postgresql' && (
                 <>
                   {metadata.tableCount && (
-                    <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-100">
-                      <div className="text-2xl font-bold text-blue-600">{metadata.tableCount}</div>
-                      <div className="text-xs text-gray-500 mt-1">Total Tables</div>
-                    </div>
-                  )}
-                  {metadata.userTables && (
-                    <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-100">
-                      <div className="text-2xl font-bold text-blue-600">{metadata.userTables}</div>
-                      <div className="text-xs text-gray-500 mt-1">User Tables</div>
-                    </div>
-                  )}
-                  {metadata.views && (
-                    <div className="text-center p-4 bg-indigo-50 rounded-lg border border-indigo-100">
-                      <div className="text-2xl font-bold text-indigo-600">{metadata.views}</div>
-                      <div className="text-xs text-gray-500 mt-1">Views</div>
+                    <div className="bg-blue-50 p-2 rounded border border-blue-100 text-center">
+                      <div className="font-bold text-blue-600">{metadata.tableCount}</div>
+                      <div className="text-blue-700">Tables</div>
                     </div>
                   )}
                   {metadata.size && (
-                    <div className="text-center p-4 bg-green-50 rounded-lg border border-green-100">
-                      <div className="text-2xl font-bold text-green-600">{metadata.size}</div>
-                      <div className="text-xs text-gray-500 mt-1">Database Size</div>
+                    <div className="bg-green-50 p-2 rounded border border-green-100 text-center">
+                      <div className="font-bold text-green-600">{metadata.size}</div>
+                      <div className="text-green-700">Size</div>
                     </div>
                   )}
                 </>
               )}
               
-              {/* Snowflake Metrics */}
               {integration.type === 'snowflake' && (
                 <>
                   {metadata.tableCount && (
-                    <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-100">
-                      <div className="text-2xl font-bold text-blue-600">{metadata.tableCount}</div>
-                      <div className="text-xs text-gray-500 mt-1">Tables</div>
-                    </div>
-                  )}
-                  {metadata.viewCount && (
-                    <div className="text-center p-4 bg-indigo-50 rounded-lg border border-indigo-100">
-                      <div className="text-2xl font-bold text-indigo-600">{metadata.viewCount}</div>
-                      <div className="text-xs text-gray-500 mt-1">Views</div>
-                    </div>
-                  )}
-                  {metadata.sizeGB && (
-                    <div className="text-center p-4 bg-green-50 rounded-lg border border-green-100">
-                      <div className="text-2xl font-bold text-green-600">{metadata.sizeGB} GB</div>
-                      <div className="text-xs text-gray-500 mt-1">Storage</div>
+                    <div className="bg-blue-50 p-2 rounded border border-blue-100 text-center">
+                      <div className="font-bold text-blue-600">{metadata.tableCount}</div>
+                      <div className="text-blue-700">Tables</div>
                     </div>
                   )}
                   {metadata.warehouse && (
-                    <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-100">
-                      <div className="text-lg font-bold text-purple-600">{metadata.warehouse}</div>
-                      <div className="text-xs text-gray-500 mt-1">Warehouse</div>
+                    <div className="bg-purple-50 p-2 rounded border border-purple-100 text-center">
+                      <div className="font-bold text-purple-600 text-xs truncate">{metadata.warehouse}</div>
+                      <div className="text-purple-700">Warehouse</div>
                     </div>
                   )}
                 </>
               )}
             </div>
-            
-            {/* Schema Information */}
-            {metadata.schemas && Array.isArray(metadata.schemas) && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-600">Schemas ({metadata.schemas.length})</span>
-                  <div className="flex space-x-1">
-                    {metadata.schemas.slice(0, 3).map((schema: string, index: number) => (
-                      <span key={index} className="inline-block px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded font-medium">
-                        {schema}
-                      </span>
-                    ))}
-                    {metadata.schemas.length > 3 && (
-                      <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded font-medium">
-                        +{metadata.schemas.length - 3} more
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Expanded Details */}
-        {isExpanded && (
-          <div className="px-6 pb-6 space-y-4 bg-gray-50">
-            {/* Timestamps */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-white rounded-lg border border-gray-200">
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Created</label>
-                <div className="text-sm text-gray-900 mt-1">{new Date(integration.createdAt).toLocaleString()}</div>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Last Updated</label>
-                <div className="text-sm text-gray-900 mt-1">{new Date(integration.updatedAt).toLocaleString()}</div>
-              </div>
-              {integration.lastUsedAt && (
-                <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Last Used</label>
-                  <div className="text-sm text-gray-900 mt-1">{new Date(integration.lastUsedAt).toLocaleString()}</div>
-                </div>
-              )}
-            </div>
-
-            {/* Connection Details */}
-            {integration.credentials && (
-              <div className="p-4 bg-white rounded-lg border border-gray-200">
-                <h5 className="text-sm font-medium text-gray-700 mb-3 uppercase tracking-wide">Connection Details</h5>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  {integration.type === 'postgresql' && (
-                    <>
-                      <div>
-                        <span className="text-gray-500">Host:</span>
-                        <span className="ml-2 font-mono text-gray-900">{(integration.credentials as any).host}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Database:</span>
-                        <span className="ml-2 font-mono text-gray-900">{(integration.credentials as any).database}</span>
-                      </div>
-                    </>
-                  )}
-                  {integration.type === 'snowflake' && (
-                    <>
-                      <div>
-                        <span className="text-gray-500">Account:</span>
-                        <span className="ml-2 font-mono text-gray-900">{(integration.credentials as any).account}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Database:</span>
-                        <span className="ml-2 font-mono text-gray-900">{(integration.credentials as any).database}</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Sync Information */}
-            {metadata?.lastSync && (
-              <div className="p-4 bg-white rounded-lg border border-gray-200">
-                <h5 className="text-sm font-medium text-gray-700 mb-2 uppercase tracking-wide">Synchronization</h5>
-                <div className="text-sm text-gray-600">
-                  Last synced: {new Date(metadata.lastSync).toLocaleString()}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
         {/* Action Buttons */}
-        <div className="px-6 py-4 bg-white border-t border-gray-100">
-          <div className="flex items-center justify-between">
-            <div className="flex space-x-3">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => handleConfigureIntegration(integration)}
-                className="font-medium hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors"
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Configure
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleTestConnection}
-                disabled={isTestingConnection}
-                className="font-medium hover:bg-green-50 hover:border-green-300 hover:text-green-700 transition-colors"
-              >
-                {isTestingConnection ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                )}
-                {isTestingConnection ? 'Testing...' : 'Test Connection'}
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleToggleStatus}
-                className={`font-medium transition-colors ${
-                  integration.status === 'connected' 
-                    ? 'hover:bg-yellow-50 hover:border-yellow-300 hover:text-yellow-700' 
-                    : 'hover:bg-green-50 hover:border-green-300 hover:text-green-700'
-                }`}
-              >
-                {integration.status === 'connected' ? (
-                  <>
-                    <Pause className="h-4 w-4 mr-2" />
-                    Pause
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-4 w-4 mr-2" />
-                    Activate
-                  </>
-                )}
-              </Button>
-            </div>
-            
+        <div className="space-y-2">
+          <div className="flex space-x-2">
             <Button 
-              variant="ghost" 
+              variant="outline" 
               size="sm"
-              onClick={() => deleteIntegrationMutation.mutate(integration.id)}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleTestConnection();
+              }}
+              disabled={isTestingConnection}
+              className="flex-1 text-xs font-medium hover:bg-green-50 hover:border-green-300 hover:text-green-700"
             >
-              <Trash2 className="h-4 w-4" />
+              {isTestingConnection ? (
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              ) : (
+                <CheckCircle className="h-3 w-3 mr-1" />
+              )}
+              {isTestingConnection ? 'Testing...' : 'Test'}
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleConfigureIntegration(integration);
+              }}
+              className="flex-1 text-xs font-medium hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
+            >
+              <Settings className="h-3 w-3 mr-1" />
+              Edit
             </Button>
           </div>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => onPreview(integration)}
+            className="w-full text-xs text-gray-600 hover:text-blue-600 hover:bg-blue-50"
+          >
+            <Info className="h-3 w-3 mr-1" />
+            View Details
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -818,6 +656,7 @@ export default function Integrations() {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [previewIntegration, setPreviewIntegration] = useState<Integration | null>(null);
 
 
 
@@ -1118,7 +957,7 @@ export default function Integrations() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {integrations.map((integration: Integration) => {
           const template = integrationTemplates[integration.type];
           return (
@@ -1129,6 +968,7 @@ export default function Integrations() {
               getStatusBadge={getStatusBadge}
               handleConfigureIntegration={handleConfigureIntegration}
               deleteIntegrationMutation={deleteIntegrationMutation}
+              onPreview={setPreviewIntegration}
             />
           );
         })}
@@ -1383,6 +1223,216 @@ export default function Integrations() {
                 )}
               </div>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Integration Preview Modal */}
+      <Dialog open={!!previewIntegration} onOpenChange={() => setPreviewIntegration(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {previewIntegration && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center space-x-4 mb-4">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
+                    {integrationTemplates[previewIntegration.type]?.icon}
+                  </div>
+                  <div>
+                    <DialogTitle className="text-2xl font-bold">{previewIntegration.name}</DialogTitle>
+                    <DialogDescription className="text-lg">
+                      {previewIntegration.description}
+                    </DialogDescription>
+                  </div>
+                  {getStatusBadge(previewIntegration.status)}
+                </div>
+              </DialogHeader>
+
+              <div className="space-y-6">
+                {/* Metadata Section */}
+                {previewIntegration.metadata && (
+                  <div className="p-6 bg-gray-50 rounded-lg">
+                    <h4 className="text-lg font-semibold text-gray-700 mb-4">
+                      {previewIntegration.type === 'postgresql' ? 'Database Metrics' : 
+                       previewIntegration.type === 'snowflake' ? 'Warehouse Metrics' : 'Data Metrics'}
+                    </h4>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {previewIntegration.type === 'postgresql' && (
+                        <>
+                          {(previewIntegration.metadata as any).tableCount && (
+                            <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-100">
+                              <div className="text-3xl font-bold text-blue-600">{(previewIntegration.metadata as any).tableCount}</div>
+                              <div className="text-sm text-gray-500 mt-1">Total Tables</div>
+                            </div>
+                          )}
+                          {(previewIntegration.metadata as any).userTables && (
+                            <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-100">
+                              <div className="text-3xl font-bold text-blue-600">{(previewIntegration.metadata as any).userTables}</div>
+                              <div className="text-sm text-gray-500 mt-1">User Tables</div>
+                            </div>
+                          )}
+                          {(previewIntegration.metadata as any).views && (
+                            <div className="text-center p-4 bg-indigo-50 rounded-lg border border-indigo-100">
+                              <div className="text-3xl font-bold text-indigo-600">{(previewIntegration.metadata as any).views}</div>
+                              <div className="text-sm text-gray-500 mt-1">Views</div>
+                            </div>
+                          )}
+                          {(previewIntegration.metadata as any).size && (
+                            <div className="text-center p-4 bg-green-50 rounded-lg border border-green-100">
+                              <div className="text-3xl font-bold text-green-600">{(previewIntegration.metadata as any).size}</div>
+                              <div className="text-sm text-gray-500 mt-1">Database Size</div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      
+                      {previewIntegration.type === 'snowflake' && (
+                        <>
+                          {(previewIntegration.metadata as any).tableCount && (
+                            <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-100">
+                              <div className="text-3xl font-bold text-blue-600">{(previewIntegration.metadata as any).tableCount}</div>
+                              <div className="text-sm text-gray-500 mt-1">Tables</div>
+                            </div>
+                          )}
+                          {(previewIntegration.metadata as any).viewCount && (
+                            <div className="text-center p-4 bg-indigo-50 rounded-lg border border-indigo-100">
+                              <div className="text-3xl font-bold text-indigo-600">{(previewIntegration.metadata as any).viewCount}</div>
+                              <div className="text-sm text-gray-500 mt-1">Views</div>
+                            </div>
+                          )}
+                          {(previewIntegration.metadata as any).sizeGB && (
+                            <div className="text-center p-4 bg-green-50 rounded-lg border border-green-100">
+                              <div className="text-3xl font-bold text-green-600">{(previewIntegration.metadata as any).sizeGB} GB</div>
+                              <div className="text-sm text-gray-500 mt-1">Storage</div>
+                            </div>
+                          )}
+                          {(previewIntegration.metadata as any).warehouse && (
+                            <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-100">
+                              <div className="text-2xl font-bold text-purple-600">{(previewIntegration.metadata as any).warehouse}</div>
+                              <div className="text-sm text-gray-500 mt-1">Warehouse</div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    
+                    {/* Schema Information */}
+                    {(previewIntegration.metadata as any).schemas && Array.isArray((previewIntegration.metadata as any).schemas) && (
+                      <div className="mt-6 pt-6 border-t border-gray-200">
+                        <h5 className="text-sm font-medium text-gray-600 mb-3">Schemas ({(previewIntegration.metadata as any).schemas.length})</h5>
+                        <div className="flex flex-wrap gap-2">
+                          {(previewIntegration.metadata as any).schemas.map((schema: string, index: number) => (
+                            <span key={index} className="inline-block px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full font-medium">
+                              {schema}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Timestamps */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-white rounded-lg border border-gray-200">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Created</label>
+                    <div className="text-lg text-gray-900 mt-1">{previewIntegration.createdAt ? new Date(previewIntegration.createdAt).toLocaleString() : 'N/A'}</div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Last Updated</label>
+                    <div className="text-lg text-gray-900 mt-1">{previewIntegration.updatedAt ? new Date(previewIntegration.updatedAt).toLocaleString() : 'N/A'}</div>
+                  </div>
+                  {previewIntegration.lastUsedAt && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Last Used</label>
+                      <div className="text-lg text-gray-900 mt-1">{new Date(previewIntegration.lastUsedAt).toLocaleString()}</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Connection Details */}
+                {previewIntegration.credentials && (
+                  <div className="p-4 bg-white rounded-lg border border-gray-200">
+                    <h5 className="text-lg font-medium text-gray-700 mb-3">Connection Details</h5>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      {previewIntegration.type === 'postgresql' && (
+                        <>
+                          <div>
+                            <span className="text-gray-500 font-medium">Host:</span>
+                            <span className="ml-2 font-mono text-gray-900">{(previewIntegration.credentials as any).host}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500 font-medium">Database:</span>
+                            <span className="ml-2 font-mono text-gray-900">{(previewIntegration.credentials as any).database}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500 font-medium">Port:</span>
+                            <span className="ml-2 font-mono text-gray-900">{(previewIntegration.credentials as any).port}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500 font-medium">SSL:</span>
+                            <span className="ml-2 font-mono text-gray-900">{(previewIntegration.credentials as any).ssl}</span>
+                          </div>
+                        </>
+                      )}
+                      {previewIntegration.type === 'snowflake' && (
+                        <>
+                          <div>
+                            <span className="text-gray-500 font-medium">Account:</span>
+                            <span className="ml-2 font-mono text-gray-900">{(previewIntegration.credentials as any).account}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500 font-medium">Database:</span>
+                            <span className="ml-2 font-mono text-gray-900">{(previewIntegration.credentials as any).database}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500 font-medium">Username:</span>
+                            <span className="ml-2 font-mono text-gray-900">{(previewIntegration.credentials as any).username}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500 font-medium">Warehouse:</span>
+                            <span className="ml-2 font-mono text-gray-900">{(previewIntegration.credentials as any).warehouse}</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex justify-between items-center pt-6 border-t border-gray-200">
+                  <div className="flex space-x-3">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        handleConfigureIntegration(previewIntegration);
+                        setPreviewIntegration(null);
+                      }}
+                      className="font-medium hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Configure Integration
+                    </Button>
+                    <Button 
+                      variant="default"
+                      className="font-medium bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Test Connection
+                    </Button>
+                  </div>
+                  
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => deleteIntegrationMutation.mutate(previewIntegration.id)}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Integration
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
