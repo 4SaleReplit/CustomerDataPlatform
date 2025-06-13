@@ -572,72 +572,85 @@ const IntegrationCard = memo(({ integration, template, getStatusBadge, handleCon
           </div>
         )}
         
-        {/* Database-specific metadata */}
-        {integration.type === 'postgresql' && integration.metadata && (
-          <div className="mt-3 pt-3 border-t border-gray-200">
-            <div className="text-xs font-semibold text-gray-600 mb-2">DATABASE METRICS</div>
-            <div className="space-y-1">
-              {(integration.metadata as any).tableCount && (
-                <div className="flex justify-between">
-                  <span>Tables:</span>
-                  <span className="font-medium text-blue-600">{(integration.metadata as any).tableCount}</span>
-                </div>
-              )}
-              {(integration.metadata as any).userTables && (integration.metadata as any).views && (
-                <div className="flex justify-between">
-                  <span>User/Views:</span>
-                  <span className="font-medium text-blue-600">{(integration.metadata as any).userTables}/{(integration.metadata as any).views}</span>
-                </div>
-              )}
-              {(integration.metadata as any).size && (
-                <div className="flex justify-between">
-                  <span>Size:</span>
-                  <span className="font-medium text-green-600">{(integration.metadata as any).size}</span>
-                </div>
-              )}
-              {(integration.metadata as any).schemas && (integration.metadata as any).schemas.length > 0 && (
-                <div className="flex justify-between">
-                  <span>Schemas:</span>
-                  <span className="font-medium text-purple-600">{(integration.metadata as any).schemas.length}</span>
-                </div>
-              )}
-            </div>
+        {/* Debug metadata */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="text-xs text-gray-400 bg-yellow-50 p-2 rounded">
+            Metadata: {integration.metadata ? JSON.stringify(Object.keys(integration.metadata)) : 'null'}
           </div>
         )}
         
-        {integration.type === 'snowflake' && integration.metadata && (
+        {/* Database-specific metadata - Always show if integration has metadata */}
+        {integration.metadata && Object.keys(integration.metadata).length > 0 && (
           <div className="mt-3 pt-3 border-t border-gray-200">
-            <div className="text-xs font-semibold text-gray-600 mb-2">WAREHOUSE METRICS</div>
+            <div className="text-xs font-semibold text-gray-600 mb-2">
+              {integration.type === 'postgresql' ? 'DATABASE METRICS' : 
+               integration.type === 'snowflake' ? 'WAREHOUSE METRICS' : 'DATA METRICS'}
+            </div>
             <div className="space-y-1">
-              {(integration.metadata as any).tableCount && (
-                <div className="flex justify-between">
-                  <span>Tables:</span>
-                  <span className="font-medium text-blue-600">{(integration.metadata as any).tableCount}</span>
-                </div>
+              {/* PostgreSQL specific metrics */}
+              {integration.type === 'postgresql' && (
+                <>
+                  {(integration.metadata as any).tableCount && (
+                    <div className="flex justify-between">
+                      <span>Tables:</span>
+                      <span className="font-medium text-blue-600">{(integration.metadata as any).tableCount}</span>
+                    </div>
+                  )}
+                  {(integration.metadata as any).userTables && (integration.metadata as any).views && (
+                    <div className="flex justify-between">
+                      <span>User/Views:</span>
+                      <span className="font-medium text-blue-600">{(integration.metadata as any).userTables}/{(integration.metadata as any).views}</span>
+                    </div>
+                  )}
+                  {(integration.metadata as any).size && (
+                    <div className="flex justify-between">
+                      <span>Size:</span>
+                      <span className="font-medium text-green-600">{(integration.metadata as any).size}</span>
+                    </div>
+                  )}
+                  {(integration.metadata as any).schemas && Array.isArray((integration.metadata as any).schemas) && (
+                    <div className="flex justify-between">
+                      <span>Schemas:</span>
+                      <span className="font-medium text-purple-600">{(integration.metadata as any).schemas.length}</span>
+                    </div>
+                  )}
+                </>
               )}
-              {(integration.metadata as any).viewCount && (
-                <div className="flex justify-between">
-                  <span>Views:</span>
-                  <span className="font-medium text-blue-600">{(integration.metadata as any).viewCount}</span>
-                </div>
-              )}
-              {(integration.metadata as any).sizeGB && (
-                <div className="flex justify-between">
-                  <span>Size:</span>
-                  <span className="font-medium text-green-600">{(integration.metadata as any).sizeGB} GB</span>
-                </div>
-              )}
-              {(integration.metadata as any).warehouse && (
-                <div className="flex justify-between">
-                  <span>Warehouse:</span>
-                  <span className="font-medium text-purple-600">{(integration.metadata as any).warehouse}</span>
-                </div>
-              )}
-              {(integration.metadata as any).schemas && (integration.metadata as any).schemas.length > 0 && (
-                <div className="flex justify-between">
-                  <span>Schemas:</span>
-                  <span className="font-medium text-purple-600">{(integration.metadata as any).schemas.length}</span>
-                </div>
+              
+              {/* Snowflake specific metrics */}
+              {integration.type === 'snowflake' && (
+                <>
+                  {(integration.metadata as any).tableCount && (
+                    <div className="flex justify-between">
+                      <span>Tables:</span>
+                      <span className="font-medium text-blue-600">{(integration.metadata as any).tableCount}</span>
+                    </div>
+                  )}
+                  {(integration.metadata as any).viewCount && (
+                    <div className="flex justify-between">
+                      <span>Views:</span>
+                      <span className="font-medium text-blue-600">{(integration.metadata as any).viewCount}</span>
+                    </div>
+                  )}
+                  {(integration.metadata as any).sizeGB && (
+                    <div className="flex justify-between">
+                      <span>Size:</span>
+                      <span className="font-medium text-green-600">{(integration.metadata as any).sizeGB} GB</span>
+                    </div>
+                  )}
+                  {(integration.metadata as any).warehouse && (
+                    <div className="flex justify-between">
+                      <span>Warehouse:</span>
+                      <span className="font-medium text-purple-600">{(integration.metadata as any).warehouse}</span>
+                    </div>
+                  )}
+                  {(integration.metadata as any).schemas && Array.isArray((integration.metadata as any).schemas) && (
+                    <div className="flex justify-between">
+                      <span>Schemas:</span>
+                      <span className="font-medium text-purple-600">{(integration.metadata as any).schemas.length}</span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -683,14 +696,14 @@ export default function Integrations() {
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [showAddModal, setShowAddModal] = useState(false);
 
-  // Fetch integrations from database with aggressive caching
+  // Fetch integrations from database with fresh data
   const { data: integrations = [], isLoading } = useQuery({
     queryKey: ['/api/integrations'],
     queryFn: () => apiRequest('/api/integrations') as Promise<Integration[]>,
-    staleTime: 10 * 60 * 1000, // Data stays fresh for 10 minutes
-    refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnMount: false, // Don't refetch on component mount if data exists
-    refetchOnReconnect: false, // Don't refetch on network reconnect
+    staleTime: 0, // Always fetch fresh data
+    refetchOnWindowFocus: true, // Refetch on window focus
+    refetchOnMount: true, // Refetch on component mount
+    refetchOnReconnect: true, // Refetch on network reconnect
   });
 
   // Create integration mutation
