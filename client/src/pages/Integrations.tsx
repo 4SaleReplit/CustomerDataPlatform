@@ -555,6 +555,17 @@ const IntegrationCard = memo(({ integration, template, getStatusBadge, handleCon
           </div>
         )}
         
+        {/* Debug: Show raw metadata */}
+        <div className="mt-2 p-2 bg-yellow-50 border rounded text-xs">
+          <div><strong>Debug:</strong></div>
+          <div>Type: {integration.type}</div>
+          <div>Has metadata: {integration.metadata ? 'YES' : 'NO'}</div>
+          <div>Metadata type: {typeof integration.metadata}</div>
+          {integration.metadata && (
+            <div>Raw metadata: {JSON.stringify(integration.metadata)}</div>
+          )}
+        </div>
+
         {/* Database-specific metadata */}
         {integration.metadata && typeof integration.metadata === 'object' && (
           <div className="mt-3 pt-3 border-t border-gray-200">
@@ -680,14 +691,17 @@ export default function Integrations() {
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [showAddModal, setShowAddModal] = useState(false);
 
-  // Fetch integrations from database with fresh data
+  // Invalidate cache on component mount
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
+  }, [queryClient]);
+
+  // Fetch integrations from database
   const { data: integrations = [], isLoading } = useQuery({
     queryKey: ['/api/integrations'],
     queryFn: () => apiRequest('/api/integrations') as Promise<Integration[]>,
     staleTime: 0, // Always fetch fresh data
-    refetchOnWindowFocus: true, // Refetch on window focus
-    refetchOnMount: true, // Refetch on component mount
-    refetchOnReconnect: true, // Refetch on network reconnect
+    refetchOnMount: true,
   });
 
   // Create integration mutation
