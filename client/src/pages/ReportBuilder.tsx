@@ -1615,42 +1615,7 @@ export default function ReportBuilder() {
             </div>
           </div>
           
-          <div className="p-4 bg-gray-50">
-            <h3 className="font-bold text-sm mb-3 text-gray-800">Quick Templates</h3>
-            <div className="space-y-2">
-              <div className="p-3 border rounded-lg cursor-pointer hover:bg-white hover:shadow-sm transition-all border-gray-200 bg-white">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-6 bg-gradient-to-r from-blue-100 to-blue-200 rounded border"></div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-800">Blank Slide</div>
-                    <div className="text-xs text-gray-500">Start with empty canvas</div>
-                  </div>
-                </div>
-              </div>
-              <div className="p-3 border rounded-lg cursor-pointer hover:bg-white hover:shadow-sm transition-all border-gray-200 bg-white">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-6 bg-gradient-to-r from-green-100 to-green-200 rounded border flex items-center justify-center">
-                    <Type className="h-2 w-2 text-green-600" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-800">Title Slide</div>
-                    <div className="text-xs text-gray-500">Title and subtitle layout</div>
-                  </div>
-                </div>
-              </div>
-              <div className="p-3 border rounded-lg cursor-pointer hover:bg-white hover:shadow-sm transition-all border-gray-200 bg-white">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-6 bg-gradient-to-r from-purple-100 to-purple-200 rounded border flex items-center justify-center">
-                    <BarChart3 className="h-2 w-2 text-purple-600" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-800">Chart Layout</div>
-                    <div className="text-xs text-gray-500">Data visualization template</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+
         </div>
 
         {/* Canvas Area */}
