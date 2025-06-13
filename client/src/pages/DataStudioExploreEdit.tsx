@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   Save, 
   Play, 
@@ -19,6 +20,7 @@ import {
   Eye
 } from 'lucide-react';
 import { CodeMirrorSQLEditor } from '@/components/dashboard/CodeMirrorSQLEditor';
+import { BarChart, Bar, LineChart as RechartsLineChart, Line, PieChart as RechartsPieChart, Cell, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
 interface Explore {
   id: string;
@@ -123,10 +125,48 @@ export function DataStudioExploreEdit() {
     }
   };
 
+  // Get available visualization options based on query results
+  const getVisualizationOptions = () => {
+    if (!queryResults?.success || !queryResults.rows?.length) return [
+      { value: 'table', label: 'Table View', icon: Database }
+    ];
+    
+    const options = [{ value: 'table', label: 'Table View', icon: Database }];
+    const hasNumericColumns = queryResults.columns?.some((col: any) => 
+      col.type === 'fixed' || col.type === 'real' || col.type === 'number' || col.type === 'FIXED'
+    );
+    
+    if (hasNumericColumns && queryResults.columns?.length >= 2) {
+      options.push({ value: 'bar', label: 'Bar Chart', icon: BarChart3 });
+      options.push({ value: 'line', label: 'Line Chart', icon: LineChart });
+      options.push({ value: 'pie', label: 'Pie Chart', icon: PieChart });
+    }
+    
+    if (queryResults.rows?.length === 1 && queryResults.columns?.length === 1 && hasNumericColumns) {
+      options.push({ value: 'number', label: 'Metric Card', icon: TrendingUp });
+    }
+    
+    return options;
+  };
+
+  // Transform data for chart rendering
+  const transformDataForChart = () => {
+    if (!queryResults?.rows || !queryResults?.columns) return [];
+    
+    return queryResults.rows.slice(0, 50).map((row: any[]) => {
+      const item: any = {};
+      queryResults.columns.forEach((col: any, index: number) => {
+        const colName = col.name || col;
+        item[colName] = row[index];
+      });
+      return item;
+    });
+  };
+
   const renderVisualization = () => {
     if (isExecuting) {
       return (
-        <div className="h-64 flex items-center justify-center">
+        <div className="h-96 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
             <p className="text-sm">Generating visualization...</p>
@@ -137,7 +177,7 @@ export function DataStudioExploreEdit() {
 
     if (queryResults?.error) {
       return (
-        <div className="h-64 flex items-center justify-center bg-red-50 dark:bg-red-950/20 rounded-lg">
+        <div className="h-96 flex items-center justify-center bg-red-50 dark:bg-red-950/20 rounded-lg">
           <div className="text-center p-4">
             <div className="text-red-600 text-sm font-medium mb-2">Query Error</div>
             <p className="text-red-500 text-xs max-w-md">{queryResults.error}</p>
@@ -146,35 +186,123 @@ export function DataStudioExploreEdit() {
       );
     }
 
-    if (queryResults && queryResults.rows && queryResults.columns) {
-      const value = queryResults.rows[0]?.[0];
-      const firstCol = queryResults.columns[0]?.name || queryResults.columns[0];
-      
+    if (!queryResults?.success || !queryResults.rows?.length) {
       return (
-        <div className="h-64 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50 rounded-lg p-4 flex items-center justify-center">
+        <div className="h-96 flex items-center justify-center border-2 border-dashed border-muted-foreground/25 rounded-lg">
           <div className="text-center">
-            {getVisualizationIcon(visualizationType)}
-            <div className="mt-2">
-              <div className="text-2xl font-bold text-blue-600 mb-1">
-                {visualizationType === 'number' ? 
-                  (typeof value === 'number' ? value.toLocaleString() : value) :
-                  `${queryResults.rows.length} records`
-                }
-              </div>
-              <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
-                {visualizationType === 'number' ? firstCol : `${visualizationType} Chart Preview`}
-              </p>
-            </div>
+            <Database className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-lg font-medium">No Data</p>
+            <p className="text-muted-foreground">Execute query to see visualization</p>
           </div>
         </div>
       );
     }
 
+    const data = transformDataForChart();
+    const firstCol = queryResults.columns?.[0]?.name || queryResults.columns?.[0];
+    const secondCol = queryResults.columns?.[1]?.name || queryResults.columns?.[1];
+
+    switch (visualizationType) {
+      case 'bar':
+        if (queryResults.columns?.length >= 2) {
+          return (
+            <div className="h-96">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey={firstCol} />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey={secondCol} fill="#3B82F6" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          );
+        }
+        break;
+        
+      case 'line':
+        if (queryResults.columns?.length >= 2) {
+          return (
+            <div className="h-96">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsLineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey={firstCol} />
+                  <YAxis />
+                  <Tooltip />
+                  <Line type="monotone" dataKey={secondCol} stroke="#3B82F6" strokeWidth={2} />
+                </RechartsLineChart>
+              </ResponsiveContainer>
+            </div>
+          );
+        }
+        break;
+        
+      case 'number':
+        if (queryResults.rows?.length === 1 && queryResults.columns?.length === 1) {
+          const value = queryResults.rows[0][0];
+          return (
+            <div className="h-96 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-6xl font-bold text-primary mb-4">
+                  {typeof value === 'number' ? value.toLocaleString() : value}
+                </div>
+                <div className="text-xl text-muted-foreground">
+                  {firstCol}
+                </div>
+              </div>
+            </div>
+          );
+        }
+        break;
+        
+      case 'table':
+      default:
+        return (
+          <div className="h-96 overflow-auto border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {queryResults.columns?.map((col: any, idx: number) => (
+                    <TableHead key={idx} className="font-medium">
+                      {col.name || col}
+                      <Badge variant="outline" className="ml-2 text-xs">
+                        {col.type}
+                      </Badge>
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {queryResults.rows?.slice(0, 100).map((row: any[], rowIdx: number) => (
+                  <TableRow key={rowIdx}>
+                    {row.map((cell: any, cellIdx: number) => (
+                      <TableCell key={cellIdx} className="font-mono text-sm">
+                        {cell === null ? (
+                          <span className="text-muted-foreground italic">null</span>
+                        ) : (
+                          String(cell)
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        );
+    }
+    
     return (
-      <div className="h-64 flex items-center justify-center border-2 border-dashed border-muted-foreground/25 rounded-lg">
+      <div className="h-96 flex items-center justify-center border-2 border-dashed border-muted-foreground/25 rounded-lg">
         <div className="text-center">
-          {getVisualizationIcon(visualizationType)}
-          <p className="text-sm text-muted-foreground mt-2">Run query to preview visualization</p>
+          <div className="text-muted-foreground mb-4">
+            Visualization not available for this data structure
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Try selecting Table View or execute a query with appropriate data structure
+          </p>
         </div>
       </div>
     );
@@ -291,7 +419,27 @@ export function DataStudioExploreEdit() {
             {/* Visualization Preview */}
             <Card>
               <CardHeader>
-                <CardTitle>Visualization Preview</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Visualization Preview</CardTitle>
+                  <Select value={visualizationType} onValueChange={setVisualizationType}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Select chart type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getVisualizationOptions().map((option) => {
+                        const Icon = option.icon;
+                        return (
+                          <SelectItem key={option.value} value={option.value}>
+                            <div className="flex items-center">
+                              <Icon className="h-4 w-4 mr-2" />
+                              {option.label}
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
               <CardContent>
                 {renderVisualization()}
