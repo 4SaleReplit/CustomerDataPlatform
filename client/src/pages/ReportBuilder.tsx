@@ -26,7 +26,8 @@ import {
   ZoomOut, 
   Grid3X3, 
   RefreshCw,
-  GripVertical
+  GripVertical,
+  Settings
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { CodeMirrorSQLEditor } from '@/components/CodeMirrorSQLEditor';
@@ -606,6 +607,24 @@ export default function ReportBuilder() {
     }
   };
 
+  const updateSelectedElement = (updates: Partial<SlideElement>) => {
+    if (!selectedElement || !currentSlide) return;
+    
+    updateElement(selectedElement, updates);
+  };
+
+  const deleteSelectedElement = () => {
+    if (!selectedElement || !currentSlide || !currentReport) return;
+    
+    const updatedElements = currentSlide.elements.filter(el => el.id !== selectedElement);
+    const updatedSlide = { ...currentSlide, elements: updatedElements };
+    const updatedSlides = [...currentReport.slides];
+    updatedSlides[currentSlideIndex] = updatedSlide;
+    
+    setCurrentReport({ ...currentReport, slides: updatedSlides });
+    setSelectedElement(null);
+  };
+
   const handleElementMouseDown = (e: React.MouseEvent, elementId: string) => {
     e.stopPropagation();
     setSelectedElement(elementId);
@@ -1107,6 +1126,90 @@ export default function ReportBuilder() {
               <div className="text-center text-gray-500 mt-8">
                 <MousePointer className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                 <p className="text-sm">Select an element to view properties</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Properties Panel */}
+        <div className="w-80 bg-white border-l flex flex-col">
+          <div className="p-4 border-b">
+            <h3 className="font-semibold text-sm">Properties</h3>
+          </div>
+          
+          <div className="flex-1 overflow-auto p-4">
+            {selectedElement && currentSlide && (() => {
+              const element = currentSlide.elements.find(el => el.id === selectedElement);
+              return element;
+            })() ? (
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium">Element Type</Label>
+                  <div className="mt-1 text-sm text-gray-600 capitalize">
+                    {currentSlide.elements.find(el => el.id === selectedElement)?.type}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-sm">X Position</Label>
+                    <Input
+                      type="number"
+                      value={currentSlide.elements.find(el => el.id === selectedElement)?.x || 0}
+                      onChange={(e) => updateSelectedElement({ x: parseInt(e.target.value) || 0 })}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Y Position</Label>
+                    <Input
+                      type="number"
+                      value={currentSlide.elements.find(el => el.id === selectedElement)?.y || 0}
+                      onChange={(e) => updateSelectedElement({ y: parseInt(e.target.value) || 0 })}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-sm">Width</Label>
+                    <Input
+                      type="number"
+                      value={currentSlide.elements.find(el => el.id === selectedElement)?.width || 0}
+                      onChange={(e) => updateSelectedElement({ width: parseInt(e.target.value) || 0 })}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Height</Label>
+                    <Input
+                      type="number"
+                      value={currentSlide.elements.find(el => el.id === selectedElement)?.height || 0}
+                      onChange={(e) => updateSelectedElement({ height: parseInt(e.target.value) || 0 })}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={deleteSelectedElement}
+                    className="w-full"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Element
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center text-gray-500 mt-8">
+                <div className="mb-2">
+                  <Settings className="h-8 w-8 mx-auto text-gray-400" />
+                </div>
+                <p className="text-sm">Select an element to edit its properties</p>
               </div>
             )}
           </div>
