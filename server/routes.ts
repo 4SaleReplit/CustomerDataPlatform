@@ -1445,22 +1445,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Test PostgreSQL connection
-      const { Pool } = await import('pg');
-      const pool = new Pool({
-        host,
-        port: parseInt(port),
-        database,
-        user: username,
-        password,
-        ssl: ssl === 'require' ? { rejectUnauthorized: false } : false,
+      // Create a test connection string for the provided credentials
+      const testConnectionString = `postgresql://${username}:${password}@${host}:${port}/${database}?sslmode=${ssl}`;
+      
+      // Test using Neon's serverless client like the existing setup
+      const { Pool, neonConfig } = await import('@neondatabase/serverless');
+      const ws = await import('ws');
+      
+      neonConfig.webSocketConstructor = ws.default;
+      
+      const testPool = new Pool({ 
+        connectionString: testConnectionString,
+        max: 1,
         connectionTimeoutMillis: 5000
       });
-
-      const client = await pool.connect();
-      const result = await client.query('SELECT version() as version, current_database() as database');
-      client.release();
-      await pool.end();
+      
+      // Test connection with a simple query
+      const result = await testPool.query('SELECT version() as version, current_database() as database');
+      await testPool.end();
 
       res.json({ 
         success: true, 
@@ -1783,24 +1785,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
         case 'postgresql':
           try {
-            const { Pool } = await import('pg');
-            const creds = integration.credentials as any;
-            const pool = new Pool({
-              host: creds.host,
-              port: parseInt(creds.port),
-              database: creds.database,
-              user: creds.username,
-              password: creds.password,
-              ssl: creds.ssl === 'require' ? { rejectUnauthorized: false } : false,
-              connectionTimeoutMillis: 5000
-            });
-            
-            const client = await pool.connect();
-            await client.query('SELECT 1 as test');
-            client.release();
-            await pool.end();
-            
-            testResult = { success: true, message: "PostgreSQL connection successful" };
+            // Use the existing database connection to test PostgreSQL
+            const { pool } = await import('./db');
+            const result = await pool.query('SELECT 1 as test, version() as version');
+            testResult = { 
+              success: true, 
+              message: "PostgreSQL connection successful",
+              databaseInfo: result.rows[0]
+            };
           } catch (error: any) {
             testResult = { success: false, error: error.message || "PostgreSQL connection failed" };
           }
