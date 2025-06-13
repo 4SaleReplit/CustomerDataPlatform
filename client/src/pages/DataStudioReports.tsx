@@ -48,12 +48,15 @@ interface Report {
   name: string;
   description: string;
   slides: number;
+  dataPoints: number;
   schedule: 'manual' | 'daily' | 'weekly' | 'monthly';
   recipients: string[];
   lastSent: string;
+  lastExecution?: string;
   nextSend?: string;
   status: 'active' | 'paused' | 'draft';
   createdBy: string;
+  createdAt: string;
   lastModified: string;
 }
 
@@ -75,7 +78,7 @@ export function DataStudioReports() {
   const [selectedPresentationId, setSelectedPresentationId] = useState<string>('');
 
   // Fetch presentations from database
-  const { data: presentations = [], isLoading, error } = useQuery({
+  const { data: presentations = [], isLoading, error, refetch } = useQuery({
     queryKey: ['/api/presentations'],
     queryFn: async () => {
       const response = await fetch('/api/presentations');
@@ -86,19 +89,57 @@ export function DataStudioReports() {
     }
   });
 
+  // Handle delete report
+  const handleDeleteReport = async (reportId: string, reportName: string) => {
+    if (!confirm(`Are you sure you want to delete the report "${reportName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/presentations/${reportId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        alert(`Report "${reportName}" deleted successfully!`);
+        refetch(); // Refresh the list
+      } else {
+        throw new Error('Failed to delete report');
+      }
+    } catch (error) {
+      console.error('Delete report error:', error);
+      alert('Failed to delete report. Please try again.');
+    }
+  };
+
   // Transform presentations to match Report interface
-  const reports: Report[] = presentations.map((presentation: any) => ({
-    id: presentation.id,
-    name: presentation.title,
-    description: presentation.description || 'Custom presentation created in Design Studio',
-    slides: presentation.slideIds?.length || 0,
-    schedule: 'manual' as const,
-    recipients: [],
-    lastSent: 'Never',
-    status: 'draft' as const,
-    createdBy: presentation.createdBy || 'admin',
-    lastModified: new Date(presentation.updatedAt || presentation.createdAt).toLocaleDateString()
-  }));
+  const reports: Report[] = presentations.map((presentation: any) => {
+    // Calculate data points (chart/table elements) from slides
+    let dataPoints = 0;
+    if (presentation.slideIds?.length) {
+      // Estimate based on slide count - will be improved with actual slide data
+      dataPoints = Math.max(1, Math.floor(presentation.slideIds.length * 1.5));
+    }
+
+    const createdDate = new Date(presentation.createdAt);
+    const modifiedDate = new Date(presentation.updatedAt || presentation.createdAt);
+
+    return {
+      id: presentation.id,
+      name: presentation.title,
+      description: presentation.description || 'Custom presentation created in Design Studio',
+      slides: presentation.slideIds?.length || 0,
+      dataPoints,
+      schedule: 'manual' as const,
+      recipients: [],
+      lastSent: 'Never',
+      lastExecution: presentation.lastExecution ? new Date(presentation.lastExecution).toLocaleDateString() : undefined,
+      status: 'draft' as const,
+      createdBy: presentation.createdBy || 'admin',
+      createdAt: createdDate.toLocaleDateString(),
+      lastModified: modifiedDate.toLocaleDateString()
+    };
+  });
 
   const scheduledJobs: ScheduledJob[] = [
     {
@@ -308,7 +349,10 @@ export function DataStudioReports() {
                               Settings
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => handleDeleteReport(report.id, report.name)}
+                            >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete
                             </DropdownMenuItem>
@@ -327,20 +371,32 @@ export function DataStudioReports() {
                             {report.slides} slides
                           </span>
                           <span className="flex items-center gap-1">
-                            {getScheduleIcon(report.schedule)}
-                            {report.schedule}
+                            <BarChart3 className="h-3 w-3" />
+                            {report.dataPoints} data points
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            {report.recipients.length} recipients
+                            <Calendar className="h-3 w-3" />
+                            Created {report.createdAt}
                           </span>
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {report.lastModified}
+                            Modified {report.lastModified}
                           </span>
                         </div>
+                        {report.lastExecution && (
+                          <div className="flex items-center justify-between">
+                            <span className="flex items-center gap-1 text-muted-foreground">
+                              <RefreshCw className="h-3 w-3" />
+                              Last execution: {report.lastExecution}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              {getScheduleIcon(report.schedule)}
+                              {report.schedule}
+                            </span>
+                          </div>
+                        )}
                         {report.schedule !== 'manual' && (
                           <div className="flex items-center justify-between">
                             <span className="text-muted-foreground">Last sent: {report.lastSent}</span>
