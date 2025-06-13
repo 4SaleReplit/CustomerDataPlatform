@@ -918,7 +918,7 @@ export default function ReportBuilder() {
                   <div className="flex items-center gap-2">
                     <GripVertical className="h-3 w-3 text-gray-400" />
                     <div 
-                      className="w-16 h-12 rounded border bg-white shadow-sm flex-shrink-0"
+                      className="w-32 h-24 rounded border bg-white shadow-sm flex-shrink-0"
                       style={{ background: slide.backgroundColor || '#ffffff' }}
                     >
                       <div className="w-full h-full rounded overflow-hidden relative">
