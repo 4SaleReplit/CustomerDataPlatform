@@ -1765,17 +1765,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
           testResult = { success: amplitudeResult.success, error: amplitudeResult.error };
           break;
         case 'snowflake':
-          const snowflakeResult = await snowflakeService.executeQuery("SELECT 1 as test");
-          testResult = { success: snowflakeResult.success, error: snowflakeResult.error };
+          try {
+            // Get comprehensive Snowflake metadata
+            const queries = [
+              "SELECT CURRENT_VERSION() as version, CURRENT_DATABASE() as database, CURRENT_WAREHOUSE() as warehouse",
+              "SELECT COUNT(*) as table_count FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA != 'INFORMATION_SCHEMA'",
+              "SELECT COUNT(*) as view_count FROM INFORMATION_SCHEMA.VIEWS",
+              "SELECT DISTINCT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME != 'INFORMATION_SCHEMA' ORDER BY SCHEMA_NAME",
+              `SELECT 
+                SUM(BYTES) / (1024*1024*1024) as size_gb,
+                COUNT(*) as file_count
+               FROM INFORMATION_SCHEMA.TABLES 
+               WHERE TABLE_SCHEMA = '${(integration.credentials as any)?.schema || 'USER_SEGMENTATION_PROJECT_V4'}'`
+            ];
+
+            const results = await Promise.all(
+              queries.map(query => snowflakeService.executeQuery(query))
+            );
+
+            if (results.every(r => r.success)) {
+              const [versionResult, tableResult, viewResult, schemaResult, sizeResult] = results;
+              
+              const metadata = {
+                version: (versionResult as any).data?.[0]?.VERSION,
+                database: (versionResult as any).data?.[0]?.DATABASE,
+                warehouse: (versionResult as any).data?.[0]?.WAREHOUSE,
+                tableCount: (tableResult as any).data?.[0]?.TABLE_COUNT || 0,
+                viewCount: (viewResult as any).data?.[0]?.VIEW_COUNT || 0,
+                schemas: (schemaResult as any).data?.map((row: any) => row.SCHEMA_NAME) || [],
+                sizeGB: Math.round(((sizeResult as any).data?.[0]?.SIZE_GB || 0) * 100) / 100,
+                fileCount: (sizeResult as any).data?.[0]?.FILE_COUNT || 0,
+                lastTested: new Date().toISOString()
+              };
+
+              testResult = { 
+                success: true, 
+                message: "Snowflake connection successful",
+                metadata
+              } as any;
+            } else {
+              testResult = { success: false, error: "Failed to retrieve Snowflake metadata" };
+            }
+          } catch (error: any) {
+            testResult = { success: false, error: error.message || "Snowflake connection failed" };
+          }
           break;
         case 'postgresql':
           try {
             // Use the existing database connection to test PostgreSQL
             const { pool } = await import('./db');
-            const result = await pool.query('SELECT 1 as test, version() as version');
+            
+            // Get comprehensive database metadata
+            const [versionResult, sizeResult, tableCountResult, schemaResult] = await Promise.all([
+              pool.query('SELECT version() as version, current_database() as database'),
+              pool.query(`
+                SELECT 
+                  pg_size_pretty(pg_database_size(current_database())) as size,
+                  pg_database_size(current_database()) as size_bytes
+              `),
+              pool.query(`
+                SELECT 
+                  COUNT(*) as table_count,
+                  COUNT(CASE WHEN table_type = 'BASE TABLE' THEN 1 END) as user_tables,
+                  COUNT(CASE WHEN table_type = 'VIEW' THEN 1 END) as views
+                FROM information_schema.tables 
+                WHERE table_schema NOT IN ('information_schema', 'pg_catalog')
+              `),
+              pool.query(`
+                SELECT DISTINCT table_schema as schema_name 
+                FROM information_schema.tables 
+                WHERE table_schema NOT IN ('information_schema', 'pg_catalog')
+                ORDER BY table_schema
+              `)
+            ]);
+
+            const metadata = {
+              version: versionResult.rows[0].version,
+              database: versionResult.rows[0].database,
+              size: sizeResult.rows[0].size,
+              sizeBytes: parseInt(sizeResult.rows[0].size_bytes),
+              tableCount: parseInt(tableCountResult.rows[0].table_count),
+              userTables: parseInt(tableCountResult.rows[0].user_tables),
+              views: parseInt(tableCountResult.rows[0].views),
+              schemas: schemaResult.rows.map(row => row.schema_name),
+              lastTested: new Date().toISOString()
+            };
+
             testResult = { 
               success: true, 
-              message: "PostgreSQL connection successful"
+              message: "PostgreSQL connection successful",
+              metadata
             } as any;
           } catch (error: any) {
             testResult = { success: false, error: error.message || "PostgreSQL connection failed" };
