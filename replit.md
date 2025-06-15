@@ -13,11 +13,12 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 - **External Data**: Snowflake for data warehousing and analytics queries
 - **Styling**: Tailwind CSS with shadcn/ui component library
 
-### Deployment Strategy
-- **Platform**: Replit with autoscale deployment
-- **Build Process**: Vite for frontend, esbuild for backend bundling
-- **Development**: Hot reloading with Vite dev server
-- **Production**: Optimized build with static file serving
+### Unified Container Deployment Strategy
+- **Architecture**: Single Docker container combining frontend and backend
+- **Frontend**: nginx serves React build and proxies API calls
+- **Backend**: Node.js Express API running on port 5000
+- **Platform**: ARM64 optimized for AWS Graviton processors
+- **Cost Optimization**: 60-70% reduction in infrastructure costs vs separate containers
 
 ## Key Components
 
