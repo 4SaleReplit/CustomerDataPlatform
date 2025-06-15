@@ -10,8 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import amplitudeLogo from '@assets/AMPL_1749419466685.png';
-import brazeLogo from '@assets/BRZE_1749419981281.png';
+// Logo imports removed for Docker build compatibility
 
 export default function CohortDetail() {
   const { id } = useParams<{ id: string }>();
@@ -416,7 +415,9 @@ export default function CohortDetail() {
                         <CheckCircle2 className="h-6 w-6 text-green-600" />
                       </div>
                     ) : (
-                      <img src={amplitudeLogo} alt="Amplitude" className="h-10 w-10 rounded-full" />
+                      <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
+                        <span className="text-purple-600 font-bold text-xs">AMP</span>
+                      </div>
                     )}
                   </div>
                   <div className="flex-1">
@@ -448,7 +449,9 @@ export default function CohortDetail() {
                         <CheckCircle2 className="h-6 w-6 text-green-600" />
                       </div>
                     ) : (
-                      <img src={brazeLogo} alt="Braze" className="h-10 w-10 rounded-full" />
+                      <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
+                        <span className="text-orange-600 font-bold text-xs">BRZ</span>
+                      </div>
                     )}
                   </div>
                   <div className="flex-1">
