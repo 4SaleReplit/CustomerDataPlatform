@@ -22,7 +22,7 @@ import {
   Edit3,
   Presentation
 } from 'lucide-react';
-import { trackBusinessEvent } from '@/lib/amplitude';
+import { analytics } from '@/lib/amplitude';
 import { useUser } from '@/contexts/UserContext';
 import {
   Sidebar,
@@ -181,7 +181,7 @@ export function AppSidebar() {
                                   <SidebarMenuSubButton asChild isActive={childIsActive}>
                                     <Link
                                       href={child.href}
-                                      onClick={() => trackBusinessEvent.navigationItemClicked(child.name)}
+                                      onClick={() => analytics.navigationItemClicked(child.name, location)}
                                     >
                                       <child.icon className="h-4 w-4" />
                                       <span>{child.name}</span>
@@ -197,7 +197,7 @@ export function AppSidebar() {
                       <SidebarMenuButton asChild isActive={isActive}>
                         <Link
                           href={item.href}
-                          onClick={() => trackBusinessEvent.navigationItemClicked(item.name)}
+                          onClick={() => analytics.navigationItemClicked(item.name, location)}
                           className="flex items-center gap-3"
                         >
                           <item.icon className="h-4 w-4 flex-shrink-0" />

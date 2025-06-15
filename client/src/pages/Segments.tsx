@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { trackBusinessEvent } from '@/lib/amplitude';
+import { analytics } from '@/lib/amplitude';
 
 // Helper functions for dynamic operator selection based on data type
 const getOperatorsForType = (dataType: string) => {
@@ -81,7 +81,7 @@ export default function Segments() {
 
   // Track page visit on component mount
   React.useEffect(() => {
-    trackBusinessEvent.pageViewed('segments');
+    analytics.screenViewed('Segments');
   }, []);
   const itemsPerPage = 10;
 
@@ -120,7 +120,7 @@ export default function Segments() {
       });
       
       // Track segment creation in Amplitude
-      trackBusinessEvent.segmentCreated(
+      analytics.segmentCreated(
         newSegment.name,
         newSegment.attribute,
         newSegment.operator
@@ -173,7 +173,7 @@ export default function Segments() {
       });
       
       // Track segment refresh in Amplitude
-      trackBusinessEvent.segmentRefreshed(data.segment.id, data.userCount);
+      analytics.segmentRefreshed(data.segment.id, data.segment.name, data.userCount);
     },
     onError: (error: any) => {
       toast({
@@ -254,7 +254,7 @@ export default function Segments() {
       return;
     }
 
-    trackBusinessEvent.segmentCreated(newSegment.name, newSegment.attribute, newSegment.operator);
+    analytics.segmentCreated(newSegment.name, newSegment.attribute, newSegment.operator);
 
     // Build the SQL rule from the form inputs
     const rule = `${newSegment.attribute} ${newSegment.operator} ${
