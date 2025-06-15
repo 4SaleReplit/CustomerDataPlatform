@@ -7,19 +7,19 @@ Write-Host "==================================================" -ForegroundColor
 # Check if Docker is running
 try {
     docker info | Out-Null
-    Write-Host "✅ Docker is running" -ForegroundColor Green
+    Write-Host "[OK] Docker is running" -ForegroundColor Green
 } catch {
-    Write-Host "❌ Error: Docker is not running. Please start Docker Desktop first." -ForegroundColor Red
+    Write-Host "[ERROR] Docker is not running. Please start Docker Desktop first." -ForegroundColor Red
     exit 1
 }
 
 # Check if .env file exists
 if (-not (Test-Path ".env")) {
-    Write-Host "❌ Error: .env file not found. Please create .env from .env.example" -ForegroundColor Red
+    Write-Host "[ERROR] .env file not found. Please create .env from .env.example" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "✅ Environment file found" -ForegroundColor Green
+Write-Host "[OK] Environment file found" -ForegroundColor Green
 
 # Build the production image
 Write-Host ""
@@ -27,9 +27,9 @@ Write-Host "📦 Building production Docker image..." -ForegroundColor Yellow
 docker build -f Dockerfile.production -t cdp-platform:test .
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ Docker image built successfully" -ForegroundColor Green
+    Write-Host "[OK] Docker image built successfully" -ForegroundColor Green
 } else {
-    Write-Host "❌ Docker build failed" -ForegroundColor Red
+    Write-Host "[ERROR] Docker build failed" -ForegroundColor Red
     exit 1
 }
 
@@ -44,11 +44,11 @@ Write-Host "🚀 Starting application with Docker Compose..." -ForegroundColor Y
 docker-compose -f docker-compose.production.yml up -d
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ Application started successfully" -ForegroundColor Green
+    Write-Host "[OK] Application started successfully" -ForegroundColor Green
     Write-Host ""
-    Write-Host "🌐 Application is running at: http://localhost:5000" -ForegroundColor Cyan
+    Write-Host "[INFO] Application is running at: http://localhost:5000" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "📋 Testing Checklist:" -ForegroundColor Yellow
+    Write-Host "[CHECKLIST] Testing Checklist:" -ForegroundColor Yellow
     Write-Host "   [ ] Application loads successfully"
     Write-Host "   [ ] Database connections work"
     Write-Host "   [ ] Snowflake queries execute"
@@ -57,9 +57,9 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "   [ ] All pages render correctly"
     Write-Host "   [ ] User authentication works"
     Write-Host ""
-    Write-Host "📝 To view logs: docker-compose -f docker-compose.production.yml logs -f" -ForegroundColor Blue
-    Write-Host "🛑 To stop: docker-compose -f docker-compose.production.yml down" -ForegroundColor Blue
+    Write-Host "[COMMANDS] To view logs: docker-compose -f docker-compose.production.yml logs -f" -ForegroundColor Blue
+    Write-Host "[COMMANDS] To stop: docker-compose -f docker-compose.production.yml down" -ForegroundColor Blue
 } else {
-    Write-Host "❌ Failed to start application" -ForegroundColor Red
+    Write-Host "[ERROR] Failed to start application" -ForegroundColor Red
     exit 1
 }
