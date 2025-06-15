@@ -14,13 +14,13 @@ console.log('=' .repeat(60));
 try {
   // Step 1: Build frontend with Vite
   console.log('\n1. Building frontend...');
-  execSync('vite build', { stdio: 'inherit' });
+  execSync('npx vite build', { stdio: 'inherit' });
   console.log('✅ Frontend build complete');
 
   // Step 2: Build server with proper exclusions
   console.log('\n2. Building server...');
   const esbuildCommand = [
-    'esbuild server/index.ts',
+    'npx esbuild server/index.ts',
     '--platform=node',
     '--packages=external',
     '--bundle',
