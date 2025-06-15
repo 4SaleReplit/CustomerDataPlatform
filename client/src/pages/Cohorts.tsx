@@ -58,7 +58,7 @@ function Cohorts() {
 
   // Track page visit on component mount
   React.useEffect(() => {
-    trackBusinessEvent.pageViewed('cohorts');
+    analytics.screenViewed('Cohorts');
   }, []);
 
   // Fetch cohorts from database
@@ -72,7 +72,7 @@ function Cohorts() {
     try {
       await apiRequest(`/api/cohorts/${cohortId}`, { method: 'DELETE' });
       if (cohortName) {
-        trackBusinessEvent.cohortDeleted(cohortName);
+        analytics.cohortDeleted(cohortId, cohortName, 0); // We don't have user count for deleted cohorts
       }
       queryClient.invalidateQueries({ queryKey: ['/api/cohorts'] });
       toast({

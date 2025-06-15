@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import { trackEvent, trackBusinessEvent } from '@/lib/amplitude';
+import { analytics } from '@/lib/amplitude';
 
 function Users() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,7 +22,7 @@ function Users() {
 
   // Track page visit on component mount
   React.useEffect(() => {
-    trackBusinessEvent.pageViewed('users');
+    analytics.screenViewed('Users');
   }, []);
 
   const usersPerPage = 10;
@@ -47,7 +47,7 @@ function Users() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      trackBusinessEvent.userDataRefreshed(filteredUsers.length);
+      analytics.buttonClicked('Refresh', 'Users', { userCount: filteredUsers.length });
       await queryClient.invalidateQueries({ queryKey: ['users', 'snowflake'] });
       await refetchUsers();
     } finally {
@@ -318,7 +318,7 @@ function Users() {
                     <td className="py-3 px-4">
                       <Link 
                         to={`/users/${user.USER_ID || user.id}`}
-                        onClick={() => trackBusinessEvent.userProfileViewed(String(user.USER_ID || user.id), 'users_list')}
+                        onClick={() => analytics.userProfileViewed(String(user.USER_ID || user.id), 'Overview', 'Users')}
                       >
                         <Button variant="ghost" size="sm">
                           <Eye className="h-4 w-4" />

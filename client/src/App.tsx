@@ -1,3 +1,4 @@
+import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,6 +7,7 @@ import { Router, Route, Switch, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { Layout } from "./components/layout/Layout";
 import { UserProvider, useUser } from "./contexts/UserContext";
+import { initializeAmplitude } from "./lib/amplitude";
 import Dashboard from "./pages/Dashboard";
 import { DataStudio } from "./pages/DataStudio";
 import { DataStudioSQL } from "./pages/DataStudioSQL";
@@ -109,18 +111,25 @@ const AppRouter = () => {
   );
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <UserProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <Router>
-          <AppRouter />
-        </Router>
-      </TooltipProvider>
-    </UserProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  // Initialize Amplitude on app start
+  React.useEffect(() => {
+    initializeAmplitude();
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <UserProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <Router>
+            <AppRouter />
+          </Router>
+        </TooltipProvider>
+      </UserProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
