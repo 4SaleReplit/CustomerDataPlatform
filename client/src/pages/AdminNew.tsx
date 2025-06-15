@@ -313,11 +313,13 @@ export default function AdminNew() {
     const env = environments.find(e => e.id === envId);
     if (env) {
       setSelectedConfigEnv(envId);
-      setEnvConfig({
-        postgresIntegrationId: env.databases.postgres.integrationId || 'none',
-        redisIntegrationId: env.databases.redis.integrationId || 'none',
-        s3IntegrationId: env.databases.s3.integrationId || 'none'
+      // Initialize envConfig with current values for all active integration types
+      const config: { [key: string]: string } = {};
+      activeIntegrationTypes.forEach(type => {
+        const configKey = `${type}IntegrationId`;
+        config[configKey] = env.databases?.[type]?.integrationId || 'none';
       });
+      setEnvConfig(config);
       setShowEnvConfigModal(true);
     }
   };
@@ -335,23 +337,19 @@ export default function AdminNew() {
       env.id === selectedConfigEnv 
         ? {
             ...env,
-            databases: {
-              postgres: { 
-                integrationId: cleanIntegrationId(envConfig.postgresIntegrationId), 
-                integrationName: getIntegrationName(envConfig.postgresIntegrationId),
-                status: envConfig.postgresIntegrationId && envConfig.postgresIntegrationId !== 'none' ? 'connected' : 'disconnected' 
-              },
-              redis: { 
-                integrationId: cleanIntegrationId(envConfig.redisIntegrationId), 
-                integrationName: getIntegrationName(envConfig.redisIntegrationId),
-                status: envConfig.redisIntegrationId && envConfig.redisIntegrationId !== 'none' ? 'connected' : 'disconnected' 
-              },
-              s3: { 
-                integrationId: cleanIntegrationId(envConfig.s3IntegrationId), 
-                integrationName: getIntegrationName(envConfig.s3IntegrationId),
-                status: envConfig.s3IntegrationId && envConfig.s3IntegrationId !== 'none' ? 'connected' : 'disconnected' 
-              }
-            }
+            databases: (() => {
+              const updatedDatabases: any = {};
+              activeIntegrationTypes.forEach(type => {
+                const configKey = `${type}IntegrationId`;
+                const integrationId = envConfig[configKey];
+                updatedDatabases[type] = {
+                  integrationId: cleanIntegrationId(integrationId), 
+                  integrationName: getIntegrationName(integrationId),
+                  status: integrationId && integrationId !== 'none' ? 'connected' : 'disconnected' 
+                };
+              });
+              return updatedDatabases;
+            })()
           }
         : env
     ));
