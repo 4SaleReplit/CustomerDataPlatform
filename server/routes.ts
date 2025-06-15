@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertIntegrationSchema, type InsertIntegration } from "@shared/schema";
 import { snowflakeService } from "./services/snowflake";
 import * as BrazeModule from "./services/braze";
+import { s3Storage } from "./services/s3Storage";
 import { 
   insertTeamSchema, insertDashboardTileInstanceSchema, insertCohortSchema, insertSegmentSchema,
   insertRoleSchema, updateRoleSchema, insertPermissionSchema, insertRolePermissionSchema,
@@ -2450,12 +2451,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No image file provided" });
       }
 
+      let imageUrl = `/uploads/images/${req.file.filename}`;
+      
+      // Upload to S3 if configured
+      if (s3Storage.isConfigured()) {
+        try {
+          const s3Key = `images/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${req.file.filename}`;
+          imageUrl = await s3Storage.uploadFile(req.file.path, s3Key, req.file.mimetype);
+        } catch (s3Error) {
+          console.warn("S3 upload failed, using local storage:", s3Error);
+        }
+      }
+
       const imageData = {
         filename: req.file.filename,
         originalName: req.file.originalname,
         mimeType: req.file.mimetype,
         size: req.file.size,
-        url: `/uploads/images/${req.file.filename}`,
+        url: imageUrl,
         uploadedBy: 'admin'
       };
 
@@ -2477,12 +2490,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No image file provided" });
       }
 
+      let imageUrl = `/uploads/images/${req.file.filename}`;
+      
+      // Upload to S3 if configured
+      if (s3Storage.isConfigured()) {
+        try {
+          const s3Key = `images/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${req.file.filename}`;
+          imageUrl = await s3Storage.uploadFile(req.file.path, s3Key, req.file.mimetype);
+        } catch (s3Error) {
+          console.warn("S3 upload failed, using local storage:", s3Error);
+        }
+      }
+
       const imageData = {
         filename: req.file.filename,
         originalName: req.file.originalname,
         mimeType: req.file.mimetype,
         size: req.file.size,
-        url: `/uploads/images/${req.file.filename}`,
+        url: imageUrl,
         uploadedBy: 'admin' // TODO: Get from authenticated user session
       };
 
@@ -2700,6 +2725,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Delete presentation error:", error);
       res.status(500).json({ error: "Failed to delete presentation" });
+    }
+  });
+
+  // S3 Migration endpoints
+  app.post("/api/migrate/s3", async (req, res) => {
+    try {
+      const { bucketName, accessKeyId, secretAccessKey, region = 'us-east-1' } = req.body;
+      
+      if (!bucketName || !accessKeyId || !secretAccessKey) {
+        return res.status(400).json({ 
+          error: "S3 credentials required: bucketName, accessKeyId, secretAccessKey" 
+        });
+      }
+
+      // Temporarily set environment variables for migration
+      const originalEnv = {
+        AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+        AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+        S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
+        AWS_REGION: process.env.AWS_REGION
+      };
+
+      process.env.AWS_ACCESS_KEY_ID = accessKeyId;
+      process.env.AWS_SECRET_ACCESS_KEY = secretAccessKey;
+      process.env.S3_BUCKET_NAME = bucketName;
+      process.env.AWS_REGION = region;
+
+      // Import and run migration
+      const { S3ImageMigrator } = require('../migrate-images-to-s3.js');
+      const migrator = new S3ImageMigrator();
+
+      await migrator.migrate({ 
+        skipConfirmation: true,
+        skipExisting: true 
+      });
+
+      // Restore original environment
+      Object.keys(originalEnv).forEach(key => {
+        if (originalEnv[key]) {
+          process.env[key] = originalEnv[key];
+        } else {
+          delete process.env[key];
+        }
+      });
+
+      res.json({ 
+        success: true, 
+        message: "Images successfully migrated to S3",
+        migrated: migrator.migratedCount,
+        failed: migrator.failedCount,
+        skipped: migrator.skippedCount
+      });
+
+    } catch (error) {
+      console.error("S3 migration error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to migrate images to S3" 
+      });
+    }
+  });
+
+  app.get("/api/migrate/s3/status", async (req, res) => {
+    try {
+      const images = await storage.getUploadedImages();
+      const localImages = images.filter(img => !img.url.includes('s3.amazonaws.com'));
+      const s3Images = images.filter(img => img.url.includes('s3.amazonaws.com'));
+
+      res.json({
+        total: images.length,
+        local: localImages.length,
+        s3: s3Images.length,
+        migrationNeeded: localImages.length > 0,
+        s3Configured: s3Storage.isConfigured()
+      });
+    } catch (error) {
+      console.error("S3 status error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to check S3 status" 
+      });
     }
   });
 
