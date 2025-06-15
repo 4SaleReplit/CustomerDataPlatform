@@ -917,6 +917,23 @@ export default function Integrations() {
     }
   };
 
+  const handleStartMigration = async () => {
+    if (!migrationData.targetUrl.trim()) {
+      toast({
+        title: "Missing URL",
+        description: "Please enter the target database URL",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsMigrating(true);
+    migrateDatabaseMutation.mutate({
+      targetUrl: migrationData.targetUrl,
+      backupEnabled: migrationData.backupEnabled
+    });
+  };
+
   const getStatusBadge = useCallback((status: string) => {
     switch (status) {
       case 'connected':
@@ -990,10 +1007,20 @@ export default function Integrations() {
           <h1 className="text-4xl font-bold tracking-tight">Integrations</h1>
           <p className="text-xl text-muted-foreground">Connect and manage your data sources and marketing platforms</p>
         </div>
-        <Button onClick={handleAddIntegration} className="btn-primary px-6 py-3 text-sm font-medium">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Integration
-        </Button>
+        <div className="flex space-x-3">
+          <Button 
+            onClick={() => setShowMigrationModal(true)} 
+            variant="outline" 
+            className="px-6 py-3 text-sm font-medium border-orange-200 text-orange-700 hover:bg-orange-50 hover:border-orange-300"
+          >
+            <Target className="h-4 w-4 mr-2" />
+            Migrate Database
+          </Button>
+          <Button onClick={handleAddIntegration} className="btn-primary px-6 py-3 text-sm font-medium">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Integration
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1473,6 +1500,108 @@ export default function Integrations() {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Database Migration Modal */}
+      <Dialog open={showMigrationModal} onOpenChange={setShowMigrationModal}>
+        <DialogContent className="modal-enhanced max-w-2xl">
+          <DialogHeader className="modal-header space-y-3">
+            <DialogTitle className="text-2xl font-bold tracking-tight">Migrate to Production Database</DialogTitle>
+            <DialogDescription className="text-lg text-muted-foreground">
+              Safely migrate all your data including integrations to a new production database
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 mt-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-blue-900">Migration Process</h4>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>• Creates schema in target database</li>
+                    <li>• Migrates all integrations and their configurations</li>
+                    <li>• Preserves user accounts, dashboard tiles, and cohorts</li>
+                    <li>• Transfers slides, presentations, and uploaded images</li>
+                    <li>• Validates data integrity after migration</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="targetUrl" className="text-sm font-medium">Production Database URL</Label>
+                <Input
+                  id="targetUrl"
+                  type="text"
+                  placeholder="postgresql://user:password@host:5432/database"
+                  value={migrationData.targetUrl}
+                  onChange={(e) => setMigrationData(prev => ({ ...prev, targetUrl: e.target.value }))}
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enter the connection string for your production PostgreSQL database
+                </p>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="backupEnabled"
+                  checked={migrationData.backupEnabled}
+                  onChange={(e) => setMigrationData(prev => ({ ...prev, backupEnabled: e.target.checked }))}
+                  className="rounded"
+                />
+                <Label htmlFor="backupEnabled" className="text-sm">
+                  Create backup before migration (recommended)
+                </Label>
+              </div>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-yellow-900">Important Notes</h4>
+                  <ul className="text-sm text-yellow-800 space-y-1">
+                    <li>• This will overwrite data in the target database</li>
+                    <li>• Make sure the target database is accessible</li>
+                    <li>• Current integrations with API keys will be preserved</li>
+                    <li>• Update your DATABASE_URL after successful migration</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowMigrationModal(false)}
+                disabled={isMigrating}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleStartMigration}
+                disabled={isMigrating || !migrationData.targetUrl.trim()}
+                className="bg-orange-600 hover:bg-orange-700 text-white"
+              >
+                {isMigrating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Migrating...
+                  </>
+                ) : (
+                  <>
+                    <Target className="h-4 w-4 mr-2" />
+                    Start Migration
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
