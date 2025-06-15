@@ -208,6 +208,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Database migration endpoint
+  app.post("/api/database/migrate", async (req, res) => {
+    try {
+      const { targetUrl, backupEnabled } = req.body;
+      
+      if (!targetUrl) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Target database URL is required" 
+        });
+      }
+
+      // Import the migration module
+      const { DatabaseMigrator } = require('../migrate-production-database.js');
+      const migrator = new DatabaseMigrator();
+      
+      // Get current database URL
+      const sourceUrl = process.env.DATABASE_URL;
+      
+      if (!sourceUrl) {
+        return res.status(500).json({ 
+          success: false, 
+          error: "Source database URL not configured" 
+        });
+      }
+
+      console.log("Starting database migration...");
+      
+      // Run the migration
+      const success = await migrator.migrate(sourceUrl, targetUrl, {
+        backup: backupEnabled || false
+      });
+
+      if (success) {
+        // Get record counts for confirmation
+        const integrations = await storage.getIntegrations();
+        
+        res.json({
+          success: true,
+          message: "Database migration completed successfully",
+          recordsCount: integrations.length,
+          migratedTables: [
+            'integrations', 'users', 'team_members', 'dashboard_tile_instances',
+            'cohorts', 'segments', 'campaigns', 'roles', 'permissions', 
+            'uploaded_images', 'slides', 'presentations'
+          ]
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: "Migration completed with errors. Check server logs for details."
+        });
+      }
+
+    } catch (error) {
+      console.error("Database migration error:", error);
+      res.status(500).json({ 
+        success: false,
+        error: error instanceof Error ? error.message : "Migration failed" 
+      });
+    }
+  });
+
   // Dashboard tile persistence routes
   app.get("/api/dashboard/tiles", async (req, res) => {
     try {

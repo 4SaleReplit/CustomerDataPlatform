@@ -657,6 +657,9 @@ export default function Integrations() {
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [previewIntegration, setPreviewIntegration] = useState<Integration | null>(null);
+  const [showMigrationModal, setShowMigrationModal] = useState(false);
+  const [migrationData, setMigrationData] = useState({ targetUrl: '', backupEnabled: true });
+  const [isMigrating, setIsMigrating] = useState(false);
 
 
 
@@ -743,6 +746,42 @@ export default function Integrations() {
           variant: "destructive"
         });
       }
+    }
+  });
+
+  // Database migration mutation
+  const migrateDatabaseMutation = useMutation({
+    mutationFn: ({ targetUrl, backupEnabled }: { targetUrl: string; backupEnabled: boolean }) => 
+      apiRequest('/api/database/migrate', {
+        method: 'POST',
+        body: JSON.stringify({ targetUrl, backupEnabled }),
+        headers: { 'Content-Type': 'application/json' }
+      }),
+    onSuccess: (result) => {
+      setIsMigrating(false);
+      setShowMigrationModal(false);
+      if (result.success) {
+        toast({
+          title: "Migration completed",
+          description: `Successfully migrated ${result.recordsCount} records to production database.`
+        });
+        // Refresh integrations to show they're still intact
+        queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
+      } else {
+        toast({
+          title: "Migration failed",
+          description: result.error || "Please check your database URL and try again.",
+          variant: "destructive"
+        });
+      }
+    },
+    onError: () => {
+      setIsMigrating(false);
+      toast({
+        title: "Migration error",
+        description: "Failed to migrate database. Please try again.",
+        variant: "destructive"
+      });
     }
   });
 
