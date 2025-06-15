@@ -13,12 +13,12 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 - **External Data**: Snowflake for data warehousing and analytics queries
 - **Styling**: Tailwind CSS with shadcn/ui component library
 
-### Unified Container Deployment Strategy
-- **Architecture**: Single Docker container combining frontend and backend
-- **Frontend**: nginx serves React build and proxies API calls
-- **Backend**: Node.js Express API running on port 5000
+### Simplified Container Deployment Strategy
+- **Architecture**: Single Docker container with Node.js serving everything
+- **Frontend**: React build served as static files by Express
+- **Backend**: Node.js Express API and static file serving on port 5000
 - **Platform**: ARM64 optimized for AWS Graviton processors
-- **Cost Optimization**: 60-70% reduction in infrastructure costs vs separate containers
+- **Cost Optimization**: 70-75% reduction in infrastructure costs vs separate containers
 
 ## Key Components
 
