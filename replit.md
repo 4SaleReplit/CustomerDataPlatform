@@ -111,9 +111,11 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
-- **June 15, 2025**: Docker Build Configuration Fixed
+- **June 15, 2025**: Docker Build Configuration Fixed & Asset Import Issues Resolved
   - Resolved missing build:client script error in Dockerfile.production
   - Updated Docker build process to use existing npm run build command
+  - Fixed asset import errors in CohortDetail.tsx and Cohorts.tsx by replacing problematic image imports with CSS-styled placeholders
+  - Replaced amplitudeLogo and brazeLogo imports with colored circular placeholders (AMP/A for Amplitude, BRZ/B for Braze)
   - Successfully building production Docker image with vite build + esbuild server compilation
   - Docker testing script now functional for Windows PowerShell users
 
