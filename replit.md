@@ -111,6 +111,15 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 15, 2025**: Enhanced Integration Card UI with Comprehensive Metadata
+  - Upgraded integration cards to display rich metadata collected from actual data sources
+  - Added color-coded statistics sections for database integrations (Snowflake, PostgreSQL)
+  - Enhanced PostgreSQL cards with table count, views, database size, and schema information
+  - Added Snowflake metadata display with table/view counts, data size, and available schemas
+  - Implemented connection details display under integration names (database, warehouse, version)
+  - Enhanced preview modal with detailed metadata sections and connection test results
+  - Removed S3 and Database migration sections from Integrations page as requested
+
 - **June 15, 2025**: nginx Removal & Simplified Deployment
   - Removed nginx dependency to simplify architecture
   - Created single-container Express.js deployment serving both API and static files

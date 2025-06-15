@@ -152,7 +152,8 @@ const IntegrationCard = ({ integration, onConfigure, onTest, onPause, onDelete, 
   
   const template = integrationTemplates[integration.type];
   const Icon = template?.icon || Database;
-  const metadata = integration.metadata?.lastTestResult?.metadata;
+  // Handle both nested metadata structure and direct metadata structure
+  const metadata = integration.metadata?.lastTestResult?.metadata || integration.metadata;
 
   const handleTestConnection = async () => {
     setIsTestingConnection(true);
@@ -829,7 +830,7 @@ export default function Integrations() {
               </div>
 
               {/* Comprehensive Metadata Display */}
-              {previewIntegration.metadata?.lastTestResult?.metadata && (
+              {(previewIntegration.metadata?.lastTestResult?.metadata || previewIntegration.metadata) && (
                 <div className="border rounded-lg p-4 bg-gray-50">
                   <h3 className="font-semibold text-lg mb-4 flex items-center">
                     <Database className="h-5 w-5 mr-2 text-blue-600" />
@@ -837,7 +838,7 @@ export default function Integrations() {
                   </h3>
                   
                   {(() => {
-                    const metadata = previewIntegration.metadata.lastTestResult.metadata;
+                    const metadata = previewIntegration.metadata?.lastTestResult?.metadata || previewIntegration.metadata;
                     
                     switch (previewIntegration.type) {
                       case 'snowflake':
