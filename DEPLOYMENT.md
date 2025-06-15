@@ -21,9 +21,17 @@ Before deploying to AWS, test the complete functionality locally with Docker:
 #### Local Docker Build & Test
 
 **Option 1: Automated Testing Script (Recommended)**
+
+For Linux/Mac:
 ```bash
 # Run the automated testing script
 ./test-docker-local.sh
+```
+
+For Windows PowerShell:
+```powershell
+# Run the Windows PowerShell script
+.\test-docker-local.ps1
 ```
 
 **Option 2: Manual Testing**
