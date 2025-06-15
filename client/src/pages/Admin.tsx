@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Plus, Eye, Edit, Trash2, UserPlus, Shield, Key, Copy, MoreHorizontal, Mail, Send, Crown } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, UserPlus, Shield, Key, Copy, MoreHorizontal, Mail, Send, Crown, Database, Server, Cloud, Target, CheckCircle, XCircle, Clock, AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -67,6 +67,54 @@ export default function Admin() {
     description: '',
     permissions: [] as string[]
   });
+
+  // Migration state management
+  const [currentEnvironment, setCurrentEnvironment] = useState('dev');
+  const [environments, setEnvironments] = useState([
+    {
+      id: 'dev',
+      name: 'Development',
+      status: 'active',
+      databases: {
+        postgres: { url: 'postgresql://dev-user:pass@dev-host:5432/dev_db', status: 'connected' },
+        redis: { url: 'redis://dev-redis:6379', status: 'connected' },
+        s3: { bucket: 'dev-bucket', region: 'us-east-1', status: 'connected' }
+      }
+    },
+    {
+      id: 'staging',
+      name: 'Staging',
+      status: 'inactive',
+      databases: {
+        postgres: { url: '', status: 'disconnected' },
+        redis: { url: '', status: 'disconnected' },
+        s3: { bucket: '', region: 'us-east-1', status: 'disconnected' }
+      }
+    },
+    {
+      id: 'production',
+      name: 'Production',
+      status: 'inactive',
+      databases: {
+        postgres: { url: '', status: 'disconnected' },
+        redis: { url: '', status: 'disconnected' },
+        s3: { bucket: '', region: 'us-east-1', status: 'disconnected' }
+      }
+    }
+  ]);
+  const [showMigrationModal, setShowMigrationModal] = useState(false);
+  const [showEnvConfigModal, setShowEnvConfigModal] = useState(false);
+  const [selectedSourceEnv, setSelectedSourceEnv] = useState('');
+  const [selectedTargetEnv, setSelectedTargetEnv] = useState('');
+  const [selectedConfigEnv, setSelectedConfigEnv] = useState('');
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [envConfig, setEnvConfig] = useState({
+    postgres: '',
+    redis: '',
+    s3Bucket: '',
+    s3Region: 'us-east-1'
+  });
+
   const { toast } = useToast();
 
   const filteredUsers = [].filter((user: any) =>
@@ -228,6 +276,88 @@ export default function Admin() {
     }));
   };
 
+  // Migration handlers
+  const handleSwitchEnvironment = (envId: string) => {
+    setEnvironments(prev => prev.map(env => ({
+      ...env,
+      status: env.id === envId ? 'active' : 'inactive'
+    })));
+    setCurrentEnvironment(envId);
+    toast({
+      title: "Environment switched",
+      description: `Now using ${environments.find(e => e.id === envId)?.name} environment`
+    });
+  };
+
+  const handleConfigureEnvironment = (envId: string) => {
+    const env = environments.find(e => e.id === envId);
+    if (env) {
+      setSelectedConfigEnv(envId);
+      setEnvConfig({
+        postgres: env.databases.postgres.url,
+        redis: env.databases.redis.url,
+        s3Bucket: env.databases.s3.bucket,
+        s3Region: env.databases.s3.region
+      });
+      setShowEnvConfigModal(true);
+    }
+  };
+
+  const handleSaveEnvironmentConfig = () => {
+    setEnvironments(prev => prev.map(env => 
+      env.id === selectedConfigEnv 
+        ? {
+            ...env,
+            databases: {
+              postgres: { url: envConfig.postgres, status: envConfig.postgres ? 'connected' : 'disconnected' },
+              redis: { url: envConfig.redis, status: envConfig.redis ? 'connected' : 'disconnected' },
+              s3: { bucket: envConfig.s3Bucket, region: envConfig.s3Region, status: envConfig.s3Bucket ? 'connected' : 'disconnected' }
+            }
+          }
+        : env
+    ));
+    setShowEnvConfigModal(false);
+    toast({
+      title: "Environment configured",
+      description: `${environments.find(e => e.id === selectedConfigEnv)?.name} environment updated successfully`
+    });
+  };
+
+  const handleStartMigration = () => {
+    if (!selectedSourceEnv || !selectedTargetEnv) {
+      toast({
+        title: "Migration error",
+        description: "Please select both source and target environments",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsMigrating(true);
+    // Simulate migration process
+    setTimeout(() => {
+      setIsMigrating(false);
+      setShowMigrationModal(false);
+      toast({
+        title: "Migration completed",
+        description: `Successfully migrated data from ${selectedSourceEnv} to ${selectedTargetEnv}`
+      });
+    }, 3000);
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'connected':
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'disconnected':
+        return <XCircle className="h-4 w-4 text-red-600" />;
+      case 'pending':
+        return <Clock className="h-4 w-4 text-yellow-600" />;
+      default:
+        return <AlertTriangle className="h-4 w-4 text-gray-600" />;
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -238,6 +368,7 @@ export default function Admin() {
         <TabsList>
           <TabsTrigger value="users">Platform Users</TabsTrigger>
           <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
+          <TabsTrigger value="migrations">Migrations</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-6">
@@ -766,6 +897,307 @@ export default function Admin() {
                 <Button variant="outline" onClick={() => setIsRolePreviewDialogOpen(false)}>
                   Close
                 </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+
+        <TabsContent value="migrations" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Environment Management</h2>
+              <p className="text-sm text-muted-foreground">Manage multiple database environments and migrate data between them</p>
+            </div>
+            <div className="flex space-x-3">
+              <Button onClick={() => setShowMigrationModal(true)} className="bg-blue-600 hover:bg-blue-700">
+                <Target className="h-4 w-4 mr-2" />
+                Start Migration
+              </Button>
+            </div>
+          </div>
+
+          {/* Current Environment Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Database className="h-5 w-5 mr-2" />
+                Active Environment: {environments.find(e => e.status === 'active')?.name}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border">
+                  <div className="flex items-center">
+                    <Database className="h-5 w-5 text-blue-600 mr-2" />
+                    <span className="font-medium">PostgreSQL</span>
+                  </div>
+                  {getStatusIcon(environments.find(e => e.status === 'active')?.databases.postgres.status || 'disconnected')}
+                </div>
+                <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border">
+                  <div className="flex items-center">
+                    <Server className="h-5 w-5 text-red-600 mr-2" />
+                    <span className="font-medium">Redis</span>
+                  </div>
+                  {getStatusIcon(environments.find(e => e.status === 'active')?.databases.redis.status || 'disconnected')}
+                </div>
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border">
+                  <div className="flex items-center">
+                    <Cloud className="h-5 w-5 text-green-600 mr-2" />
+                    <span className="font-medium">S3</span>
+                  </div>
+                  {getStatusIcon(environments.find(e => e.status === 'active')?.databases.s3.status || 'disconnected')}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Environment Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {environments.map((env) => (
+              <Card key={env.id} className={`border-2 ${env.status === 'active' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center">
+                      {env.status === 'active' && <CheckCircle className="h-4 w-4 text-green-600 mr-2" />}
+                      {env.name}
+                    </CardTitle>
+                    <Badge variant={env.status === 'active' ? 'default' : 'secondary'}>
+                      {env.status}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Database Status */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center">
+                        <Database className="h-4 w-4 mr-2" />
+                        PostgreSQL
+                      </div>
+                      {getStatusIcon(env.databases.postgres.status)}
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center">
+                        <Server className="h-4 w-4 mr-2" />
+                        Redis
+                      </div>
+                      {getStatusIcon(env.databases.redis.status)}
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center">
+                        <Cloud className="h-4 w-4 mr-2" />
+                        S3
+                      </div>
+                      {getStatusIcon(env.databases.s3.status)}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex space-x-2">
+                    {env.status !== 'active' && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleSwitchEnvironment(env.id)}
+                        className="flex-1"
+                      >
+                        Switch to {env.name}
+                      </Button>
+                    )}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleConfigureEnvironment(env.id)}
+                    >
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Migration History */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Migrations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-600 mr-3" />
+                    <div>
+                      <p className="font-medium">Development → Staging</p>
+                      <p className="text-sm text-muted-foreground">Migrated 15,432 records • 2 hours ago</p>
+                    </div>
+                  </div>
+                  <Badge className="bg-green-100 text-green-800">Completed</Badge>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center">
+                    <Clock className="h-4 w-4 text-blue-600 mr-3" />
+                    <div>
+                      <p className="font-medium">Staging → Production</p>
+                      <p className="text-sm text-muted-foreground">Schema migration in progress • Started 30 minutes ago</p>
+                    </div>
+                  </div>
+                  <Badge className="bg-blue-100 text-blue-800">In Progress</Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Migration Modal */}
+          <Dialog open={showMigrationModal} onOpenChange={setShowMigrationModal}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Database Migration</DialogTitle>
+                <DialogDescription>
+                  Migrate data and schema between environments
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Source Environment</Label>
+                    <Select value={selectedSourceEnv} onValueChange={setSelectedSourceEnv}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select source" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {environments.map(env => (
+                          <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Target Environment</Label>
+                    <Select value={selectedTargetEnv} onValueChange={setSelectedTargetEnv}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select target" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {environments.map(env => (
+                          <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label>Migration Options</Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="schema" defaultChecked />
+                      <Label htmlFor="schema">Migrate Schema</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="data" defaultChecked />
+                      <Label htmlFor="data">Migrate Data</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="integrations" defaultChecked />
+                      <Label htmlFor="integrations">Migrate Integrations</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="images" defaultChecked />
+                      <Label htmlFor="images">Migrate Images to S3</Label>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 mr-2" />
+                    <div className="text-sm">
+                      <p className="font-medium text-yellow-800">Migration Warning</p>
+                      <p className="text-yellow-700">This will overwrite data in the target environment. Make sure you have backups.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3">
+                  <Button variant="outline" onClick={() => setShowMigrationModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleStartMigration} disabled={isMigrating || !selectedSourceEnv || !selectedTargetEnv}>
+                    {isMigrating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Migrating...
+                      </>
+                    ) : (
+                      'Start Migration'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Environment Configuration Modal */}
+          <Dialog open={showEnvConfigModal} onOpenChange={setShowEnvConfigModal}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Configure {environments.find(e => e.id === selectedConfigEnv)?.name} Environment</DialogTitle>
+                <DialogDescription>
+                  Set up database connections for this environment
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>PostgreSQL Connection String</Label>
+                  <Input
+                    type="password"
+                    placeholder="postgresql://user:password@host:5432/database"
+                    value={envConfig.postgres}
+                    onChange={(e) => setEnvConfig(prev => ({ ...prev, postgres: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label>Redis Connection String</Label>
+                  <Input
+                    type="password"
+                    placeholder="redis://user:password@host:6379"
+                    value={envConfig.redis}
+                    onChange={(e) => setEnvConfig(prev => ({ ...prev, redis: e.target.value }))}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>S3 Bucket Name</Label>
+                    <Input
+                      placeholder="my-app-bucket"
+                      value={envConfig.s3Bucket}
+                      onChange={(e) => setEnvConfig(prev => ({ ...prev, s3Bucket: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label>S3 Region</Label>
+                    <Select value={envConfig.s3Region} onValueChange={(value) => setEnvConfig(prev => ({ ...prev, s3Region: value }))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="us-east-1">US East (N. Virginia)</SelectItem>
+                        <SelectItem value="us-west-2">US West (Oregon)</SelectItem>
+                        <SelectItem value="eu-west-1">Europe (Ireland)</SelectItem>
+                        <SelectItem value="ap-southeast-1">Asia Pacific (Singapore)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-3">
+                  <Button variant="outline" onClick={() => setShowEnvConfigModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveEnvironmentConfig}>
+                    Save Configuration
+                  </Button>
+                </div>
               </div>
             </DialogContent>
           </Dialog>
