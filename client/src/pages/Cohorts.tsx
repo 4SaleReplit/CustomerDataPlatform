@@ -252,7 +252,10 @@ function Cohorts() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">Cohorts</h1>
         <Link to="/cohorts/new">
-          <Button>
+          <Button onClick={() => analytics.buttonClicked('Create Cohort', 'Cohorts', { 
+            action: 'navigate_to_create',
+            destination: '/cohorts/new'
+          })}>
             <Plus className="mr-2 h-4 w-4" />
             Create Cohort
           </Button>
@@ -298,6 +301,10 @@ function Cohorts() {
               </Select>
 
               <Button variant="outline" onClick={() => {
+                analytics.buttonClicked('Clear Filters', 'Cohorts', {
+                  action: 'clear_filters',
+                  filters_cleared: ['search', 'status', 'sync_status']
+                });
                 setSearchTerm('');
                 setStatusFilter('all');
                 setSyncStatusFilter('all');
@@ -378,14 +385,28 @@ function Cohorts() {
                     <td className="py-3 px-4">
                       <div className="flex gap-2">
                         <Link to={`/cohorts/${cohort.id}`}>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => analytics.buttonClicked('View Cohort', 'Cohorts', {
+                            action: 'view_cohort',
+                            cohort_id: cohort.id,
+                            cohort_name: cohort.name,
+                            cohort_status: cohort.status
+                          })}>
                             <Eye className="h-4 w-4" />
                           </Button>
                         </Link>
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          onClick={() => syncToAmplitude(cohort.id, cohort.name)}
+                          onClick={() => {
+                            analytics.buttonClicked('Sync to Amplitude', 'Cohorts', {
+                              action: 'sync_amplitude',
+                              cohort_id: cohort.id,
+                              cohort_name: cohort.name,
+                              sync_status: cohort.syncStatus,
+                              is_resync: cohort.syncStatus === 'synced'
+                            });
+                            syncToAmplitude(cohort.id, cohort.name);
+                          }}
                           title={cohort.syncStatus === 'synced' ? 'Re-sync to Amplitude' : 'Sync to Amplitude'}
                           className={cohort.syncStatus === 'synced' ? 'text-green-600 hover:text-green-700' : 'text-blue-600 hover:text-blue-700'}
                         >
@@ -399,7 +420,16 @@ function Cohorts() {
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          onClick={() => syncToBraze(cohort.id, cohort.name)}
+                          onClick={() => {
+                            analytics.buttonClicked('Sync to Braze', 'Cohorts', {
+                              action: 'sync_braze',
+                              cohort_id: cohort.id,
+                              cohort_name: cohort.name,
+                              braze_sync_status: cohort.brazeSyncStatus,
+                              is_resync: cohort.brazeSyncStatus === 'synced'
+                            });
+                            syncToBraze(cohort.id, cohort.name);
+                          }}
                           title={cohort.brazeSyncStatus === 'synced' ? 'Re-sync to Braze' : 'Sync to Braze'}
                           className={cohort.brazeSyncStatus === 'synced' ? 'text-green-600 hover:text-green-700' : 'text-orange-600 hover:text-orange-700'}
                         >

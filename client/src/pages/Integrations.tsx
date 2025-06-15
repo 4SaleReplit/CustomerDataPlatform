@@ -609,7 +609,13 @@ export default function Integrations() {
           <p className="text-xl text-muted-foreground">Connect and manage your data sources and marketing platforms</p>
         </div>
         <div className="flex space-x-3">
-          <Button onClick={handleAddIntegration} className="btn-primary px-6 py-3 text-sm font-medium">
+          <Button onClick={() => {
+            analytics.buttonClicked('Add Integration', 'Integrations', {
+              action: 'open_add_modal',
+              total_integrations: integrations.length
+            });
+            handleAddIntegration();
+          }} className="btn-primary px-6 py-3 text-sm font-medium">
             <Plus className="h-4 w-4 mr-2" />
             Add Integration
           </Button>
