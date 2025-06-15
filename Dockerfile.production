@@ -26,7 +26,8 @@ COPY shared/ ./shared/
 
 # Build application (frontend + backend)
 ENV NODE_ENV=production
-RUN npm run build
+COPY build-production.js ./
+RUN node build-production.js
 
 # Production runtime stage
 FROM --platform=linux/arm64 node:18-alpine
@@ -72,4 +73,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 ENTRYPOINT ["dumb-init", "--"]
 
 # Start the application
-CMD ["node", "dist/index.js"]
+CMD ["sh", "-c", "NODE_ENV=production node dist/index-production.js"]
