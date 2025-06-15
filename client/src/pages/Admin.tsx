@@ -19,57 +19,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import RoleManagement from './RoleManagement';
 
-// Mock data
-const mockUsers = [
-  {
-    id: 1,
-    name: 'John Admin',
-    email: 'john@company.com',
-    role: 'Administrator',
-    status: 'active',
-    lastLogin: '2024-06-03'
-  },
-  {
-    id: 2,
-    name: 'Sarah Marketing',
-    email: 'sarah@company.com',
-    role: 'Marketing Manager',
-    status: 'active',
-    lastLogin: '2024-06-02'
-  },
-  {
-    id: 3,
-    name: 'Mike Data',
-    email: 'mike@company.com',
-    role: 'Data Analyst',
-    status: 'active',
-    lastLogin: '2024-06-01'
-  }
-];
 
-const mockRoles = [
-  {
-    id: 1,
-    name: 'Administrator',
-    description: 'Full access to all features',
-    userCount: 1,
-    permissions: ['all']
-  },
-  {
-    id: 2,
-    name: 'Marketing Manager',
-    description: 'Can manage campaigns and cohorts',
-    userCount: 3,
-    permissions: ['view_dashboard', 'manage_campaigns', 'manage_cohorts', 'view_users']
-  },
-  {
-    id: 3,
-    name: 'Data Analyst',
-    description: 'Read-only access to analytics',
-    userCount: 2,
-    permissions: ['view_dashboard', 'view_users', 'view_cohorts', 'view_campaigns']
-  }
-];
 
 const allPermissions = [
   { id: 'view_dashboard', label: 'View Dashboard' },

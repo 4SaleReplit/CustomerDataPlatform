@@ -36,44 +36,8 @@ interface WorksheetsProps {
   onCreateNew?: () => void;
 }
 
-const sampleWorksheets: Worksheet[] = [
-  {
-    id: '1',
-    name: 'User Segmentation Analysis',
-    description: 'Comprehensive analysis of user types and their engagement patterns',
-    query: 'SELECT USER_TYPE, COUNT(*) as count, AVG(TOTAL_CREDITS_SPENT) as avg_credits FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 GROUP BY USER_TYPE',
-    createdAt: new Date('2025-06-10'),
-    updatedAt: new Date('2025-06-12'),
-    createdBy: 'admin',
-    isPublic: true,
-    tags: ['analysis', 'users', 'segmentation']
-  },
-  {
-    id: '2',
-    name: 'Revenue by User Type',
-    description: 'Revenue analysis across different user segments',
-    query: 'SELECT USER_TYPE, SUM(TOTAL_CREDITS_SPENT) as total_revenue, COUNT(*) as user_count FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE TOTAL_CREDITS_SPENT > 0 GROUP BY USER_TYPE ORDER BY total_revenue DESC',
-    createdAt: new Date('2025-06-11'),
-    updatedAt: new Date('2025-06-11'),
-    createdBy: 'admin',
-    isPublic: false,
-    tags: ['revenue', 'finance', 'users']
-  },
-  {
-    id: '3',
-    name: 'Listing Performance Metrics',
-    description: 'Analysis of listing counts and performance across user segments',
-    query: 'SELECT USER_TYPE, AVG(TOTAL_LISTINGS_COUNT) as avg_listings, SUM(TOTAL_LISTINGS_COUNT) as total_listings FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE TOTAL_LISTINGS_COUNT > 0 GROUP BY USER_TYPE',
-    createdAt: new Date('2025-06-09'),
-    updatedAt: new Date('2025-06-12'),
-    createdBy: 'admin',
-    isPublic: true,
-    tags: ['listings', 'performance', 'metrics']
-  }
-];
-
 export function Worksheets({ onOpenWorksheet, onCreateNew }: WorksheetsProps) {
-  const [worksheets] = useState<Worksheet[]>(sampleWorksheets);
+  const [worksheets] = useState<Worksheet[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 

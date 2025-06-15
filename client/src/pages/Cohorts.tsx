@@ -40,76 +40,7 @@ interface Cohort {
   brazeSyncStatus: string;
 }
 
-// Remove mock cohorts data - now using database
-const removedMockCohorts = [
-  {
-    id: 1,
-    name: 'Premium Users',
-    description: 'Users with premium account type',
-    userCount: 15234,
-    createdDate: '2024-05-15',
-    updatedDate: '2024-05-28',
-    creator: 'John Smith',
-    status: 'active',
-    syncStatus: 'synced'
-  },
-  {
-    id: 2,
-    name: 'Active Listers',
-    description: 'Users who posted listings in the last 30 days',
-    userCount: 8976,
-    createdDate: '2024-05-20',
-    updatedDate: '2024-06-01',
-    creator: 'Sarah Wilson',
-    status: 'active',
-    syncStatus: 'pending'
-  },
-  {
-    id: 3,
-    name: 'High Value Customers',
-    description: 'Users with CLTV > $500',
-    userCount: 3421,
-    createdDate: '2024-05-25',
-    updatedDate: '2024-06-02',
-    creator: 'Mike Johnson',
-    status: 'calculating',
-    syncStatus: 'not_synced'
-  },
-  {
-    id: 4,
-    name: 'Electronics Enthusiasts',
-    description: 'Users primarily listing in Electronics category',
-    userCount: 12567,
-    createdDate: '2024-05-10',
-    updatedDate: '2024-05-15',
-    creator: 'Emily Davis',
-    status: 'active',
-    syncStatus: 'synced'
-  },
-  // Add more mock data for pagination testing
-  {
-    id: 5,
-    name: 'Mobile App Users',
-    description: 'Users who primarily use mobile app',
-    userCount: 22450,
-    createdDate: '2024-04-20',
-    updatedDate: '2024-05-30',
-    creator: 'Alex Chen',
-    status: 'active',
-    syncStatus: 'synced'
-  },
-  {
-    id: 6,
-    name: 'Frequent Buyers',
-    description: 'Users with 5+ purchases in last 90 days',
-    userCount: 6789,
-    createdDate: '2024-04-15',
-    updatedDate: '2024-05-25',
-    creator: 'Lisa Wang',
-    status: 'paused',
-    syncStatus: 'pending'
-  }
-];
+
 
 function Cohorts() {
   const [searchTerm, setSearchTerm] = useState('');
