@@ -1,7 +1,7 @@
 # Local Docker Testing Script for Customer Data Platform (Windows PowerShell)
 # This script builds and tests the application locally before AWS deployment
 
-Write-Host "🚀 Starting Local Docker Testing for Customer Data Platform" -ForegroundColor Green
+Write-Host "[STARTING] Local Docker Testing for Customer Data Platform" -ForegroundColor Green
 Write-Host "==================================================" -ForegroundColor Green
 
 # Check if Docker is running
@@ -23,7 +23,7 @@ Write-Host "[OK] Environment file found" -ForegroundColor Green
 
 # Build the production image
 Write-Host ""
-Write-Host "📦 Building production Docker image..." -ForegroundColor Yellow
+Write-Host "[BUILD] Building production Docker image..." -ForegroundColor Yellow
 docker build -f Dockerfile.production -t cdp-platform:test .
 
 if ($LASTEXITCODE -eq 0) {
@@ -35,12 +35,12 @@ if ($LASTEXITCODE -eq 0) {
 
 # Stop any existing containers
 Write-Host ""
-Write-Host "🛑 Stopping existing containers..." -ForegroundColor Yellow
+Write-Host "[CLEANUP] Stopping existing containers..." -ForegroundColor Yellow
 docker-compose -f docker-compose.production.yml down 2>$null
 
 # Start the application
 Write-Host ""
-Write-Host "🚀 Starting application with Docker Compose..." -ForegroundColor Yellow
+Write-Host "[STARTING] Starting application with Docker Compose..." -ForegroundColor Yellow
 docker-compose -f docker-compose.production.yml up -d
 
 if ($LASTEXITCODE -eq 0) {
