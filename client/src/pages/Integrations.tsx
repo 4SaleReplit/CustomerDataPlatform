@@ -25,6 +25,16 @@ interface Integration {
   lastTested: string | null;
   credentials?: Record<string, any>;
   configuration?: Record<string, any>;
+  metadata?: {
+    lastTestResult?: {
+      success: boolean;
+      error?: string;
+      message?: string;
+      metadata?: any;
+    };
+    lastTested?: string;
+    [key: string]: any;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -142,6 +152,7 @@ const IntegrationCard = ({ integration, onConfigure, onTest, onPause, onDelete, 
   
   const template = integrationTemplates[integration.type];
   const Icon = template?.icon || Database;
+  const metadata = integration.metadata?.lastTestResult?.metadata;
 
   const handleTestConnection = async () => {
     setIsTestingConnection(true);
@@ -164,6 +175,101 @@ const IntegrationCard = ({ integration, onConfigure, onTest, onPause, onDelete, 
     }
   };
 
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const renderMetadataStats = () => {
+    if (!metadata) return null;
+
+    switch (integration.type) {
+      case 'snowflake':
+        return (
+          <div className="grid grid-cols-2 gap-3 mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+            <div className="text-center">
+              <div className="text-lg font-semibold text-blue-900">{metadata.tableCount || 0}</div>
+              <div className="text-xs text-blue-600">Tables</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-blue-900">{metadata.viewCount || 0}</div>
+              <div className="text-xs text-blue-600">Views</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-blue-900">{metadata.sizeGB || 0}GB</div>
+              <div className="text-xs text-blue-600">Data Size</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-blue-900">{metadata.schemas?.length || 0}</div>
+              <div className="text-xs text-blue-600">Schemas</div>
+            </div>
+          </div>
+        );
+      case 'postgresql':
+        return (
+          <div className="grid grid-cols-2 gap-3 mt-3 p-3 bg-green-50 rounded-lg border border-green-100">
+            <div className="text-center">
+              <div className="text-lg font-semibold text-green-900">{metadata.userTables || 0}</div>
+              <div className="text-xs text-green-600">Tables</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-green-900">{metadata.views || 0}</div>
+              <div className="text-xs text-green-600">Views</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-green-900">{metadata.size || 'N/A'}</div>
+              <div className="text-xs text-green-600">DB Size</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-green-900">{metadata.schemas?.length || 0}</div>
+              <div className="text-xs text-green-600">Schemas</div>
+            </div>
+          </div>
+        );
+      case 'amplitude':
+      case 'braze':
+        return (
+          <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-100">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-purple-900">API Connection</span>
+              <CheckCircle className="h-4 w-4 text-purple-600" />
+            </div>
+            <div className="text-xs text-purple-600 mt-1">
+              Ready for campaign automation
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const renderConnectionInfo = () => {
+    if (!metadata) return null;
+
+    const connectionDetails = [];
+    
+    if (metadata.database) {
+      connectionDetails.push(`DB: ${metadata.database}`);
+    }
+    if (metadata.warehouse) {
+      connectionDetails.push(`WH: ${metadata.warehouse}`);
+    }
+    if (metadata.version) {
+      const shortVersion = metadata.version.split(' ')[0];
+      connectionDetails.push(`v${shortVersion}`);
+    }
+
+    return connectionDetails.length > 0 ? (
+      <div className="mt-2 text-xs text-gray-500 truncate">
+        {connectionDetails.join(' • ')}
+      </div>
+    ) : null;
+  };
+
   return (
     <Card className="group hover:shadow-lg transition-all duration-200 cursor-pointer border border-gray-200 hover:border-gray-300">
       <CardHeader className="pb-3">
@@ -175,6 +281,7 @@ const IntegrationCard = ({ integration, onConfigure, onTest, onPause, onDelete, 
             <div className="min-w-0 flex-1">
               <CardTitle className="text-lg font-semibold truncate">{integration.name}</CardTitle>
               <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{integration.description}</p>
+              {renderConnectionInfo()}
             </div>
           </div>
           <div className="flex items-center space-x-1">
@@ -219,6 +326,9 @@ const IntegrationCard = ({ integration, onConfigure, onTest, onPause, onDelete, 
             </div>
           )}
         </div>
+
+        {/* Enhanced Metadata Display */}
+        {renderMetadataStats()}
 
         <div className="space-y-2 mt-4">
           <div className="flex space-x-2">
@@ -656,20 +766,33 @@ export default function Integrations() {
 
       {/* Preview Modal */}
       <Dialog open={!!previewIntegration} onOpenChange={() => setPreviewIntegration(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Integration Details</DialogTitle>
+            <DialogTitle className="flex items-center space-x-3">
+              {previewIntegration && (
+                <>
+                  <div className={`p-2 rounded-lg bg-${integrationTemplates[previewIntegration.type]?.color || 'gray'}-100`}>
+                    {(() => {
+                      const Icon = integrationTemplates[previewIntegration.type]?.icon || Database;
+                      return <Icon className={`h-5 w-5 text-${integrationTemplates[previewIntegration.type]?.color || 'gray'}-600`} />;
+                    })()}
+                  </div>
+                  <span>Integration Details</span>
+                </>
+              )}
+            </DialogTitle>
             <DialogDescription>
-              View integration information and configuration
+              View comprehensive integration information and metadata
             </DialogDescription>
           </DialogHeader>
 
           {previewIntegration && (
             <div className="space-y-6 mt-6">
+              {/* Basic Information */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Name</Label>
-                  <p className="text-sm text-gray-900 mt-1">{previewIntegration.name}</p>
+                  <p className="text-sm text-gray-900 mt-1 font-medium">{previewIntegration.name}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Type</Label>
@@ -678,7 +801,18 @@ export default function Integrations() {
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Status</Label>
                   <div className="mt-1">
-                    {/* Badge component for status */}
+                    {(() => {
+                      switch (previewIntegration.status) {
+                        case 'connected':
+                          return <Badge className="status-connected px-3 py-1 text-xs font-medium"><CheckCircle className="h-3 w-3 mr-1" />Connected</Badge>;
+                        case 'error':
+                          return <Badge className="status-error px-3 py-1 text-xs font-medium"><XCircle className="h-3 w-3 mr-1" />Error</Badge>;
+                        case 'paused':
+                          return <Badge className="bg-orange-100 text-orange-800 border border-orange-200 px-3 py-1 text-xs font-medium"><Clock className="h-3 w-3 mr-1" />Paused</Badge>;
+                        default:
+                          return <Badge className="bg-gray-100 text-gray-700 border border-gray-200 px-3 py-1 text-xs font-medium"><AlertTriangle className="h-3 w-3 mr-1" />Disconnected</Badge>;
+                      }
+                    })()}
                   </div>
                 </div>
                 <div>
@@ -694,14 +828,193 @@ export default function Integrations() {
                 <p className="text-sm text-gray-900 mt-1">{previewIntegration.description}</p>
               </div>
 
-              {previewIntegration.lastTested && (
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Last Tested</Label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {new Date(previewIntegration.lastTested).toLocaleString()}
-                  </p>
+              {/* Comprehensive Metadata Display */}
+              {previewIntegration.metadata?.lastTestResult?.metadata && (
+                <div className="border rounded-lg p-4 bg-gray-50">
+                  <h3 className="font-semibold text-lg mb-4 flex items-center">
+                    <Database className="h-5 w-5 mr-2 text-blue-600" />
+                    Integration Metadata
+                  </h3>
+                  
+                  {(() => {
+                    const metadata = previewIntegration.metadata.lastTestResult.metadata;
+                    
+                    switch (previewIntegration.type) {
+                      case 'snowflake':
+                        return (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-3 gap-4">
+                              <div className="text-center p-3 bg-blue-100 rounded-lg">
+                                <div className="text-2xl font-bold text-blue-900">{metadata.tableCount || 0}</div>
+                                <div className="text-sm text-blue-600">Tables</div>
+                              </div>
+                              <div className="text-center p-3 bg-blue-100 rounded-lg">
+                                <div className="text-2xl font-bold text-blue-900">{metadata.viewCount || 0}</div>
+                                <div className="text-sm text-blue-600">Views</div>
+                              </div>
+                              <div className="text-center p-3 bg-blue-100 rounded-lg">
+                                <div className="text-2xl font-bold text-blue-900">{metadata.sizeGB || 0}GB</div>
+                                <div className="text-sm text-blue-600">Data Size</div>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label className="text-sm font-medium text-gray-600">Database</Label>
+                                <p className="text-sm text-gray-900 mt-1 font-mono">{metadata.database || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-600">Warehouse</Label>
+                                <p className="text-sm text-gray-900 mt-1 font-mono">{metadata.warehouse || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-600">Version</Label>
+                                <p className="text-sm text-gray-900 mt-1 font-mono">{metadata.version || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-600">File Count</Label>
+                                <p className="text-sm text-gray-900 mt-1">{metadata.fileCount || 0}</p>
+                              </div>
+                            </div>
+                            
+                            {metadata.schemas && metadata.schemas.length > 0 && (
+                              <div>
+                                <Label className="text-sm font-medium text-gray-600">Available Schemas</Label>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {metadata.schemas.map((schema: string, index: number) => (
+                                    <Badge key={index} variant="secondary" className="text-xs">{schema}</Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                        
+                      case 'postgresql':
+                        return (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-3 gap-4">
+                              <div className="text-center p-3 bg-green-100 rounded-lg">
+                                <div className="text-2xl font-bold text-green-900">{metadata.userTables || 0}</div>
+                                <div className="text-sm text-green-600">User Tables</div>
+                              </div>
+                              <div className="text-center p-3 bg-green-100 rounded-lg">
+                                <div className="text-2xl font-bold text-green-900">{metadata.views || 0}</div>
+                                <div className="text-sm text-green-600">Views</div>
+                              </div>
+                              <div className="text-center p-3 bg-green-100 rounded-lg">
+                                <div className="text-xl font-bold text-green-900">{metadata.size || 'N/A'}</div>
+                                <div className="text-sm text-green-600">Database Size</div>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label className="text-sm font-medium text-gray-600">Database</Label>
+                                <p className="text-sm text-gray-900 mt-1 font-mono">{metadata.database || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-600">Total Objects</Label>
+                                <p className="text-sm text-gray-900 mt-1">{metadata.tableCount || 0}</p>
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <Label className="text-sm font-medium text-gray-600">PostgreSQL Version</Label>
+                              <p className="text-sm text-gray-900 mt-1 font-mono text-xs">{metadata.version || 'N/A'}</p>
+                            </div>
+                            
+                            {metadata.schemas && metadata.schemas.length > 0 && (
+                              <div>
+                                <Label className="text-sm font-medium text-gray-600">Available Schemas</Label>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {metadata.schemas.map((schema: string, index: number) => (
+                                    <Badge key={index} variant="secondary" className="text-xs">{schema}</Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                        
+                      default:
+                        return (
+                          <div className="text-center p-6 text-gray-500">
+                            <div className="text-lg font-medium">API Integration</div>
+                            <div className="text-sm mt-1">Ready for campaign automation and data sync</div>
+                          </div>
+                        );
+                    }
+                  })()}
                 </div>
               )}
+
+              {/* Connection Test Results */}
+              {previewIntegration.metadata?.lastTestResult && (
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3 flex items-center">
+                    <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
+                    Last Connection Test
+                  </h3>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-600">Result</Label>
+                      <div className="mt-1">
+                        {previewIntegration.metadata.lastTestResult.success ? (
+                          <Badge className="status-connected">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Success
+                          </Badge>
+                        ) : (
+                          <Badge className="status-error">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Failed
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-600">Tested At</Label>
+                      <p className="text-sm text-gray-900 mt-1">
+                        {new Date(previewIntegration.metadata.lastTested || previewIntegration.lastTested || '').toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {previewIntegration.metadata.lastTestResult.message && (
+                    <div className="mt-3">
+                      <Label className="text-sm font-medium text-gray-600">Message</Label>
+                      <p className="text-sm text-gray-900 mt-1">{previewIntegration.metadata.lastTestResult.message}</p>
+                    </div>
+                  )}
+                  
+                  {previewIntegration.metadata.lastTestResult.error && (
+                    <div className="mt-3">
+                      <Label className="text-sm font-medium text-gray-600">Error Details</Label>
+                      <p className="text-sm text-red-600 mt-1 font-mono text-xs bg-red-50 p-2 rounded">
+                        {previewIntegration.metadata.lastTestResult.error}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Timestamps */}
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Created At</Label>
+                  <p className="text-sm text-gray-900 mt-1">
+                    {new Date(previewIntegration.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Last Updated</Label>
+                  <p className="text-sm text-gray-900 mt-1">
+                    {new Date(previewIntegration.updatedAt).toLocaleString()}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </DialogContent>
