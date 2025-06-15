@@ -8,7 +8,8 @@ import { s3Storage } from "./services/s3Storage";
 import { 
   insertTeamSchema, insertDashboardTileInstanceSchema, insertCohortSchema, insertSegmentSchema,
   insertRoleSchema, updateRoleSchema, insertPermissionSchema, insertRolePermissionSchema,
-  insertUploadedImageSchema, insertSlideSchema, updateSlideSchema, insertPresentationSchema
+  insertUploadedImageSchema, insertSlideSchema, updateSlideSchema, insertPresentationSchema,
+  environmentConfigurations, insertEnvironmentConfigurationSchema
 } from "@shared/schema";
 import bcrypt from "bcrypt";
 import multer from "multer";
@@ -2804,6 +2805,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         error: error instanceof Error ? error.message : "Failed to check S3 status" 
       });
+    }
+  });
+
+  // Environment Configuration API endpoints
+  app.get('/api/environment-configurations', async (req, res) => {
+    try {
+      const configs = await db.select().from(environmentConfigurations);
+      res.json(configs);
+    } catch (error) {
+      console.error('Error fetching environment configurations:', error);
+      res.status(500).json({ error: 'Failed to fetch environment configurations' });
+    }
+  });
+
+  app.post('/api/environment-configurations', async (req, res) => {
+    try {
+      const { environmentId, environmentName, integrationType, integrationId } = req.body;
+      
+      // Remove existing configuration for this environment and integration type
+      await db
+        .delete(environmentConfigurations)
+        .where(
+          and(
+            eq(environmentConfigurations.environmentId, environmentId),
+            eq(environmentConfigurations.integrationType, integrationType)
+          )
+        );
+
+      // Insert new configuration if integrationId is provided
+      if (integrationId && integrationId !== 'none') {
+        const [config] = await db
+          .insert(environmentConfigurations)
+          .values({
+            environmentId,
+            environmentName,
+            integrationType,
+            integrationId,
+            isActive: true
+          })
+          .returning();
+        
+        res.json(config);
+      } else {
+        res.json({ success: true, message: 'Configuration cleared' });
+      }
+    } catch (error) {
+      console.error('Error saving environment configuration:', error);
+      res.status(500).json({ error: 'Failed to save environment configuration' });
+    }
+  });
+
+  app.delete('/api/environment-configurations/:environmentId/:integrationType', async (req, res) => {
+    try {
+      const { environmentId, integrationType } = req.params;
+      
+      await db
+        .delete(environmentConfigurations)
+        .where(
+          and(
+            eq(environmentConfigurations.environmentId, environmentId),
+            eq(environmentConfigurations.integrationType, integrationType)
+          )
+        );
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting environment configuration:', error);
+      res.status(500).json({ error: 'Failed to delete environment configuration' });
     }
   });
 

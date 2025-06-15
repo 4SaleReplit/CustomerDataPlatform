@@ -384,6 +384,31 @@ export const insertRolePermissionSchema = createInsertSchema(rolePermissions).om
   createdAt: true,
 });
 
+// Environment configurations table
+export const environmentConfigurations = pgTable("environment_configurations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  environmentId: varchar("environment_id", { length: 100 }).notNull(),
+  environmentName: varchar("environment_name", { length: 100 }).notNull(),
+  integrationType: varchar("integration_type", { length: 50 }).notNull(),
+  integrationId: uuid("integration_id").references(() => integrations.id, { onDelete: 'cascade' }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
+// Environment configuration schemas
+export const insertEnvironmentConfigurationSchema = createInsertSchema(environmentConfigurations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateEnvironmentConfigurationSchema = createInsertSchema(environmentConfigurations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
 // Role and permission types
 export type InsertRole = z.infer<typeof insertRoleSchema>;
 export type UpdateRole = z.infer<typeof updateRoleSchema>;
@@ -392,3 +417,6 @@ export type InsertPermission = z.infer<typeof insertPermissionSchema>;
 export type Permission = typeof permissions.$inferSelect;
 export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
 export type RolePermission = typeof rolePermissions.$inferSelect;
+export type InsertEnvironmentConfiguration = z.infer<typeof insertEnvironmentConfigurationSchema>;
+export type UpdateEnvironmentConfiguration = z.infer<typeof updateEnvironmentConfigurationSchema>;
+export type EnvironmentConfiguration = typeof environmentConfigurations.$inferSelect;
