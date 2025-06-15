@@ -22,7 +22,7 @@ function SegmentDetail() {
 
   // Track page visit
   useEffect(() => {
-    trackBusinessEvent.pageViewed('segment-detail');
+    analytics.screenViewed('Segment Detail');
   }, []);
 
   // Fetch segment data from API

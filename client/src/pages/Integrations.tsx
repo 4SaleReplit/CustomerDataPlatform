@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,7 @@ import {
   Snowflake, Palette, Pause, Play, Trash2
 } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { analytics } from '@/lib/amplitude';
 
 interface Integration {
   id: string;
@@ -373,6 +374,11 @@ const IntegrationCard = ({ integration, onConfigure, onTest, onPause, onDelete, 
 export default function Integrations() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Track page view on component mount
+  useEffect(() => {
+    analytics.screenViewed('Integrations');
+  }, []);
   const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
