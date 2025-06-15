@@ -115,11 +115,9 @@ export default function AdminNew() {
   const [selectedTargetEnv, setSelectedTargetEnv] = useState('');
   const [selectedConfigEnv, setSelectedConfigEnv] = useState('');
   const [isMigrating, setIsMigrating] = useState(false);
-  const [envConfig, setEnvConfig] = useState({
-    postgresIntegrationId: '',
-    redisIntegrationId: '',
-    s3IntegrationId: ''
-  });
+  const [envConfig, setEnvConfig] = useState<{ [key: string]: string }>({});
+
+
 
   // Fetch team members
   const { data: teamMembers = [], isLoading: membersLoading } = useQuery({
@@ -434,6 +432,22 @@ export default function AdminNew() {
     return displays[type] || { icon: Settings, color: 'gray' };
   };
 
+  // Update environment databases when integration types change
+  const updateEnvironmentDatabases = () => {
+    setEnvironments(prev => prev.map(env => ({
+      ...env,
+      databases: initializeEnvironmentDatabases(activeIntegrationTypes)
+    })));
+  };
+
+  // Update environments when active integration types change
+  React.useEffect(() => {
+    setEnvironments(prev => prev.map(env => ({
+      ...env,
+      databases: initializeEnvironmentDatabases(activeIntegrationTypes)
+    })));
+  }, [activeIntegrationTypes]);
+
   const handleStartMigration = () => {
     if (!selectedSourceEnv || !selectedTargetEnv) {
       toast({
@@ -729,15 +743,47 @@ export default function AdminNew() {
             <div className="flex items-start justify-between">
               <div className="flex items-start">
                 <Database className="h-5 w-5 text-blue-600 mt-0.5 mr-2" />
-                <div className="text-sm">
+                <div className="text-sm w-full">
                   <p className="font-medium text-blue-800">Active Integration Types</p>
-                  <p className="text-blue-700 mb-2">Currently enabled tools for environment configuration:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {activeIntegrationTypes.map(type => (
-                      <span key={type} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
-                        {type.charAt(0).toUpperCase() + type.slice(1)}
-                      </span>
-                    ))}
+                  <p className="text-blue-700 mb-3">Available integrations from your configured services:</p>
+                  
+                  {/* Show all available integrations */}
+                  <div className="mb-4">
+                    <h5 className="text-xs font-medium text-gray-600 mb-2">All Configured Integrations:</h5>
+                    <div className="grid grid-cols-1 gap-2">
+                      {integrations.map((integration: any) => (
+                        <div key={integration.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                          <div className="flex items-center">
+                            <Database className="h-3 w-3 text-gray-500 mr-2" />
+                            <div>
+                              <span className="text-xs font-medium">{integration.name}</span>
+                              <p className="text-xs text-gray-400">{integration.type}</p>
+                            </div>
+                          </div>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            integration.status === 'connected' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {integration.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Show selected tools for migration */}
+                  <div>
+                    <h5 className="text-xs font-medium text-gray-600 mb-2">Selected Tools for Migration:</h5>
+                    <div className="flex flex-wrap gap-2">
+                      {activeIntegrationTypes.map(type => {
+                        const { icon: Icon, color } = getIntegrationDisplay(type);
+                        return (
+                          <span key={type} className={`px-2 py-1 bg-${color}-100 text-${color}-800 rounded text-xs font-medium flex items-center`}>
+                            <Icon className="h-3 w-3 mr-1" />
+                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                          </span>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -765,15 +811,14 @@ export default function AdminNew() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {activeIntegrationTypes.map(type => {
                   const activeEnv = environments.find(e => e.status === 'active');
-                  const dbStatus = activeEnv?.databases?.[type]?.status || 'disconnected';
+                  const dbConfig = activeEnv?.databases?.[type];
+                  const dbStatus = dbConfig?.status || 'disconnected';
                   const { icon: Icon, color } = getIntegrationDisplay(type);
-                  const bgColorClass = `bg-${color}-50`;
-                  const textColorClass = `text-${color}-600`;
                   
                   return (
-                    <div key={type} className={`flex items-center justify-between p-3 ${bgColorClass} rounded-lg border`}>
+                    <div key={type} className={`flex items-center justify-between p-3 bg-${color}-50 rounded-lg border`}>
                       <div className="flex items-center">
-                        <Icon className={`h-5 w-5 ${textColorClass} mr-2`} />
+                        <Icon className={`h-5 w-5 text-${color}-600 mr-2`} />
                         <span className="font-medium">{type.charAt(0).toUpperCase() + type.slice(1)}</span>
                       </div>
                       {getStatusIcon(dbStatus)}
@@ -802,27 +847,21 @@ export default function AdminNew() {
                 <CardContent className="space-y-4">
                   {/* Database Status */}
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center">
-                        <Database className="h-4 w-4 mr-2" />
-                        PostgreSQL
-                      </div>
-                      {getStatusIcon(env.databases.postgres.status)}
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center">
-                        <Server className="h-4 w-4 mr-2" />
-                        Redis
-                      </div>
-                      {getStatusIcon(env.databases.redis.status)}
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center">
-                        <Cloud className="h-4 w-4 mr-2" />
-                        S3
-                      </div>
-                      {getStatusIcon(env.databases.s3.status)}
-                    </div>
+                    {activeIntegrationTypes.map(type => {
+                      const dbConfig = env.databases?.[type];
+                      const dbStatus = dbConfig?.status || 'disconnected';
+                      const { icon: Icon, color } = getIntegrationDisplay(type);
+                      
+                      return (
+                        <div key={type} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center">
+                            <Icon className={`h-4 w-4 mr-2 text-${color}-600`} />
+                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                          </div>
+                          {getStatusIcon(dbStatus)}
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Actions */}
@@ -981,31 +1020,42 @@ export default function AdminNew() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                <div>
-                  <Label>PostgreSQL Integration</Label>
-                  <Select value={envConfig.postgresIntegrationId} onValueChange={(value) => setEnvConfig(prev => ({ ...prev, postgresIntegrationId: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select PostgreSQL integration" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No PostgreSQL integration</SelectItem>
-                      {getPostgresIntegrations().map((integration: any) => (
-                        <SelectItem key={integration.id} value={integration.id}>
-                          <div className="flex items-center">
-                            <Database className="h-4 w-4 mr-2 text-blue-600" />
-                            {integration.name}
-                            {integration.status === 'active' && <span className="ml-2 text-xs text-green-600">(Active)</span>}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {getPostgresIntegrations().length === 0 && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      No PostgreSQL integrations found. Configure one in the Integrations page first.
-                    </p>
-                  )}
-                </div>
+                {activeIntegrationTypes.map(type => {
+                  const { icon: Icon, color } = getIntegrationDisplay(type);
+                  const integrationOptions = getIntegrationsByType(type);
+                  const configKey = `${type}IntegrationId` as keyof typeof envConfig;
+                  
+                  return (
+                    <div key={type}>
+                      <Label>{type.charAt(0).toUpperCase() + type.slice(1)} Integration</Label>
+                      <Select 
+                        value={envConfig[configKey] || 'none'} 
+                        onValueChange={(value) => setEnvConfig(prev => ({ ...prev, [configKey]: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={`Select ${type} integration`} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No {type} integration</SelectItem>
+                          {integrationOptions.map((integration: any) => (
+                            <SelectItem key={integration.id} value={integration.id}>
+                              <div className="flex items-center">
+                                <Icon className={`h-4 w-4 mr-2 text-${color}-600`} />
+                                {integration.name}
+                                {integration.status === 'connected' && <span className="ml-2 text-xs text-green-600">(Connected)</span>}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {integrationOptions.length === 0 && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          No {type} integrations found. Configure one in the Integrations page first.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
 
                 <div>
                   <Label>Redis Integration</Label>
