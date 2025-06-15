@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Plus, Settings, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Info, BookOpen, Shield, Target, Loader2 } from "lucide-react";
+import { Plus, Settings, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Info, BookOpen, Shield, Target, Loader2, Cloud, Upload } from "lucide-react";
 import { ChevronUp, ChevronDown, Play, Pause } from "lucide-react";
 import { SiFacebook, SiGoogle, SiSnowflake, SiTwilio, SiMixpanel, SiIntercom, SiSalesforce, SiHubspot, SiZendesk } from "react-icons/si";
 import brazeIconPath from "@assets/BRZE_1749419981281.png";
@@ -660,6 +660,14 @@ export default function Integrations() {
   const [showMigrationModal, setShowMigrationModal] = useState(false);
   const [migrationData, setMigrationData] = useState({ targetUrl: '', backupEnabled: true });
   const [isMigrating, setIsMigrating] = useState(false);
+  const [showS3MigrationModal, setShowS3MigrationModal] = useState(false);
+  const [s3MigrationData, setS3MigrationData] = useState({
+    bucketName: '',
+    accessKeyId: '',
+    secretAccessKey: '',
+    region: 'us-east-1'
+  });
+  const [isS3Migrating, setIsS3Migrating] = useState(false);
 
 
 
@@ -780,6 +788,40 @@ export default function Integrations() {
       toast({
         title: "Migration error",
         description: "Failed to migrate database. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // S3 migration mutation
+  const migrateS3Mutation = useMutation({
+    mutationFn: (data: typeof s3MigrationData) => 
+      apiRequest('/api/migrate/s3', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+      }),
+    onSuccess: (result) => {
+      setIsS3Migrating(false);
+      setShowS3MigrationModal(false);
+      if (result.success) {
+        toast({
+          title: "S3 migration completed",
+          description: `Successfully migrated ${result.migrated} images to S3. ${result.skipped} already on S3.`
+        });
+      } else {
+        toast({
+          title: "S3 migration failed",
+          description: result.error || "Please check your S3 credentials and try again.",
+          variant: "destructive"
+        });
+      }
+    },
+    onError: () => {
+      setIsS3Migrating(false);
+      toast({
+        title: "S3 migration error",
+        description: "Failed to migrate images to S3. Please try again.",
         variant: "destructive"
       });
     }
@@ -934,6 +976,20 @@ export default function Integrations() {
     });
   };
 
+  const handleStartS3Migration = async () => {
+    if (!s3MigrationData.bucketName.trim() || !s3MigrationData.accessKeyId.trim() || !s3MigrationData.secretAccessKey.trim()) {
+      toast({
+        title: "Missing S3 credentials",
+        description: "Please enter all required S3 credentials",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsS3Migrating(true);
+    migrateS3Mutation.mutate(s3MigrationData);
+  };
+
   const getStatusBadge = useCallback((status: string) => {
     switch (status) {
       case 'connected':
@@ -1008,6 +1064,14 @@ export default function Integrations() {
           <p className="text-xl text-muted-foreground">Connect and manage your data sources and marketing platforms</p>
         </div>
         <div className="flex space-x-3">
+          <Button 
+            onClick={() => setShowS3MigrationModal(true)} 
+            variant="outline" 
+            className="px-6 py-3 text-sm font-medium border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300"
+          >
+            <Cloud className="h-4 w-4 mr-2" />
+            Migrate to S3
+          </Button>
           <Button 
             onClick={() => setShowMigrationModal(true)} 
             variant="outline" 
@@ -1597,6 +1661,131 @@ export default function Integrations() {
                   <>
                     <Target className="h-4 w-4 mr-2" />
                     Start Migration
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* S3 Migration Modal */}
+      <Dialog open={showS3MigrationModal} onOpenChange={setShowS3MigrationModal}>
+        <DialogContent className="modal-enhanced max-w-2xl">
+          <DialogHeader className="modal-header space-y-3">
+            <DialogTitle className="text-2xl font-bold tracking-tight">Migrate Images to S3</DialogTitle>
+            <DialogDescription className="text-lg text-muted-foreground">
+              Move your local images to AWS S3 for production-ready cloud storage
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 mt-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <Cloud className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-blue-900">S3 Migration Process</h4>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>• Uploads all local images to your S3 bucket</li>
+                    <li>• Updates database URLs to point to S3</li>
+                    <li>• Updates slide references to use S3 URLs</li>
+                    <li>• Organizes images by upload date in S3</li>
+                    <li>• Future uploads will go directly to S3</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="bucketName" className="text-sm font-medium">S3 Bucket Name</Label>
+                <Input
+                  id="bucketName"
+                  type="text"
+                  placeholder="my-app-images"
+                  value={s3MigrationData.bucketName}
+                  onChange={(e) => setS3MigrationData(prev => ({ ...prev, bucketName: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="accessKeyId" className="text-sm font-medium">AWS Access Key ID</Label>
+                <Input
+                  id="accessKeyId"
+                  type="text"
+                  placeholder="AKIAIOSFODNN7EXAMPLE"
+                  value={s3MigrationData.accessKeyId}
+                  onChange={(e) => setS3MigrationData(prev => ({ ...prev, accessKeyId: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="secretAccessKey" className="text-sm font-medium">AWS Secret Access Key</Label>
+                <Input
+                  id="secretAccessKey"
+                  type="password"
+                  placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+                  value={s3MigrationData.secretAccessKey}
+                  onChange={(e) => setS3MigrationData(prev => ({ ...prev, secretAccessKey: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="region" className="text-sm font-medium">AWS Region</Label>
+                <Select value={s3MigrationData.region} onValueChange={(value) => setS3MigrationData(prev => ({ ...prev, region: value }))}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="us-east-1">US East (N. Virginia)</SelectItem>
+                    <SelectItem value="us-west-2">US West (Oregon)</SelectItem>
+                    <SelectItem value="eu-west-1">Europe (Ireland)</SelectItem>
+                    <SelectItem value="ap-southeast-1">Asia Pacific (Singapore)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-yellow-900">Before Migration</h4>
+                  <ul className="text-sm text-yellow-800 space-y-1">
+                    <li>• Ensure S3 bucket exists and has public read access</li>
+                    <li>• Verify AWS credentials have S3 upload permissions</li>
+                    <li>• Local images will remain until you delete them manually</li>
+                    <li>• Set these environment variables in production after migration</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowS3MigrationModal(false)}
+                disabled={isS3Migrating}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleStartS3Migration}
+                disabled={isS3Migrating || !s3MigrationData.bucketName.trim() || !s3MigrationData.accessKeyId.trim() || !s3MigrationData.secretAccessKey.trim()}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {isS3Migrating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Migrating...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Start S3 Migration
                   </>
                 )}
               </Button>
