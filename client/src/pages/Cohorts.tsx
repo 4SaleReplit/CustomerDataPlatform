@@ -3,7 +3,7 @@ import { Link } from 'wouter';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { trackBusinessEvent } from '@/lib/amplitude';
+import { analytics } from '@/lib/amplitude';
 import { Plus, Eye, Edit, Trash2, RefreshCw, Filter, SortAsc, SortDesc, MoreHorizontal, Copy, BarChart3 } from 'lucide-react';
 import amplitudeLogo from '@assets/AMPL_1749419466685.png';
 import brazeLogo from '@assets/BRZE_1749419981281.png';
@@ -97,7 +97,7 @@ function Cohorts() {
         body: JSON.stringify({ ownerEmail: "data-team@yourcompany.com" })
       });
       
-      trackBusinessEvent.cohortSyncedToAmplitude(cohortName, response.syncedUserCount || 0);
+      analytics.cohortSynced(cohortId, cohortName, 'Amplitude', response.syncedUserCount || 0);
       queryClient.invalidateQueries({ queryKey: ['/api/cohorts'] });
       toast({
         title: "Sync successful",
@@ -120,7 +120,7 @@ function Cohorts() {
         headers: { 'Content-Type': 'application/json' }
       });
       
-      trackBusinessEvent.cohortSyncedToBraze(cohortName, response.syncedUserCount || 0);
+      analytics.cohortSynced(cohortId, cohortName, 'Braze', response.syncedUserCount || 0);
       queryClient.invalidateQueries({ queryKey: ['/api/cohorts'] });
       toast({
         title: "Sync successful",

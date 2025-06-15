@@ -3,18 +3,24 @@ import * as amplitude from '@amplitude/analytics-browser';
 // Amplitude configuration
 const AMPLITUDE_API_KEY = import.meta.env.VITE_AMPLITUDE_API_KEY;
 
-// Initialize Amplitude
+/**
+ * Clean Amplitude Analytics Implementation
+ * Following comprehensive event naming convention with Title Case events
+ * and camelCase properties for consistency and clarity
+ */
+
+// Initialize Amplitude with minimal autocapture to avoid event pollution
 export const initializeAmplitude = () => {
   if (AMPLITUDE_API_KEY) {
     amplitude.init(AMPLITUDE_API_KEY, undefined, {
       defaultTracking: {
         sessions: true,
-        pageViews: true,
-        formInteractions: true,
-        fileDownloads: true,
+        pageViews: false, // We'll track manually with proper naming
+        formInteractions: false, // We'll track manually
+        fileDownloads: false,
       },
       autocapture: {
-        elementInteractions: true,
+        elementInteractions: false, // Manual tracking for clean event names
       },
     });
     console.log('Amplitude initialized successfully');
@@ -23,206 +29,298 @@ export const initializeAmplitude = () => {
   }
 };
 
-// Track custom events with user context
-export const trackEvent = (eventName: string, eventProperties?: Record<string, any>) => {
-  if (AMPLITUDE_API_KEY) {
-    // Get current user from localStorage to enrich events
-    const storedUser = localStorage.getItem('platform_user');
-    let userContext = {};
-    
-    if (storedUser) {
-      try {
-        const user = JSON.parse(storedUser);
-        userContext = {
-          platform_user_id: user.id,
-          platform_username: user.username,
-          platform_user_role: user.role,
-          platform: 'CDP'
-        };
-      } catch (error) {
-        console.warn('Failed to parse user context for tracking:', error);
-      }
-    }
-    
-    // Merge user context with event properties
-    const enrichedProperties = {
-      ...userContext,
-      ...eventProperties,
-      timestamp: new Date().toISOString()
-    };
-    
-    amplitude.track(eventName, enrichedProperties);
-    console.log('Amplitude event tracked:', eventName, enrichedProperties);
-  }
-};
-
-// Identify user
-export const identifyUser = (userId: string, userProperties?: Record<string, any>) => {
+// Set user context after login - called once and persists for session
+export const setUserContext = (userId: string, userProperties: {
+  email?: string;
+  name?: string;
+  userType?: string;
+  role?: string;
+}) => {
   if (AMPLITUDE_API_KEY) {
     amplitude.setUserId(userId);
-    if (userProperties) {
-      const identify = new amplitude.Identify();
-      Object.entries(userProperties).forEach(([key, value]) => {
-        identify.set(key, value);
-      });
-      amplitude.identify(identify);
-    }
-  }
-};
-
-// Set user properties
-export const setUserProperties = (properties: Record<string, any>) => {
-  if (AMPLITUDE_API_KEY) {
+    
     const identify = new amplitude.Identify();
-    Object.entries(properties).forEach(([key, value]) => {
-      identify.set(key, value);
+    Object.entries(userProperties).forEach(([key, value]) => {
+      if (value) identify.set(key, value);
     });
     amplitude.identify(identify);
+    
+    console.log('User context set:', userId, userProperties);
   }
 };
 
-// Track page views manually if needed
-export const trackPageView = (pageName: string, properties?: Record<string, any>) => {
+// Clear user context on logout
+export const clearUserContext = () => {
   if (AMPLITUDE_API_KEY) {
-    amplitude.track('Page View', {
-      page_name: pageName,
-      ...properties
-    });
+    amplitude.setUserId(undefined);
+    amplitude.reset();
   }
 };
 
-// Track business events
-export const trackBusinessEvent = {
-  // Dashboard interactions
-  dashboardTileCreated: (tileType: string, dataSource: string) => {
+// Core event tracking function following Title Case + camelCase convention
+const trackEvent = (eventName: string, eventProperties?: Record<string, any>) => {
+  if (AMPLITUDE_API_KEY) {
+    amplitude.track(eventName, eventProperties);
+    console.log('Amplitude event tracked:', eventName, eventProperties);
+  }
+};
+
+/**
+ * Analytics Event Library
+ * Following convention: [Component/Screen + Action] in Title Case
+ * Properties in camelCase with descriptive context
+ */
+export const analytics = {
+  // Screen/Page Navigation Events
+  screenViewed: (screenName: string, additionalProperties?: Record<string, any>) => {
+    trackEvent(`${screenName} Screen Viewed`, {
+      screenName,
+      ...additionalProperties
+    });
+  },
+
+  // Button Click Events
+  buttonClicked: (buttonName: string, screenName: string, additionalProperties?: Record<string, any>) => {
+    trackEvent(`${buttonName} Button Clicked`, {
+      buttonName,
+      screenName,
+      ...additionalProperties
+    });
+  },
+
+  // Form Events
+  formSubmitted: (formName: string, screenName: string, success: boolean, additionalProperties?: Record<string, any>) => {
+    trackEvent(`${formName} Form Submitted`, {
+      formName,
+      screenName,
+      success,
+      ...additionalProperties
+    });
+  },
+
+  // Navigation Events
+  navigationItemClicked: (itemName: string, sourceScreen: string, destinationScreen?: string) => {
+    trackEvent('Navigation Item Clicked', {
+      itemName,
+      sourceScreen,
+      destinationScreen
+    });
+  },
+
+  // Dashboard Events
+  dashboardTileCreated: (tileType: string, dataSource: string, screenName: string = 'Dashboard') => {
     trackEvent('Dashboard Tile Created', {
-      tile_type: tileType,
-      data_source: dataSource,
+      tileType,
+      dataSource,
+      screenName
     });
   },
-  
-  dashboardTileRefreshed: (tileId: string, tileType: string) => {
+
+  dashboardTileRefreshed: (tileId: string, tileType: string, screenName: string = 'Dashboard') => {
     trackEvent('Dashboard Tile Refreshed', {
-      tile_id: tileId,
-      tile_type: tileType,
+      tileId,
+      tileType,
+      screenName
     });
   },
 
-  dashboardGlobalRefresh: (tileCount: number) => {
-    trackEvent('Dashboard Global Refresh', {
-      tile_count: tileCount,
+  dashboardGlobalRefreshed: (tileCount: number, screenName: string = 'Dashboard') => {
+    trackEvent('Dashboard Global Refreshed', {
+      tileCount,
+      screenName
     });
   },
 
-  // Cohort management
-  cohortCreated: (cohortName: string, conditionsCount: number) => {
+  // Integration Events
+  integrationTestClicked: (integrationType: string, integrationName: string, screenName: string = 'Integrations') => {
+    trackEvent('Integration Test Clicked', {
+      integrationType,
+      integrationName,
+      screenName
+    });
+  },
+
+  integrationTestCompleted: (integrationType: string, integrationName: string, success: boolean, errorMessage?: string) => {
+    trackEvent('Integration Test Completed', {
+      integrationType,
+      integrationName,
+      success,
+      errorMessage
+    });
+  },
+
+  integrationConfigOpened: (integrationType: string, integrationName: string, screenName: string = 'Integrations') => {
+    trackEvent('Integration Config Opened', {
+      integrationType,
+      integrationName,
+      screenName
+    });
+  },
+
+  integrationConfigSaved: (integrationType: string, integrationName: string, configFields: string[]) => {
+    trackEvent('Integration Config Saved', {
+      integrationType,
+      integrationName,
+      configFieldsCount: configFields.length
+    });
+  },
+
+  // Cohort Management Events
+  cohortCreated: (cohortName: string, conditionsCount: number, screenName: string = 'Cohorts') => {
     trackEvent('Cohort Created', {
-      cohort_name: cohortName,
-      conditions_count: conditionsCount,
+      cohortName,
+      conditionsCount,
+      screenName
     });
   },
 
-  cohortRefreshed: (cohortId: string, userCount: number) => {
+  cohortRefreshed: (cohortId: string, cohortName: string, userCount: number) => {
     trackEvent('Cohort Refreshed', {
-      cohort_id: cohortId,
-      user_count: userCount,
+      cohortId,
+      cohortName,
+      userCount
     });
   },
 
-  cohortDeleted: (cohortName: string) => {
+  cohortSynced: (cohortId: string, cohortName: string, platform: 'Amplitude' | 'Braze', userCount: number) => {
+    trackEvent('Cohort Synced', {
+      cohortId,
+      cohortName,
+      platform,
+      userCount
+    });
+  },
+
+  cohortDeleted: (cohortId: string, cohortName: string, userCount: number) => {
     trackEvent('Cohort Deleted', {
-      cohort_name: cohortName,
+      cohortId,
+      cohortName,
+      userCount
     });
   },
 
-  cohortSyncedToAmplitude: (cohortId: string, userCount: number) => {
-    trackEvent('Cohort Synced to Amplitude', {
-      cohort_id: cohortId,
-      user_count: userCount,
-    });
-  },
-
-  cohortSyncedToBraze: (cohortId: string, userCount: number) => {
-    trackEvent('Cohort Synced to Braze', {
-      cohort_id: cohortId,
-      user_count: userCount,
-    });
-  },
-
-  // Segment management
-  segmentCreated: (segmentName: string, attribute: string, operator: string) => {
+  // Segment Management Events
+  segmentCreated: (segmentName: string, attribute: string, operator: string, screenName: string = 'Segments') => {
     trackEvent('Segment Created', {
-      segment_name: segmentName,
+      segmentName,
       attribute,
       operator,
+      screenName
     });
   },
 
-  segmentRefreshed: (segmentId: string, userCount: number) => {
+  segmentRefreshed: (segmentId: string, segmentName: string, userCount: number) => {
     trackEvent('Segment Refreshed', {
-      segment_id: segmentId,
-      user_count: userCount,
+      segmentId,
+      segmentName,
+      userCount
     });
   },
 
-  // Snowflake queries
-  snowflakeQueryExecuted: (queryType: string, success: boolean, executionTime?: number) => {
-    trackEvent('Snowflake Query Executed', {
-      query_type: queryType,
+  // Query Execution Events
+  queryExecuted: (queryType: 'Snowflake' | 'PostgreSQL', success: boolean, executionTimeMs?: number, errorMessage?: string) => {
+    trackEvent('Query Executed', {
+      queryType,
       success,
-      execution_time_ms: executionTime,
+      executionTimeMs,
+      errorMessage
     });
   },
 
-  // User exploration
-  userProfileViewed: (userId: string, tabName: string) => {
-    trackEvent('User Profile Viewed', {
-      user_id: userId,
-      tab_name: tabName,
-    });
-  },
-
-  usersListFiltered: (filterType: string, filterValue: string) => {
-    trackEvent('Users List Filtered', {
-      filter_type: filterType,
-      filter_value: filterValue,
-    });
-  },
-
-  userDataRefreshed: (userCount: number) => {
-    trackEvent('User Data Refreshed', {
-      user_count: userCount,
-    });
-  },
-
-  // Data exploration
-  dataTableSorted: (tableName: string, sortColumn: string, sortDirection: string) => {
-    trackEvent('Data Table Sorted', {
-      table_name: tableName,
-      sort_column: sortColumn,
-      sort_direction: sortDirection,
-    });
-  },
-
-  dataExported: (exportType: string, recordCount: number) => {
+  // Data Export Events
+  dataExported: (exportType: 'PDF' | 'Excel' | 'CSV', recordCount: number, screenName: string) => {
     trackEvent('Data Exported', {
-      export_type: exportType,
-      record_count: recordCount,
+      exportType,
+      recordCount,
+      screenName
     });
   },
 
-  // Page navigation
-  pageViewed: (pageName: string) => {
-    trackEvent('Page Viewed', {
-      page_name: pageName,
+  // Search and Filter Events
+  searchExecuted: (searchTerm: string, resultCount: number, screenName: string) => {
+    trackEvent('Search Executed', {
+      searchTerm,
+      resultCount,
+      screenName
     });
   },
 
-  navigationItemClicked: (itemName: string) => {
-    trackEvent('Navigation Item Clicked', {
-      item_name: itemName,
+  filterApplied: (filterType: string, filterValue: string, screenName: string) => {
+    trackEvent('Filter Applied', {
+      filterType,
+      filterValue,
+      screenName
     });
   },
+
+  // Modal and Dialog Events
+  modalOpened: (modalName: string, sourceScreen: string) => {
+    trackEvent('Modal Opened', {
+      modalName,
+      sourceScreen
+    });
+  },
+
+  modalClosed: (modalName: string, sourceScreen: string, completedAction?: string) => {
+    trackEvent('Modal Closed', {
+      modalName,
+      sourceScreen,
+      completedAction
+    });
+  },
+
+  // Error Events
+  errorOccurred: (errorType: string, errorMessage: string, screenName: string) => {
+    trackEvent('Error Occurred', {
+      errorType,
+      errorMessage,
+      screenName
+    });
+  },
+
+  // User Profile Events
+  userProfileViewed: (userId: string, tabName: string, screenName: string = 'User Profile') => {
+    trackEvent('User Profile Viewed', {
+      userId,
+      tabName,
+      screenName
+    });
+  },
+
+  // Table Interaction Events
+  tableRowClicked: (tableName: string, rowId: string, screenName: string) => {
+    trackEvent('Table Row Clicked', {
+      tableName,
+      rowId,
+      screenName
+    });
+  },
+
+  tableSorted: (tableName: string, sortColumn: string, sortDirection: 'asc' | 'desc', screenName: string) => {
+    trackEvent('Table Sorted', {
+      tableName,
+      sortColumn,
+      sortDirection,
+      screenName
+    });
+  },
+
+  // Campaign Events
+  campaignCreated: (campaignName: string, campaignType: string, screenName: string = 'Campaigns') => {
+    trackEvent('Campaign Created', {
+      campaignName,
+      campaignType,
+      screenName
+    });
+  },
+
+  campaignLaunched: (campaignId: string, campaignName: string, targetUserCount: number) => {
+    trackEvent('Campaign Launched', {
+      campaignId,
+      campaignName,
+      targetUserCount
+    });
+  }
 };
 
 export default amplitude;

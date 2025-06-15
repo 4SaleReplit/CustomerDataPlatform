@@ -1,0 +1,142 @@
+Here's a **comprehensive event naming convention document** tailored for **Amplitude** tracking, ready to be shared with Replit or any AI agent to automate event generation or validation.
+
+---
+
+## 📊 Amplitude Event Naming Convention Guide
+
+This document outlines how to **standardize analytics events and properties** to ensure clarity, consistency, and ease of analysis across the product team. These conventions apply to all events tracked in **Amplitude**.
+
+---
+
+### 🧩 1. Event Naming Conventions
+
+* **Format**: `Title Case`
+* **Structure**: Use the **screen** or **UI element name** followed by the **action**, e.g.:
+
+  ```
+  Home Screen Viewed  
+  Post Button Clicked  
+  Product Card Scrolled
+  ```
+
+#### ✅ Recommended Patterns
+
+| Action Type             | Examples                                             |
+| ----------------------- | ---------------------------------------------------- |
+| **Viewed**              | `Home Screen Viewed`, `Onboarding Step Viewed`       |
+| **Clicked**             | `Login Button Clicked`, `Share Icon Clicked`         |
+| **Submitted**           | `Signup Form Submitted`, `Search Form Submitted`     |
+| **Opened/Closed**       | `Filter Panel Opened`, `Chat Window Closed`          |
+| **Toggled**             | `Dark Mode Toggled`, `Notification Setting Toggled`  |
+| **Scrolled**            | `Feed Screen Scrolled`, `Product List Scrolled`      |
+| **Started/Completed**   | `Purchase Flow Started`, `Lesson Video Completed`    |
+| **Selected/Deselected** | `Category Tag Selected`, `Payment Option Deselected` |
+| **Errored/Failed**      | `Payment Submission Errored`, `Login Failed`         |
+
+---
+
+### 🏷️ 2. Event Property (Attribute) Naming Conventions
+
+* **Format**: `camelCase`
+* **Type**: Only use relevant context to support the event (e.g., which item, what state, why the event matters)
+
+#### ✅ Examples of Event Properties
+
+| Property Name       | Description                         | Example Value      |
+| ------------------- | ----------------------------------- | ------------------ |
+| `screenName`        | Name of the screen                  | `Home`             |
+| `buttonName`        | Name of the button                  | `Post`             |
+| `formName`          | Which form was submitted            | `LoginForm`        |
+| `errorMessage`      | Message if the action failed        | `Invalid Password` |
+| `itemId`            | ID of the item interacted with      | `post_123`         |
+| `itemType`          | Type of item (e.g., video, article) | `video`            |
+| `listingCategory`   | Category of listing if applicable   | `Vehicles`         |
+| `toggleState`       | State when toggled                  | `on` / `off`       |
+| `sourceScreen`      | Where user came from                | `Home Screen`      |
+| `destinationScreen` | Where user navigated to             | `Product Detail`   |
+| `positionIndex`     | Index of item in a list/grid        | `3`                |
+
+---
+
+### 🧱 3. Screen Name Convention
+
+* Use consistent and descriptive screen names.
+* Format: `Title Case`, **do not include words like "page" or "screen" unless part of the UI label**.
+* Examples:
+
+  ```
+  Home
+  Profile
+  Search Results
+  Checkout
+  Onboarding Step 1
+  ```
+
+---
+
+### 📁 4. Component/Element Naming Convention
+
+* Format: `Title Case`
+* Match what the user sees if possible
+* Add granularity when needed:
+
+  ```
+  Category Filter Button
+  Product Card
+  Message Input Field
+  ```
+
+---
+
+### 🧪 5. Additional Tips for Quality Tracking
+
+* **Each event must include context properties** like `screenName`, `userId` (if available), and `sessionId`.
+* Avoid using generic names like `Button Clicked`. Instead:
+  ✅ `Login Button Clicked`
+  ❌ `Button Clicked`
+* Keep action verbs consistent: always use **past tense** (e.g., `Viewed`, `Clicked`, `Submitted`).
+* For multi-step flows, include the step:
+  ✅ `Onboarding Step 1 Viewed`
+
+---
+
+### 📄 6. Sample Event JSON
+
+```json
+{
+  "event_type": "Product Card Clicked",
+  "user_id": "user_123",
+  "event_properties": {
+    "screenName": "Home",
+    "itemId": "product_456",
+    "itemType": "Car",
+    "positionIndex": 4
+  }
+}
+```
+
+---
+
+### 🛠️ 7. Naming Automation Prompt for Replit
+
+**Prompt to Generate Amplitude Event Object Based on UI Description:**
+
+```
+You are an analytics tagging assistant. Based on the UI element and interaction description, generate:
+- Event Name in Title Case using: [Component/Screen + Action]
+- Event Properties in camelCase with appropriate value placeholders
+
+For example, input: "User clicks on the Save button on the Product Edit screen"
+Output:
+{
+  "event_type": "Save Button Clicked",
+  "event_properties": {
+    "screenName": "Product Edit",
+    "buttonName": "Save"
+  }
+}
+```
+
+---
+
+Would you like me to export this as a Markdown or Google Docs file to use directly in Replit or Notion?

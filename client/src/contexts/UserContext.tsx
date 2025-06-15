@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { identifyUser, setUserProperties } from '@/lib/amplitude';
+import { setUserContext, clearUserContext } from '@/lib/amplitude';
 
 interface User {
   id: string;
@@ -38,12 +38,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
         
-        // Identify user in Amplitude
-        identifyUser(parsedUser.id, {
-          username: parsedUser.username,
+        // Set user context in Amplitude
+        setUserContext(parsedUser.id, {
           email: parsedUser.email,
-          role: parsedUser.role,
-          platform: 'CDP'
+          name: parsedUser.username,
+          userType: parsedUser.role
         });
       } catch (error) {
         console.error('Failed to parse stored user:', error);
@@ -62,12 +61,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(defaultUser);
       localStorage.setItem('platform_user', JSON.stringify(defaultUser));
       
-      // Identify user in Amplitude
-      identifyUser(defaultUser.id, {
-        username: defaultUser.username,
+      // Set user context in Amplitude
+      setUserContext(defaultUser.id, {
         email: defaultUser.email,
-        role: defaultUser.role,
-        platform: 'CDP'
+        name: defaultUser.username,
+        userType: defaultUser.role
       });
     }
   }, []);
@@ -87,13 +85,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(userData);
         localStorage.setItem('platform_user', JSON.stringify(userData));
         
-        // Identify user in Amplitude
-        identifyUser(userData.id, {
-          username: userData.username,
+        // Set user context in Amplitude
+        setUserContext(userData.id, {
           email: userData.email,
-          role: userData.role,
-          platform: 'CDP',
-          login_method: 'username_password'
+          name: userData.username,
+          userType: userData.role
         });
         
         return true;

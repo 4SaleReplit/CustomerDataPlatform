@@ -1,0 +1,83 @@
+Great — here’s how to **enhance the Amplitude tracking standard** to include **user identifiers** (like email, name, userId) and ensure they're persisted and sent **with every event** across the session.
+
+---
+
+## 🧑‍💼 8. User Identifier Tracking (Global Context)
+
+### ✅ When to Set User Info
+
+Set the user identifier **once after login or signup** using Amplitude's `identify` method, and include key user traits like:
+
+* `userId` (your internal ID for the user)
+* `email`
+* `name` or `fullName`
+* `userType` or `role` (if applicable)
+
+### 🛠 Code Example (JavaScript Web SDK)
+
+```js
+amplitude.getInstance().setUserId("user_123");
+
+amplitude.getInstance().identify(
+  new amplitude.Identify()
+    .set("email", "user@example.com")
+    .set("name", "Ahmed Hawary")
+    .set("userType", "seller") // Optional
+);
+```
+
+This sets these values **once**, and they will be sent **with every future event automatically** for that user session.
+
+---
+
+### 🔐 Best Practices
+
+| Rule                                     | Description                                                                          |
+| ---------------------------------------- | ------------------------------------------------------------------------------------ |
+| ✅ **Set after login/signup**             | Initialize `setUserId` and `identify()` right after successful authentication.       |
+| ✅ **Avoid storing in event\_properties** | These should be set as **user properties**, not manually included in every event.    |
+| ✅ **Persist until logout**               | No need to re-set unless the user logs out or changes profile info.                  |
+| ✅ **Clear on logout**                    | Call `setUserId(null)` and optionally reset the instance on logout to clear context. |
+
+### ❌ Anti-Patterns
+
+* ❌ `email`, `userId` inside every `event_properties` – **not needed** if set as `user properties`.
+* ❌ Forgetting to clear userId after logout or session expiration.
+
+---
+
+### 🧾 Sample Session Flow
+
+```js
+// After login
+amplitude.getInstance().setUserId("user_456");
+
+amplitude.getInstance().identify(
+  new amplitude.Identify()
+    .set("email", "hello@domain.com")
+    .set("name", "Layla Saleh")
+);
+
+// Log event
+amplitude.getInstance().logEvent("Dashboard Screen Viewed", {
+  screenName: "Dashboard"
+});
+```
+
+---
+
+### 🧠 Suggested Replit Prompt Add-on
+
+To ensure each session respects user context:
+
+```
+After login, always set:
+- `userId` using `setUserId()`
+- `email`, `name`, and other traits using `identify()`
+
+Persist this user context until logout. Avoid duplicating user info inside event properties unless needed for a special case like impersonation or auditing.
+```
+
+---
+
+Would you like a consolidated Markdown file or JSON schema for all of this? I can also generate a tracking plan template next if you're setting up events in bulk.
