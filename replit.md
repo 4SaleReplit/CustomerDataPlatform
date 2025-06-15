@@ -111,17 +111,6 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
-- **June 15, 2025**: Docker Production Deployment Configuration Complete
-  - Resolved missing build:client script error in Dockerfile.production
-  - Fixed critical Dockerfile path issue: corrected frontend build output path from /app/client/dist to /app/dist/public
-  - Fixed production environment detection: updated server to use process.env.NODE_ENV instead of app.get("env")
-  - Resolved Vite import errors in production by properly setting NODE_ENV=production in Docker container
-  - Fixed asset import errors in CohortDetail.tsx and Cohorts.tsx by replacing problematic image imports with CSS-styled placeholders
-  - Replaced amplitudeLogo and brazeLogo imports with colored circular placeholders (AMP/A for Amplitude, BRZ/B for Braze)
-  - Successfully building production Docker image with vite build + esbuild server compilation
-  - Docker testing script now functional for Windows PowerShell users
-  - Production server properly serves static files without development dependencies
-
 - **June 15, 2025**: Complete Amplitude Event Tracking System Implementation
   - Completely rebuilt Amplitude implementation with clean, standardized approach using industry best practices
   - Disabled all default Amplitude automatic tracking to prevent event pollution and maintain clean analytics

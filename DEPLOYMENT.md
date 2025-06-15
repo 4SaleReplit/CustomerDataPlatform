@@ -10,155 +10,19 @@ npm install
 npm run dev
 ```
 
-### Local Testing Options
-
-#### Option A: Docker Testing (Production Environment)
-Test the complete functionality locally with Docker (closest to production):
-
-**Prerequisites:**
-- Docker Desktop running properly
-- Environment variables configured in `.env`
-
-#### Local Docker Build & Test
-
-**Option 1: Automated Testing Script (Recommended)**
-
-For Linux/Mac:
-```bash
-# Run the automated testing script
-./test-docker-local.sh
-```
-
-For Windows PowerShell:
-```powershell
-# Run the Windows PowerShell script
-.\test-docker-local.ps1
-```
-
-**Option 2: Manual Testing**
-```bash
-# Build production image locally
-docker build -f Dockerfile.production -t cdp-platform:latest .
-
-# Test locally with docker-compose
-docker-compose -f docker-compose.production.yml up
-
-# Access application at http://localhost:5000
-# Verify all features work as expected
-```
-
-**Monitoring and Debugging**
-```bash
-# View application logs
-docker-compose -f docker-compose.production.yml logs -f
-
-# Stop the application
-docker-compose -f docker-compose.production.yml down
-
-# Rebuild if needed
-docker-compose -f docker-compose.production.yml up --build
-```
-
-#### Local Testing Checklist
-- [ ] Application loads successfully
-- [ ] Database connections work
-- [ ] Snowflake queries execute
-- [ ] Amplitude analytics track events
-- [ ] File uploads function
-- [ ] All pages render correctly
-- [ ] User authentication works
-
-#### Option B: Development Testing (Alternative)
-If Docker Desktop isn't working properly, test with the development environment:
-
-**Prerequisites:**
-- Node.js installed locally
-- Environment variables configured in `.env`
-
-**Development Testing Process:**
-```bash
-# Install dependencies (if not already done)
-npm install
-
-# Start development server
-npm run dev
-
-# Access application at http://localhost:3000
-# Complete the same testing checklist as Docker testing
-```
-
-**Development Testing Checklist:**
-- [ ] Application loads successfully
-- [ ] Database connections work
-- [ ] Snowflake queries execute
-- [ ] Amplitude analytics track events
-- [ ] File uploads function
-- [ ] All pages render correctly
-- [ ] User authentication works
-
-**Note:** Development testing uses the same database and APIs as production, so it validates core functionality. However, Docker testing better simulates the production deployment environment.
-
-#### Troubleshooting Local Docker Issues
-
-**Common Issues and Solutions:**
-
-1. **Docker Desktop Not Running (Windows)**
-   - Start Docker Desktop application
-   - Wait for "Docker Desktop is running" status
-   - If still failing, restart Docker Desktop
-   - Check Docker Desktop settings > General > "Use Docker Compose V2"
-   - Alternative: Try switching to Windows containers and back to Linux containers
-
-2. **Missing Build Scripts Error**
-   - Fixed: Dockerfile now uses existing `npm run build` script
-   - If you see "Missing script" errors, the Dockerfile has been updated
-
-2. **Port Already in Use**
-   ```bash
-   # Kill process using port 5000
-   lsof -ti:5000 | xargs kill -9
-   ```
-
-2. **Environment Variables Not Loaded**
-   - Verify `.env` file exists in project root
-   - Check environment variables are properly formatted
-   - Restart containers: `docker-compose -f docker-compose.production.yml down && docker-compose -f docker-compose.production.yml up`
-
-3. **Database Connection Issues**
-   - Verify DATABASE_URL is correct
-   - Check network connectivity to database
-   - Ensure database allows connections from Docker containers
-
-4. **Build Failures**
-   ```bash
-   # Clean Docker cache and rebuild
-   docker system prune -f
-   docker build --no-cache -f Dockerfile.production -t cdp-platform:latest .
-   ```
-
-5. **Application Not Starting**
-   ```bash
-   # Check container logs
-   docker-compose -f docker-compose.production.yml logs
-   
-   # Check container status
-   docker-compose -f docker-compose.production.yml ps
-   ```
-
-### Production Deployment (After Local Testing)
+### Production Deployment
 
 #### Prerequisites
-- Local Docker testing completed successfully
-- AWS account configured
-- Production database (Neon) provisioned
-- Production environment variables configured
+- Docker installed
+- PostgreSQL database (Neon recommended)
+- Environment variables configured
 
-#### AWS Production Deployment
+#### Single Container Deployment
 ```bash
-# Build and tag for production
+# Build production image
 ./build-production.sh
 
-# Deploy to AWS
+# Deploy to production
 ./deploy-production.sh
 ```
 

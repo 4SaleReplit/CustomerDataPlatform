@@ -5,7 +5,8 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { analytics } from '@/lib/amplitude';
 import { Plus, Eye, Edit, Trash2, RefreshCw, Filter, SortAsc, SortDesc, MoreHorizontal, Copy, BarChart3 } from 'lucide-react';
-// Logo imports removed for Docker build compatibility
+import amplitudeLogo from '@assets/AMPL_1749419466685.png';
+import brazeLogo from '@assets/BRZE_1749419981281.png';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -409,9 +410,11 @@ function Cohorts() {
                           title={cohort.syncStatus === 'synced' ? 'Re-sync to Amplitude' : 'Sync to Amplitude'}
                           className={cohort.syncStatus === 'synced' ? 'text-green-600 hover:text-green-700' : 'text-blue-600 hover:text-blue-700'}
                         >
-                          <div className="h-6 w-6 rounded-full bg-purple-100 flex items-center justify-center">
-                            <span className="text-purple-600 font-bold text-xs">A</span>
-                          </div>
+                          <img 
+                            src={amplitudeLogo} 
+                            alt="Amplitude" 
+                            className="h-6 w-6 rounded-full"
+                          />
                         </Button>
                         
                         <Button 
@@ -430,9 +433,11 @@ function Cohorts() {
                           title={cohort.brazeSyncStatus === 'synced' ? 'Re-sync to Braze' : 'Sync to Braze'}
                           className={cohort.brazeSyncStatus === 'synced' ? 'text-green-600 hover:text-green-700' : 'text-orange-600 hover:text-orange-700'}
                         >
-                          <div className="h-6 w-6 rounded-full bg-orange-100 flex items-center justify-center">
-                            <span className="text-orange-600 font-bold text-xs">B</span>
-                          </div>
+                          <img 
+                            src={brazeLogo} 
+                            alt="Braze" 
+                            className="h-6 w-6 rounded-full"
+                          />
                         </Button>
                         
                         <DropdownMenu>
