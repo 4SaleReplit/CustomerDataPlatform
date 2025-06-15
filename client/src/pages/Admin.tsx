@@ -69,9 +69,9 @@ export default function Admin() {
   });
   const { toast } = useToast();
 
-  const filteredUsers = mockUsers.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredUsers = [].filter((user: any) =>
+    user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getStatusBadge = (status: string) => {
@@ -284,7 +284,7 @@ export default function Admin() {
                         <SelectValue placeholder="Select a role" />
                       </SelectTrigger>
                       <SelectContent>
-                        {mockRoles.map((role) => (
+                        {[].map((role: any) => (
                           <SelectItem key={role.id} value={role.name}>
                             {role.name}
                           </SelectItem>
