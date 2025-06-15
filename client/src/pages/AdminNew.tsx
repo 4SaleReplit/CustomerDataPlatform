@@ -71,36 +71,41 @@ export default function AdminNew() {
 
   // Migration state management
   const [currentEnvironment, setCurrentEnvironment] = useState('dev');
+  const [activeIntegrationTypes, setActiveIntegrationTypes] = useState([
+    'postgresql', 'redis', 's3', 'amplitude', 'braze', 'snowflake', 'sendgrid'
+  ]);
+
+  // Initialize environment databases based on active integration types
+  const initializeEnvironmentDatabases = (types: string[]) => {
+    const databases: any = {};
+    types.forEach(type => {
+      databases[type] = { 
+        integrationId: '', 
+        integrationName: `No ${type.charAt(0).toUpperCase() + type.slice(1)} configured`, 
+        status: 'disconnected' 
+      };
+    });
+    return databases;
+  };
+
   const [environments, setEnvironments] = useState([
     {
       id: 'dev',
       name: 'Development',
       status: 'active',
-      databases: {
-        postgres: { integrationId: '', integrationName: 'No PostgreSQL configured', status: 'disconnected' },
-        redis: { integrationId: '', integrationName: 'No Redis configured', status: 'disconnected' },
-        s3: { integrationId: '', integrationName: 'No S3 configured', status: 'disconnected' }
-      }
+      databases: initializeEnvironmentDatabases(['postgresql', 'redis', 's3', 'amplitude', 'braze', 'snowflake', 'sendgrid'])
     },
     {
       id: 'staging',
       name: 'Staging',
       status: 'inactive',
-      databases: {
-        postgres: { integrationId: '', integrationName: 'No PostgreSQL configured', status: 'disconnected' },
-        redis: { integrationId: '', integrationName: 'No Redis configured', status: 'disconnected' },
-        s3: { integrationId: '', integrationName: 'No S3 configured', status: 'disconnected' }
-      }
+      databases: initializeEnvironmentDatabases(['postgresql', 'redis', 's3', 'amplitude', 'braze', 'snowflake', 'sendgrid'])
     },
     {
       id: 'production',
       name: 'Production',
       status: 'inactive',
-      databases: {
-        postgres: { integrationId: '', integrationName: 'No PostgreSQL configured', status: 'disconnected' },
-        redis: { integrationId: '', integrationName: 'No Redis configured', status: 'disconnected' },
-        s3: { integrationId: '', integrationName: 'No S3 configured', status: 'disconnected' }
-      }
+      databases: initializeEnvironmentDatabases(['postgresql', 'redis', 's3', 'amplitude', 'braze', 'snowflake', 'sendgrid'])
     }
   ]);
   const [showMigrationModal, setShowMigrationModal] = useState(false);
@@ -115,9 +120,6 @@ export default function AdminNew() {
     redisIntegrationId: '',
     s3IntegrationId: ''
   });
-  const [activeIntegrationTypes, setActiveIntegrationTypes] = useState([
-    'postgresql', 'redis', 's3', 'amplitude', 'braze', 'snowflake', 'sendgrid'
-  ]);
 
   // Fetch team members
   const { data: teamMembers = [], isLoading: membersLoading } = useQuery({
@@ -414,6 +416,22 @@ export default function AdminNew() {
       if (int.name?.toLowerCase().includes('sendgrid')) types.add('sendgrid');
     });
     return Array.from(types) as string[];
+  };
+
+  // Get integration icon and color by type
+  const getIntegrationDisplay = (type: string) => {
+    const displays: any = {
+      postgresql: { icon: Database, color: 'blue' },
+      database: { icon: Database, color: 'blue' },
+      redis: { icon: Server, color: 'red' },
+      s3: { icon: Cloud, color: 'green' },
+      aws: { icon: Cloud, color: 'green' },
+      amplitude: { icon: BarChart3, color: 'purple' },
+      braze: { icon: Mail, color: 'orange' },
+      snowflake: { icon: Database, color: 'cyan' },
+      sendgrid: { icon: Mail, color: 'blue' }
+    };
+    return displays[type] || { icon: Settings, color: 'gray' };
   };
 
   const handleStartMigration = () => {
@@ -745,27 +763,23 @@ export default function AdminNew() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border">
-                  <div className="flex items-center">
-                    <Database className="h-5 w-5 text-blue-600 mr-2" />
-                    <span className="font-medium">PostgreSQL</span>
-                  </div>
-                  {getStatusIcon(environments.find(e => e.status === 'active')?.databases.postgres.status || 'disconnected')}
-                </div>
-                <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border">
-                  <div className="flex items-center">
-                    <Server className="h-5 w-5 text-red-600 mr-2" />
-                    <span className="font-medium">Redis</span>
-                  </div>
-                  {getStatusIcon(environments.find(e => e.status === 'active')?.databases.redis.status || 'disconnected')}
-                </div>
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border">
-                  <div className="flex items-center">
-                    <Cloud className="h-5 w-5 text-green-600 mr-2" />
-                    <span className="font-medium">S3</span>
-                  </div>
-                  {getStatusIcon(environments.find(e => e.status === 'active')?.databases.s3.status || 'disconnected')}
-                </div>
+                {activeIntegrationTypes.map(type => {
+                  const activeEnv = environments.find(e => e.status === 'active');
+                  const dbStatus = activeEnv?.databases?.[type]?.status || 'disconnected';
+                  const { icon: Icon, color } = getIntegrationDisplay(type);
+                  const bgColorClass = `bg-${color}-50`;
+                  const textColorClass = `text-${color}-600`;
+                  
+                  return (
+                    <div key={type} className={`flex items-center justify-between p-3 ${bgColorClass} rounded-lg border`}>
+                      <div className="flex items-center">
+                        <Icon className={`h-5 w-5 ${textColorClass} mr-2`} />
+                        <span className="font-medium">{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                      </div>
+                      {getStatusIcon(dbStatus)}
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
