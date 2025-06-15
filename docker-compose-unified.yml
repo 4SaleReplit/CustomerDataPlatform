@@ -1,0 +1,85 @@
+# Unified Docker Compose - Single container for Frontend + Backend (ARM64)
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.unified
+    platform: linux/arm64
+    ports:
+      - "80:80"
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/cdp_platform
+      - SNOWFLAKE_ACCOUNT=${SNOWFLAKE_ACCOUNT:-q84sale}
+      - SNOWFLAKE_USER=${SNOWFLAKE_USER:-CDP_USER}
+      - SNOWFLAKE_PASSWORD=${SNOWFLAKE_PASSWORD}
+      - SNOWFLAKE_DATABASE=${SNOWFLAKE_DATABASE:-DBT_CORE_PROD_DATABASE}
+      - SNOWFLAKE_WAREHOUSE=${SNOWFLAKE_WAREHOUSE:-LOOKER}
+      - SNOWFLAKE_SCHEMA=${SNOWFLAKE_SCHEMA:-USER_SEGMENTATION_PROJECT_V4}
+      - SESSION_SECRET=${SESSION_SECRET:-development-session-secret}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    volumes:
+      - ./uploads:/app/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -f http://localhost/ && curl -f http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  postgres:
+    image: postgres:15-alpine
+    platform: linux/arm64
+    environment:
+      - POSTGRES_DB=cdp_platform
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    platform: linux/arm64
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  app-network:
+    driver: bridge
