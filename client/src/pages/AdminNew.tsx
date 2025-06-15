@@ -58,8 +58,10 @@ export default function AdminNew() {
   const queryClient = useQueryClient();
   
   // Fetch environment configurations from database
-  const { data: environmentConfigurations = [] } = useQuery({
+  const { data: environmentConfigurations = [], isLoading: configsLoading } = useQuery({
     queryKey: ['/api/environment-configurations'],
+    staleTime: 0, // Always fetch fresh data
+    refetchOnWindowFocus: true,
   });
   const [selectedUser, setSelectedUser] = useState<TeamMember | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -504,17 +506,36 @@ export default function AdminNew() {
 
   // Load environment configurations from database
   React.useEffect(() => {
-    if (Array.isArray(environmentConfigurations) && environmentConfigurations.length > 0) {
+    console.log('Loading environment configurations:', {
+      environmentConfigurations,
+      configurationsLength: Array.isArray(environmentConfigurations) ? environmentConfigurations.length : 0,
+      integrationsLength: integrations.length,
+      activeIntegrationTypes
+    });
+
+    if (Array.isArray(environmentConfigurations) && environmentConfigurations.length > 0 && integrations.length > 0) {
+      console.log('Processing environment configurations...');
+      
       setEnvironments(prev => prev.map(env => {
         const envConfigs = (environmentConfigurations as any[]).filter((config: any) => 
           config.environmentId === env.id
         );
         
-        const updatedDatabases = { ...env.databases };
+        console.log(`Environment ${env.id} configurations:`, envConfigs);
         
+        // Start with initialized databases for all active integration types
+        const updatedDatabases = initializeEnvironmentDatabases(activeIntegrationTypes);
+        
+        // Override with saved configurations
         envConfigs.forEach((config: any) => {
-          if (updatedDatabases[config.integrationType]) {
+          if (activeIntegrationTypes.includes(config.integrationType)) {
             const integration = integrations.find((int: any) => int.id === config.integrationId);
+            console.log(`Updating ${config.integrationType} for ${env.id}:`, {
+              integrationId: config.integrationId,
+              integrationName: integration?.name,
+              found: !!integration
+            });
+            
             updatedDatabases[config.integrationType] = {
               integrationId: config.integrationId,
               integrationName: integration ? integration.name : 'Integration not found',
@@ -529,7 +550,7 @@ export default function AdminNew() {
         };
       }));
     }
-  }, [environmentConfigurations, integrations]);
+  }, [environmentConfigurations, integrations, activeIntegrationTypes]);
 
   const handleStartMigration = async () => {
     if (!selectedSourceEnv || !selectedTargetEnv) {
