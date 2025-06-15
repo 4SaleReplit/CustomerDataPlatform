@@ -105,6 +105,7 @@ export default function AdminNew() {
   ]);
   const [showMigrationModal, setShowMigrationModal] = useState(false);
   const [showEnvConfigModal, setShowEnvConfigModal] = useState(false);
+  const [showIntegrationTypesModal, setShowIntegrationTypesModal] = useState(false);
   const [selectedSourceEnv, setSelectedSourceEnv] = useState('');
   const [selectedTargetEnv, setSelectedTargetEnv] = useState('');
   const [selectedConfigEnv, setSelectedConfigEnv] = useState('');
@@ -114,6 +115,9 @@ export default function AdminNew() {
     redisIntegrationId: '',
     s3IntegrationId: ''
   });
+  const [activeIntegrationTypes, setActiveIntegrationTypes] = useState([
+    'postgresql', 'redis', 's3', 'amplitude', 'braze', 'snowflake', 'sendgrid'
+  ]);
 
   // Fetch team members
   const { data: teamMembers = [], isLoading: membersLoading } = useQuery({
@@ -347,21 +351,69 @@ export default function AdminNew() {
 
   // Helper functions to filter integrations by type
   const getPostgresIntegrations = () => {
+    if (!activeIntegrationTypes.includes('postgresql')) return [];
     return integrations.filter((int: any) => 
       int.type === 'postgresql' || int.type === 'database' || int.name?.toLowerCase().includes('postgres')
     );
   };
 
   const getRedisIntegrations = () => {
+    if (!activeIntegrationTypes.includes('redis')) return [];
     return integrations.filter((int: any) => 
       int.type === 'redis' || int.name?.toLowerCase().includes('redis')
     );
   };
 
   const getS3Integrations = () => {
+    if (!activeIntegrationTypes.includes('s3')) return [];
     return integrations.filter((int: any) => 
       int.type === 's3' || int.type === 'aws' || int.name?.toLowerCase().includes('s3')
     );
+  };
+
+  const getAmplitudeIntegrations = () => {
+    if (!activeIntegrationTypes.includes('amplitude')) return [];
+    return integrations.filter((int: any) => 
+      int.type === 'amplitude' || int.name?.toLowerCase().includes('amplitude')
+    );
+  };
+
+  const getBrazeIntegrations = () => {
+    if (!activeIntegrationTypes.includes('braze')) return [];
+    return integrations.filter((int: any) => 
+      int.type === 'braze' || int.name?.toLowerCase().includes('braze')
+    );
+  };
+
+  const getSnowflakeIntegrations = () => {
+    if (!activeIntegrationTypes.includes('snowflake')) return [];
+    return integrations.filter((int: any) => 
+      int.type === 'snowflake' || int.name?.toLowerCase().includes('snowflake')
+    );
+  };
+
+  const getSendGridIntegrations = () => {
+    if (!activeIntegrationTypes.includes('sendgrid')) return [];
+    return integrations.filter((int: any) => 
+      int.type === 'sendgrid' || int.name?.toLowerCase().includes('sendgrid')
+    );
+  };
+
+  // Get all available integration types from current integrations
+  const getAvailableIntegrationTypes = () => {
+    const types = new Set();
+    integrations.forEach((int: any) => {
+      if (int.type) types.add(int.type);
+      // Add common variations
+      if (int.name?.toLowerCase().includes('postgres')) types.add('postgresql');
+      if (int.name?.toLowerCase().includes('redis')) types.add('redis');
+      if (int.name?.toLowerCase().includes('s3')) types.add('s3');
+      if (int.name?.toLowerCase().includes('amplitude')) types.add('amplitude');
+      if (int.name?.toLowerCase().includes('braze')) types.add('braze');
+      if (int.name?.toLowerCase().includes('snowflake')) types.add('snowflake');
+      if (int.name?.toLowerCase().includes('sendgrid')) types.add('sendgrid');
+    });
+    return Array.from(types) as string[];
   };
 
   const handleStartMigration = () => {
@@ -643,9 +695,42 @@ export default function AdminNew() {
               <p className="text-sm text-muted-foreground">Manage multiple database environments and migrate data between them</p>
             </div>
             <div className="flex space-x-3">
+              <Button variant="outline" onClick={() => setShowIntegrationTypesModal(true)}>
+                <Settings className="h-4 w-4 mr-2" />
+                Configure Tools
+              </Button>
               <Button onClick={() => setShowMigrationModal(true)} className="bg-blue-600 hover:bg-blue-700">
                 <Target className="h-4 w-4 mr-2" />
                 Start Migration
+              </Button>
+            </div>
+          </div>
+
+          {/* Active Integration Types Display */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start">
+                <Database className="h-5 w-5 text-blue-600 mt-0.5 mr-2" />
+                <div className="text-sm">
+                  <p className="font-medium text-blue-800">Active Integration Types</p>
+                  <p className="text-blue-700 mb-2">Currently enabled tools for environment configuration:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {activeIntegrationTypes.map(type => (
+                      <span key={type} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowIntegrationTypesModal(true)}
+                className="text-blue-700 border-blue-300 hover:bg-blue-100"
+              >
+                <Settings className="h-4 w-4 mr-1" />
+                Manage
               </Button>
             </div>
           </div>
@@ -975,6 +1060,97 @@ export default function AdminNew() {
                     Cancel
                   </Button>
                   <Button onClick={handleSaveEnvironmentConfig}>
+                    Save Configuration
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Integration Types Management Modal */}
+          <Dialog open={showIntegrationTypesModal} onOpenChange={setShowIntegrationTypesModal}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Configure Integration Tools</DialogTitle>
+                <DialogDescription>
+                  Select which integration types should be available in environment configuration
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <Database className="h-5 w-5 text-gray-600 mt-0.5 mr-2" />
+                    <div className="text-sm">
+                      <p className="font-medium text-gray-800">Available Integration Types</p>
+                      <p className="text-gray-700">Based on your configured integrations:</p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {getAvailableIntegrationTypes().map(type => (
+                          <span key={type} className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs font-medium">
+                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-base font-medium">Active Integration Types</Label>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Select which integration types should appear in environment configuration dropdowns
+                  </p>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    {[
+                      { id: 'postgresql', label: 'PostgreSQL', icon: Database, color: 'blue' },
+                      { id: 'redis', label: 'Redis', icon: Server, color: 'red' },
+                      { id: 's3', label: 'S3 Storage', icon: Cloud, color: 'green' },
+                      { id: 'amplitude', label: 'Amplitude', icon: BarChart3, color: 'purple' },
+                      { id: 'braze', label: 'Braze', icon: Mail, color: 'orange' },
+                      { id: 'snowflake', label: 'Snowflake', icon: Database, color: 'cyan' },
+                      { id: 'sendgrid', label: 'SendGrid', icon: Mail, color: 'blue' }
+                    ].map(({ id, label, icon: Icon, color }) => (
+                      <label key={id} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={activeIntegrationTypes.includes(id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setActiveIntegrationTypes(prev => [...prev, id]);
+                            } else {
+                              setActiveIntegrationTypes(prev => prev.filter(t => t !== id));
+                            }
+                          }}
+                          className="rounded"
+                        />
+                        <Icon className={`h-4 w-4 text-${color}-600`} />
+                        <span className="font-medium">{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 mr-2" />
+                    <div className="text-sm">
+                      <p className="font-medium text-amber-800">Integration Management</p>
+                      <p className="text-amber-700">Only integration types with configured integrations will show actual options. Make sure to configure integrations in the Integrations page first.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3">
+                  <Button variant="outline" onClick={() => setShowIntegrationTypesModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={() => {
+                    setShowIntegrationTypesModal(false);
+                    toast({
+                      title: "Integration tools updated",
+                      description: `${activeIntegrationTypes.length} integration types are now active`
+                    });
+                  }}>
                     Save Configuration
                   </Button>
                 </div>
