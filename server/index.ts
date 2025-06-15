@@ -1,14 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { config } from "dotenv";
 import { registerRoutes } from "./routes";
-// Import based on environment
-let viteModule: any;
-if (process.env.NODE_ENV === "production") {
-  viteModule = await import("./vite-production");
-} else {
-  viteModule = await import("./vite");
-}
-const { serveStatic, log } = viteModule;
 
 // Load environment variables
 config();
@@ -55,7 +47,12 @@ app.use((req, res, next) => {
         logLine = logLine.slice(0, 79) + "…";
       }
 
-      log(logLine);
+      console.log(`${new Date().toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit", 
+        second: "2-digit",
+        hour12: true,
+      })} [express] ${logLine}`);
     }
   });
 
@@ -64,6 +61,10 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
+    // Import Vite module based on environment
+    const viteModulePath = process.env.NODE_ENV === "production" ? "./vite-production" : "./vite";
+    const { serveStatic, log, setupVite } = await import(viteModulePath);
+    
     const server = await registerRoutes(app);
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -79,7 +80,6 @@ app.use((req, res, next) => {
     // setting up all the other routes so the catch-all route
     // doesn't interfere with the other routes
     if (app.get("env") === "development") {
-      const { setupVite } = await import("./vite");
       await setupVite(app, server);
     } else {
       serveStatic(app);
@@ -94,13 +94,23 @@ app.use((req, res, next) => {
       host: "0.0.0.0",
       reusePort: true,
     }, () => {
-      log(`serving on port ${port}`);
+      console.log(`${new Date().toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit", 
+        hour12: true,
+      })} [express] serving on port ${port}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
     // Create a minimal server that can still serve the frontend
     const server = app.listen(5000, "0.0.0.0", () => {
-      log(`serving on port 5000 (minimal mode due to startup error)`);
+      console.log(`${new Date().toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      })} [express] serving on port 5000 (minimal mode due to startup error)`);
     });
   }
 })();
