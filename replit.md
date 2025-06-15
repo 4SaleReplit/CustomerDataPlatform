@@ -132,13 +132,13 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
   - Enhanced preview modal with detailed metadata sections and connection test results
   - Removed S3 and Database migration sections from Integrations page as requested
 
-- **June 15, 2025**: nginx Removal & Simplified Deployment
-  - Removed nginx dependency to simplify architecture
-  - Created single-container Express.js deployment serving both API and static files
-  - Built optimized Docker configuration (Dockerfile.production, docker-compose.production.yml)
-  - Added automated build and deployment scripts (build-production.sh, deploy-production.sh)
+- **June 15, 2025**: Repository Cleanup & Streamlined Deployment
+  - Removed nginx dependency to simplify architecture with single-container Express.js deployment
+  - Cleaned up repository by removing outdated Docker files (Dockerfile.unified, docker-compose-unified.yml)
+  - Consolidated 10+ scattered deployment documentation files into single DEPLOYMENT.md guide
+  - Removed outdated migration scripts and unified tools
+  - Maintained production-ready configuration (Dockerfile.production, docker-compose.production.yml)
   - Achieved 40-50% memory reduction and 70-75% infrastructure cost savings
-  - Fixed environment configuration persistence issue with React Query cache clearing
 
 - **June 15, 2025**: Multi-Environment Management System
   - Added comprehensive Migrations tab to Admin page for environment management
