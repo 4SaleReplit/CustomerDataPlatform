@@ -2807,6 +2807,277 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Data Migration API endpoint
+  app.post('/api/migrate-data', async (req, res) => {
+    try {
+      const { type, sourceIntegrationId, targetIntegrationId, sourceEnvironment, targetEnvironment, sourceConfig, targetConfig } = req.body;
+
+      if (!type || !sourceIntegrationId || !targetIntegrationId) {
+        return res.status(400).json({ error: 'Missing required migration parameters' });
+      }
+
+      console.log(`Starting ${type} migration from ${sourceEnvironment} to ${targetEnvironment}`);
+
+      let migrationResult = null;
+
+      switch (type) {
+        case 'postgresql':
+          migrationResult = await migratePostgreSQL(sourceConfig, targetConfig);
+          break;
+        case 'redis':
+          migrationResult = await migrateRedis(sourceConfig, targetConfig);
+          break;
+        case 's3':
+          migrationResult = await migrateS3(sourceConfig, targetConfig);
+          break;
+        default:
+          return res.status(400).json({ error: `Unsupported migration type: ${type}` });
+      }
+
+      res.json({
+        success: true,
+        message: `${type} migration completed successfully`,
+        details: migrationResult
+      });
+
+    } catch (error: any) {
+      console.error('Migration error:', error);
+      res.status(500).json({ 
+        error: error.message || 'Migration failed',
+        type: 'migration_error'
+      });
+    }
+  });
+
+  // Helper functions for migrations
+  async function migratePostgreSQL(sourceConfig: any, targetConfig: any) {
+    // PostgreSQL migration logic
+    const { Pool } = require('pg');
+    
+    const sourcePool = new Pool({
+      connectionString: sourceConfig.connectionString || sourceConfig.url,
+      ssl: sourceConfig.ssl !== false ? { rejectUnauthorized: false } : false
+    });
+
+    const targetPool = new Pool({
+      connectionString: targetConfig.connectionString || targetConfig.url,
+      ssl: targetConfig.ssl !== false ? { rejectUnauthorized: false } : false
+    });
+
+    try {
+      // Test connections
+      await sourcePool.query('SELECT 1');
+      await targetPool.query('SELECT 1');
+
+      // Get table list from source
+      const tablesResult = await sourcePool.query(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_type = 'BASE TABLE'
+      `);
+
+      const tables = tablesResult.rows.map((row: any) => row.table_name);
+      let migratedTables = 0;
+
+      for (const table of tables) {
+        try {
+          // Get table structure
+          const structureResult = await sourcePool.query(`
+            SELECT column_name, data_type, is_nullable, column_default
+            FROM information_schema.columns
+            WHERE table_name = $1 AND table_schema = 'public'
+            ORDER BY ordinal_position
+          `, [table]);
+
+          // Create table in target if it doesn't exist
+          const createTableQuery = `
+            CREATE TABLE IF NOT EXISTS "${table}" (
+              ${structureResult.rows.map((col: any) => 
+                `"${col.column_name}" ${col.data_type}${col.is_nullable === 'NO' ? ' NOT NULL' : ''}${col.column_default ? ` DEFAULT ${col.column_default}` : ''}`
+              ).join(',\n              ')}
+            )
+          `;
+          
+          await targetPool.query(createTableQuery);
+
+          // Migrate data
+          const dataResult = await sourcePool.query(`SELECT * FROM "${table}"`);
+          
+          if (dataResult.rows.length > 0) {
+            const columns = structureResult.rows.map((col: any) => `"${col.column_name}"`).join(', ');
+            const placeholders = structureResult.rows.map((_: any, i: number) => `$${i + 1}`).join(', ');
+            
+            for (const row of dataResult.rows) {
+              const values = structureResult.rows.map((col: any) => row[col.column_name]);
+              await targetPool.query(
+                `INSERT INTO "${table}" (${columns}) VALUES (${placeholders}) ON CONFLICT DO NOTHING`,
+                values
+              );
+            }
+          }
+
+          migratedTables++;
+        } catch (tableError) {
+          console.error(`Error migrating table ${table}:`, tableError);
+        }
+      }
+
+      return { migratedTables, totalTables: tables.length };
+    } finally {
+      await sourcePool.end();
+      await targetPool.end();
+    }
+  }
+
+  async function migrateRedis(sourceConfig: any, targetConfig: any) {
+    // Redis migration logic
+    const Redis = require('ioredis');
+    
+    const sourceRedis = new Redis({
+      host: sourceConfig.host,
+      port: sourceConfig.port,
+      password: sourceConfig.password,
+      db: sourceConfig.database || 0
+    });
+
+    const targetRedis = new Redis({
+      host: targetConfig.host,
+      port: targetConfig.port,
+      password: targetConfig.password,
+      db: targetConfig.database || 0
+    });
+
+    try {
+      // Test connections
+      await sourceRedis.ping();
+      await targetRedis.ping();
+
+      // Get all keys
+      const keys = await sourceRedis.keys('*');
+      let migratedKeys = 0;
+
+      for (const key of keys) {
+        try {
+          const type = await sourceRedis.type(key);
+          const ttl = await sourceRedis.ttl(key);
+
+          switch (type) {
+            case 'string':
+              const stringValue = await sourceRedis.get(key);
+              await targetRedis.set(key, stringValue);
+              break;
+            case 'hash':
+              const hashValue = await sourceRedis.hgetall(key);
+              await targetRedis.hset(key, hashValue);
+              break;
+            case 'list':
+              const listValue = await sourceRedis.lrange(key, 0, -1);
+              await targetRedis.del(key);
+              if (listValue.length > 0) {
+                await targetRedis.lpush(key, ...listValue.reverse());
+              }
+              break;
+            case 'set':
+              const setValue = await sourceRedis.smembers(key);
+              await targetRedis.del(key);
+              if (setValue.length > 0) {
+                await targetRedis.sadd(key, ...setValue);
+              }
+              break;
+            case 'zset':
+              const zsetValue = await sourceRedis.zrange(key, 0, -1, 'WITHSCORES');
+              await targetRedis.del(key);
+              if (zsetValue.length > 0) {
+                await targetRedis.zadd(key, ...zsetValue);
+              }
+              break;
+          }
+
+          // Set TTL if it exists
+          if (ttl > 0) {
+            await targetRedis.expire(key, ttl);
+          }
+
+          migratedKeys++;
+        } catch (keyError) {
+          console.error(`Error migrating key ${key}:`, keyError);
+        }
+      }
+
+      return { migratedKeys, totalKeys: keys.length };
+    } finally {
+      sourceRedis.disconnect();
+      targetRedis.disconnect();
+    }
+  }
+
+  async function migrateS3(sourceConfig: any, targetConfig: any) {
+    // S3 migration logic
+    const { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
+    
+    const sourceS3 = new S3Client({
+      region: sourceConfig.region,
+      credentials: {
+        accessKeyId: sourceConfig.accessKeyId,
+        secretAccessKey: sourceConfig.secretAccessKey
+      }
+    });
+
+    const targetS3 = new S3Client({
+      region: targetConfig.region,
+      credentials: {
+        accessKeyId: targetConfig.accessKeyId,
+        secretAccessKey: targetConfig.secretAccessKey
+      }
+    });
+
+    try {
+      // List objects in source bucket
+      const listCommand = new ListObjectsV2Command({
+        Bucket: sourceConfig.bucketName,
+        MaxKeys: 1000
+      });
+
+      const listResponse = await sourceS3.send(listCommand);
+      const objects = listResponse.Contents || [];
+      let migratedObjects = 0;
+
+      for (const object of objects) {
+        try {
+          // Get object from source
+          const getCommand = new GetObjectCommand({
+            Bucket: sourceConfig.bucketName,
+            Key: object.Key
+          });
+
+          const getResponse = await sourceS3.send(getCommand);
+          const body = await getResponse.Body?.transformToByteArray();
+
+          if (body) {
+            // Put object to target
+            const putCommand = new PutObjectCommand({
+              Bucket: targetConfig.bucketName,
+              Key: object.Key,
+              Body: body,
+              ContentType: getResponse.ContentType,
+              Metadata: getResponse.Metadata
+            });
+
+            await targetS3.send(putCommand);
+            migratedObjects++;
+          }
+        } catch (objectError) {
+          console.error(`Error migrating object ${object.Key}:`, objectError);
+        }
+      }
+
+      return { migratedObjects, totalObjects: objects.length };
+    } catch (error) {
+      throw new Error(`S3 migration failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   // Serve uploaded images statically
   app.use('/uploads', (req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
