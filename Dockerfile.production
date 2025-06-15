@@ -45,7 +45,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/shared ./shared
 
 # Copy built frontend to be served by Express
-COPY --from=builder /app/client/dist ./public
+COPY --from=builder /app/dist/public ./public
 
 # Create required directories
 RUN mkdir -p /app/uploads /app/logs && \
