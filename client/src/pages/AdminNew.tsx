@@ -117,7 +117,20 @@ export default function AdminNew() {
   const [isMigrating, setIsMigrating] = useState(false);
   const [envConfig, setEnvConfig] = useState<{ [key: string]: string }>({});
 
-
+  // Generic function to get integrations by type
+  const getIntegrationsByType = (type: string) => {
+    return integrations.filter((int: any) => 
+      int.type === type || 
+      int.name?.toLowerCase().includes(type) ||
+      (type === 'postgresql' && (int.type === 'database' || int.name?.toLowerCase().includes('postgres'))) ||
+      (type === 'redis' && int.name?.toLowerCase().includes('redis')) ||
+      (type === 's3' && (int.type === 'aws' || int.name?.toLowerCase().includes('s3'))) ||
+      (type === 'amplitude' && int.name?.toLowerCase().includes('amplitude')) ||
+      (type === 'braze' && int.name?.toLowerCase().includes('braze')) ||
+      (type === 'snowflake' && int.name?.toLowerCase().includes('snowflake')) ||
+      (type === 'sendgrid' && int.name?.toLowerCase().includes('sendgrid'))
+    );
+  };
 
   // Fetch team members
   const { data: teamMembers = [], isLoading: membersLoading } = useQuery({
@@ -1019,7 +1032,8 @@ export default function AdminNew() {
                   Select integrations for this environment from your configured connections
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4">
+              <div className="space-y-6">
+                <div className="space-y-4">
                 {activeIntegrationTypes.map(type => {
                   const { icon: Icon, color } = getIntegrationDisplay(type);
                   const integrationOptions = getIntegrationsByType(type);
@@ -1056,57 +1070,6 @@ export default function AdminNew() {
                     </div>
                   );
                 })}
-
-                <div>
-                  <Label>Redis Integration</Label>
-                  <Select value={envConfig.redisIntegrationId} onValueChange={(value) => setEnvConfig(prev => ({ ...prev, redisIntegrationId: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Redis integration" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No Redis integration</SelectItem>
-                      {getRedisIntegrations().map((integration: any) => (
-                        <SelectItem key={integration.id} value={integration.id}>
-                          <div className="flex items-center">
-                            <Server className="h-4 w-4 mr-2 text-red-600" />
-                            {integration.name}
-                            {integration.status === 'active' && <span className="ml-2 text-xs text-green-600">(Active)</span>}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {getRedisIntegrations().length === 0 && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      No Redis integrations found. Configure one in the Integrations page first.
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label>S3 Integration</Label>
-                  <Select value={envConfig.s3IntegrationId} onValueChange={(value) => setEnvConfig(prev => ({ ...prev, s3IntegrationId: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select S3 integration" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No S3 integration</SelectItem>
-                      {getS3Integrations().map((integration: any) => (
-                        <SelectItem key={integration.id} value={integration.id}>
-                          <div className="flex items-center">
-                            <Cloud className="h-4 w-4 mr-2 text-green-600" />
-                            {integration.name}
-                            {integration.status === 'active' && <span className="ml-2 text-xs text-green-600">(Active)</span>}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {getS3Integrations().length === 0 && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      No S3 integrations found. Configure one in the Integrations page first.
-                    </p>
-                  )}
                 </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
