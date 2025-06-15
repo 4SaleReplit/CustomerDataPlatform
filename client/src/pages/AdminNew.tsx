@@ -77,9 +77,9 @@ export default function AdminNew() {
       name: 'Development',
       status: 'active',
       databases: {
-        postgres: { url: 'postgresql://dev-user:pass@dev-host:5432/dev_db', status: 'connected' },
-        redis: { url: 'redis://dev-redis:6379', status: 'connected' },
-        s3: { bucket: 'dev-bucket', region: 'us-east-1', status: 'connected' }
+        postgres: { integrationId: '', integrationName: 'No PostgreSQL configured', status: 'disconnected' },
+        redis: { integrationId: '', integrationName: 'No Redis configured', status: 'disconnected' },
+        s3: { integrationId: '', integrationName: 'No S3 configured', status: 'disconnected' }
       }
     },
     {
@@ -87,9 +87,9 @@ export default function AdminNew() {
       name: 'Staging',
       status: 'inactive',
       databases: {
-        postgres: { url: '', status: 'disconnected' },
-        redis: { url: '', status: 'disconnected' },
-        s3: { bucket: '', region: 'us-east-1', status: 'disconnected' }
+        postgres: { integrationId: '', integrationName: 'No PostgreSQL configured', status: 'disconnected' },
+        redis: { integrationId: '', integrationName: 'No Redis configured', status: 'disconnected' },
+        s3: { integrationId: '', integrationName: 'No S3 configured', status: 'disconnected' }
       }
     },
     {
@@ -97,9 +97,9 @@ export default function AdminNew() {
       name: 'Production',
       status: 'inactive',
       databases: {
-        postgres: { url: '', status: 'disconnected' },
-        redis: { url: '', status: 'disconnected' },
-        s3: { bucket: '', region: 'us-east-1', status: 'disconnected' }
+        postgres: { integrationId: '', integrationName: 'No PostgreSQL configured', status: 'disconnected' },
+        redis: { integrationId: '', integrationName: 'No Redis configured', status: 'disconnected' },
+        s3: { integrationId: '', integrationName: 'No S3 configured', status: 'disconnected' }
       }
     }
   ]);
@@ -110,10 +110,9 @@ export default function AdminNew() {
   const [selectedConfigEnv, setSelectedConfigEnv] = useState('');
   const [isMigrating, setIsMigrating] = useState(false);
   const [envConfig, setEnvConfig] = useState({
-    postgres: '',
-    redis: '',
-    s3Bucket: '',
-    s3Region: 'us-east-1'
+    postgresIntegrationId: '',
+    redisIntegrationId: '',
+    s3IntegrationId: ''
   });
 
   // Fetch team members
@@ -129,6 +128,14 @@ export default function AdminNew() {
     queryKey: ['/api/roles'],
     queryFn: () => apiRequest('/api/roles') as Promise<Role[]>,
     staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false
+  });
+
+  // Fetch integrations for environment configuration
+  const { data: integrations = [] } = useQuery({
+    queryKey: ['/api/integrations'],
+    queryFn: () => apiRequest('/api/integrations'),
+    staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false
   });
 
@@ -290,24 +297,40 @@ export default function AdminNew() {
     if (env) {
       setSelectedConfigEnv(envId);
       setEnvConfig({
-        postgres: env.databases.postgres.url,
-        redis: env.databases.redis.url,
-        s3Bucket: env.databases.s3.bucket,
-        s3Region: env.databases.s3.region
+        postgresIntegrationId: env.databases.postgres.integrationId || '',
+        redisIntegrationId: env.databases.redis.integrationId || '',
+        s3IntegrationId: env.databases.s3.integrationId || ''
       });
       setShowEnvConfigModal(true);
     }
   };
 
   const handleSaveEnvironmentConfig = () => {
+    const getIntegrationName = (integrationId: string) => {
+      const integration = integrations.find((int: any) => int.id === integrationId);
+      return integration ? integration.name : 'No integration configured';
+    };
+
     setEnvironments(prev => prev.map(env => 
       env.id === selectedConfigEnv 
         ? {
             ...env,
             databases: {
-              postgres: { url: envConfig.postgres, status: envConfig.postgres ? 'connected' : 'disconnected' },
-              redis: { url: envConfig.redis, status: envConfig.redis ? 'connected' : 'disconnected' },
-              s3: { bucket: envConfig.s3Bucket, region: envConfig.s3Region, status: envConfig.s3Bucket ? 'connected' : 'disconnected' }
+              postgres: { 
+                integrationId: envConfig.postgresIntegrationId, 
+                integrationName: getIntegrationName(envConfig.postgresIntegrationId),
+                status: envConfig.postgresIntegrationId ? 'connected' : 'disconnected' 
+              },
+              redis: { 
+                integrationId: envConfig.redisIntegrationId, 
+                integrationName: getIntegrationName(envConfig.redisIntegrationId),
+                status: envConfig.redisIntegrationId ? 'connected' : 'disconnected' 
+              },
+              s3: { 
+                integrationId: envConfig.s3IntegrationId, 
+                integrationName: getIntegrationName(envConfig.s3IntegrationId),
+                status: envConfig.s3IntegrationId ? 'connected' : 'disconnected' 
+              }
             }
           }
         : env
@@ -317,6 +340,25 @@ export default function AdminNew() {
       title: "Environment configured",
       description: `${environments.find(e => e.id === selectedConfigEnv)?.name} environment updated successfully`
     });
+  };
+
+  // Helper functions to filter integrations by type
+  const getPostgresIntegrations = () => {
+    return integrations.filter((int: any) => 
+      int.type === 'postgresql' || int.type === 'database' || int.name?.toLowerCase().includes('postgres')
+    );
+  };
+
+  const getRedisIntegrations = () => {
+    return integrations.filter((int: any) => 
+      int.type === 'redis' || int.name?.toLowerCase().includes('redis')
+    );
+  };
+
+  const getS3Integrations = () => {
+    return integrations.filter((int: any) => 
+      int.type === 's3' || int.type === 'aws' || int.name?.toLowerCase().includes('s3')
+    );
   };
 
   const handleStartMigration = () => {
@@ -833,52 +875,98 @@ export default function AdminNew() {
               <DialogHeader>
                 <DialogTitle>Configure {environments.find(e => e.id === selectedConfigEnv)?.name} Environment</DialogTitle>
                 <DialogDescription>
-                  Set up database connections for this environment
+                  Select integrations for this environment from your configured connections
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label>PostgreSQL Connection String</Label>
-                  <Input
-                    type="password"
-                    placeholder="postgresql://user:password@host:5432/database"
-                    value={envConfig.postgres}
-                    onChange={(e) => setEnvConfig(prev => ({ ...prev, postgres: e.target.value }))}
-                  />
+                  <Label>PostgreSQL Integration</Label>
+                  <Select value={envConfig.postgresIntegrationId} onValueChange={(value) => setEnvConfig(prev => ({ ...prev, postgresIntegrationId: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select PostgreSQL integration" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No PostgreSQL integration</SelectItem>
+                      {getPostgresIntegrations().map((integration: any) => (
+                        <SelectItem key={integration.id} value={integration.id}>
+                          <div className="flex items-center">
+                            <Database className="h-4 w-4 mr-2 text-blue-600" />
+                            {integration.name}
+                            {integration.status === 'active' && <span className="ml-2 text-xs text-green-600">(Active)</span>}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {getPostgresIntegrations().length === 0 && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      No PostgreSQL integrations found. Configure one in the Integrations page first.
+                    </p>
+                  )}
                 </div>
+
                 <div>
-                  <Label>Redis Connection String</Label>
-                  <Input
-                    type="password"
-                    placeholder="redis://user:password@host:6379"
-                    value={envConfig.redis}
-                    onChange={(e) => setEnvConfig(prev => ({ ...prev, redis: e.target.value }))}
-                  />
+                  <Label>Redis Integration</Label>
+                  <Select value={envConfig.redisIntegrationId} onValueChange={(value) => setEnvConfig(prev => ({ ...prev, redisIntegrationId: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Redis integration" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No Redis integration</SelectItem>
+                      {getRedisIntegrations().map((integration: any) => (
+                        <SelectItem key={integration.id} value={integration.id}>
+                          <div className="flex items-center">
+                            <Server className="h-4 w-4 mr-2 text-red-600" />
+                            {integration.name}
+                            {integration.status === 'active' && <span className="ml-2 text-xs text-green-600">(Active)</span>}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {getRedisIntegrations().length === 0 && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      No Redis integrations found. Configure one in the Integrations page first.
+                    </p>
+                  )}
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>S3 Bucket Name</Label>
-                    <Input
-                      placeholder="my-app-bucket"
-                      value={envConfig.s3Bucket}
-                      onChange={(e) => setEnvConfig(prev => ({ ...prev, s3Bucket: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <Label>S3 Region</Label>
-                    <Select value={envConfig.s3Region} onValueChange={(value) => setEnvConfig(prev => ({ ...prev, s3Region: value }))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="us-east-1">US East (N. Virginia)</SelectItem>
-                        <SelectItem value="us-west-2">US West (Oregon)</SelectItem>
-                        <SelectItem value="eu-west-1">Europe (Ireland)</SelectItem>
-                        <SelectItem value="ap-southeast-1">Asia Pacific (Singapore)</SelectItem>
-                      </SelectContent>
-                    </Select>
+
+                <div>
+                  <Label>S3 Integration</Label>
+                  <Select value={envConfig.s3IntegrationId} onValueChange={(value) => setEnvConfig(prev => ({ ...prev, s3IntegrationId: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select S3 integration" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No S3 integration</SelectItem>
+                      {getS3Integrations().map((integration: any) => (
+                        <SelectItem key={integration.id} value={integration.id}>
+                          <div className="flex items-center">
+                            <Cloud className="h-4 w-4 mr-2 text-green-600" />
+                            {integration.name}
+                            {integration.status === 'active' && <span className="ml-2 text-xs text-green-600">(Active)</span>}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {getS3Integrations().length === 0 && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      No S3 integrations found. Configure one in the Integrations page first.
+                    </p>
+                  )}
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <Database className="h-5 w-5 text-blue-600 mt-0.5 mr-2" />
+                    <div className="text-sm">
+                      <p className="font-medium text-blue-800">Integration Selection</p>
+                      <p className="text-blue-700">Choose from your configured integrations. If you need to add new integrations, visit the Integrations page first.</p>
+                    </div>
                   </div>
                 </div>
+
                 <div className="flex justify-end space-x-3">
                   <Button variant="outline" onClick={() => setShowEnvConfigModal(false)}>
                     Cancel
