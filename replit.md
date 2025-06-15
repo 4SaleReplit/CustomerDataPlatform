@@ -108,8 +108,26 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 - **Performance Metrics**: Query execution tracking and optimization
 - **Business Intelligence**: Dashboard analytics and user behavior insights
 
+## Recent Changes
+
+- **June 15, 2025**: S3 Integration & Migration System
+  - Added AWS S3 service for production image storage
+  - Created comprehensive migration tools (web interface + command line)
+  - Updated image upload routes to auto-detect S3 configuration
+  - Built S3 migration interface in Integrations page
+  - Added database + S3 migration capabilities for production deployment
+
+- **June 15, 2025**: Production Database Migration
+  - Implemented complete database migration system with web interface
+  - Added migration tools preserving integrations, API keys, and configurations
+  - Created production-ready migration scripts with validation and backup
+
+- **June 15, 2025**: Initial setup
+
 ## Changelog
 
+- June 15, 2025. S3 integration for production image storage with migration system
+- June 15, 2025. Database migration system for production deployment  
 - June 15, 2025. Initial setup
 
 ## User Preferences
