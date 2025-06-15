@@ -70,8 +70,7 @@ test_image() {
     # Test container startup
     CONTAINER_ID=$(docker run -d \
         --platform $PLATFORM \
-        -p 8080:80 \
-        -p 8081:5000 \
+        -p 8080:5000 \
         -e NODE_ENV=production \
         -e DATABASE_URL=postgresql://test:test@localhost:5432/test \
         $PROJECT_NAME/unified:$VERSION)
@@ -82,17 +81,18 @@ test_image() {
     if docker ps | grep -q $CONTAINER_ID; then
         log_info "Container started successfully"
         
-        # Test health endpoints
+        # Test health endpoint
         if curl -f http://localhost:8080/health &> /dev/null; then
-            log_info "Frontend health check passed"
+            log_info "Health check passed"
         else
-            log_warn "Frontend health check failed (may be expected without database)"
+            log_warn "Health check failed (expected without database)"
         fi
         
-        if curl -f http://localhost:8081/api/health &> /dev/null; then
-            log_info "Backend health check passed"
+        # Test frontend access
+        if curl -f http://localhost:8080/ &> /dev/null; then
+            log_info "Frontend access test passed"
         else
-            log_warn "Backend health check failed (expected without database)"
+            log_warn "Frontend access failed (may be expected without database)"
         fi
     else
         log_error "Container failed to start"
@@ -114,10 +114,10 @@ show_results() {
     echo "  Production: ./deploy-unified.sh"
     echo ""
     echo "Image details:"
-    echo "  • Single container with frontend + backend"
+    echo "  • Single container with Node.js serving frontend + backend"
     echo "  • ARM64 optimized for AWS Graviton"
-    echo "  • nginx serves frontend, proxies API to backend"
-    echo "  • Estimated size: ~250MB"
+    echo "  • Node.js serves static files and API on port 5000"
+    echo "  • Estimated size: ~180MB (smaller without nginx)"
     echo ""
 }
 

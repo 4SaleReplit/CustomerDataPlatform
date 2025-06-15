@@ -10,11 +10,8 @@ The Customer Data Platform uses a streamlined single-container architecture that
 ┌─────────────────────────────────────────┐
 │           Unified Container             │
 ├─────────────────────────────────────────┤
-│  nginx (Port 80)                        │
-│  ├── Serves React frontend             │
-│  └── Proxies /api/* to backend         │
-├─────────────────────────────────────────┤
 │  Node.js Express (Port 5000)           │
+│  ├── Serves React frontend (static)    │
 │  ├── REST API endpoints                │
 │  ├── PostgreSQL integration            │
 │  ├── Snowflake data warehouse          │
@@ -26,8 +23,6 @@ The Customer Data Platform uses a streamlined single-container architecture that
 
 ### Core Container Files
 - `Dockerfile.unified` - Multi-stage build for frontend + backend
-- `nginx-unified.conf` - Web server configuration with API proxy
-- `start-unified.sh` - Process management for both services
 - `docker-compose-unified.yml` - Local development environment
 
 ### Infrastructure
@@ -94,9 +89,9 @@ cp .env.production.template .env.production
 - **Scaling**: 2-10 instances based on CPU
 
 ### Service Endpoints
-- **Frontend**: Port 80 (nginx)
-- **Backend API**: Port 5000 (proxied via nginx)
-- **Health Checks**: `/health` and `/api/health`
+- **Frontend & Backend**: Port 5000 (Node.js Express)
+- **Health Check**: `/health`
+- **API Endpoints**: `/api/*`
 
 ### External Integrations
 - **Database**: PostgreSQL (RDS or self-hosted)
