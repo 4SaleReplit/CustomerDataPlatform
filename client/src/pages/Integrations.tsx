@@ -15,6 +15,7 @@ import {
   Info, Loader2, Database, BarChart3, MessageSquare, Mail, 
   Snowflake, Palette, Pause, Play, Trash2
 } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 interface Integration {
   id: string;
@@ -335,7 +336,7 @@ const IntegrationCard = ({ integration, onConfigure, onTest, onPause, onDelete, 
               className="flex-1 text-xs font-medium hover:bg-green-50 hover:border-green-300 hover:text-green-700"
             >
               {isTestingConnection ? (
-                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                <LoadingSpinner size="sm" className="mr-1" />
               ) : (
                 <CheckCircle className="h-3 w-3 mr-1" />
               )}
@@ -696,7 +697,7 @@ export default function Integrations() {
                   >
                     {isTestingConnection ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <LoadingSpinner size="sm" className="mr-2" />
                         Testing...
                       </>
                     ) : (
@@ -1061,7 +1062,7 @@ export default function Integrations() {
                 >
                   {isTestingConnection ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <LoadingSpinner size="sm" className="mr-2" />
                       Testing...
                     </>
                   ) : (
