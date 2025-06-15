@@ -1,7 +1,14 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { config } from "dotenv";
 import { registerRoutes } from "./routes";
-import { serveStatic, log } from process.env.NODE_ENV === "production" ? "./vite-production" : "./vite";
+// Import based on environment
+let viteModule: any;
+if (process.env.NODE_ENV === "production") {
+  viteModule = await import("./vite-production");
+} else {
+  viteModule = await import("./vite");
+}
+const { serveStatic, log } = viteModule;
 
 // Load environment variables
 config();

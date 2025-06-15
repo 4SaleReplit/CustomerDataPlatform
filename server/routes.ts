@@ -1294,6 +1294,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // S3 test endpoint
+  app.post("/api/integrations/s3/test", async (req, res) => {
+    try {
+      const { accessKeyId, secretAccessKey, region, bucketName, endpoint } = req.body;
+      
+      if (!accessKeyId || !secretAccessKey || !region || !bucketName) {
+        return res.status(400).json({ 
+          error: "Missing required fields: accessKeyId, secretAccessKey, region, bucketName" 
+        });
+      }
+
+      // Import AWS S3 client
+      const { S3Client, HeadBucketCommand, ListObjectsV2Command } = await import('@aws-sdk/client-s3');
+      
+      // Create S3 client with provided credentials
+      const s3Client = new S3Client({
+        region,
+        credentials: {
+          accessKeyId,
+          secretAccessKey,
+        },
+        ...(endpoint && { endpoint })
+      });
+
+      try {
+        // Test bucket access
+        await s3Client.send(new HeadBucketCommand({ Bucket: bucketName }));
+        
+        // Get bucket metadata
+        const listCommand = new ListObjectsV2Command({ 
+          Bucket: bucketName,
+          MaxKeys: 1000
+        });
+        const listResult = await s3Client.send(listCommand);
+        
+        const objectCount = listResult.KeyCount || 0;
+        const totalSize = listResult.Contents?.reduce((sum, obj) => sum + (obj.Size || 0), 0) || 0;
+        
+        res.json({ 
+          success: true, 
+          message: "S3 connection successful",
+          metadata: {
+            bucketName,
+            region,
+            objectCount,
+            totalSize,
+            hasAccess: true
+          }
+        });
+      } catch (s3Error: any) {
+        res.status(400).json({ 
+          success: false, 
+          error: `S3 connection failed: ${s3Error.message || 'Check your credentials and bucket permissions.'}` 
+        });
+      }
+    } catch (error) {
+      console.error("S3 test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Internal server error during S3 connection test" 
+      });
+    }
+  });
+
   // Intercom test endpoint
   app.post("/api/integrations/intercom/test", async (req, res) => {
     try {

@@ -111,6 +111,13 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 15, 2025**: S3 Integration Type Added
+  - Added AWS S3 Storage as a full integration type with complete configuration support
+  - Created S3 integration template with Access Key ID, Secret Access Key, Region, and Bucket Name fields
+  - Implemented S3 connection testing with bucket access validation and metadata collection
+  - Added S3 metadata display showing object count, total size, bucket name, and region
+  - Enhanced integration cards to display S3 storage statistics in green-themed layout
+
 - **June 15, 2025**: Docker Production Build Fix
   - Fixed "Cannot find package 'vite'" error in Docker production builds
   - Created production-safe Vite configuration (server/vite-production.ts) without Vite dependencies

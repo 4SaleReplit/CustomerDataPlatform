@@ -139,6 +139,20 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
       { key: 'fromEmail', label: 'From Email', type: 'email', placeholder: 'noreply@yourapp.com', required: true },
       { key: 'fromName', label: 'From Name', type: 'text', placeholder: 'Your App' }
     ]
+  },
+  s3: {
+    name: 'AWS S3 Storage',
+    description: 'Amazon S3 cloud storage for file uploads and static assets',
+    category: 'Storage',
+    icon: Database,
+    color: 'green',
+    fields: [
+      { key: 'accessKeyId', label: 'Access Key ID', type: 'text', required: true },
+      { key: 'secretAccessKey', label: 'Secret Access Key', type: 'password', required: true },
+      { key: 'region', label: 'AWS Region', type: 'select', options: ['us-east-1', 'us-west-2', 'eu-west-1', 'ap-southeast-1'], placeholder: 'us-east-1', required: true },
+      { key: 'bucketName', label: 'Bucket Name', type: 'text', placeholder: 'my-app-storage', required: true },
+      { key: 'endpoint', label: 'Custom Endpoint (Optional)', type: 'url', placeholder: 'https://s3.amazonaws.com' }
+    ]
   }
 };
 
@@ -229,6 +243,27 @@ const IntegrationCard = ({ integration, onConfigure, onTest, onPause, onDelete, 
             <div className="text-center">
               <div className="text-lg font-semibold text-green-900">{metadata.schemas?.length || 0}</div>
               <div className="text-xs text-green-600">Schemas</div>
+            </div>
+          </div>
+        );
+      case 's3':
+        return (
+          <div className="grid grid-cols-2 gap-3 mt-3 p-3 bg-green-50 rounded-lg border border-green-100">
+            <div className="text-center">
+              <div className="text-lg font-semibold text-green-900">{metadata.objectCount || 0}</div>
+              <div className="text-xs text-green-600">Objects</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-green-900">{metadata.totalSize ? formatBytes(metadata.totalSize) : 'N/A'}</div>
+              <div className="text-xs text-green-600">Total Size</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-green-900">{metadata.bucketName || 'N/A'}</div>
+              <div className="text-xs text-green-600">Bucket</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-green-900">{metadata.region || 'N/A'}</div>
+              <div className="text-xs text-green-600">Region</div>
             </div>
           </div>
         );
