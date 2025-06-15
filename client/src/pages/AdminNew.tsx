@@ -58,11 +58,36 @@ export default function AdminNew() {
   const queryClient = useQueryClient();
   
   // Fetch environment configurations from database
-  const { data: environmentConfigurations = [], isLoading: configsLoading } = useQuery({
+  const { data: environmentConfigurations = [], isLoading: configsLoading, refetch: refetchConfigs } = useQuery({
     queryKey: ['/api/environment-configurations'],
     staleTime: 0, // Always fetch fresh data
     refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
+
+  // Force refetch on component mount and clear cache
+  React.useEffect(() => {
+    const loadConfigurations = async () => {
+      try {
+        // Clear cache first
+        queryClient.removeQueries({ queryKey: ['/api/environment-configurations'] });
+        
+        // Manual fetch to ensure data is loaded
+        const response = await fetch('/api/environment-configurations');
+        const configs = await response.json();
+        
+        // Set data manually in cache
+        queryClient.setQueryData(['/api/environment-configurations'], configs);
+        
+        // Also trigger refetch
+        refetchConfigs();
+      } catch (error) {
+        console.error('Failed to load configurations:', error);
+      }
+    };
+    
+    loadConfigurations();
+  }, []);
   const [selectedUser, setSelectedUser] = useState<TeamMember | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -506,22 +531,11 @@ export default function AdminNew() {
 
   // Load environment configurations from database
   React.useEffect(() => {
-    console.log('Loading environment configurations:', {
-      environmentConfigurations,
-      configurationsLength: Array.isArray(environmentConfigurations) ? environmentConfigurations.length : 0,
-      integrationsLength: integrations.length,
-      activeIntegrationTypes
-    });
-
     if (Array.isArray(environmentConfigurations) && environmentConfigurations.length > 0 && integrations.length > 0) {
-      console.log('Processing environment configurations...');
-      
       setEnvironments(prev => prev.map(env => {
         const envConfigs = (environmentConfigurations as any[]).filter((config: any) => 
           config.environmentId === env.id
         );
-        
-        console.log(`Environment ${env.id} configurations:`, envConfigs);
         
         // Start with initialized databases for all active integration types
         const updatedDatabases = initializeEnvironmentDatabases(activeIntegrationTypes);
@@ -530,12 +544,6 @@ export default function AdminNew() {
         envConfigs.forEach((config: any) => {
           if (activeIntegrationTypes.includes(config.integrationType)) {
             const integration = integrations.find((int: any) => int.id === config.integrationId);
-            console.log(`Updating ${config.integrationType} for ${env.id}:`, {
-              integrationId: config.integrationId,
-              integrationName: integration?.name,
-              found: !!integration
-            });
-            
             updatedDatabases[config.integrationType] = {
               integrationId: config.integrationId,
               integrationName: integration ? integration.name : 'Integration not found',
