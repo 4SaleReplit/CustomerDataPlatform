@@ -297,9 +297,9 @@ export default function AdminNew() {
     if (env) {
       setSelectedConfigEnv(envId);
       setEnvConfig({
-        postgresIntegrationId: env.databases.postgres.integrationId || '',
-        redisIntegrationId: env.databases.redis.integrationId || '',
-        s3IntegrationId: env.databases.s3.integrationId || ''
+        postgresIntegrationId: env.databases.postgres.integrationId || 'none',
+        redisIntegrationId: env.databases.redis.integrationId || 'none',
+        s3IntegrationId: env.databases.s3.integrationId || 'none'
       });
       setShowEnvConfigModal(true);
     }
@@ -307,9 +307,12 @@ export default function AdminNew() {
 
   const handleSaveEnvironmentConfig = () => {
     const getIntegrationName = (integrationId: string) => {
+      if (integrationId === 'none' || !integrationId) return 'No integration configured';
       const integration = integrations.find((int: any) => int.id === integrationId);
       return integration ? integration.name : 'No integration configured';
     };
+
+    const cleanIntegrationId = (id: string) => id === 'none' ? '' : id;
 
     setEnvironments(prev => prev.map(env => 
       env.id === selectedConfigEnv 
@@ -317,19 +320,19 @@ export default function AdminNew() {
             ...env,
             databases: {
               postgres: { 
-                integrationId: envConfig.postgresIntegrationId, 
+                integrationId: cleanIntegrationId(envConfig.postgresIntegrationId), 
                 integrationName: getIntegrationName(envConfig.postgresIntegrationId),
-                status: envConfig.postgresIntegrationId ? 'connected' : 'disconnected' 
+                status: envConfig.postgresIntegrationId && envConfig.postgresIntegrationId !== 'none' ? 'connected' : 'disconnected' 
               },
               redis: { 
-                integrationId: envConfig.redisIntegrationId, 
+                integrationId: cleanIntegrationId(envConfig.redisIntegrationId), 
                 integrationName: getIntegrationName(envConfig.redisIntegrationId),
-                status: envConfig.redisIntegrationId ? 'connected' : 'disconnected' 
+                status: envConfig.redisIntegrationId && envConfig.redisIntegrationId !== 'none' ? 'connected' : 'disconnected' 
               },
               s3: { 
-                integrationId: envConfig.s3IntegrationId, 
+                integrationId: cleanIntegrationId(envConfig.s3IntegrationId), 
                 integrationName: getIntegrationName(envConfig.s3IntegrationId),
-                status: envConfig.s3IntegrationId ? 'connected' : 'disconnected' 
+                status: envConfig.s3IntegrationId && envConfig.s3IntegrationId !== 'none' ? 'connected' : 'disconnected' 
               }
             }
           }
@@ -886,7 +889,7 @@ export default function AdminNew() {
                       <SelectValue placeholder="Select PostgreSQL integration" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No PostgreSQL integration</SelectItem>
+                      <SelectItem value="none">No PostgreSQL integration</SelectItem>
                       {getPostgresIntegrations().map((integration: any) => (
                         <SelectItem key={integration.id} value={integration.id}>
                           <div className="flex items-center">
@@ -912,7 +915,7 @@ export default function AdminNew() {
                       <SelectValue placeholder="Select Redis integration" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No Redis integration</SelectItem>
+                      <SelectItem value="none">No Redis integration</SelectItem>
                       {getRedisIntegrations().map((integration: any) => (
                         <SelectItem key={integration.id} value={integration.id}>
                           <div className="flex items-center">
@@ -938,7 +941,7 @@ export default function AdminNew() {
                       <SelectValue placeholder="Select S3 integration" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No S3 integration</SelectItem>
+                      <SelectItem value="none">No S3 integration</SelectItem>
                       {getS3Integrations().map((integration: any) => (
                         <SelectItem key={integration.id} value={integration.id}>
                           <div className="flex items-center">
