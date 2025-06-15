@@ -315,18 +315,23 @@ export default function AdminNew() {
   };
 
   const handleConfigureEnvironment = (envId: string) => {
-    const env = environments.find(e => e.id === envId);
-    if (env) {
-      setSelectedConfigEnv(envId);
-      // Initialize envConfig with current values for all active integration types
-      const config: { [key: string]: string } = {};
-      activeIntegrationTypes.forEach(type => {
-        const configKey = `${type}IntegrationId`;
-        config[configKey] = env.databases?.[type]?.integrationId || 'none';
-      });
-      setEnvConfig(config);
-      setShowEnvConfigModal(true);
-    }
+    setSelectedConfigEnv(envId);
+    
+    // Load existing configurations from database for this environment
+    const envConfigs = Array.isArray(environmentConfigurations) 
+      ? (environmentConfigurations as any[]).filter((config: any) => config.environmentId === envId)
+      : [];
+    
+    // Initialize config state with database values
+    const initialConfig: { [key: string]: string } = {};
+    activeIntegrationTypes.forEach(type => {
+      const configKey = `${type}IntegrationId`;
+      const existingConfig = envConfigs.find((config: any) => config.integrationType === type);
+      initialConfig[configKey] = existingConfig?.integrationId || 'none';
+    });
+    
+    setEnvConfig(initialConfig);
+    setShowEnvConfigModal(true);
   };
 
   const handleSaveEnvironmentConfig = async () => {
@@ -499,9 +504,9 @@ export default function AdminNew() {
 
   // Load environment configurations from database
   React.useEffect(() => {
-    if (environmentConfigurations.length > 0) {
+    if (Array.isArray(environmentConfigurations) && environmentConfigurations.length > 0) {
       setEnvironments(prev => prev.map(env => {
-        const envConfigs = environmentConfigurations.filter((config: any) => 
+        const envConfigs = (environmentConfigurations as any[]).filter((config: any) => 
           config.environmentId === env.id
         );
         
