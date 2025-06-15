@@ -111,6 +111,15 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 15, 2025**: Complete Amplitude Event Tracking System Rebuild
+  - Completely replaced existing Amplitude implementation with clean, standardized approach
+  - Created new analytics.ts with comprehensive event naming conventions following industry standards
+  - Implemented proper user identification and metadata tracking across all events
+  - Migrated all tracking across 8+ components to use new standardized event structure
+  - Added screen-level tracking for all major pages (Dashboard, Users, Segments, Cohorts, Integrations)
+  - Removed all legacy trackBusinessEvent references and replaced with clean analytics functions
+  - Implemented custom green circular loading animation for all test connection buttons
+
 - **June 15, 2025**: Enhanced Integration Card UI with Comprehensive Metadata
   - Upgraded integration cards to display rich metadata collected from actual data sources
   - Added color-coded statistics sections for database integrations (Snowflake, PostgreSQL)

@@ -8,7 +8,7 @@ import { TimeFilter, type TimeFilterState } from '@/components/dashboard/TimeFil
 
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
-import { trackEvent } from '@/lib/amplitude';
+import { analytics } from '@/lib/amplitude';
 
 const initialTiles: DashboardTile[] = [
   {
@@ -170,9 +170,7 @@ function Dashboard() {
 
   // Track page view when component mounts
   useEffect(() => {
-    trackEvent('Page Viewed', {
-      page_name: 'dashboard'
-    });
+    analytics.screenViewed('Dashboard');
   }, []);
 
   // Event handlers
