@@ -331,6 +331,13 @@ const IntegrationCard = ({ integration, onConfigure, onTest, onPause, onDelete, 
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
+                analytics.buttonClicked('Test Connection', 'Integrations', {
+                  action: 'test_connection',
+                  integration_id: integration.id,
+                  integration_name: integration.name,
+                  integration_type: integration.type,
+                  current_status: integration.status
+                });
                 handleTestConnection();
               }}
               disabled={isTestingConnection}
@@ -348,6 +355,13 @@ const IntegrationCard = ({ integration, onConfigure, onTest, onPause, onDelete, 
               size="sm" 
               onClick={(e) => {
                 e.stopPropagation();
+                analytics.buttonClicked('Edit Integration', 'Integrations', {
+                  action: 'edit_integration',
+                  integration_id: integration.id,
+                  integration_name: integration.name,
+                  integration_type: integration.type,
+                  current_status: integration.status
+                });
                 onConfigure(integration);
               }}
               className="flex-1 text-xs font-medium hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
@@ -359,7 +373,16 @@ const IntegrationCard = ({ integration, onConfigure, onTest, onPause, onDelete, 
           <Button 
             variant="ghost" 
             size="sm"
-            onClick={() => onPreview(integration)}
+            onClick={() => {
+              analytics.buttonClicked('View Integration Details', 'Integrations', {
+                action: 'view_details',
+                integration_id: integration.id,
+                integration_name: integration.name,
+                integration_type: integration.type,
+                current_status: integration.status
+              });
+              onPreview(integration);
+            }}
             className="w-full text-xs text-gray-600 hover:text-blue-600 hover:bg-blue-50"
           >
             <Info className="h-3 w-3 mr-1" />

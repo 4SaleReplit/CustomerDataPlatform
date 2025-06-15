@@ -353,7 +353,14 @@ function Dashboard() {
                 <Button
                   variant="outline"
                   size="default"
-                  onClick={handleGlobalRefresh}
+                  onClick={() => {
+                    analytics.buttonClicked('Refresh All', 'Dashboard', {
+                      action: 'refresh_all_tiles',
+                      total_tiles: tiles.length,
+                      is_loading: isLoading
+                    });
+                    handleGlobalRefresh();
+                  }}
                   disabled={isLoading}
                   className="px-6 py-3 font-medium border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all"
                 >
@@ -364,7 +371,14 @@ function Dashboard() {
                   <Button
                     variant="outline"
                     size="default"
-                    onClick={handleSaveLayout}
+                    onClick={() => {
+                      analytics.buttonClicked('Save Layout', 'Dashboard', {
+                        action: 'save_dashboard_layout',
+                        total_tiles: tiles.length,
+                        edit_mode: isEditMode
+                      });
+                      handleSaveLayout();
+                    }}
                     className="px-6 py-3 font-medium border-green-200 hover:bg-green-50 hover:border-green-300 transition-all"
                   >
                     <Save className="h-4 w-4 mr-2" />
@@ -374,7 +388,15 @@ function Dashboard() {
                 <Button
                   variant={isEditMode ? "default" : "outline"}
                   size="default"
-                  onClick={handleToggleEditMode}
+                  onClick={() => {
+                    analytics.buttonClicked('Toggle Edit Mode', 'Dashboard', {
+                      action: 'toggle_edit_mode',
+                      current_edit_mode: isEditMode,
+                      new_edit_mode: !isEditMode,
+                      total_tiles: tiles.length
+                    });
+                    handleToggleEditMode();
+                  }}
                   className={isEditMode ? "btn-primary px-6 py-3 font-medium" : "px-6 py-3 font-medium hover:bg-gray-50 transition-all"}
                 >
                   {isEditMode ? (
