@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'wouter';
 import { ArrowLeft, Plus, Trash2, Calculator, Tags, Play, Copy } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -230,6 +230,7 @@ export default function CohortEditor({
   const [isExecuting, setIsExecuting] = useState(false);
   const [queryResult, setQueryResult] = useState<{ count: number; userIds: string[] } | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const getOperatorsForAttribute = (attributeValue: string) => {
     const attribute = userAttributes.find(attr => attr.value === attributeValue);
@@ -435,6 +436,9 @@ export default function CohortEditor({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(cohortData)
       });
+
+      // Invalidate cohorts cache to make new cohort appear instantly
+      queryClient.invalidateQueries({ queryKey: ['/api/cohorts'] });
 
       toast({
         title: "Cohort saved successfully",
