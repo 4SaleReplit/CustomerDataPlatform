@@ -285,30 +285,7 @@ const IntegrationCard = ({ integration, onConfigure, onTest, onPause, onDelete, 
               {renderConnectionInfo()}
             </div>
           </div>
-          <div className="flex items-center space-x-1">
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onPause(integration);
-              }}
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              {integration.status === 'paused' ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(integration);
-              }}
-              className="opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700 hover:bg-red-50"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+
         </div>
       </CardHeader>
       <CardContent className="pt-0">
@@ -661,27 +638,61 @@ export default function Integrations() {
                 ))}
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4">
-                <Button variant="outline" onClick={() => setIsConfigModalOpen(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={() => handleTestConnection(selectedIntegration)}
-                  disabled={isTestingConnection}
-                  variant="outline"
-                >
-                  {isTestingConnection ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Testing...
-                    </>
-                  ) : (
-                    'Test Connection'
-                  )}
-                </Button>
-                <Button onClick={handleSaveIntegration}>
-                  Save Changes
-                </Button>
+              <div className="flex justify-between pt-4">
+                <div className="flex space-x-2">
+                  <Button 
+                    variant="outline"
+                    onClick={() => handlePauseToggle(selectedIntegration)}
+                    className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                  >
+                    {selectedIntegration.status === 'paused' ? (
+                      <>
+                        <Play className="h-4 w-4 mr-2" />
+                        Resume
+                      </>
+                    ) : (
+                      <>
+                        <Pause className="h-4 w-4 mr-2" />
+                        Pause
+                      </>
+                    )}
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      if (window.confirm('Are you sure you want to delete this integration?')) {
+                        deleteIntegrationMutation.mutate(selectedIntegration.id);
+                        setIsConfigModalOpen(false);
+                      }
+                    }}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                </div>
+                <div className="flex space-x-3">
+                  <Button variant="outline" onClick={() => setIsConfigModalOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={() => handleTestConnection(selectedIntegration)}
+                    disabled={isTestingConnection}
+                    variant="outline"
+                  >
+                    {isTestingConnection ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Testing...
+                      </>
+                    ) : (
+                      'Test Connection'
+                    )}
+                  </Button>
+                  <Button onClick={handleSaveIntegration}>
+                    Save Changes
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -1015,6 +1026,37 @@ export default function Integrations() {
                     {new Date(previewIntegration.updatedAt).toLocaleString()}
                   </p>
                 </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-3 pt-4 border-t">
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    setPreviewIntegration(null);
+                    handleConfigureIntegration(previewIntegration);
+                  }}
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Edit Configuration
+                </Button>
+                <Button 
+                  onClick={() => handleTestConnection(previewIntegration)}
+                  disabled={isTestingConnection}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {isTestingConnection ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Testing...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Test Connection
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           )}
