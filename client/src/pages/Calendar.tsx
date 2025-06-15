@@ -169,13 +169,48 @@ export default function Calendar() {
               {monthNames[currentMonth]} {currentYear}
             </CardTitle>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => navigateMonth('prev')}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  analytics.buttonClicked('Previous Month', 'Calendar', {
+                    action: 'navigate_month',
+                    direction: 'previous',
+                    current_month: currentMonth,
+                    current_year: currentYear
+                  });
+                  navigateMonth('prev');
+                }}
+              >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  analytics.buttonClicked('Today', 'Calendar', {
+                    action: 'go_to_today',
+                    current_month: currentMonth,
+                    current_year: currentYear
+                  });
+                  setCurrentDate(new Date());
+                }}
+              >
                 Today
               </Button>
-              <Button variant="outline" size="sm" onClick={() => navigateMonth('next')}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  analytics.buttonClicked('Next Month', 'Calendar', {
+                    action: 'navigate_month',
+                    direction: 'next',
+                    current_month: currentMonth,
+                    current_year: currentYear
+                  });
+                  navigateMonth('next');
+                }}
+              >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
