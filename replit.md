@@ -111,6 +111,12 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 15, 2025**: Docker Production Build Fix
+  - Fixed "Cannot find package 'vite'" error in Docker production builds
+  - Created production-safe Vite configuration (server/vite-production.ts) without Vite dependencies
+  - Updated server imports to conditionally load development vs production Vite modules
+  - Ensured Docker builds work properly with static file serving in production
+
 - **June 15, 2025**: Complete Amplitude Event Tracking System Implementation
   - Completely rebuilt Amplitude implementation with clean, standardized approach using industry best practices
   - Disabled all default Amplitude automatic tracking to prevent event pollution and maintain clean analytics
