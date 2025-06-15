@@ -107,6 +107,11 @@ npm run dev
    - Wait for "Docker Desktop is running" status
    - If still failing, restart Docker Desktop
    - Check Docker Desktop settings > General > "Use Docker Compose V2"
+   - Alternative: Try switching to Windows containers and back to Linux containers
+
+2. **Missing Build Scripts Error**
+   - Fixed: Dockerfile now uses existing `npm run build` script
+   - If you see "Missing script" errors, the Dockerfile has been updated
 
 2. **Port Already in Use**
    ```bash

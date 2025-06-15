@@ -24,12 +24,9 @@ COPY client/ ./client/
 COPY server/ ./server/
 COPY shared/ ./shared/
 
-# Build frontend
+# Build application (frontend + backend)
 ENV NODE_ENV=production
-RUN npm run build:client
-
-# Build backend TypeScript
-RUN npm run build:server
+RUN npm run build
 
 # Production runtime stage
 FROM --platform=linux/arm64 node:18-alpine
