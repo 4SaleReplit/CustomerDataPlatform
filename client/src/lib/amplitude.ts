@@ -9,18 +9,14 @@ const AMPLITUDE_API_KEY = import.meta.env.VITE_AMPLITUDE_API_KEY;
  * and camelCase properties for consistency and clarity
  */
 
-// Initialize Amplitude with minimal autocapture to avoid event pollution
+// Initialize Amplitude with all automatic tracking disabled
 export const initializeAmplitude = () => {
   if (AMPLITUDE_API_KEY) {
     amplitude.init(AMPLITUDE_API_KEY, undefined, {
-      defaultTracking: {
-        sessions: true,
-        pageViews: false, // We'll track manually with proper naming
-        formInteractions: false, // We'll track manually
-        fileDownloads: false,
-      },
-      autocapture: {
-        elementInteractions: false, // Manual tracking for clean event names
+      defaultTracking: false, // Disable all default tracking
+      autocapture: false, // Disable all autocapture
+      trackingOptions: {
+        pageViews: false, // Explicitly disable page views
       },
     });
     console.log('Amplitude initialized successfully');
