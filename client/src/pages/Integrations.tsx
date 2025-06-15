@@ -303,6 +303,20 @@ const IntegrationCard = ({ integration, onConfigure, onTest, onPause, onDelete, 
               </span>
             </div>
           )}
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">Created</span>
+            <span className="text-sm text-gray-900">
+              {new Date(integration.createdAt).toLocaleDateString()}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">Updated</span>
+            <span className="text-sm text-gray-900">
+              {new Date(integration.updatedAt).toLocaleDateString()}
+            </span>
+          </div>
         </div>
 
         {/* Enhanced Metadata Display */}
