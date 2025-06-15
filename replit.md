@@ -115,6 +115,7 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
   - Completely replaced existing Amplitude implementation with clean, standardized approach
   - Created new analytics.ts with comprehensive event naming conventions following industry standards
   - Implemented proper user identification and metadata tracking across all events
+  - Enhanced all events to automatically include user_name, user_email, and user_type properties
   - Migrated all tracking across 8+ components to use new standardized event structure
   - Added screen-level tracking for all major pages (Dashboard, Users, Segments, Cohorts, Integrations)
   - Removed all legacy trackBusinessEvent references and replaced with clean analytics functions

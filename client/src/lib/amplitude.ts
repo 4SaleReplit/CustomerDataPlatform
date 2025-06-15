@@ -29,6 +29,13 @@ export const initializeAmplitude = () => {
   }
 };
 
+// Store current user properties for inclusion in all events
+let currentUserProperties: {
+  user_name?: string;
+  user_email?: string;
+  user_type?: string;
+} = {};
+
 // Set user context after login - called once and persists for session
 export const setUserContext = (userId: string, userProperties: {
   email?: string;
@@ -45,7 +52,14 @@ export const setUserContext = (userId: string, userProperties: {
     });
     amplitude.identify(identify);
     
-    console.log('User context set:', userId, userProperties);
+    // Store user properties for inclusion in all events
+    currentUserProperties = {
+      user_name: userProperties.name,
+      user_email: userProperties.email,
+      user_type: userProperties.userType || userProperties.role,
+    };
+    
+    console.log('User context set:', userId, currentUserProperties);
   }
 };
 
@@ -60,8 +74,14 @@ export const clearUserContext = () => {
 // Core event tracking function following Title Case + camelCase convention
 const trackEvent = (eventName: string, eventProperties?: Record<string, any>) => {
   if (AMPLITUDE_API_KEY) {
-    amplitude.track(eventName, eventProperties);
-    console.log('Amplitude event tracked:', eventName, eventProperties);
+    // Merge user properties with event properties
+    const enrichedProperties = {
+      ...currentUserProperties,
+      ...eventProperties
+    };
+    
+    amplitude.track(eventName, enrichedProperties);
+    console.log('Amplitude event tracked:', eventName, enrichedProperties);
   }
 };
 
