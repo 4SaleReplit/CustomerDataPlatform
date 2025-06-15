@@ -28,8 +28,8 @@ RUN npm run build
 # Production stage - ARM64 optimized
 FROM --platform=linux/arm64 node:18-alpine
 
-# Install production dependencies and nginx
-RUN apk add --no-cache nginx curl
+# Install curl for health checks
+RUN apk add --no-cache curl
 
 # Set working directory
 WORKDIR /app
@@ -42,32 +42,25 @@ RUN npm ci --only=production && npm cache clean --force
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/shared ./shared
 
-# Copy built frontend to nginx directory
-COPY --from=builder /app/client/dist /usr/share/nginx/html
-
-# Copy nginx configuration
-COPY nginx-unified.conf /etc/nginx/nginx.conf
+# Copy built frontend to public directory
+COPY --from=builder /app/client/dist ./public
 
 # Create uploads directory
 RUN mkdir -p /app/uploads && chmod 755 /app/uploads
 
 # Create non-root user for Node.js process
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+RUN chown -R nodejs:nodejs /app
 
-# Create nginx directories and set permissions
-RUN mkdir -p /var/log/nginx /var/cache/nginx /var/run/nginx && \
-    chown -R nginx:nginx /var/log/nginx /var/cache/nginx /var/run/nginx /usr/share/nginx/html
+# Switch to non-root user
+USER nodejs
 
-# Copy startup script
-COPY start-unified.sh /start-unified.sh
-RUN chmod +x /start-unified.sh
+# Expose single port
+EXPOSE 5000
 
-# Expose ports
-EXPOSE 80 5000
-
-# Health check for both services
+# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost/ && curl -f http://localhost:5000/api/health || exit 1
+  CMD curl -f http://localhost:5000/health || exit 1
 
-# Start both frontend and backend
-CMD ["/start-unified.sh"]
+# Start Node.js server
+CMD ["node", "dist/index.js"]

@@ -8,7 +8,6 @@ services:
       dockerfile: Dockerfile.unified
     platform: linux/arm64
     ports:
-      - "80:80"
       - "5000:5000"
     environment:
       - NODE_ENV=development
@@ -33,7 +32,7 @@ services:
       - ./uploads:/app/uploads
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "sh", "-c", "curl -f http://localhost/ && curl -f http://localhost:5000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
