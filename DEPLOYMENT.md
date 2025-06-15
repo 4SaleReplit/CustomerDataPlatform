@@ -10,19 +10,105 @@ npm install
 npm run dev
 ```
 
-### Production Deployment
+### Local Docker Testing (Recommended First Step)
+
+Before deploying to AWS, test the complete functionality locally with Docker:
 
 #### Prerequisites
-- Docker installed
-- PostgreSQL database (Neon recommended)
-- Environment variables configured
+- Docker and Docker Compose installed
+- Environment variables configured in `.env`
 
-#### Single Container Deployment
+#### Local Docker Build & Test
+
+**Option 1: Automated Testing Script (Recommended)**
 ```bash
-# Build production image
+# Run the automated testing script
+./test-docker-local.sh
+```
+
+**Option 2: Manual Testing**
+```bash
+# Build production image locally
+docker build -f Dockerfile.production -t cdp-platform:latest .
+
+# Test locally with docker-compose
+docker-compose -f docker-compose.production.yml up
+
+# Access application at http://localhost:5000
+# Verify all features work as expected
+```
+
+**Monitoring and Debugging**
+```bash
+# View application logs
+docker-compose -f docker-compose.production.yml logs -f
+
+# Stop the application
+docker-compose -f docker-compose.production.yml down
+
+# Rebuild if needed
+docker-compose -f docker-compose.production.yml up --build
+```
+
+#### Local Testing Checklist
+- [ ] Application loads successfully
+- [ ] Database connections work
+- [ ] Snowflake queries execute
+- [ ] Amplitude analytics track events
+- [ ] File uploads function
+- [ ] All pages render correctly
+- [ ] User authentication works
+
+#### Troubleshooting Local Docker Issues
+
+**Common Issues and Solutions:**
+
+1. **Port Already in Use**
+   ```bash
+   # Kill process using port 5000
+   lsof -ti:5000 | xargs kill -9
+   ```
+
+2. **Environment Variables Not Loaded**
+   - Verify `.env` file exists in project root
+   - Check environment variables are properly formatted
+   - Restart containers: `docker-compose -f docker-compose.production.yml down && docker-compose -f docker-compose.production.yml up`
+
+3. **Database Connection Issues**
+   - Verify DATABASE_URL is correct
+   - Check network connectivity to database
+   - Ensure database allows connections from Docker containers
+
+4. **Build Failures**
+   ```bash
+   # Clean Docker cache and rebuild
+   docker system prune -f
+   docker build --no-cache -f Dockerfile.production -t cdp-platform:latest .
+   ```
+
+5. **Application Not Starting**
+   ```bash
+   # Check container logs
+   docker-compose -f docker-compose.production.yml logs
+   
+   # Check container status
+   docker-compose -f docker-compose.production.yml ps
+   ```
+
+### Production Deployment (After Local Testing)
+
+#### Prerequisites
+- Local Docker testing completed successfully
+- AWS account configured
+- Production database (Neon) provisioned
+- Production environment variables configured
+
+#### AWS Production Deployment
+```bash
+# Build and tag for production
 ./build-production.sh
 
-# Deploy to production
+# Deploy to AWS
 ./deploy-production.sh
 ```
 
