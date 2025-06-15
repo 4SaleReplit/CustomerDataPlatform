@@ -5,6 +5,8 @@ import { insertIntegrationSchema, type InsertIntegration } from "@shared/schema"
 import { snowflakeService } from "./services/snowflake";
 import * as BrazeModule from "./services/braze";
 import { s3Storage } from "./services/s3Storage";
+import { db } from "./db";
+import { eq, and } from "drizzle-orm";
 import { 
   insertTeamSchema, insertDashboardTileInstanceSchema, insertCohortSchema, insertSegmentSchema,
   insertRoleSchema, updateRoleSchema, insertPermissionSchema, insertRolePermissionSchema,

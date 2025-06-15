@@ -56,6 +56,11 @@ interface Role {
 export default function AdminNew() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Fetch environment configurations from database
+  const { data: environmentConfigurations = [] } = useQuery({
+    queryKey: ['/api/environment-configurations'],
+  });
   const [selectedUser, setSelectedUser] = useState<TeamMember | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -324,7 +329,7 @@ export default function AdminNew() {
     }
   };
 
-  const handleSaveEnvironmentConfig = () => {
+  const handleSaveEnvironmentConfig = async () => {
     const getIntegrationName = (integrationId: string) => {
       if (integrationId === 'none' || !integrationId) return 'No integration configured';
       const integration = integrations.find((int: any) => int.id === integrationId);
@@ -332,32 +337,65 @@ export default function AdminNew() {
     };
 
     const cleanIntegrationId = (id: string) => id === 'none' ? '' : id;
+    const currentEnv = environments.find(e => e.id === selectedConfigEnv);
 
-    setEnvironments(prev => prev.map(env => 
-      env.id === selectedConfigEnv 
-        ? {
-            ...env,
-            databases: (() => {
-              const updatedDatabases: any = {};
-              activeIntegrationTypes.forEach(type => {
-                const configKey = `${type}IntegrationId`;
-                const integrationId = envConfig[configKey];
-                updatedDatabases[type] = {
-                  integrationId: cleanIntegrationId(integrationId), 
-                  integrationName: getIntegrationName(integrationId),
-                  status: integrationId && integrationId !== 'none' ? 'connected' : 'disconnected' 
-                };
-              });
-              return updatedDatabases;
-            })()
-          }
-        : env
-    ));
-    setShowEnvConfigModal(false);
-    toast({
-      title: "Environment configured",
-      description: `${environments.find(e => e.id === selectedConfigEnv)?.name} environment updated successfully`
-    });
+    if (!currentEnv) return;
+
+    try {
+      // Save each integration type configuration to database
+      for (const type of activeIntegrationTypes) {
+        const configKey = `${type}IntegrationId`;
+        const integrationId = envConfig[configKey];
+        
+        await apiRequest('/api/environment-configurations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            environmentId: selectedConfigEnv,
+            environmentName: currentEnv.name,
+            integrationType: type,
+            integrationId: cleanIntegrationId(integrationId)
+          })
+        });
+      }
+
+      // Invalidate cache to refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/environment-configurations'] });
+
+      // Update local state
+      setEnvironments(prev => prev.map(env => 
+        env.id === selectedConfigEnv 
+          ? {
+              ...env,
+              databases: (() => {
+                const updatedDatabases: any = {};
+                activeIntegrationTypes.forEach(type => {
+                  const configKey = `${type}IntegrationId`;
+                  const integrationId = envConfig[configKey];
+                  updatedDatabases[type] = {
+                    integrationId: cleanIntegrationId(integrationId), 
+                    integrationName: getIntegrationName(integrationId),
+                    status: integrationId && integrationId !== 'none' ? 'connected' : 'disconnected' 
+                  };
+                });
+                return updatedDatabases;
+              })()
+            }
+          : env
+      ));
+
+      setShowEnvConfigModal(false);
+      toast({
+        title: "Environment configured",
+        description: `${currentEnv.name} environment saved to database successfully`
+      });
+    } catch (error: any) {
+      toast({
+        title: "Configuration failed",
+        description: error.message || "Failed to save environment configuration",
+        variant: "destructive"
+      });
+    }
   };
 
   // Helper functions to filter integrations by type
@@ -458,6 +496,35 @@ export default function AdminNew() {
       databases: initializeEnvironmentDatabases(activeIntegrationTypes)
     })));
   }, [activeIntegrationTypes]);
+
+  // Load environment configurations from database
+  React.useEffect(() => {
+    if (environmentConfigurations.length > 0) {
+      setEnvironments(prev => prev.map(env => {
+        const envConfigs = environmentConfigurations.filter((config: any) => 
+          config.environmentId === env.id
+        );
+        
+        const updatedDatabases = { ...env.databases };
+        
+        envConfigs.forEach((config: any) => {
+          if (updatedDatabases[config.integrationType]) {
+            const integration = integrations.find((int: any) => int.id === config.integrationId);
+            updatedDatabases[config.integrationType] = {
+              integrationId: config.integrationId,
+              integrationName: integration ? integration.name : 'Integration not found',
+              status: config.integrationId ? 'connected' : 'disconnected'
+            };
+          }
+        });
+
+        return {
+          ...env,
+          databases: updatedDatabases
+        };
+      }));
+    }
+  }, [environmentConfigurations, integrations]);
 
   const handleStartMigration = async () => {
     if (!selectedSourceEnv || !selectedTargetEnv) {
