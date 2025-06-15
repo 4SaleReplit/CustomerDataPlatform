@@ -1,5 +1,5 @@
-# Backend Dockerfile - Production-optimized Node.js API
-FROM node:18-alpine AS builder
+# Backend Dockerfile - Production-optimized Node.js API (ARM64)
+FROM --platform=linux/arm64 node:18-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache python3 make g++
@@ -21,8 +21,8 @@ COPY shared/ ./shared/
 # Build TypeScript
 RUN npm run build
 
-# Production stage
-FROM node:18-alpine
+# Production stage - ARM64 optimized
+FROM --platform=linux/arm64 node:18-alpine
 
 # Install production dependencies only
 WORKDIR /app
