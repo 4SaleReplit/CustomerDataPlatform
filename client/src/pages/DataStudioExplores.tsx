@@ -37,6 +37,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { analytics } from '@/lib/amplitude';
 
 interface Explore {
   id: string;
@@ -367,7 +368,15 @@ export function DataStudioExplores() {
           </div>
           <Dialog open={showNewExplore} onOpenChange={setShowNewExplore}>
             <DialogTrigger asChild>
-              <Button size="sm">
+              <Button 
+                size="sm"
+                onClick={() => {
+                  analytics.buttonClicked('New Explore', 'Explores', {
+                    action: 'open_create_dialog',
+                    screen_name: 'data_studio_explores'
+                  });
+                }}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 New Explore
               </Button>

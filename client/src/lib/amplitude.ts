@@ -15,9 +15,6 @@ export const initializeAmplitude = () => {
     amplitude.init(AMPLITUDE_API_KEY, undefined, {
       defaultTracking: false, // Disable all default tracking
       autocapture: false, // Disable all autocapture
-      trackingOptions: {
-        pageViews: false, // Explicitly disable page views
-      },
     });
     console.log('Amplitude initialized successfully');
   } else {

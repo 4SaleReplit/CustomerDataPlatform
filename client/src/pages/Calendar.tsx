@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'wouter';
+import { analytics } from '@/lib/amplitude';
 
 // Mock campaign events
 const mockEvents = [
@@ -121,18 +122,39 @@ export default function Calendar() {
         <div className="flex gap-2">
           <Button
             variant={viewMode === 'month' ? 'default' : 'outline'}
-            onClick={() => setViewMode('month')}
+            onClick={() => {
+              analytics.buttonClicked('Month View', 'Calendar', {
+                action: 'change_view_mode',
+                view_mode: 'month',
+                current_view: viewMode
+              });
+              setViewMode('month');
+            }}
           >
             Month
           </Button>
           <Button
             variant={viewMode === 'week' ? 'default' : 'outline'}
-            onClick={() => setViewMode('week')}
+            onClick={() => {
+              analytics.buttonClicked('Week View', 'Calendar', {
+                action: 'change_view_mode',
+                view_mode: 'week',
+                current_view: viewMode
+              });
+              setViewMode('week');
+            }}
           >
             Week
           </Button>
           <Link to="/campaigns/new">
-            <Button>
+            <Button
+              onClick={() => {
+                analytics.buttonClicked('New Campaign', 'Calendar', {
+                  action: 'navigate_to_create',
+                  destination: '/campaigns/new'
+                });
+              }}
+            >
               <Plus className="mr-2 h-4 w-4" />
               New Campaign
             </Button>
