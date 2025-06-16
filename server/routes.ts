@@ -2108,11 +2108,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/integrations", async (req, res) => {
     try {
       const validatedData = insertIntegrationSchema.parse(req.body);
+      
+      // Encrypt credentials if provided
+      if (validatedData.credentials && typeof validatedData.credentials === 'object' && !Array.isArray(validatedData.credentials)) {
+        const { credentialManager } = await import('./services/credentialManager');
+        const encryptedCredentials = credentialManager.encryptCredentials(validatedData.credentials as Record<string, any>);
+        validatedData.credentials = encryptedCredentials;
+      }
+      
       const integration = await storage.createIntegration(validatedData);
       res.status(201).json(integration);
     } catch (error) {
       console.error("Create integration error:", error);
-      res.status(400).json({ error: "Failed to create integration" });
+      res.status(400).json({ 
+        error: error instanceof Error ? error.message : "Failed to create integration" 
+      });
     }
   });
 

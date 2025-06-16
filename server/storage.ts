@@ -441,9 +441,19 @@ export class DatabaseStorage implements IStorage {
     return integration || undefined;
   }
 
-  async getIntegrationByType(type: string): Promise<Integration | undefined> {
-    const [integration] = await db.select().from(integrations).where(eq(integrations.type, type));
+  async getIntegrationsByType(type: string): Promise<Integration[]> {
+    return await db.select().from(integrations).where(eq(integrations.type, type));
+  }
+
+  async getActiveIntegrationByType(type: string): Promise<Integration | undefined> {
+    const [integration] = await db.select().from(integrations)
+      .where(and(eq(integrations.type, type), eq(integrations.status, 'connected')));
     return integration || undefined;
+  }
+
+  async getIntegrationByType(type: string): Promise<Integration | undefined> {
+    // Return the first connected integration of this type for backward compatibility
+    return this.getActiveIntegrationByType(type);
   }
 
   async createIntegration(insertIntegration: InsertIntegration): Promise<Integration> {
