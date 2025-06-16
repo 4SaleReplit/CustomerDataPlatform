@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertIntegrationSchema, type InsertIntegration } from "@shared/schema";
-import { snowflakeService } from "./services/snowflake";
+// Snowflake service is now dynamically imported where needed
 import * as BrazeModule from "./services/braze";
 import { s3Storage } from "./services/s3Storage";
 import { db } from "./db";
@@ -1775,28 +1775,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case 'postgresql':
           try {
             const { Pool } = await import('pg');
-            const testPool = new Pool({
-              host: credentials.host,
-              port: parseInt(credentials.port) || 5432,
-              database: credentials.database,
-              user: credentials.username,
-              password: credentials.password,
-              ssl: credentials.ssl !== 'disable'
-            });
+            let poolConfig: any;
 
+            // Handle connection string vs individual fields
+            if (credentials.connectionString && !credentials.useIndividualFields) {
+              poolConfig = {
+                connectionString: credentials.connectionString
+              };
+            } else {
+              poolConfig = {
+                host: credentials.host,
+                port: parseInt(credentials.port) || 5432,
+                database: credentials.database,
+                user: credentials.username,
+                password: credentials.password,
+                ssl: credentials.ssl !== 'disable'
+              };
+            }
+
+            const testPool = new Pool(poolConfig);
             const client = await testPool.connect();
-            await client.query('SELECT 1');
+            
+            // Test basic connectivity and get database info
+            const result = await client.query('SELECT version() as version, current_database() as database');
             client.release();
             await testPool.end();
 
             res.json({
               success: true,
-              message: "PostgreSQL connection successful"
+              message: "PostgreSQL connection successful",
+              metadata: {
+                version: result.rows[0].version,
+                database: result.rows[0].database
+              }
             });
-          } catch (error) {
+          } catch (error: any) {
             res.status(400).json({
               success: false,
-              error: "PostgreSQL connection failed. Check your credentials."
+              error: `PostgreSQL connection failed: ${error.message}`
             });
           }
           break;

@@ -140,6 +140,7 @@ export class CredentialManager {
     username: string;
     password: string;
     ssl: boolean;
+    connectionString?: string;
   } | null> {
     const credentials = await this.getIntegrationCredentials('postgresql');
     
@@ -147,6 +148,26 @@ export class CredentialManager {
       return null;
     }
 
+    // If connection string is provided, parse it
+    if (credentials.connectionString && !credentials.useIndividualFields) {
+      try {
+        const url = new URL(credentials.connectionString);
+        return {
+          host: url.hostname || 'localhost',
+          port: parseInt(url.port) || 5432,
+          database: url.pathname.slice(1) || '',
+          username: url.username || '',
+          password: url.password || '',
+          ssl: url.searchParams.get('sslmode') !== 'disable',
+          connectionString: credentials.connectionString
+        };
+      } catch (error) {
+        console.error('Error parsing PostgreSQL connection string:', error);
+        // Fall back to individual fields if parsing fails
+      }
+    }
+
+    // Use individual fields
     return {
       host: credentials.host || 'localhost',
       port: parseInt(credentials.port) || 5432,
