@@ -432,6 +432,8 @@ export const scheduledReports = pgTable("scheduled_reports", {
   lastError: text("last_error"),
   airflowDagId: varchar("airflow_dag_id", { length: 255 }),
   airflowTaskId: varchar("airflow_task_id", { length: 255 }),
+  airflowConfiguration: jsonb("airflow_configuration").default('{}'), // Complete Airflow DAG configuration
+  pdfDeliveryUrl: text("pdf_delivery_url"), // Public URL for PDF delivery
   placeholderConfig: jsonb("placeholder_config").default('{}'), // Available placeholders and their sources
   formatSettings: jsonb("format_settings").default('{}'), // PDF/Excel export settings
   createdBy: uuid("created_by").references(() => team.id, { onDelete: 'set null' }),
