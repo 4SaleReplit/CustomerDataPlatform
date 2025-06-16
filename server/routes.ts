@@ -466,6 +466,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/dashboard/layout", async (req, res) => {
+    try {
+      const { tiles } = req.body;
+      console.log("Saving dashboard layout with", tiles.length, "tiles");
+      
+      // Convert tiles to the format expected by storage
+      const tileInstances = tiles.map((tile: any) => ({
+        tileId: tile.id || tile.tileId,
+        dashboardId: tile.dashboardId || null,
+        type: tile.type,
+        title: tile.title,
+        x: tile.x,
+        y: tile.y,
+        width: tile.width,
+        height: tile.height,
+        icon: tile.icon,
+        dataSource: tile.dataSource,
+        refreshConfig: tile.refreshConfig
+      }));
+      
+      const savedTiles = await storage.saveDashboardLayout(tileInstances);
+      console.log("Dashboard layout saved successfully");
+      res.json({ success: true, tiles: savedTiles });
+    } catch (error) {
+      console.error("Save dashboard layout error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to save dashboard layout" 
+      });
+    }
+  });
+
   // Dashboard tile data loading endpoint
   app.post("/api/dashboard/tiles/:tileId/data", async (req, res) => {
     try {

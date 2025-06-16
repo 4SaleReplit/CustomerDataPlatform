@@ -244,8 +244,10 @@ function Dashboard() {
 
   const handleSaveLayout = async () => {
     try {
+      console.log('Saving dashboard layout with tiles:', tiles);
+      
       // Save layout to database
-      await apiRequest('/api/dashboard/layout', {
+      const response = await apiRequest('/api/dashboard/layout', {
         method: 'POST',
         body: JSON.stringify({ tiles }),
         headers: {
@@ -253,14 +255,18 @@ function Dashboard() {
         }
       });
       
+      console.log('Dashboard layout save response:', response);
+      setIsEditMode(false);
+      
       toast({
         title: "Layout Saved",
         description: "Your dashboard layout has been saved successfully.",
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Dashboard save error:', error);
       toast({
         title: "Save Failed",
-        description: "Failed to save dashboard layout",
+        description: error.message || "Failed to save dashboard layout",
         variant: "destructive",
       });
     }
