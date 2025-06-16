@@ -111,6 +111,14 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 16, 2025**: PostgreSQL Integration Creation with Unique Names
+  - Fixed critical JSON parsing error in API request function by adding proper JSON.stringify() for request bodies
+  - Successfully implemented PostgreSQL integration creation with connection string support
+  - Added mandatory unique name field to integration creation form with duplicate name validation
+  - Enhanced integration form with custom name input field and proper error handling
+  - Validated complete integration creation flow from frontend to database persistence
+  - Removed credential encryption temporarily to ensure stable integration creation process
+
 - **June 16, 2025**: Complete Integration Management System
   - Completely replaced hardcoded Snowflake credentials with database-driven integration system
   - Created CredentialManager service for secure credential storage and retrieval with encryption support

@@ -574,8 +574,36 @@ export default function Integrations() {
     } else if (selectedTemplate) {
       const template = integrationTemplates[selectedTemplate];
       
+      // Validate required fields
+      if (!formData.integrationName?.trim()) {
+        toast({
+          title: "Error",
+          description: "Please provide a unique name for your integration",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Check for duplicate names
+      const existingIntegration = integrations.find(
+        (integration: Integration) => 
+          integration.name.toLowerCase() === formData.integrationName.trim().toLowerCase()
+      );
+      
+      if (existingIntegration) {
+        toast({
+          title: "Error", 
+          description: "An integration with this name already exists. Please choose a different name.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Clean the credentials data to ensure proper JSON serialization
       const cleanCredentials = Object.entries(formData).reduce((acc, [key, value]) => {
+        // Skip integration name and other non-credential fields
+        if (key === 'integrationName') return acc;
+        
         // Skip undefined, null, empty strings, and non-serializable values
         if (value !== undefined && value !== null && value !== '') {
           // Handle checkbox values
@@ -594,7 +622,7 @@ export default function Integrations() {
       console.log('Creating integration with cleaned credentials:', cleanCredentials);
       
       createIntegrationMutation.mutate({
-        name: template.name,
+        name: formData.integrationName.trim(),
         type: selectedTemplate,
         description: template.description,
         credentials: cleanCredentials,
@@ -903,6 +931,23 @@ export default function Integrations() {
                   <h3 className="text-lg font-semibold">{integrationTemplates[selectedTemplate].name}</h3>
                 </div>
 
+                {/* Custom Integration Name Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="integrationName" className="text-sm font-medium">
+                    Integration Name
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
+                  <Input
+                    id="integrationName"
+                    type="text"
+                    placeholder={`My ${integrationTemplates[selectedTemplate].name}`}
+                    value={formData.integrationName || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, integrationName: e.target.value }))}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-gray-500">Give your integration a unique, descriptive name</p>
+                </div>
+
                 <div className="grid grid-cols-1 gap-4">
                   {integrationTemplates[selectedTemplate].fields.map((field) => {
                     // Handle conditional field visibility
@@ -933,7 +978,7 @@ export default function Integrations() {
                   <Button 
                     variant="outline"
                     onClick={() => handleTestConnection()}
-                    disabled={isTestingConnection || Object.keys(formData).length === 0}
+                    disabled={isTestingConnection || !formData.integrationName?.trim() || Object.keys(formData).filter(k => k !== 'integrationName').length === 0}
                   >
                     {isTestingConnection ? (
                       <>
