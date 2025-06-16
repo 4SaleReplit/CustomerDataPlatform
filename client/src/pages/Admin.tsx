@@ -69,6 +69,12 @@ export default function Admin() {
     permissions: [] as string[]
   });
 
+  // Fetch integrations data for migration
+  const { data: integrations = [] } = useQuery({
+    queryKey: ['/api/integrations'],
+    queryFn: () => apiRequest('/api/integrations')
+  });
+
   // Migration state management
   const [currentEnvironment, setCurrentEnvironment] = useState('dev');
   const [environments, setEnvironments] = useState([
@@ -1153,14 +1159,16 @@ export default function Admin() {
                     </Select>
                   </div>
                   <div>
-                    <Label>Target Environment</Label>
+                    <Label>Target Integration</Label>
                     <Select value={selectedTargetEnv} onValueChange={setSelectedTargetEnv}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select target" />
+                        <SelectValue placeholder="Select target database" />
                       </SelectTrigger>
                       <SelectContent>
-                        {environments.map(env => (
-                          <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
+                        {integrations.filter((i: any) => i.type === 'postgresql' && i.id !== selectedSourceEnv).map((integration: any) => (
+                          <SelectItem key={integration.id} value={integration.id}>
+                            {integration.name} ({integration.status})
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
