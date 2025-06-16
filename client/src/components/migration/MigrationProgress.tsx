@@ -16,6 +16,18 @@ interface MigrationProgress {
   status: 'running' | 'completed' | 'error' | 'cancelled';
   startTime: string;
   error?: string;
+  migrationMetadata?: {
+    sourceDatabase: string;
+    targetDatabase: string;
+    totalTables: number;
+    totalSchemas: number;
+    totalColumns: number;
+    totalRowsMigrated: number;
+    tablesCompleted: string[];
+    startTime: string;
+    endTime?: string;
+    duration?: number;
+  };
 }
 
 interface MigrationProgressProps {
@@ -226,6 +238,54 @@ export function MigrationProgress({ sessionId, onComplete, onError }: MigrationP
           <span>Duration:</span>
           <span>{formatDuration()}</span>
         </div>
+
+        {/* Migration Completion Summary */}
+        {progress.status === 'completed' && progress.migrationMetadata && (
+          <div className="p-4 bg-green-50 border border-green-200 rounded-md space-y-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              <h4 className="font-semibold text-green-800">Migration Completed Successfully!</h4>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="space-y-2">
+                <div className="font-medium text-green-800">Source & Destination</div>
+                <div className="text-green-700">
+                  <div>From: {progress.migrationMetadata.sourceDatabase}</div>
+                  <div>To: {progress.migrationMetadata.targetDatabase}</div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="font-medium text-green-800">Migration Statistics</div>
+                <div className="text-green-700">
+                  <div>Tables: {progress.migrationMetadata.totalTables}</div>
+                  <div>Schemas: {progress.migrationMetadata.totalSchemas}</div>
+                  <div>Columns: {progress.migrationMetadata.totalColumns}</div>
+                  <div>Rows: {progress.migrationMetadata.totalRowsMigrated.toLocaleString()}</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="font-medium text-green-800">Duration</div>
+              <div className="text-green-700">
+                {progress.migrationMetadata.duration ? 
+                  `${Math.floor(progress.migrationMetadata.duration / 60000)}m ${Math.floor((progress.migrationMetadata.duration % 60000) / 1000)}s` 
+                  : 'N/A'}
+              </div>
+            </div>
+            
+            {progress.migrationMetadata.tablesCompleted.length > 0 && (
+              <div className="space-y-2">
+                <div className="font-medium text-green-800">Tables Migrated</div>
+                <div className="text-green-700 text-xs">
+                  {progress.migrationMetadata.tablesCompleted.join(', ')}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Error Message */}
         {progress.status === 'error' && progress.error && (

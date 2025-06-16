@@ -37,6 +37,18 @@ interface MigrationProgress {
   status: 'running' | 'completed' | 'error' | 'cancelled';
   startTime: Date;
   error?: string;
+  migrationMetadata?: {
+    sourceDatabase: string;
+    targetDatabase: string;
+    totalTables: number;
+    totalSchemas: number;
+    totalColumns: number;
+    totalRowsMigrated: number;
+    tablesCompleted: string[];
+    startTime: string;
+    endTime?: string;
+    duration?: number;
+  };
 }
 
 // Configure multer for file uploads
@@ -3491,6 +3503,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalTables = tables.length;
       let migratedTables = 0;
       let totalRowsMigrated = 0;
+      let totalColumns = 0;
+      const tablesCompleted: string[] = [];
+
+      // Get source and target database names
+      const sourceDbName = sourceConfig.name || sourceConfig.connectionString?.split('/').pop()?.split('?')[0] || 'Source Database';
+      const targetDbName = targetConfig.name || targetConfig.connectionString?.split('/').pop()?.split('?')[0] || 'Target Database';
 
       updateProgress('Schema Discovery', `Found ${totalTables} tables to migrate`, 20, totalTables, 0);
       console.log(`Tables to migrate: ${tables.join(', ')}`);
@@ -3577,6 +3595,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           await targetPool.query(createTableQuery);
           console.log(`Created table schema: ${table}`);
+          
+          // Count columns for metadata
+          totalColumns += structureResult.rows.length;
 
           // Get row count for progress tracking
           const countResult = await sourcePool.query(`SELECT COUNT(*) FROM "${table}"`);
@@ -3641,7 +3662,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const tableDuration = tableEndTime - tableStartTime;
 
           migratedTables++;
-          updateProgress('Table Complete', `✓ Table ${table}: schema created, ${totalRows} rows migrated`, 
+          tablesCompleted.push(table);
+          updateProgress('Table Complete', `✓ Table ${table}: schema created, ${processedRows} rows migrated`, 
             30 + (migratedTables / totalTables) * 60, totalTables, migratedTables);
           
           console.log(`Completed migration for table: ${table} (${processedRows} rows) in ${tableDuration}ms`);
