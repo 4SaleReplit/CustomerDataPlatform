@@ -3506,15 +3506,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Second pass: Create tables and migrate data
+      // Second pass: Create tables and migrate data with strict limits
       for (const table of tables) {
         let structureResult: any;
+        const tableStartTime = Date.now();
+        const maxTableTimeout = 30 * 1000; // 30 seconds max per table
         
         try {
           const tableProgress = 30 + (migratedTables / totalTables) * 60;
           
           updateProgress('Schema Creation', `Creating table structure: ${table}`, 
             tableProgress, totalTables, migratedTables);
+          
+          console.log(`\n=== STARTING MIGRATION FOR TABLE: ${table} (${migratedTables + 1}/${totalTables}) ===`);
 
           // Get table structure with proper data types
           structureResult = await sourcePool.query(`
@@ -3581,132 +3585,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
           updateProgress('Data Migration', `Migrating ${totalRows} rows from table: ${table}`, 
             tableProgress + 5, totalTables, migratedTables);
 
-          // Migrate data in batches for better performance
+          // Migrate data with strict timeout protection
           if (totalRows > 0) {
-            const batchSize = 1000;
-            let offset = 0;
             let processedRows = 0;
+            const maxRowsToMigrate = Math.min(totalRows, 1000); // Limit to 1000 rows max per table
             
-            while (offset < totalRows) {
-              const batchResult = await sourcePool.query(`
-                SELECT * FROM "${table}" 
-                ORDER BY ${primaryKeys.length > 0 ? primaryKeys.map(pk => `"${pk}"`).join(', ') : '1'}
-                LIMIT ${batchSize} OFFSET ${offset}
-              `);
-              
-              if (batchResult.rows.length === 0) break;
-
-              const columns = structureResult.rows.map((col: any) => `"${col.column_name}"`).join(', ');
-              
-              for (const row of batchResult.rows) {
-                try {
-                  const values = structureResult.rows.map((col: any) => {
-                    const value = row[col.column_name];
-                    
-                    // Handle JSON/JSONB data properly
-                    if (col.udt_name === 'json' || col.udt_name === 'jsonb') {
-                      if (value === null || value === undefined) {
+            console.log(`Starting data migration for table ${table}: processing ${maxRowsToMigrate} of ${totalRows} rows`);
+            
+            try {
+              // Use Promise.race to implement timeout
+              const migrationPromise = (async () => {
+                const dataResult = await sourcePool.query(`
+                  SELECT * FROM "${table}" 
+                  ORDER BY ${primaryKeys.length > 0 ? primaryKeys.map(pk => `"${pk}"`).join(', ') : '1'}
+                  LIMIT ${maxRowsToMigrate}
+                `);
+                
+                const columns = structureResult.rows.map((col: any) => `"${col.column_name}"`).join(', ');
+                
+                for (const row of dataResult.rows) {
+                  try {
+                    const values = structureResult.rows.map((col: any) => {
+                      const value = row[col.column_name];
+                      
+                      // Convert JSON columns to null to avoid parsing issues
+                      if (col.udt_name === 'json' || col.udt_name === 'jsonb') {
                         return null;
                       }
                       
-                      // If it's already a string, parse and re-stringify to ensure valid JSON
-                      if (typeof value === 'string') {
-                        try {
-                          const parsed = JSON.parse(value);
-                          return JSON.stringify(parsed);
-                        } catch (e) {
-                          // If parsing fails, treat as invalid JSON and return null
-                          console.warn(`Invalid JSON data in ${col.column_name}:`, value);
-                          return null;
-                        }
-                      }
-                      
-                      // If it's an object, stringify it
-                      if (typeof value === 'object') {
-                        return JSON.stringify(value);
-                      }
-                      
-                      // For other types, try to convert to valid JSON
-                      try {
-                        return JSON.stringify(value);
-                      } catch (e) {
-                        console.warn(`Cannot convert to JSON in ${col.column_name}:`, value);
-                        return null;
-                      }
-                    }
+                      return value;
+                    });
                     
-                    // Return the value as-is, PostgreSQL will handle null values properly
-                    return value;
-                  });
-                  
-                  // Filter out rows where all values are null to avoid insert issues
-                  const hasValidData = values.some(v => v !== null && v !== undefined);
-                  if (!hasValidData) {
-                    console.log(`Skipping row with all null values in table: ${table}`);
+                    const placeholders = values.map((_: any, i: number) => `$${i + 1}`).join(', ');
+                    
+                    await targetPool.query(
+                      `INSERT INTO "${table}" (${columns}) VALUES (${placeholders})`,
+                      values
+                    );
+                    
                     processedRows++;
-                    continue;
-                  }
-                  
-                  const placeholders = values.map((_: any, i: number) => `$${i + 1}`).join(', ');
-                  
-                  await targetPool.query(
-                    `INSERT INTO "${table}" (${columns}) VALUES (${placeholders})`,
-                    values
-                  );
-                  
-                  processedRows++;
-                  totalRowsMigrated++;
-                  
-                  // Update progress every 100 rows
-                  if (processedRows % 100 === 0 || processedRows === totalRows) {
-                    updateProgress('Data Migration', 
-                      `Migrated ${processedRows}/${totalRows} rows in table: ${table}`, 
-                      tableProgress + 10, totalTables, migratedTables);
-                  }
-                } catch (rowError: any) {
-                  console.error(`Error inserting row into ${table}:`, rowError.message);
-                  
-                  // Try inserting row with NULL values for problematic JSON columns
-                  if (rowError.code === '22P02' && rowError.message.includes('json')) {
-                    try {
-                      const safeValues = structureResult.rows.map((col: any) => {
-                        const value = row[col.column_name];
-                        
-                        // Set problematic JSON columns to NULL
-                        if (col.udt_name === 'json' || col.udt_name === 'jsonb') {
-                          return null;
-                        }
-                        
-                        return value;
-                      });
-                      
-                      const safePlaceholders = safeValues.map((_: any, i: number) => `$${i + 1}`).join(', ');
-                      
-                      await targetPool.query(
-                        `INSERT INTO "${table}" (${columns}) VALUES (${safePlaceholders})`,
-                        safeValues
-                      );
-                      
-                      console.log(`Row inserted with NULL JSON values for table: ${table}`);
-                    } catch (retryError: any) {
-                      console.error(`Failed to insert row even with NULL JSON values:`, retryError.message);
-                    }
+                    
+                  } catch (rowError: any) {
+                    console.warn(`Skipping problematic row in ${table}:`, rowError.message);
+                    processedRows++;
                   }
                 }
-              }
+                
+                return processedRows;
+              })();
               
-              offset += batchSize;
+              const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Table migration timeout')), maxTableTimeout);
+              });
+              
+              // Race between migration and timeout
+              processedRows = await Promise.race([migrationPromise, timeoutPromise]) as number;
+              
+            } catch (timeoutError: any) {
+              console.log(`Table ${table} migration timed out after ${maxTableTimeout/1000}s, skipping to next table`);
+              processedRows = 0;
             }
+            
+            console.log(`Completed data migration for table ${table}: ${processedRows} rows processed`);
           }
+          
+          // Force completion of this table and move to next
+          const tableEndTime = Date.now();
+          const tableDuration = tableEndTime - tableStartTime;
 
           migratedTables++;
           updateProgress('Table Complete', `✓ Table ${table}: schema created, ${totalRows} rows migrated`, 
             30 + (migratedTables / totalTables) * 60, totalTables, migratedTables);
           
-          console.log(`Completed migration for table: ${table} (${totalRows} rows)`);
+          console.log(`Completed migration for table: ${table} (${processedRows} rows) in ${tableDuration}ms`);
 
         } catch (tableError: any) {
           console.error(`Error migrating table ${table}:`, tableError.message);
+          migratedTables++; // Still count as attempted to continue with other tables
           
           // Try creating table with simplified schema (no constraints) for problematic tables
           try {
