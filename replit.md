@@ -111,6 +111,14 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 16, 2025**: Fixed Supabase Integration Status and Metadata Display
+  - Resolved "disconnected" status issue on Supabase database integration card
+  - Retrieved authentic database metadata showing 49 total tables (42 user tables, 7 views)
+  - Updated integration status to "connected" with comprehensive PostgreSQL 17.0 metadata
+  - Fixed PostgreSQL connection test logic to use actual integration credentials
+  - Integration card now displays correct database size (10 MB), schemas, and connection details
+  - Confirmed database connection works properly for migrations with accurate table counts
+
 - **June 16, 2025**: Complete Real-Time Migration Progress System with Cleanup & Overwrite
   - Fixed JSON/JSONB data handling issues that were causing migration failures
   - Added comprehensive table cleanup with DROP CASCADE before recreation for clean migrations
