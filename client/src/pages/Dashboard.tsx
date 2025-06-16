@@ -220,16 +220,42 @@ function Dashboard() {
     const tile = tiles.find(t => t.id === tileId);
     if (!tile) return;
 
-    // Invalidate and refetch the tile's data
-    await queryClient.invalidateQueries({
-      queryKey: ['/api/snowflake/query', tileId]
-    });
-    
-    toast({
-      title: "Tile Refreshed",
-      description: `${tile.title} has been refreshed with the latest data.`,
-    });
-  }, [tiles, toast]);
+    try {
+      const tileIdForApi = tile.databaseId || tile.id;
+      const queryKey = ['/api/dashboard/tiles', tileIdForApi, 'data'];
+      
+      // Force refetch the tile data using the correct query pattern
+      await queryClient.fetchQuery({
+        queryKey,
+        queryFn: async () => {
+          const response = await apiRequest(`/api/dashboard/tiles/${tileIdForApi}/data`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+          });
+          
+          // Store refreshed data in localStorage
+          const timestamp = new Date();
+          localStorage.setItem(`tile-${tile.id}-lastRefresh`, timestamp.toISOString());
+          localStorage.setItem(`tile-${tile.id}-data`, JSON.stringify(response));
+          
+          return response;
+        }
+      });
+      
+      toast({
+        title: "Tile Refreshed",
+        description: `${tile.title} has been refreshed with the latest data.`,
+      });
+    } catch (error: any) {
+      console.error('Tile refresh error:', error);
+      toast({
+        title: "Refresh Failed",
+        description: `Failed to refresh ${tile.title}`,
+        variant: "destructive",
+      });
+    }
+  }, [tiles, toast, queryClient]);
 
   const handleToggleEditMode = () => {
     setIsEditMode(prev => !prev);
@@ -276,25 +302,31 @@ function Dashboard() {
     setIsLoading(true);
     
     try {
-      // Refresh all tiles by invalidating their queries
-      const refreshPromises = tiles.map(tile => {
-        return queryClient.fetchQuery({
-          queryKey: ['/api/snowflake/query', tile.id],
+      // Refresh all tiles using the correct query pattern that matches DashboardTile.tsx
+      const refreshPromises = tiles.map(async (tile) => {
+        const tileIdForApi = tile.databaseId || tile.id;
+        const queryKey = ['/api/dashboard/tiles', tileIdForApi, 'data'];
+        
+        // Force refetch the tile data
+        const response = await queryClient.fetchQuery({
+          queryKey,
           queryFn: async () => {
-            const response = await apiRequest('/api/snowflake/query', {
+            const apiResponse = await apiRequest(`/api/dashboard/tiles/${tileIdForApi}/data`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ query: tile.dataSource.query })
+              body: JSON.stringify({})
             });
             
-            // Store refreshed data in localStorage
+            // Store refreshed data in localStorage to match tile behavior
             const timestamp = new Date();
             localStorage.setItem(`tile-${tile.id}-lastRefresh`, timestamp.toISOString());
-            localStorage.setItem(`tile-${tile.id}-data`, JSON.stringify(response));
+            localStorage.setItem(`tile-${tile.id}-data`, JSON.stringify(apiResponse));
             
-            return response;
+            return apiResponse;
           }
         });
+        
+        return response;
       });
       
       await Promise.all(refreshPromises);
@@ -303,10 +335,11 @@ function Dashboard() {
         title: "Dashboard Refreshed",
         description: "All tile data has been refreshed successfully.",
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Global refresh error:', error);
       toast({
         title: "Refresh Failed",
-        description: "Failed to refresh dashboard data",
+        description: error.message || "Failed to refresh dashboard data",
         variant: "destructive",
       });
     } finally {
