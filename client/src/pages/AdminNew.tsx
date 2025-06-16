@@ -1060,27 +1060,8 @@ export default function AdminNew() {
               <CardTitle>Recent Migrations</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-                  <div className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-600 mr-3" />
-                    <div>
-                      <p className="font-medium">Development → Staging</p>
-                      <p className="text-sm text-muted-foreground">Migrated 15,432 records • 2 hours ago</p>
-                    </div>
-                  </div>
-                  <Badge className="bg-green-100 text-green-800">Completed</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="flex items-center">
-                    <Clock className="h-4 w-4 text-blue-600 mr-3" />
-                    <div>
-                      <p className="font-medium">Staging → Production</p>
-                      <p className="text-sm text-muted-foreground">Schema migration in progress • Started 30 minutes ago</p>
-                    </div>
-                  </div>
-                  <Badge className="bg-blue-100 text-blue-800">In Progress</Badge>
-                </div>
+              <div className="text-center py-8 text-muted-foreground">
+                No migrations found. Start your first migration to see history here.
               </div>
             </CardContent>
           </Card>

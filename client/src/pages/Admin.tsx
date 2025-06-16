@@ -71,38 +71,6 @@ export default function Admin() {
 
   // Migration state management
   const [currentEnvironment, setCurrentEnvironment] = useState('dev');
-  const [environments, setEnvironments] = useState([
-    {
-      id: 'dev',
-      name: 'Development',
-      status: 'active',
-      databases: {
-        postgres: { url: 'postgresql://dev-user:pass@dev-host:5432/dev_db', status: 'connected' },
-        redis: { url: 'redis://dev-redis:6379', status: 'connected' },
-        s3: { bucket: 'dev-bucket', region: 'us-east-1', status: 'connected' }
-      }
-    },
-    {
-      id: 'staging',
-      name: 'Staging',
-      status: 'inactive',
-      databases: {
-        postgres: { url: '', status: 'disconnected' },
-        redis: { url: '', status: 'disconnected' },
-        s3: { bucket: '', region: 'us-east-1', status: 'disconnected' }
-      }
-    },
-    {
-      id: 'production',
-      name: 'Production',
-      status: 'inactive',
-      databases: {
-        postgres: { url: '', status: 'disconnected' },
-        redis: { url: '', status: 'disconnected' },
-        s3: { bucket: '', region: 'us-east-1', status: 'disconnected' }
-      }
-    }
-  ]);
   const [showMigrationModal, setShowMigrationModal] = useState(false);
   const [showEnvConfigModal, setShowEnvConfigModal] = useState(false);
   const [selectedSourceEnv, setSelectedSourceEnv] = useState('');
@@ -304,52 +272,7 @@ export default function Admin() {
     }));
   };
 
-  // Migration handlers
-  const handleSwitchEnvironment = (envId: string) => {
-    setEnvironments(prev => prev.map(env => ({
-      ...env,
-      status: env.id === envId ? 'active' : 'inactive'
-    })));
-    setCurrentEnvironment(envId);
-    toast({
-      title: "Environment switched",
-      description: `Now using ${environments.find(e => e.id === envId)?.name} environment`
-    });
-  };
-
-  const handleConfigureEnvironment = (envId: string) => {
-    const env = environments.find(e => e.id === envId);
-    if (env) {
-      setSelectedConfigEnv(envId);
-      setEnvConfig({
-        postgres: env.databases.postgres.url,
-        redis: env.databases.redis.url,
-        s3Bucket: env.databases.s3.bucket,
-        s3Region: env.databases.s3.region
-      });
-      setShowEnvConfigModal(true);
-    }
-  };
-
-  const handleSaveEnvironmentConfig = () => {
-    setEnvironments(prev => prev.map(env => 
-      env.id === selectedConfigEnv 
-        ? {
-            ...env,
-            databases: {
-              postgres: { url: envConfig.postgres, status: envConfig.postgres ? 'connected' : 'disconnected' },
-              redis: { url: envConfig.redis, status: envConfig.redis ? 'connected' : 'disconnected' },
-              s3: { bucket: envConfig.s3Bucket, region: envConfig.s3Region, status: envConfig.s3Bucket ? 'connected' : 'disconnected' }
-            }
-          }
-        : env
-    ));
-    setShowEnvConfigModal(false);
-    toast({
-      title: "Environment configured",
-      description: `${environments.find(e => e.id === selectedConfigEnv)?.name} environment updated successfully`
-    });
-  };
+  // Migration handlers removed - using authentic integration data only
 
   const handleStartMigration = async () => {
     console.log('handleStartMigration called!', { selectedSourceEnv, selectedTargetEnv });
