@@ -931,7 +931,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const query = `SELECT USER_ID FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE ${conditions.rule}`;
-      const queryResult = await snowflakeService.executeQuery(query);
+      
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const dynamicService = await getDynamicSnowflakeService();
+      
+      if (!dynamicService) {
+        return res.status(400).json({ 
+          error: "Snowflake integration not configured",
+          details: "Please configure a Snowflake integration in the Integrations page"
+        });
+      }
+
+      const queryResult = await dynamicService.executeQuery(query);
       
       if (!queryResult.success) {
         return res.status(500).json({ 
@@ -1939,7 +1950,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         LIMIT ${limit} OFFSET ${offset}
       `;
       
-      const result = await snowflakeService.executeQuery(query);
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const dynamicService = await getDynamicSnowflakeService();
+      
+      if (!dynamicService) {
+        return res.status(400).json({ 
+          error: "Snowflake integration not configured",
+          details: "Please configure a Snowflake integration in the Integrations page"
+        });
+      }
+
+      const result = await dynamicService.executeQuery(query);
       
       if (result.success && result.rows) {
         const enrichedUsers = result.rows.map(row => ({
@@ -1998,7 +2019,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         WHERE USER_ID = '${userId}'
       `;
       
-      const result = await snowflakeService.executeQuery(query);
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const dynamicService = await getDynamicSnowflakeService();
+      
+      if (!dynamicService) {
+        return res.status(400).json({ 
+          error: "Snowflake integration not configured",
+          details: "Please configure a Snowflake integration in the Integrations page"
+        });
+      }
+
+      const result = await dynamicService.executeQuery(query);
       
       if (result.success && result.rows && result.rows.length > 0) {
         const row = result.rows[0];
@@ -2134,8 +2165,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
                WHERE TABLE_SCHEMA = '${(integration.credentials as any)?.schema || 'USER_SEGMENTATION_PROJECT_V4'}'`
             ];
 
+            const { getDynamicSnowflakeService } = await import('./services/snowflake');
+            const dynamicService = await getDynamicSnowflakeService();
+            
+            if (!dynamicService) {
+              return res.status(400).json({ 
+                success: false, 
+                error: "Snowflake integration not configured. Please configure a Snowflake integration first." 
+              });
+            }
+
             const results = await Promise.all(
-              queries.map(query => snowflakeService.executeQuery(query))
+              queries.map(query => dynamicService.executeQuery(query))
             );
 
             if (results.every(r => r.success)) {

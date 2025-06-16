@@ -111,6 +111,16 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 16, 2025**: Dynamic Credential Management System Implementation
+  - Completely replaced hardcoded Snowflake credentials with database-driven integration system
+  - Created CredentialManager service for secure credential storage and retrieval with encryption support
+  - Updated all Snowflake service calls across dashboards, SQL editor, cohorts, and segments to use dynamic credentials
+  - Implemented getDynamicSnowflakeService() function that automatically loads credentials from integrations table
+  - Added comprehensive error handling when Snowflake integration is not configured
+  - Platform now uses actual integration credentials stored in database instead of environment variables or hardcoded values
+  - Enhanced security with encrypted credential storage and proper credential validation
+  - Seamless integration with existing UI - users configure once through Integrations page, works everywhere
+
 - **June 16, 2025**: Complete Docker Removal & Production Code Cleanup
   - Completely removed all Docker configurations (Dockerfile.production, docker-compose.production.yml)
   - Removed Docker build scripts (build-optimized.sh, build-production.sh, deploy-production.sh)
