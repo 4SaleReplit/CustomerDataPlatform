@@ -594,7 +594,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Cohort has no calculation query" });
       }
 
-      const queryResult = await snowflakeService.executeQuery(cohort.calculationQuery);
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const dynamicService = await getDynamicSnowflakeService();
+      
+      if (!dynamicService) {
+        return res.status(400).json({ 
+          error: "Snowflake integration not configured",
+          details: "Please configure a Snowflake integration in the Integrations page"
+        });
+      }
+
+      const queryResult = await dynamicService.executeQuery(cohort.calculationQuery);
       if (!queryResult.success) {
         return res.status(500).json({ 
           error: `Failed to execute cohort query: ${queryResult.error}` 
@@ -657,7 +667,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Cohort has no calculation query" });
       }
 
-      const queryResult = await snowflakeService.executeQuery(cohort.calculationQuery);
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const dynamicService = await getDynamicSnowflakeService();
+      
+      if (!dynamicService) {
+        return res.status(400).json({ 
+          error: "Snowflake integration not configured",
+          details: "Please configure a Snowflake integration in the Integrations page"
+        });
+      }
+
+      const queryResult = await dynamicService.executeQuery(cohort.calculationQuery);
       if (!queryResult.success) {
         return res.status(500).json({ error: "Failed to execute cohort query" });
       }
@@ -713,7 +733,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Execute the cohort query to get user IDs
-      const queryResult = await snowflakeService.executeQuery(cohort.calculationQuery);
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const dynamicService = await getDynamicSnowflakeService();
+      
+      if (!dynamicService) {
+        return res.status(400).json({ 
+          error: "Snowflake integration not configured",
+          details: "Please configure a Snowflake integration in the Integrations page"
+        });
+      }
+
+      const queryResult = await dynamicService.executeQuery(cohort.calculationQuery);
       
       if (!queryResult.success || !queryResult.rows) {
         throw new Error(`Query execution failed: ${queryResult.error}`);
@@ -804,19 +834,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const conditions = validatedData.conditions as Record<string, any>;
           if (conditions.rule) {
             const query = `SELECT USER_ID FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE ${conditions.rule}`;
-            const queryResult = await snowflakeService.executeQuery(query);
             
-            if (queryResult.success) {
-              const userCount = queryResult.rows ? queryResult.rows.length : 0;
-              // Update segment with user count
-              await storage.updateSegment(segment.id, { 
-                conditions: { 
-                  ...conditions, 
-                  userCount,
-                  lastCalculatedAt: new Date().toISOString(),
-                  calculationQuery: query
-                }
-              });
+            const { getDynamicSnowflakeService } = await import('./services/snowflake');
+            const dynamicService = await getDynamicSnowflakeService();
+            
+            if (!dynamicService) {
+              console.warn('Snowflake integration not configured for segment calculation');
+              validatedData.conditions = { ...conditions, userCount: 0 };
+            } else {
+              const queryResult = await dynamicService.executeQuery(query);
+            
+              if (queryResult.success) {
+                const userCount = queryResult.rows ? queryResult.rows.length : 0;
+                // Update segment with user count
+                await storage.updateSegment(segment.id, { 
+                  conditions: { 
+                    ...conditions, 
+                    userCount,
+                    lastCalculatedAt: new Date().toISOString(),
+                    calculationQuery: query
+                  }
+                });
+              }
             }
           }
         } catch (calcError) {
