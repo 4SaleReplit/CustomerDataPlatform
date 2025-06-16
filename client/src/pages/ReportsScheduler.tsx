@@ -144,8 +144,15 @@ export function ReportsScheduler() {
   });
 
   // Fetch presentations for dropdown
-  const { data: presentations = [] } = useQuery({
+  const { data: presentations = [], isLoading: presentationsLoading } = useQuery({
     queryKey: ["/api/presentations"],
+    queryFn: async () => {
+      const response = await fetch('/api/presentations');
+      if (!response.ok) {
+        throw new Error('Failed to fetch presentations');
+      }
+      return response.json();
+    }
   });
 
   // Fetch mailing lists
@@ -543,11 +550,17 @@ function SchedulerForm({
               <SelectValue placeholder="Choose a report to schedule" />
             </SelectTrigger>
             <SelectContent>
-              {presentations.map((presentation: Presentation) => (
-                <SelectItem key={presentation.id} value={presentation.id}>
-                  {presentation.title}
-                </SelectItem>
-              ))}
+              {presentationsLoading ? (
+                <div className="p-2 text-sm text-muted-foreground">Loading reports...</div>
+              ) : presentations.length === 0 ? (
+                <div className="p-2 text-sm text-muted-foreground">No reports available</div>
+              ) : (
+                presentations.map((presentation: any) => (
+                  <SelectItem key={presentation.id} value={presentation.id}>
+                    {presentation.title}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>
