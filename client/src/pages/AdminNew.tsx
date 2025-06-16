@@ -1089,58 +1089,100 @@ export default function AdminNew() {
           <Dialog open={showMigrationModal} onOpenChange={setShowMigrationModal}>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Database Migration</DialogTitle>
+                <DialogTitle>Integration Migration</DialogTitle>
                 <DialogDescription>
-                  Migrate data and schema between environments
+                  Migrate data and schema between integrations of the same type
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Source Database</Label>
-                    <Select value={selectedSourceEnv} onValueChange={setSelectedSourceEnv}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select source PostgreSQL database" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {integrations
-                          .filter((integration: any) => integration.type === 'postgresql' && integration.status === 'connected')
-                          .map((integration: any) => (
-                            <SelectItem key={integration.id} value={integration.id}>
-                              <div className="flex items-center space-x-2">
-                                <Database className="h-4 w-4" />
-                                <span>{integration.name}</span>
-                                <Badge variant="secondary" className="text-xs">PostgreSQL</Badge>
-                              </div>
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground mt-1">Choose the database to migrate FROM</p>
-                  </div>
-                  <div>
-                    <Label>Destination Database</Label>
-                    <Select value={selectedTargetEnv} onValueChange={setSelectedTargetEnv}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select destination PostgreSQL database" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {integrations
-                          .filter((integration: any) => integration.type === 'postgresql' && integration.status === 'connected')
-                          .map((integration: any) => (
-                            <SelectItem key={integration.id} value={integration.id}>
-                              <div className="flex items-center space-x-2">
-                                <Database className="h-4 w-4" />
-                                <span>{integration.name}</span>
-                                <Badge variant="secondary" className="text-xs">PostgreSQL</Badge>
-                              </div>
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground mt-1">Choose the database to migrate TO</p>
-                  </div>
+                {/* Integration Type Selection */}
+                <div>
+                  <Label>Integration Type</Label>
+                  <Select value={selectedMigrationType} onValueChange={(value) => {
+                    setSelectedMigrationType(value);
+                    setSelectedSourceEnv('');
+                    setSelectedTargetEnv('');
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select integration type to migrate" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getMigratableIntegrationTypes().map((type) => (
+                        <SelectItem key={type} value={type}>
+                          <div className="flex items-center space-x-2">
+                            <Database className="h-4 w-4" />
+                            <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {getIntegrationsByType(type).length} available
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Only types with 2+ integrations are available for migration
+                  </p>
                 </div>
+
+                {/* Source and Destination Selection - Only show when type is selected */}
+                {selectedMigrationType && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Source Integration</Label>
+                      <Select value={selectedSourceEnv} onValueChange={setSelectedSourceEnv}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={`Select source ${selectedMigrationType}`} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getIntegrationsByType(selectedMigrationType)
+                            .map((integration: any) => (
+                              <SelectItem key={integration.id} value={integration.id}>
+                                <div className="flex items-center space-x-2">
+                                  <Database className="h-4 w-4" />
+                                  <span>{integration.name}</span>
+                                  <Badge 
+                                    variant={integration.status === 'connected' ? 'default' : 'secondary'} 
+                                    className="text-xs"
+                                  >
+                                    {integration.status}
+                                  </Badge>
+                                </div>
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">Choose the integration to migrate FROM</p>
+                    </div>
+                    <div>
+                      <Label>Destination Integration</Label>
+                      <Select value={selectedTargetEnv} onValueChange={setSelectedTargetEnv}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={`Select destination ${selectedMigrationType}`} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getIntegrationsByType(selectedMigrationType)
+                            .filter((integration: any) => integration.id !== selectedSourceEnv)
+                            .map((integration: any) => (
+                              <SelectItem key={integration.id} value={integration.id}>
+                                <div className="flex items-center space-x-2">
+                                  <Database className="h-4 w-4" />
+                                  <span>{integration.name}</span>
+                                  <Badge 
+                                    variant={integration.status === 'connected' ? 'default' : 'secondary'} 
+                                    className="text-xs"
+                                  >
+                                    {integration.status}
+                                  </Badge>
+                                </div>
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">Choose the integration to migrate TO</p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-3">
                   <Label>Migration Options</Label>
@@ -1177,7 +1219,7 @@ export default function AdminNew() {
                   <Button variant="outline" onClick={() => setShowMigrationModal(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={handleStartMigration} disabled={isMigrating || !selectedSourceEnv || !selectedTargetEnv}>
+                  <Button onClick={handleStartMigration} disabled={isMigrating || !selectedMigrationType || !selectedSourceEnv || !selectedTargetEnv}>
                     {isMigrating ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />

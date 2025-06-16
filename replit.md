@@ -111,13 +111,15 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
-- **June 16, 2025**: Database Migration System & Build Fixes
+- **June 16, 2025**: Enhanced Migration System with Integration Type Selection
+  - Fixed migration dropdown issue that was hiding disconnected databases from selection
+  - Added integration type selection as first step in migration process
+  - Enhanced migration interface to show all available integrations regardless of connection status
+  - Added clear status badges (connected/disconnected) for better user decision making
+  - Implemented progressive disclosure: type selection → source selection → destination selection
+  - Migration now supports any integration type with 2+ available instances
   - Fixed critical build error caused by duplicate function declarations in AdminNew.tsx
-  - Implemented comprehensive PostgreSQL-to-PostgreSQL database migration system
-  - Added database selection interface allowing users to choose specific source and target PostgreSQL integrations
-  - Enhanced migration workflow with proper error handling and success feedback
-  - Successfully resolved JSON parsing issues in API requests with proper JSON.stringify() implementation
-  - Application now builds and runs successfully with full migration capabilities
+  - Application now builds and runs successfully with comprehensive migration capabilities
 
 - **June 16, 2025**: PostgreSQL Integration Creation with Unique Names
   - Successfully implemented PostgreSQL integration creation with connection string support
