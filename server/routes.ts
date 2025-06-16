@@ -57,6 +57,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use((err: any, req: any, res: any, next: any) => {
     if (err instanceof SyntaxError && 'body' in err) {
       console.error('JSON parsing error:', err.message);
+      console.error('Request URL:', req.url);
+      console.error('Request method:', req.method);
       return res.status(400).json({
         error: 'Invalid JSON format in request body',
         details: 'Please check your request format and try again'

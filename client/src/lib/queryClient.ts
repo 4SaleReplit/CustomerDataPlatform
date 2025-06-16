@@ -11,13 +11,20 @@ export const queryClient = new QueryClient({
 
 // Default fetcher for API requests
 export async function apiRequest(url: string, options: RequestInit = {}) {
-  const response = await fetch(url, {
+  const config: RequestInit = {
     headers: {
       "Content-Type": "application/json",
       ...options.headers,
     },
     ...options,
-  });
+  };
+
+  // Stringify the body if it's an object
+  if (options.body && typeof options.body === 'object') {
+    config.body = JSON.stringify(options.body);
+  }
+
+  const response = await fetch(url, config);
 
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
