@@ -3485,9 +3485,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const tables = tablesResult.rows.map((row: any) => row.table_name);
       let migratedTables = 0;
+      const totalTables = tables.length;
+
+      updateProgress('Migrating Tables', `Preparing to migrate ${totalTables} tables`, 25, totalTables, 0);
 
       for (const table of tables) {
         try {
+          updateProgress('Creating Schema', `Creating table structure: ${table}`, 
+            25 + (migratedTables / totalTables) * 70, totalTables, migratedTables);
+
           // Get table structure
           const structureResult = await sourcePool.query(`
             SELECT column_name, data_type, is_nullable, column_default
@@ -3507,6 +3513,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           await targetPool.query(createTableQuery);
 
+          // Get row count for progress tracking
+          const countResult = await sourcePool.query(`SELECT COUNT(*) FROM "${table}"`);
+          const totalRows = parseInt(countResult.rows[0].count);
+
+          updateProgress('Migrating Data', `Copying ${totalRows} rows from table: ${table}`, 
+            25 + (migratedTables / totalTables) * 70, totalTables, migratedTables);
+
           // Migrate data
           const dataResult = await sourcePool.query(`SELECT * FROM "${table}"`);
           
@@ -3514,21 +3527,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const columns = structureResult.rows.map((col: any) => `"${col.column_name}"`).join(', ');
             const placeholders = structureResult.rows.map((_: any, i: number) => `$${i + 1}`).join(', ');
             
+            let processedRows = 0;
             for (const row of dataResult.rows) {
               const values = structureResult.rows.map((col: any) => row[col.column_name]);
-              await targetPool.query(
-                `INSERT INTO "${table}" (${columns}) VALUES (${placeholders}) ON CONFLICT DO NOTHING`,
-                values
-              );
+              try {
+                await targetPool.query(
+                  `INSERT INTO "${table}" (${columns}) VALUES (${placeholders}) ON CONFLICT DO NOTHING`,
+                  values
+                );
+                processedRows++;
+                
+                // Update progress every 100 rows
+                if (processedRows % 100 === 0 || processedRows === totalRows) {
+                  updateProgress('Migrating Data', 
+                    `Copied ${processedRows}/${totalRows} rows from table: ${table}`, 
+                    25 + (migratedTables / totalTables) * 70, totalTables, migratedTables);
+                }
+              } catch (rowError) {
+                console.error(`Error inserting row into ${table}:`, rowError);
+                // Continue with next row
+              }
             }
           }
 
           migratedTables++;
+          updateProgress('Table Complete', `Finished migrating table: ${table}`, 
+            25 + (migratedTables / totalTables) * 70, totalTables, migratedTables);
+
         } catch (tableError) {
           console.error(`Error migrating table ${table}:`, tableError);
+          updateProgress('Error', `Failed to migrate table: ${table} - ${tableError.message}`, 
+            25 + (migratedTables / totalTables) * 70, totalTables, migratedTables);
         }
       }
 
+      updateProgress('Finalizing', 'Migration completed successfully', 95, totalTables, migratedTables);
       return { migratedTables, totalTables: tables.length };
     } finally {
       await sourcePool.end();

@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import RoleManagement from './RoleManagement';
+import { MigrationProgress } from '@/components/migration/MigrationProgress';
 
 
 
@@ -108,6 +109,8 @@ export default function Admin() {
   const [selectedTargetEnv, setSelectedTargetEnv] = useState('');
   const [selectedConfigEnv, setSelectedConfigEnv] = useState('');
   const [isMigrating, setIsMigrating] = useState(false);
+  const [migrationSessionId, setMigrationSessionId] = useState('');
+  const [showMigrationProgress, setShowMigrationProgress] = useState(false);
   const [envConfig, setEnvConfig] = useState({
     postgres: '',
     redis: '',
