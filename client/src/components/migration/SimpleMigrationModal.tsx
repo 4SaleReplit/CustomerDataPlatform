@@ -111,6 +111,8 @@ export function SimpleMigrationModal({ isOpen, sessionId, onClose, onComplete, o
   };
 
   if (!isOpen) return null;
+  
+  console.log('SimpleMigrationModal render:', { isOpen, sessionId, progress });
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

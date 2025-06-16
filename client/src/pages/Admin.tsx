@@ -337,10 +337,13 @@ export default function Admin() {
     }
 
     // Show progress popup immediately before starting migration
+    console.log('Starting migration - setting states');
     setShowMigrationModal(false);
     setShowMigrationProgress(true);
     setMigrationSessionId('initializing');
     setIsMigrating(true);
+    
+    console.log('States set:', { showMigrationProgress: true, migrationSessionId: 'initializing' });
     
     toast({
       title: "Migration Starting",
@@ -1275,6 +1278,7 @@ export default function Admin() {
           </Dialog>
 
           {/* Simple Migration Modal - Fixed Implementation */}
+          {console.log('Rendering SimpleMigrationModal with:', { showMigrationProgress, migrationSessionId })}
           <SimpleMigrationModal
             isOpen={showMigrationProgress}
             sessionId={migrationSessionId}
@@ -1282,6 +1286,13 @@ export default function Admin() {
             onComplete={handleMigrationComplete}
             onError={handleMigrationError}
           />
+          
+          {/* Debug overlay to verify state */}
+          {showMigrationProgress && (
+            <div className="fixed top-4 right-4 bg-red-500 text-white p-2 text-xs z-[9999]">
+              DEBUG: Modal should be showing. SessionId: {migrationSessionId}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
