@@ -12,6 +12,9 @@ import {
   slides,
   presentations,
   migrationHistory,
+  scheduledReports,
+  mailingLists,
+  reportExecutions,
   type User, 
   type InsertUser, 
   type Team, 
@@ -46,7 +49,13 @@ import {
   type InsertPresentation,
   type MigrationHistory,
   type InsertMigrationHistory,
-  type UpdateMigrationHistory
+  type UpdateMigrationHistory,
+  type ScheduledReport,
+  type InsertScheduledReport,
+  type MailingList,
+  type InsertMailingList,
+  type ReportExecution,
+  type InsertReportExecution
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, or, and, desc } from "drizzle-orm";
@@ -150,9 +159,31 @@ export interface IStorage {
   // Presentation management
   getPresentations(): Promise<Presentation[]>;
   getPresentation(id: string): Promise<Presentation | undefined>;
+  getPresentationById(id: string): Promise<Presentation | undefined>;
   createPresentation(presentation: InsertPresentation): Promise<Presentation>;
   updatePresentation(id: string, updates: Partial<InsertPresentation>): Promise<Presentation | undefined>;
   deletePresentation(id: string): Promise<boolean>;
+  
+  // Scheduled Reports management
+  getScheduledReports(): Promise<ScheduledReport[]>;
+  getScheduledReportById(id: string): Promise<ScheduledReport | undefined>;
+  createScheduledReport(report: InsertScheduledReport): Promise<ScheduledReport>;
+  updateScheduledReport(id: string, updates: Partial<InsertScheduledReport>): Promise<ScheduledReport | undefined>;
+  deleteScheduledReport(id: string): Promise<boolean>;
+  
+  // Mailing Lists management
+  getMailingLists(): Promise<MailingList[]>;
+  getMailingListById(id: string): Promise<MailingList | undefined>;
+  createMailingList(mailingList: InsertMailingList): Promise<MailingList>;
+  updateMailingList(id: string, updates: Partial<InsertMailingList>): Promise<MailingList | undefined>;
+  deleteMailingList(id: string): Promise<boolean>;
+  
+  // Report Executions management
+  getReportExecutions(scheduledReportId: string): Promise<ReportExecution[]>;
+  getReportExecution(id: string): Promise<ReportExecution | undefined>;
+  createReportExecution(execution: InsertReportExecution): Promise<ReportExecution>;
+  updateReportExecution(id: string, updates: Partial<InsertReportExecution>): Promise<ReportExecution | undefined>;
+  deleteReportExecution(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -744,6 +775,103 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMigrationHistory(id: string): Promise<boolean> {
     const result = await db.delete(migrationHistory).where(eq(migrationHistory.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Presentation management methods
+  async getPresentationById(id: string): Promise<Presentation | undefined> {
+    const [presentation] = await db.select().from(presentations).where(eq(presentations.id, id));
+    return presentation || undefined;
+  }
+
+  // Scheduled Reports management methods
+  async getScheduledReports(): Promise<ScheduledReport[]> {
+    return await db.select().from(scheduledReports).orderBy(desc(scheduledReports.createdAt));
+  }
+
+  async getScheduledReportById(id: string): Promise<ScheduledReport | undefined> {
+    const [report] = await db.select().from(scheduledReports).where(eq(scheduledReports.id, id));
+    return report || undefined;
+  }
+
+  async createScheduledReport(report: InsertScheduledReport): Promise<ScheduledReport> {
+    const [newReport] = await db.insert(scheduledReports).values(report).returning();
+    return newReport;
+  }
+
+  async updateScheduledReport(id: string, updates: Partial<InsertScheduledReport>): Promise<ScheduledReport | undefined> {
+    const [report] = await db
+      .update(scheduledReports)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(scheduledReports.id, id))
+      .returning();
+    return report || undefined;
+  }
+
+  async deleteScheduledReport(id: string): Promise<boolean> {
+    const result = await db.delete(scheduledReports).where(eq(scheduledReports.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Mailing Lists management methods
+  async getMailingLists(): Promise<MailingList[]> {
+    return await db.select().from(mailingLists).orderBy(desc(mailingLists.createdAt));
+  }
+
+  async getMailingListById(id: string): Promise<MailingList | undefined> {
+    const [mailingList] = await db.select().from(mailingLists).where(eq(mailingLists.id, id));
+    return mailingList || undefined;
+  }
+
+  async createMailingList(mailingList: InsertMailingList): Promise<MailingList> {
+    const [newList] = await db.insert(mailingLists).values(mailingList).returning();
+    return newList;
+  }
+
+  async updateMailingList(id: string, updates: Partial<InsertMailingList>): Promise<MailingList | undefined> {
+    const [mailingList] = await db
+      .update(mailingLists)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(mailingLists.id, id))
+      .returning();
+    return mailingList || undefined;
+  }
+
+  async deleteMailingList(id: string): Promise<boolean> {
+    const result = await db.delete(mailingLists).where(eq(mailingLists.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Report Executions management methods
+  async getReportExecutions(scheduledReportId: string): Promise<ReportExecution[]> {
+    return await db
+      .select()
+      .from(reportExecutions)
+      .where(eq(reportExecutions.scheduledReportId, scheduledReportId))
+      .orderBy(desc(reportExecutions.createdAt));
+  }
+
+  async getReportExecution(id: string): Promise<ReportExecution | undefined> {
+    const [execution] = await db.select().from(reportExecutions).where(eq(reportExecutions.id, id));
+    return execution || undefined;
+  }
+
+  async createReportExecution(execution: InsertReportExecution): Promise<ReportExecution> {
+    const [newExecution] = await db.insert(reportExecutions).values(execution).returning();
+    return newExecution;
+  }
+
+  async updateReportExecution(id: string, updates: Partial<InsertReportExecution>): Promise<ReportExecution | undefined> {
+    const [execution] = await db
+      .update(reportExecutions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(reportExecutions.id, id))
+      .returning();
+    return execution || undefined;
+  }
+
+  async deleteReportExecution(id: string): Promise<boolean> {
+    const result = await db.delete(reportExecutions).where(eq(reportExecutions.id, id));
     return result.rowCount !== null && result.rowCount > 0;
   }
 }
