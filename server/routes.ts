@@ -3623,32 +3623,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               const columns = structureResult.rows.map((col: any) => `"${col.column_name}"`).join(', ');
               
-              for (const row of dataResult.rows) {
-                try {
-                  const values = structureResult.rows.map((col: any) => {
-                    const value = row[col.column_name];
+              // Process rows in smaller batches with better error handling
+              const batchSize = 50;
+              for (let i = 0; i < dataResult.rows.length; i += batchSize) {
+                const batch = dataResult.rows.slice(i, i + batchSize);
+                
+                for (const row of batch) {
+                  try {
+                    // Skip rows that have null values in NOT NULL columns
+                    const hasNullInRequired = structureResult.rows.some((col: any) => {
+                      const value = row[col.column_name];
+                      return (value === null || value === undefined) && col.is_nullable === 'NO';
+                    });
                     
-                    // Convert JSON columns to null to avoid parsing issues
-                    if (col.udt_name === 'json' || col.udt_name === 'jsonb') {
-                      return null;
+                    if (hasNullInRequired) {
+                      processedRows++;
+                      continue; // Skip this row entirely
                     }
                     
-                    return value;
-                  });
-                  
-                  const placeholders = values.map((_: any, i: number) => `$${i + 1}`).join(', ');
-                  
-                  await targetPool.query(
-                    `INSERT INTO "${table}" (${columns}) VALUES (${placeholders})`,
-                    values
-                  );
-                  
-                  processedRows++;
-                  
-                } catch (rowError: any) {
-                  console.warn(`Skipping problematic row in ${table}:`, rowError.message);
-                  processedRows++;
+                    const values = structureResult.rows.map((col: any) => {
+                      const value = row[col.column_name];
+                      
+                      // Handle null values for nullable columns
+                      if (value === null || value === undefined) {
+                        return null;
+                      }
+                      
+                      // Convert JSON columns to avoid parsing issues
+                      if (col.udt_name === 'json' || col.udt_name === 'jsonb') {
+                        if (typeof value === 'object') {
+                          return JSON.stringify(value);
+                        }
+                        return value;
+                      }
+                      
+                      return value;
+                    });
+                    
+                    const placeholders = values.map((_: any, i: number) => `$${i + 1}`).join(', ');
+                    
+                    await targetPool.query(
+                      `INSERT INTO "${table}" (${columns}) VALUES (${placeholders})`,
+                      values
+                    );
+                    
+                    processedRows++;
+                    
+                  } catch (rowError: any) {
+                    console.warn(`Skipping row ${processedRows + 1} in ${table}:`, rowError.message);
+                    processedRows++;
+                  }
                 }
+                
+                // Update progress every batch
+                const batchProgress = 30 + (migratedTables / totalTables) * 60 + (processedRows / totalRows) * (60 / totalTables);
+                updateProgress('Data Migration', `Migrating table ${table}: ${processedRows}/${totalRows} rows completed`, 
+                  batchProgress, totalTables, migratedTables);
               }
               
             } catch (migrationError: any) {
@@ -3661,6 +3691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Force completion of this table and move to next
           const tableEndTime = Date.now();
           const tableDuration = tableEndTime - tableStartTime;
+          totalRowsMigrated += processedRows;
 
           migratedTables++;
           tablesCompleted.push(table);
@@ -3672,7 +3703,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (tableError: any) {
           console.error(`Error migrating table ${table}:`, tableError.message);
           migratedTables++; // Still count as attempted to continue with other tables
-          const processedRows = 0; // Initialize for error recovery
           
           // Try creating table with simplified schema (no constraints) for problematic tables
           try {

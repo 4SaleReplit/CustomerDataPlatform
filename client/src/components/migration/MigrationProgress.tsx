@@ -102,6 +102,7 @@ export function MigrationProgress({ sessionId, onComplete, onError }: MigrationP
         const response = await fetch(`/api/migration-progress/${sessionId}`);
         if (response.ok) {
           const data = await response.json();
+          console.log('Polling migration progress:', data);
           setProgress(data);
           
           if (data.status === 'completed') {
@@ -115,8 +116,11 @@ export function MigrationProgress({ sessionId, onComplete, onError }: MigrationP
       }
     };
 
-    // Poll every 2 seconds as fallback
-    const pollInterval = setInterval(pollProgress, 2000);
+    // Poll every 1 second for more responsive updates
+    const pollInterval = setInterval(pollProgress, 1000);
+    
+    // Initial poll to get current state
+    pollProgress();
 
     // Cleanup
     return () => {
