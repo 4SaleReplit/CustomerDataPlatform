@@ -320,6 +320,7 @@ export function ReportsScheduler() {
               formData={formData}
               setFormData={setFormData}
               presentations={presentations}
+              presentationsLoading={presentationsLoading}
               mailingLists={mailingLists}
               onSubmit={handleCreateReport}
               onCancel={() => setIsCreateDialogOpen(false)}
@@ -450,6 +451,7 @@ export function ReportsScheduler() {
             formData={formData}
             setFormData={setFormData}
             presentations={presentations}
+            presentationsLoading={presentationsLoading}
             mailingLists={mailingLists}
             onSubmit={handleUpdateReport}
             onCancel={() => setIsEditDialogOpen(false)}
@@ -466,6 +468,7 @@ interface SchedulerFormProps {
   formData: any;
   setFormData: (data: any) => void;
   presentations: Presentation[];
+  presentationsLoading: boolean;
   mailingLists: MailingList[];
   onSubmit: () => void;
   onCancel: () => void;
@@ -477,6 +480,7 @@ function SchedulerForm({
   formData,
   setFormData,
   presentations,
+  presentationsLoading,
   mailingLists,
   onSubmit,
   onCancel,
