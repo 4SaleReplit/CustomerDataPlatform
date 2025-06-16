@@ -367,7 +367,7 @@ export function ReportsScheduler() {
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Button onClick={() => { resetForm(); setIsCreateDialogOpen(true); }}>
               <Plus className="h-4 w-4 mr-2" />
               Schedule New Report
             </Button>
