@@ -457,11 +457,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createIntegration(insertIntegration: InsertIntegration): Promise<Integration> {
-    const [integration] = await db
-      .insert(integrations)
-      .values(insertIntegration)
-      .returning();
-    return integration;
+    try {
+      console.log("Storage: Creating integration with:", JSON.stringify(insertIntegration, null, 2));
+      
+      // Ensure credentials is a proper JSON object
+      if (insertIntegration.credentials && typeof insertIntegration.credentials === 'object') {
+        console.log("Storage: Credentials type:", typeof insertIntegration.credentials);
+        console.log("Storage: Credentials content:", insertIntegration.credentials);
+      }
+
+      const [integration] = await db
+        .insert(integrations)
+        .values(insertIntegration)
+        .returning();
+      
+      console.log("Storage: Integration created successfully with ID:", integration.id);
+      return integration;
+    } catch (error) {
+      console.error("Storage: Database insertion error:", error);
+      throw error;
+    }
   }
 
   async updateIntegration(id: string, updates: Partial<InsertIntegration>): Promise<Integration | undefined> {

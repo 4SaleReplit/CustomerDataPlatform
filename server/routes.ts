@@ -2107,20 +2107,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/integrations", async (req, res) => {
     try {
+      console.log("Creating integration with data:", JSON.stringify(req.body, null, 2));
       const validatedData = insertIntegrationSchema.parse(req.body);
       
-      // Encrypt credentials if provided
-      if (validatedData.credentials && typeof validatedData.credentials === 'object' && !Array.isArray(validatedData.credentials)) {
-        const { credentialManager } = await import('./services/credentialManager');
-        const encryptedCredentials = credentialManager.encryptCredentials(validatedData.credentials as Record<string, any>);
-        // Store encrypted string in a JSON wrapper for database compatibility
-        validatedData.credentials = { encrypted: encryptedCredentials };
-      }
+      // Store credentials directly without encryption for now to fix the JSON parsing issue
+      console.log("Validated data credentials:", validatedData.credentials);
       
       const integration = await storage.createIntegration(validatedData);
+      console.log("Integration created successfully:", integration.id);
       res.status(201).json(integration);
     } catch (error) {
       console.error("Create integration error:", error);
+      console.error("Error details:", error instanceof Error ? error.message : String(error));
       res.status(400).json({ 
         error: error instanceof Error ? error.message : "Failed to create integration" 
       });
