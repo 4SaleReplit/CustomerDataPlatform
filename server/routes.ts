@@ -2237,6 +2237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let testResult: { success: boolean; error?: string; message?: string } = { success: false, error: "Test not implemented" };
 
       // Test connection based on integration type
+      console.log(`Testing integration type: '${integration.type}' for integration: ${integration.name}`);
       switch (integration.type) {
         case 'braze':
           const { brazeService } = await import("./services/braze");
@@ -2377,6 +2378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 message: "PostgreSQL connection successful",
                 metadata
               } as any;
+              console.log(`PostgreSQL test successful with metadata:`, metadata);
             } finally {
               await testPool.end();
             }
