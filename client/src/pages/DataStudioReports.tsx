@@ -179,6 +179,61 @@ export function DataStudioReports() {
   };
 
   // Refresh report data function
+  // Generate thumbnails for presentations that don't have preview images
+  const generateMissingThumbnails = async () => {
+    const presentationsWithoutThumbnails = presentations.filter(p => !p.previewImageUrl);
+    
+    for (const presentation of presentationsWithoutThumbnails) {
+      const presentationData = allSlidesData[presentation.id];
+      if (presentationData?.slides?.length > 0) {
+        // Find first slide with an image element
+        for (const slide of presentationData.slides) {
+          if (slide?.elements) {
+            const imageElement = slide.elements.find((element: any) => 
+              element.type === 'image' && (element.content || element.uploadedImageId)
+            );
+            
+            if (imageElement) {
+              const previewUrl = imageElement.content || 
+                (imageElement.uploadedImageId ? `/uploads/${imageElement.uploadedImageId}` : null);
+              
+              if (previewUrl) {
+                try {
+                  await fetch(`/api/presentations/${presentation.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                      previewImageUrl: previewUrl,
+                      lastRefreshed: new Date().toISOString()
+                    })
+                  });
+                  console.log(`Generated thumbnail for presentation: ${presentation.title}`);
+                } catch (error) {
+                  console.error(`Failed to generate thumbnail for ${presentation.title}:`, error);
+                }
+                break; // Use first image found
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Refresh presentations data after thumbnail generation
+    if (presentationsWithoutThumbnails.length > 0) {
+      refetch();
+    }
+  };
+
+  // Auto-generate thumbnails when data loads
+  useEffect(() => {
+    if (presentations.length > 0 && Object.keys(allSlidesData).length > 0) {
+      generateMissingThumbnails();
+    }
+  }, [presentations, allSlidesData]);
+
   const handleRefreshReport = async (reportId: string) => {
     try {
       // Add to refreshing reports
@@ -584,32 +639,62 @@ export function DataStudioReports() {
       );
     }
 
-    // Fallback to existing thumbnail cache system
-    if (!slideData || !slideData.elements?.length) {
-      return (
-        <div className="w-full h-20 bg-gradient-to-r from-blue-50 to-blue-100 rounded border border-blue-200 flex items-center justify-center">
-          <Presentation className="h-8 w-8 text-blue-400" />
-        </div>
-      );
+    // Look for images in all slides of the presentation
+    const presentationData = allSlidesData[presentationId];
+    if (presentationData?.slides?.length > 0) {
+      // Find first slide with an image element
+      for (const slide of presentationData.slides) {
+        if (slide?.elements) {
+          const imageElement = slide.elements.find((element: any) => 
+            element.type === 'image' && (element.content || element.uploadedImageId)
+          );
+          
+          if (imageElement) {
+            const imageUrl = imageElement.content || 
+              (imageElement.uploadedImageId ? `/uploads/${imageElement.uploadedImageId}` : null);
+            
+            if (imageUrl) {
+              const thumbnailUrl = imageUrl.startsWith('/uploads/') 
+                ? `${window.location.origin}${imageUrl}`
+                : imageUrl;
+              
+              return (
+                <div className="w-full h-20 bg-white rounded border border-gray-200 overflow-hidden">
+                  <img 
+                    src={thumbnailUrl} 
+                    alt="Slide preview" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Hide broken images
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+              );
+            }
+          }
+        }
+      }
     }
 
+    // Fallback to cached thumbnail if available
     const thumbnailUrl = thumbnailCache[presentationId];
-    
-    if (!thumbnailUrl) {
+    if (thumbnailUrl) {
       return (
-        <div className="w-full h-20 bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
-          <div className="text-xs text-gray-500">Generating preview...</div>
+        <div className="w-full h-20 bg-white rounded border border-gray-200 overflow-hidden">
+          <img 
+            src={thumbnailUrl} 
+            alt="Slide preview" 
+            className="w-full h-full object-cover"
+          />
         </div>
       );
     }
 
+    // Default empty state with presentation icon
     return (
-      <div className="w-full h-20 bg-white rounded border border-gray-200 overflow-hidden">
-        <img 
-          src={thumbnailUrl} 
-          alt="Slide preview" 
-          className="w-full h-full object-cover"
-        />
+      <div className="w-full h-20 bg-gradient-to-r from-blue-50 to-blue-100 rounded border border-blue-200 flex items-center justify-center">
+        <Presentation className="h-8 w-8 text-blue-400" />
       </div>
     );
   };
@@ -912,12 +997,10 @@ export function DataStudioReports() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      {/* Slide Preview - only show if there's content */}
-                      {slidePreviewsData[report.id] && slidePreviewsData[report.id].elements?.length > 0 && (
-                        <div className="mb-3">
-                          <SlidePreview slideData={slidePreviewsData[report.id]} presentationId={report.id} />
-                        </div>
-                      )}
+                      {/* Slide Preview - always show preview area */}
+                      <div className="mb-3">
+                        <SlidePreview slideData={slidePreviewsData[report.id]} presentationId={report.id} />
+                      </div>
                       
                       {/* Progress indicator during refresh */}
                       {refreshingReports.has(report.id) && refreshProgress[report.id] && (

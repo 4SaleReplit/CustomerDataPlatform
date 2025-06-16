@@ -516,23 +516,32 @@ export default function ReportBuilder() {
       
       // Find first slide with an image element
       const slideWithImage = currentReport.slides.find(slide => 
-        slide.elements.some(element => element.type === 'image' && element.content)
+        slide.elements.some(element => element.type === 'image' && (element.content || element.uploadedImageId))
       );
       
       if (slideWithImage) {
-        const imageElement = slideWithImage.elements.find(el => el.type === 'image' && el.content);
-        if (imageElement?.content) {
-          // Update presentation with the first image as preview
-          await fetch(`/api/presentations/${presentationId}`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              previewImageUrl: imageElement.content,
-              lastRefreshed: new Date().toISOString()
-            })
-          });
+        const imageElement = slideWithImage.elements.find(el => 
+          el.type === 'image' && (el.content || el.uploadedImageId)
+        );
+        
+        if (imageElement) {
+          const previewUrl = imageElement.content || 
+            (imageElement.uploadedImageId ? `/uploads/${imageElement.uploadedImageId}` : null);
+          
+          if (previewUrl) {
+            // Update presentation with the first image as preview
+            await fetch(`/api/presentations/${presentationId}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                previewImageUrl: previewUrl,
+                lastRefreshed: new Date().toISOString()
+              })
+            });
+            console.log('Thumbnail generated and saved:', previewUrl);
+          }
         }
       }
     } catch (error) {
