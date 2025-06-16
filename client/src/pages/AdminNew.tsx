@@ -1140,30 +1140,48 @@ export default function AdminNew() {
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Source Environment</Label>
+                    <Label>Source Database</Label>
                     <Select value={selectedSourceEnv} onValueChange={setSelectedSourceEnv}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select source" />
+                        <SelectValue placeholder="Select source PostgreSQL database" />
                       </SelectTrigger>
                       <SelectContent>
-                        {environments.map(env => (
-                          <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
-                        ))}
+                        {integrations
+                          .filter((integration: any) => integration.type === 'postgresql' && integration.status === 'connected')
+                          .map((integration: any) => (
+                            <SelectItem key={integration.id} value={integration.id}>
+                              <div className="flex items-center space-x-2">
+                                <Database className="h-4 w-4" />
+                                <span>{integration.name}</span>
+                                <Badge variant="secondary" className="text-xs">PostgreSQL</Badge>
+                              </div>
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground mt-1">Choose the database to migrate FROM</p>
                   </div>
                   <div>
-                    <Label>Target Environment</Label>
+                    <Label>Destination Database</Label>
                     <Select value={selectedTargetEnv} onValueChange={setSelectedTargetEnv}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select target" />
+                        <SelectValue placeholder="Select destination PostgreSQL database" />
                       </SelectTrigger>
                       <SelectContent>
-                        {environments.map(env => (
-                          <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
-                        ))}
+                        {integrations
+                          .filter((integration: any) => integration.type === 'postgresql' && integration.status === 'connected')
+                          .map((integration: any) => (
+                            <SelectItem key={integration.id} value={integration.id}>
+                              <div className="flex items-center space-x-2">
+                                <Database className="h-4 w-4" />
+                                <span>{integration.name}</span>
+                                <Badge variant="secondary" className="text-xs">PostgreSQL</Badge>
+                              </div>
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground mt-1">Choose the database to migrate TO</p>
                   </div>
                 </div>
 
@@ -1172,19 +1190,18 @@ export default function AdminNew() {
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
                       <Checkbox id="schema" defaultChecked />
-                      <Label htmlFor="schema">Migrate Schema</Label>
+                      <Label htmlFor="schema">Create Schema</Label>
+                      <p className="text-xs text-muted-foreground ml-6">Create tables, indexes, and constraints in destination database</p>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Checkbox id="data" defaultChecked />
                       <Label htmlFor="data">Migrate Data</Label>
+                      <p className="text-xs text-muted-foreground ml-6">Copy all table data from source to destination</p>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Checkbox id="integrations" defaultChecked />
-                      <Label htmlFor="integrations">Migrate Integrations</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="images" defaultChecked />
-                      <Label htmlFor="images">Migrate Images to S3</Label>
+                      <Checkbox id="sequences" defaultChecked />
+                      <Label htmlFor="sequences">Reset Sequences</Label>
+                      <p className="text-xs text-muted-foreground ml-6">Update auto-increment sequences to match data</p>
                     </div>
                   </div>
                 </div>
