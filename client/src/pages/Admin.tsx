@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import RoleManagement from './RoleManagement';
-import { MigrationProgress } from '@/components/migration/MigrationProgress';
+import { SimpleMigrationModal } from '@/components/migration/SimpleMigrationModal';
 
 
 
@@ -1274,45 +1274,14 @@ export default function Admin() {
             </DialogContent>
           </Dialog>
 
-          {/* Real-time Migration Progress Dialog - Always Visible When Active */}
-          {showMigrationProgress && (
-            <Dialog open={true} onOpenChange={(open) => !isMigrating && setShowMigrationProgress(open)}>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
-                    Migration Progress - Live Updates
-                  </DialogTitle>
-                  <DialogDescription>
-                    Real-time progress tracking with comprehensive migration statistics
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-6">
-                  {migrationSessionId ? (
-                    <MigrationProgress 
-                      sessionId={migrationSessionId}
-                      onComplete={handleMigrationComplete}
-                      onError={handleMigrationError}
-                    />
-                  ) : (
-                    <div className="text-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-500" />
-                      <p className="text-sm text-gray-600">Initializing migration...</p>
-                    </div>
-                  )}
-                  <div className="flex justify-end border-t pt-4">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setShowMigrationProgress(false)}
-                      disabled={isMigrating}
-                    >
-                      {isMigrating ? 'Migration In Progress...' : 'Close'}
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
+          {/* Simple Migration Modal - Fixed Implementation */}
+          <SimpleMigrationModal
+            isOpen={showMigrationProgress}
+            sessionId={migrationSessionId}
+            onClose={() => setShowMigrationProgress(false)}
+            onComplete={handleMigrationComplete}
+            onError={handleMigrationError}
+          />
         </TabsContent>
       </Tabs>
     </div>
