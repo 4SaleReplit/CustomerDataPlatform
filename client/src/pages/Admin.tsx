@@ -327,7 +327,10 @@ export default function Admin() {
   };
 
   const handleStartMigration = async () => {
+    console.log('handleStartMigration called!', { selectedSourceEnv, selectedTargetEnv });
+    
     if (!selectedSourceEnv || !selectedTargetEnv) {
+      console.log('Missing source or target env');
       toast({
         title: "Migration error",
         description: "Please select both source and target environments",
@@ -358,13 +361,13 @@ export default function Admin() {
           type: 'postgresql',
           sourceIntegrationId: selectedSourceEnv,
           targetIntegrationId: selectedTargetEnv,
-          sourceEnvironment: selectedSourceEnv,
-          targetEnvironment: selectedTargetEnv,
+          sourceEnvironment: integrations.find((i: any) => i.id === selectedSourceEnv)?.name || 'Source',
+          targetEnvironment: integrations.find((i: any) => i.id === selectedTargetEnv)?.name || 'Target',
           sourceConfig: {
-            connectionString: environments.find(e => e.id === selectedSourceEnv)?.databases.postgres.url
+            connectionString: integrations.find((i: any) => i.id === selectedSourceEnv)?.credentials?.connectionString
           },
           targetConfig: {
-            connectionString: environments.find(e => e.id === selectedTargetEnv)?.databases.postgres.url
+            connectionString: integrations.find((i: any) => i.id === selectedTargetEnv)?.credentials?.connectionString
           }
         })
       });
@@ -1135,14 +1138,16 @@ export default function Admin() {
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Source Environment</Label>
+                    <Label>Source Integration</Label>
                     <Select value={selectedSourceEnv} onValueChange={setSelectedSourceEnv}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select source" />
+                        <SelectValue placeholder="Select source database" />
                       </SelectTrigger>
                       <SelectContent>
-                        {environments.map(env => (
-                          <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
+                        {integrations.filter((i: any) => i.type === 'postgresql').map((integration: any) => (
+                          <SelectItem key={integration.id} value={integration.id}>
+                            {integration.name} ({integration.status})
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
