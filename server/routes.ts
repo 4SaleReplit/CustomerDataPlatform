@@ -2311,50 +2311,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
         case 'postgresql':
           try {
-            // Use the existing database connection to test PostgreSQL
-            const { pool } = await import('./db');
+            const { Pool } = await import('pg');
+            let poolConfig: any;
+
+            // Check if integration uses connection string or individual parameters
+            const credentials = integration.credentials as any;
+            if (credentials.connectionString) {
+              poolConfig = { connectionString: credentials.connectionString };
+            } else {
+              poolConfig = {
+                host: credentials.host,
+                port: credentials.port || 5432,
+                database: credentials.database,
+                user: credentials.username,
+                password: credentials.password,
+                ssl: credentials.ssl === 'require' ? { rejectUnauthorized: false } : false
+              };
+            }
+
+            const testPool = new Pool(poolConfig);
             
-            // Get comprehensive database metadata
-            const [versionResult, sizeResult, tableCountResult, schemaResult] = await Promise.all([
-              pool.query('SELECT version() as version, current_database() as database'),
-              pool.query(`
-                SELECT 
-                  pg_size_pretty(pg_database_size(current_database())) as size,
-                  pg_database_size(current_database()) as size_bytes
-              `),
-              pool.query(`
-                SELECT 
-                  COUNT(*) as table_count,
-                  COUNT(CASE WHEN table_type = 'BASE TABLE' THEN 1 END) as user_tables,
-                  COUNT(CASE WHEN table_type = 'VIEW' THEN 1 END) as views
-                FROM information_schema.tables 
-                WHERE table_schema NOT IN ('information_schema', 'pg_catalog')
-              `),
-              pool.query(`
-                SELECT DISTINCT table_schema as schema_name 
-                FROM information_schema.tables 
-                WHERE table_schema NOT IN ('information_schema', 'pg_catalog')
-                ORDER BY table_schema
-              `)
-            ]);
+            try {
+              // Test connection and get comprehensive database metadata
+              const [versionResult, sizeResult, tableCountResult, schemaResult] = await Promise.all([
+                testPool.query('SELECT version() as version, current_database() as database'),
+                testPool.query(`
+                  SELECT 
+                    pg_size_pretty(pg_database_size(current_database())) as size,
+                    pg_database_size(current_database()) as size_bytes
+                `),
+                testPool.query(`
+                  SELECT 
+                    COUNT(*) as table_count,
+                    COUNT(CASE WHEN table_type = 'BASE TABLE' THEN 1 END) as user_tables,
+                    COUNT(CASE WHEN table_type = 'VIEW' THEN 1 END) as views
+                  FROM information_schema.tables 
+                  WHERE table_schema NOT IN ('information_schema', 'pg_catalog')
+                `),
+                testPool.query(`
+                  SELECT DISTINCT table_schema as schema_name 
+                  FROM information_schema.tables 
+                  WHERE table_schema NOT IN ('information_schema', 'pg_catalog')
+                  ORDER BY table_schema
+                `)
+              ]);
 
-            const metadata = {
-              version: versionResult.rows[0].version,
-              database: versionResult.rows[0].database,
-              size: sizeResult.rows[0].size,
-              sizeBytes: parseInt(sizeResult.rows[0].size_bytes),
-              tableCount: parseInt(tableCountResult.rows[0].table_count),
-              userTables: parseInt(tableCountResult.rows[0].user_tables),
-              views: parseInt(tableCountResult.rows[0].views),
-              schemas: schemaResult.rows.map(row => row.schema_name),
-              lastTested: new Date().toISOString()
-            };
+              const metadata = {
+                version: versionResult.rows[0].version,
+                database: versionResult.rows[0].database,
+                size: sizeResult.rows[0].size,
+                sizeBytes: parseInt(sizeResult.rows[0].size_bytes),
+                tableCount: parseInt(tableCountResult.rows[0].table_count),
+                userTables: parseInt(tableCountResult.rows[0].user_tables),
+                views: parseInt(tableCountResult.rows[0].views),
+                schemas: schemaResult.rows.map(row => row.schema_name),
+                lastTested: new Date().toISOString()
+              };
 
-            testResult = { 
-              success: true, 
-              message: "PostgreSQL connection successful",
-              metadata
-            } as any;
+              testResult = { 
+                success: true, 
+                message: "PostgreSQL connection successful",
+                metadata
+              } as any;
+            } finally {
+              await testPool.end();
+            }
           } catch (error: any) {
             testResult = { success: false, error: error.message || "PostgreSQL connection failed" };
           }
