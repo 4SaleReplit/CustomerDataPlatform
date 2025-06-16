@@ -11,6 +11,7 @@ import {
   uploadedImages,
   slides,
   presentations,
+  migrationHistory,
   type User, 
   type InsertUser, 
   type Team, 
@@ -42,7 +43,10 @@ import {
   type InsertSlide,
   type UpdateSlide,
   type Presentation,
-  type InsertPresentation
+  type InsertPresentation,
+  type MigrationHistory,
+  type InsertMigrationHistory,
+  type UpdateMigrationHistory
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, or, and, desc } from "drizzle-orm";
@@ -107,6 +111,14 @@ export interface IStorage {
   createRole(role: InsertRole): Promise<Role>;
   updateRole(id: string, updates: UpdateRole): Promise<Role | undefined>;
   deleteRole(id: string): Promise<boolean>;
+  
+  // Migration History management
+  getMigrationHistory(): Promise<MigrationHistory[]>;
+  getMigrationHistoryById(id: string): Promise<MigrationHistory | undefined>;
+  getMigrationHistoryBySessionId(sessionId: string): Promise<MigrationHistory | undefined>;
+  createMigrationHistory(migration: InsertMigrationHistory): Promise<MigrationHistory>;
+  updateMigrationHistory(id: string, updates: UpdateMigrationHistory): Promise<MigrationHistory | undefined>;
+  deleteMigrationHistory(id: string): Promise<boolean>;
   
   // Permission management
   getPermissions(): Promise<Permission[]>;
@@ -699,6 +711,40 @@ export class DatabaseStorage implements IStorage {
   async deletePresentation(id: string): Promise<boolean> {
     const result = await db.delete(presentations).where(eq(presentations.id, id));
     return result.rowCount > 0;
+  }
+
+  // Migration History methods
+  async getMigrationHistory(): Promise<MigrationHistory[]> {
+    return await db.select().from(migrationHistory).orderBy(desc(migrationHistory.createdAt));
+  }
+
+  async getMigrationHistoryById(id: string): Promise<MigrationHistory | undefined> {
+    const [migration] = await db.select().from(migrationHistory).where(eq(migrationHistory.id, id));
+    return migration || undefined;
+  }
+
+  async getMigrationHistoryBySessionId(sessionId: string): Promise<MigrationHistory | undefined> {
+    const [migration] = await db.select().from(migrationHistory).where(eq(migrationHistory.sessionId, sessionId));
+    return migration || undefined;
+  }
+
+  async createMigrationHistory(migration: InsertMigrationHistory): Promise<MigrationHistory> {
+    const [newMigration] = await db.insert(migrationHistory).values(migration).returning();
+    return newMigration;
+  }
+
+  async updateMigrationHistory(id: string, updates: UpdateMigrationHistory): Promise<MigrationHistory | undefined> {
+    const [migration] = await db
+      .update(migrationHistory)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(migrationHistory.id, id))
+      .returning();
+    return migration || undefined;
+  }
+
+  async deleteMigrationHistory(id: string): Promise<boolean> {
+    const result = await db.delete(migrationHistory).where(eq(migrationHistory.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 }
 

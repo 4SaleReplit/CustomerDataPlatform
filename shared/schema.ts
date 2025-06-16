@@ -420,3 +420,44 @@ export type RolePermission = typeof rolePermissions.$inferSelect;
 export type InsertEnvironmentConfiguration = z.infer<typeof insertEnvironmentConfigurationSchema>;
 export type UpdateEnvironmentConfiguration = z.infer<typeof updateEnvironmentConfigurationSchema>;
 export type EnvironmentConfiguration = typeof environmentConfigurations.$inferSelect;
+
+// Migration History table
+export const migrationHistory = pgTable("migration_history", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sessionId: varchar("session_id", { length: 100 }).notNull(),
+  sourceIntegrationId: uuid("source_integration_id").references(() => integrations.id, { onDelete: 'set null' }),
+  targetIntegrationId: uuid("target_integration_id").references(() => integrations.id, { onDelete: 'set null' }),
+  sourceIntegrationName: varchar("source_integration_name", { length: 255 }),
+  targetIntegrationName: varchar("target_integration_name", { length: 255 }),
+  migrationType: varchar("migration_type", { length: 50 }).notNull(), // 'database', 'redis', 's3'
+  status: varchar("status", { length: 20 }).notNull().default('running'), // 'running', 'completed', 'error', 'cancelled'
+  progress: integer("progress").default(0), // 0-100
+  totalItems: integer("total_items").default(0),
+  completedItems: integer("completed_items").default(0),
+  startTime: timestamp("start_time", { withTimezone: true }).defaultNow(),
+  endTime: timestamp("end_time", { withTimezone: true }),
+  duration: integer("duration"), // duration in seconds
+  logs: jsonb("logs").default('[]'), // Array of log messages
+  metadata: jsonb("metadata").default('{}'), // Migration-specific metadata
+  errorMessage: text("error_message"),
+  createdBy: uuid("created_by").references(() => team.id, { onDelete: 'set null' }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
+// Migration History schemas
+export const insertMigrationHistorySchema = createInsertSchema(migrationHistory).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateMigrationHistorySchema = createInsertSchema(migrationHistory).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
+export type InsertMigrationHistory = z.infer<typeof insertMigrationHistorySchema>;
+export type UpdateMigrationHistory = z.infer<typeof updateMigrationHistorySchema>;
+export type MigrationHistory = typeof migrationHistory.$inferSelect;
