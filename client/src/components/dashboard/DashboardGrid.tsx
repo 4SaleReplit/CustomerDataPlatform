@@ -74,15 +74,15 @@ export function DashboardGrid({
   if (!isEditMode) {
     // Static grid for view mode
     const gridCols = 12;
-    const gridRows = Math.max(6, Math.max(...tiles.map(tile => tile.y + tile.height)));
+    const gridRows = Math.max(24, Math.max(...tiles.map(tile => tile.y + tile.height)));
 
     return (
       <div 
         className="relative grid gap-4"
         style={{
           gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
-          gridTemplateRows: `repeat(${gridRows}, 80px)`,
-          minHeight: `${gridRows * 80}px`
+          gridTemplateRows: `repeat(${gridRows}, 20px)`,
+          minHeight: `${gridRows * 20}px`
         }}
       >
         {tiles.map((tile) => (
@@ -114,7 +114,7 @@ export function DashboardGrid({
         className="layout"
         layout={layout}
         cols={12}
-        rowHeight={80}
+        rowHeight={20}
         width={1200}
         onLayoutChange={handleLayoutChange}
         isDraggable={isEditMode}

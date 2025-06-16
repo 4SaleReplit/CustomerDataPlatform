@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { RefreshCw, Settings, X, Save, Plus } from 'lucide-react';
 import { DashboardBuilder, type DashboardTile } from '@/components/dashboard/DashboardBuilder';
 import { TileEditDialog } from '@/components/dashboard/TileEditDialog';
-import { TimeFilter, type TimeFilterState } from '@/components/dashboard/TimeFilter';
+
 
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -129,11 +129,7 @@ function Dashboard() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingTile, setEditingTile] = useState<DashboardTile | null>(null);
 
-  const [timeFilters, setTimeFilters] = useState<TimeFilterState>({
-    chartType: 'line',
-    timeRange: '7d',
-    granularity: 'day'
-  });
+
   const [isLoaded, setIsLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -414,15 +410,7 @@ function Dashboard() {
               </div>
             </div>
 
-            {/* Enhanced Time Filters */}
-            <div className="px-8 pb-6">
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-100 p-4">
-                <TimeFilter 
-                  filters={timeFilters} 
-                  onFiltersChange={handleTimeFiltersChange} 
-                />
-              </div>
-            </div>
+
           </div>
 
           {/* Enhanced Dashboard Content */}
