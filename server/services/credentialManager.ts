@@ -51,17 +51,28 @@ export class CredentialManager {
   /**
    * Decrypt credentials from storage
    */
-  decryptCredentials(encryptedData: string): DecryptedCredentials {
+  decryptCredentials(encryptedData: string | Record<string, any>): DecryptedCredentials {
     try {
-      // Check if data is already in plain JSON format
-      if (encryptedData.startsWith('{')) {
-        return JSON.parse(encryptedData);
+      let dataToDecrypt: string;
+      
+      // Handle new JSON wrapper format
+      if (typeof encryptedData === 'object' && encryptedData.encrypted) {
+        dataToDecrypt = encryptedData.encrypted;
+      } else if (typeof encryptedData === 'string') {
+        dataToDecrypt = encryptedData;
+      } else {
+        return encryptedData as DecryptedCredentials;
       }
 
-      const parts = encryptedData.split(':');
+      // Check if data is already in plain JSON format
+      if (dataToDecrypt.startsWith('{')) {
+        return JSON.parse(dataToDecrypt);
+      }
+
+      const parts = dataToDecrypt.split(':');
       if (parts.length !== 2) {
         // Fallback to plain JSON
-        return JSON.parse(encryptedData);
+        return JSON.parse(dataToDecrypt);
       }
 
       const iv = Buffer.from(parts[0], 'hex');
@@ -76,7 +87,8 @@ export class CredentialManager {
       console.error('Decryption error:', error);
       // Fallback to parsing as plain JSON
       try {
-        return JSON.parse(encryptedData);
+        const fallbackData = typeof encryptedData === 'string' ? encryptedData : JSON.stringify(encryptedData);
+        return JSON.parse(fallbackData);
       } catch {
         return {};
       }
@@ -95,7 +107,7 @@ export class CredentialManager {
       }
 
       const credentials = integration.credentials as Record<string, any>;
-      return this.decryptCredentials(JSON.stringify(credentials));
+      return this.decryptCredentials(credentials);
     } catch (error) {
       console.error(`Error getting ${integrationType} credentials:`, error);
       return null;

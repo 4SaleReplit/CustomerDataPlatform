@@ -2113,7 +2113,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (validatedData.credentials && typeof validatedData.credentials === 'object' && !Array.isArray(validatedData.credentials)) {
         const { credentialManager } = await import('./services/credentialManager');
         const encryptedCredentials = credentialManager.encryptCredentials(validatedData.credentials as Record<string, any>);
-        validatedData.credentials = encryptedCredentials;
+        // Store encrypted string in a JSON wrapper for database compatibility
+        validatedData.credentials = { encrypted: encryptedCredentials };
       }
       
       const integration = await storage.createIntegration(validatedData);
