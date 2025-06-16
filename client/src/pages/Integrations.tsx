@@ -573,11 +573,31 @@ export default function Integrations() {
       });
     } else if (selectedTemplate) {
       const template = integrationTemplates[selectedTemplate];
+      
+      // Clean the credentials data to ensure proper JSON serialization
+      const cleanCredentials = Object.entries(formData).reduce((acc, [key, value]) => {
+        // Skip undefined, null, empty strings, and non-serializable values
+        if (value !== undefined && value !== null && value !== '') {
+          // Handle checkbox values
+          if (typeof value === 'boolean') {
+            acc[key] = value;
+          } else if (typeof value === 'string') {
+            acc[key] = value.trim();
+          } else {
+            // Convert other types to string
+            acc[key] = String(value);
+          }
+        }
+        return acc;
+      }, {} as Record<string, any>);
+      
+      console.log('Creating integration with cleaned credentials:', cleanCredentials);
+      
       createIntegrationMutation.mutate({
         name: template.name,
         type: selectedTemplate,
         description: template.description,
-        credentials: formData,
+        credentials: cleanCredentials,
         status: 'disconnected'
       });
     }
