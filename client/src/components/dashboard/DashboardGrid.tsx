@@ -47,8 +47,7 @@ export function DashboardGrid({
   const handleLayoutChange = (newLayout: any[]) => {
     if (!isEditMode) return;
     
-    console.log('GRID: Layout change detected in edit mode');
-    console.log('GRID: New layout:', newLayout.map(item => ({ id: item.i, x: item.x, y: item.y, w: item.w, h: item.h })));
+
     
     // Process all layout changes in edit mode
     newLayout.forEach(item => {

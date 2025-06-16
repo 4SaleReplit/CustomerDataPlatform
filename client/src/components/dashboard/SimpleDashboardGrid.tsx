@@ -125,7 +125,7 @@ export function SimpleDashboardGrid({
     setDragOffset({ x: offsetX, y: offsetY });
     setTempPosition({ x: tile.x, y: tile.y });
 
-    console.log(`DRAG START: ${tileId} at (${tile.x}, ${tile.y})`);
+
   }, [isEditMode, tiles]);
 
   const handleResizeMouseDown = useCallback((e: React.MouseEvent, tileId: string, handle: string) => {
@@ -142,7 +142,7 @@ export function SimpleDashboardGrid({
     setTempSize({ width: tile.width, height: tile.height });
     setInitialTileData(tile);
 
-    console.log(`RESIZE START: ${tileId} handle ${handle} at size (${tile.width}x${tile.height})`);
+
   }, [isEditMode, tiles]);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
@@ -198,7 +198,7 @@ export function SimpleDashboardGrid({
     if (draggedTile && tempPosition) {
       const tile = tiles.find(t => t.id === draggedTile);
       if (tile && (tile.x !== tempPosition.x || tile.y !== tempPosition.y)) {
-        console.log(`DRAG END: Moving ${draggedTile} from (${tile.x}, ${tile.y}) to (${tempPosition.x}, ${tempPosition.y})`);
+
         
         // Create updated tiles array with new position
         const updatedTiles = tiles.map(t => 

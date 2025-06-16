@@ -388,7 +388,7 @@ export default function CohortEditor({
         });
       }
     } catch (error) {
-      console.error('Calculate estimate error:', error);
+
       setEstimatedSize(0);
       toast({
         title: "Error",
@@ -453,7 +453,7 @@ export default function CohortEditor({
       });
 
     } catch (error) {
-      console.error('Save cohort error:', error);
+
       toast({
         title: "Failed to save cohort",
         description: error instanceof Error ? error.message : "Unknown error occurred",
@@ -681,7 +681,7 @@ export default function CohortEditor({
       });
 
     } catch (error) {
-      console.error('Query execution error:', error);
+
       toast({
         title: "Query execution failed",
         description: error instanceof Error ? error.message : "Unknown error occurred",
