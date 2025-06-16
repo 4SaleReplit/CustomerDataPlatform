@@ -358,14 +358,26 @@ export default function Admin() {
       });
 
       if (response.success && response.sessionId) {
-        // Hide migration modal and show progress tracking
+        // Hide migration modal and show progress tracking immediately
         setMigrationSessionId(response.sessionId);
         setShowMigrationModal(false);
         setShowMigrationProgress(true);
+        setIsMigrating(false); // Reset this to allow popup interaction
         
         toast({
           title: "Migration Started",
-          description: "Real-time progress tracking is now active"
+          description: "Progress popup is now displaying with live updates"
+        });
+      } else {
+        // Fallback if no session ID - still show progress popup
+        setShowMigrationModal(false);
+        setShowMigrationProgress(true);
+        setMigrationSessionId('fallback-session');
+        setIsMigrating(false);
+        
+        toast({
+          title: "Migration Started",
+          description: "Migration running - check progress popup"
         });
       }
     } catch (error: any) {
@@ -1258,35 +1270,45 @@ export default function Admin() {
             </DialogContent>
           </Dialog>
 
-          {/* Real-time Migration Progress Dialog */}
-          <Dialog open={showMigrationProgress} onOpenChange={setShowMigrationProgress}>
-            <DialogContent className="max-w-3xl">
-              <DialogHeader>
-                <DialogTitle>Migration Progress - Live Updates</DialogTitle>
-                <DialogDescription>
-                  Real-time progress tracking with detailed stage information
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                {migrationSessionId && (
-                  <MigrationProgress 
-                    sessionId={migrationSessionId}
-                    onComplete={handleMigrationComplete}
-                    onError={handleMigrationError}
-                  />
-                )}
-                <div className="flex justify-end">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowMigrationProgress(false)}
-                    disabled={isMigrating}
-                  >
-                    {isMigrating ? 'Migration Running...' : 'Close'}
-                  </Button>
+          {/* Real-time Migration Progress Dialog - Always Visible When Active */}
+          {showMigrationProgress && (
+            <Dialog open={true} onOpenChange={(open) => !isMigrating && setShowMigrationProgress(open)}>
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                    Migration Progress - Live Updates
+                  </DialogTitle>
+                  <DialogDescription>
+                    Real-time progress tracking with comprehensive migration statistics
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-6">
+                  {migrationSessionId ? (
+                    <MigrationProgress 
+                      sessionId={migrationSessionId}
+                      onComplete={handleMigrationComplete}
+                      onError={handleMigrationError}
+                    />
+                  ) : (
+                    <div className="text-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-500" />
+                      <p className="text-sm text-gray-600">Initializing migration...</p>
+                    </div>
+                  )}
+                  <div className="flex justify-end border-t pt-4">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowMigrationProgress(false)}
+                      disabled={isMigrating}
+                    >
+                      {isMigrating ? 'Migration In Progress...' : 'Close'}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+          )}
         </TabsContent>
       </Tabs>
     </div>
