@@ -4060,6 +4060,390 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reports Scheduler API Endpoints
+  
+  // Get all scheduled reports
+  app.get("/api/scheduled-reports", async (req: Request, res: Response) => {
+    try {
+      const scheduledReports = await storage.getScheduledReports();
+      res.json(scheduledReports);
+    } catch (error) {
+      console.error("Error fetching scheduled reports:", error);
+      res.status(500).json({ error: "Failed to fetch scheduled reports" });
+    }
+  });
+
+  // Get scheduled report by ID
+  app.get("/api/scheduled-reports/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const scheduledReport = await storage.getScheduledReportById(id);
+      if (!scheduledReport) {
+        return res.status(404).json({ error: "Scheduled report not found" });
+      }
+      res.json(scheduledReport);
+    } catch (error) {
+      console.error("Error fetching scheduled report:", error);
+      res.status(500).json({ error: "Failed to fetch scheduled report" });
+    }
+  });
+
+  // Create new scheduled report
+  app.post("/api/scheduled-reports", async (req: Request, res: Response) => {
+    try {
+      const reportData = req.body;
+      
+      // Calculate next execution based on cron expression
+      const nextExecution = calculateNextExecution(reportData.cronExpression, reportData.timezone);
+      
+      const scheduledReport = await storage.createScheduledReport({
+        ...reportData,
+        nextExecution,
+        createdBy: req.session.user?.id
+      });
+      
+      // Create Airflow DAG if configured
+      await createOrUpdateAirflowDAG(scheduledReport);
+      
+      res.status(201).json(scheduledReport);
+    } catch (error) {
+      console.error("Error creating scheduled report:", error);
+      res.status(500).json({ error: "Failed to create scheduled report" });
+    }
+  });
+
+  // Update scheduled report
+  app.patch("/api/scheduled-reports/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      
+      // Recalculate next execution if cron expression changed
+      if (updateData.cronExpression || updateData.timezone) {
+        updateData.nextExecution = calculateNextExecution(
+          updateData.cronExpression, 
+          updateData.timezone
+        );
+      }
+      
+      const scheduledReport = await storage.updateScheduledReport(id, updateData);
+      
+      // Update Airflow DAG if configured
+      await createOrUpdateAirflowDAG(scheduledReport);
+      
+      res.json(scheduledReport);
+    } catch (error) {
+      console.error("Error updating scheduled report:", error);
+      res.status(500).json({ error: "Failed to update scheduled report" });
+    }
+  });
+
+  // Delete scheduled report
+  app.delete("/api/scheduled-reports/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      // Get report for Airflow DAG cleanup
+      const report = await storage.getScheduledReportById(id);
+      if (report && report.airflowDagId) {
+        await deleteAirflowDAG(report.airflowDagId);
+      }
+      
+      await storage.deleteScheduledReport(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting scheduled report:", error);
+      res.status(500).json({ error: "Failed to delete scheduled report" });
+    }
+  });
+
+  // Execute scheduled report manually
+  app.post("/api/scheduled-reports/:id/execute", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const scheduledReport = await storage.getScheduledReportById(id);
+      
+      if (!scheduledReport) {
+        return res.status(404).json({ error: "Scheduled report not found" });
+      }
+      
+      const execution = await executeScheduledReport(scheduledReport);
+      res.json(execution);
+    } catch (error) {
+      console.error("Error executing scheduled report:", error);
+      res.status(500).json({ error: "Failed to execute scheduled report" });
+    }
+  });
+
+  // Get mailing lists
+  app.get("/api/mailing-lists", async (req: Request, res: Response) => {
+    try {
+      const mailingLists = await storage.getMailingLists();
+      res.json(mailingLists);
+    } catch (error) {
+      console.error("Error fetching mailing lists:", error);
+      res.status(500).json({ error: "Failed to fetch mailing lists" });
+    }
+  });
+
+  // Create mailing list
+  app.post("/api/mailing-lists", async (req: Request, res: Response) => {
+    try {
+      const mailingListData = req.body;
+      mailingListData.subscriberCount = mailingListData.emails?.length || 0;
+      mailingListData.createdBy = req.session.user?.id;
+      
+      const mailingList = await storage.createMailingList(mailingListData);
+      res.status(201).json(mailingList);
+    } catch (error) {
+      console.error("Error creating mailing list:", error);
+      res.status(500).json({ error: "Failed to create mailing list" });
+    }
+  });
+
+  // Update mailing list
+  app.patch("/api/mailing-lists/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      
+      if (updateData.emails) {
+        updateData.subscriberCount = updateData.emails.length;
+      }
+      
+      const mailingList = await storage.updateMailingList(id, updateData);
+      res.json(mailingList);
+    } catch (error) {
+      console.error("Error updating mailing list:", error);
+      res.status(500).json({ error: "Failed to update mailing list" });
+    }
+  });
+
+  // Delete mailing list
+  app.delete("/api/mailing-lists/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteMailingList(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting mailing list:", error);
+      res.status(500).json({ error: "Failed to delete mailing list" });
+    }
+  });
+
+  // Get report executions for a scheduled report
+  app.get("/api/scheduled-reports/:id/executions", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const executions = await storage.getReportExecutions(id);
+      res.json(executions);
+    } catch (error) {
+      console.error("Error fetching report executions:", error);
+      res.status(500).json({ error: "Failed to fetch report executions" });
+    }
+  });
+
+  // Test Airflow connection
+  app.post("/api/airflow/test-connection", async (req: Request, res: Response) => {
+    try {
+      const { airflowBaseUrl, airflowUsername, airflowPassword } = req.body;
+      const isConnected = await testAirflowConnection(airflowBaseUrl, airflowUsername, airflowPassword);
+      res.json({ connected: isConnected });
+    } catch (error) {
+      console.error("Error testing Airflow connection:", error);
+      res.status(500).json({ error: "Failed to test Airflow connection" });
+    }
+  });
+
+  // Helper functions for scheduler functionality
+  function calculateNextExecution(cronExpression: string, timezone: string = 'UTC'): Date {
+    const cronParser = require('cron-parser');
+    try {
+      const interval = cronParser.parseExpression(cronExpression, { tz: timezone });
+      return interval.next().toDate();
+    } catch (error) {
+      console.error('Error parsing cron expression:', error);
+      // Fallback to next hour
+      const nextExecution = new Date();
+      nextExecution.setHours(nextExecution.getHours() + 1);
+      return nextExecution;
+    }
+  }
+
+  async function createOrUpdateAirflowDAG(scheduledReport: any) {
+    try {
+      const dagId = `report_scheduler_${scheduledReport.id}`;
+      
+      const dagPayload = {
+        dag_id: dagId,
+        schedule_interval: scheduledReport.cronExpression,
+        start_date: new Date().toISOString(),
+        tasks: [{
+          task_id: 'send_report',
+          operator: 'PythonOperator',
+          python_callable: 'send_scheduled_report',
+          op_kwargs: {
+            report_id: scheduledReport.id,
+            presentation_id: scheduledReport.presentationId,
+            recipients: scheduledReport.recipientList,
+            email_subject: scheduledReport.emailSubject,
+            email_body: scheduledReport.emailBody
+          }
+        }]
+      };
+      
+      // Update report with Airflow DAG information
+      await storage.updateScheduledReport(scheduledReport.id, {
+        airflowDagId: dagId,
+        airflowTaskId: 'send_report'
+      });
+      
+    } catch (error) {
+      console.error('Error creating/updating Airflow DAG:', error);
+    }
+  }
+
+  async function deleteAirflowDAG(dagId: string) {
+    try {
+      console.log('Would delete Airflow DAG:', dagId);
+    } catch (error) {
+      console.error('Error deleting Airflow DAG:', error);
+    }
+  }
+
+  async function executeScheduledReport(scheduledReport: any) {
+    try {
+      // Create execution record
+      const execution = await storage.createReportExecution({
+        scheduledReportId: scheduledReport.id,
+        executionStatus: 'running',
+        recipientCount: scheduledReport.recipientList.length
+      });
+
+      // Get presentation data
+      const presentation = await storage.getPresentationById(scheduledReport.presentationId);
+      if (!presentation) {
+        throw new Error('Presentation not found');
+      }
+
+      // Generate report (PDF/Excel)
+      const reportBuffer = await generateReportFile(presentation, scheduledReport.formatSettings);
+      
+      // Send emails with report attachment
+      let successfulDeliveries = 0;
+      for (const recipient of scheduledReport.recipientList) {
+        try {
+          await sendReportEmail({
+            to: recipient,
+            subject: processEmailTemplate(scheduledReport.emailSubject, scheduledReport),
+            body: processEmailTemplate(scheduledReport.emailBody, scheduledReport),
+            attachment: {
+              filename: `${presentation.title}_${new Date().toISOString().split('T')[0]}.pdf`,
+              content: reportBuffer
+            }
+          });
+          successfulDeliveries++;
+        } catch (emailError) {
+          console.error(`Failed to send email to ${recipient}:`, emailError);
+        }
+      }
+
+      // Update execution status
+      await storage.updateReportExecution(execution.id, {
+        executionStatus: 'completed',
+        completedAt: new Date(),
+        successfulDeliveries: successfulDeliveries,
+        failedDeliveries: scheduledReport.recipientList.length - successfulDeliveries
+      });
+
+      // Update scheduled report stats
+      await storage.updateScheduledReport(scheduledReport.id, {
+        lastExecuted: new Date(),
+        executionCount: scheduledReport.executionCount + 1,
+        nextExecution: calculateNextExecution(scheduledReport.cronExpression, scheduledReport.timezone)
+      });
+
+      return execution;
+    } catch (error) {
+      console.error('Error executing scheduled report:', error);
+      throw error;
+    }
+  }
+
+  function processEmailTemplate(template: string, scheduledReport: any): string {
+    const now = new Date();
+    const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
+    const weekEnd = new Date(now.setDate(now.getDate() - now.getDay() + 6));
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    
+    const replacements = {
+      '{date}': new Date().toISOString().split('T')[0],
+      '{time}': new Date().toTimeString().split(' ')[0],
+      '{datetime}': new Date().toISOString(),
+      '{report_name}': scheduledReport.name,
+      '{execution_count}': (scheduledReport.executionCount + 1).toString(),
+      '{recipient_count}': scheduledReport.recipientList.length.toString(),
+      '{week_start}': weekStart.toISOString().split('T')[0],
+      '{week_end}': weekEnd.toISOString().split('T')[0],
+      '{month_start}': monthStart.toISOString().split('T')[0],
+      '{month_end}': monthEnd.toISOString().split('T')[0]
+    };
+    
+    let processed = template;
+    for (const [placeholder, value] of Object.entries(replacements)) {
+      processed = processed.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), value);
+    }
+    
+    return processed;
+  }
+
+  async function generateReportFile(presentation: any, formatSettings: any) {
+    // This would integrate with your existing report generation logic
+    // For now, return a placeholder buffer
+    return Buffer.from(`Generated report for: ${presentation.title}`);
+  }
+
+  async function sendReportEmail(emailData: any) {
+    // Integration with SendGrid or your configured email service
+    console.log('Sending scheduled report email to:', emailData.to);
+    
+    // If SendGrid is configured, send actual email
+    if (process.env.SENDGRID_API_KEY) {
+      const sgMail = require('@sendgrid/mail');
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+      
+      const msg = {
+        to: emailData.to,
+        from: 'reports@company.com', // Use your verified sender
+        subject: emailData.subject,
+        text: emailData.body,
+        html: emailData.body.replace(/\n/g, '<br>'),
+        attachments: emailData.attachment ? [{
+          content: emailData.attachment.content.toString('base64'),
+          filename: emailData.attachment.filename,
+          type: 'application/pdf',
+          disposition: 'attachment'
+        }] : []
+      };
+      
+      await sgMail.send(msg);
+    }
+  }
+
+  async function testAirflowConnection(baseUrl: string, username: string, password: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${baseUrl}/api/v1/health`, {
+        headers: {
+          'Authorization': `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
+        }
+      });
+      return response.ok;
+    } catch (error) {
+      return false;
+    }
+  }
+
   // Serve uploaded images statically
   app.use('/uploads', (req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');

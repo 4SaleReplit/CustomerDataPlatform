@@ -1,0 +1,729 @@
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Calendar, Clock, Mail, Send, Settings, Play, Pause, Trash2, Plus, Users, Database, CalendarDays } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+
+interface ScheduledReport {
+  id: string;
+  name: string;
+  description: string;
+  presentationId: string;
+  presentationTitle?: string;
+  cronExpression: string;
+  timezone: string;
+  emailSubject: string;
+  emailBody: string;
+  recipientList: string[];
+  ccList: string[];
+  bccList: string[];
+  isActive: boolean;
+  lastExecuted: string | null;
+  nextExecution: string | null;
+  executionCount: number;
+  errorCount: number;
+  lastError: string | null;
+  placeholderConfig: Record<string, any>;
+  formatSettings: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Presentation {
+  id: string;
+  title: string;
+  description: string;
+  slideIds: string[];
+  previewImageUrl: string | null;
+}
+
+interface MailingList {
+  id: string;
+  name: string;
+  description: string;
+  emails: Array<{ name: string; email: string }>;
+  subscriberCount: number;
+  isActive: boolean;
+}
+
+const CRON_PRESETS = [
+  { label: "Every Monday 9 AM", value: "0 9 * * 1", description: "Weekly on Monday morning" },
+  { label: "Every Day 8 AM", value: "0 8 * * *", description: "Daily morning" },
+  { label: "Every Weekday 9 AM", value: "0 9 * * 1-5", description: "Monday to Friday" },
+  { label: "Every Friday 5 PM", value: "0 17 * * 5", description: "Weekly on Friday evening" },
+  { label: "First of Month 10 AM", value: "0 10 1 * *", description: "Monthly on 1st" },
+  { label: "Every Hour", value: "0 * * * *", description: "Hourly execution" },
+  { label: "Custom", value: "custom", description: "Enter your own cron expression" }
+];
+
+const AVAILABLE_PLACEHOLDERS = [
+  { key: "{date}", description: "Current date (YYYY-MM-DD)" },
+  { key: "{time}", description: "Current time (HH:MM)" },
+  { key: "{datetime}", description: "Current date and time" },
+  { key: "{report_name}", description: "Name of the report" },
+  { key: "{execution_count}", description: "Number of times report has been sent" },
+  { key: "{recipient_count}", description: "Number of recipients" },
+  { key: "{week_start}", description: "Start of current week" },
+  { key: "{week_end}", description: "End of current week" },
+  { key: "{month_start}", description: "Start of current month" },
+  { key: "{month_end}", description: "End of current month" },
+  { key: "{quarter_start}", description: "Start of current quarter" },
+  { key: "{quarter_end}", description: "End of current quarter" }
+];
+
+export function ReportsScheduler() {
+  const [selectedReport, setSelectedReport] = useState<ScheduledReport | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    presentationId: "",
+    cronExpression: "",
+    timezone: "UTC",
+    emailSubject: "",
+    emailBody: "",
+    recipientList: [] as string[],
+    ccList: [] as string[],
+    bccList: [] as string[],
+    isActive: true,
+    placeholderConfig: {},
+    formatSettings: { format: "pdf", includeCharts: true }
+  });
+
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch scheduled reports
+  const { data: scheduledReports = [], isLoading: reportsLoading } = useQuery({
+    queryKey: ["/api/scheduled-reports"],
+  });
+
+  // Fetch presentations for dropdown
+  const { data: presentations = [] } = useQuery({
+    queryKey: ["/api/presentations"],
+  });
+
+  // Fetch mailing lists
+  const { data: mailingLists = [] } = useQuery({
+    queryKey: ["/api/mailing-lists"],
+  });
+
+  // Create scheduled report mutation
+  const createReportMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("/api/scheduled-reports", "POST", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/scheduled-reports"] });
+      setIsCreateDialogOpen(false);
+      resetForm();
+      toast({ title: "Scheduled report created successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error creating scheduled report", description: error.message, variant: "destructive" });
+    }
+  });
+
+  // Update scheduled report mutation
+  const updateReportMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => 
+      apiRequest(`/api/scheduled-reports/${id}`, "PATCH", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/scheduled-reports"] });
+      setIsEditDialogOpen(false);
+      setSelectedReport(null);
+      toast({ title: "Scheduled report updated successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error updating scheduled report", description: error.message, variant: "destructive" });
+    }
+  });
+
+  // Delete scheduled report mutation
+  const deleteReportMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/scheduled-reports/${id}`, "DELETE"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/scheduled-reports"] });
+      toast({ title: "Scheduled report deleted successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error deleting scheduled report", description: error.message, variant: "destructive" });
+    }
+  });
+
+  // Toggle active status mutation
+  const toggleActiveMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => 
+      apiRequest(`/api/scheduled-reports/${id}`, "PATCH", { isActive }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/scheduled-reports"] });
+      toast({ title: "Report status updated successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error updating report status", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      description: "",
+      presentationId: "",
+      cronExpression: "",
+      timezone: "UTC",
+      emailSubject: "",
+      emailBody: "",
+      recipientList: [],
+      ccList: [],
+      bccList: [],
+      isActive: true,
+      placeholderConfig: {},
+      formatSettings: { format: "pdf", includeCharts: true }
+    });
+  };
+
+  const handleCreateReport = () => {
+    createReportMutation.mutate(formData);
+  };
+
+  const handleUpdateReport = () => {
+    if (selectedReport) {
+      updateReportMutation.mutate({ id: selectedReport.id, data: formData });
+    }
+  };
+
+  const handleDeleteReport = (id: string) => {
+    if (confirm("Are you sure you want to delete this scheduled report?")) {
+      deleteReportMutation.mutate(id);
+    }
+  };
+
+  const handleToggleActive = (id: string, currentStatus: boolean) => {
+    toggleActiveMutation.mutate({ id, isActive: !currentStatus });
+  };
+
+  const openEditDialog = (report: ScheduledReport) => {
+    setSelectedReport(report);
+    setFormData({
+      name: report.name,
+      description: report.description || "",
+      presentationId: report.presentationId,
+      cronExpression: report.cronExpression,
+      timezone: report.timezone,
+      emailSubject: report.emailSubject,
+      emailBody: report.emailBody,
+      recipientList: report.recipientList,
+      ccList: report.ccList,
+      bccList: report.bccList,
+      isActive: report.isActive,
+      placeholderConfig: report.placeholderConfig,
+      formatSettings: report.formatSettings
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const insertPlaceholder = (placeholder: string, field: "emailSubject" | "emailBody") => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: prev[field] + placeholder
+    }));
+  };
+
+  const formatNextExecution = (nextExecution: string | null) => {
+    if (!nextExecution) return "Not scheduled";
+    const date = new Date(nextExecution);
+    return date.toLocaleDateString() + " at " + date.toLocaleTimeString();
+  };
+
+  const getStatusBadge = (report: ScheduledReport) => {
+    if (!report.isActive) {
+      return <Badge variant="secondary">Paused</Badge>;
+    }
+    if (report.errorCount > 0) {
+      return <Badge variant="destructive">Error</Badge>;
+    }
+    return <Badge variant="default">Active</Badge>;
+  };
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Reports Scheduler</h1>
+          <p className="text-muted-foreground">Automate report delivery with scheduled emails</p>
+        </div>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => { resetForm(); setIsCreateDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Schedule New Report
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Schedule New Report</DialogTitle>
+              <DialogDescription>
+                Configure automated report delivery with custom schedules and email templates
+              </DialogDescription>
+            </DialogHeader>
+            <SchedulerForm
+              formData={formData}
+              setFormData={setFormData}
+              presentations={presentations}
+              mailingLists={mailingLists}
+              onSubmit={handleCreateReport}
+              onCancel={() => setIsCreateDialogOpen(false)}
+              isLoading={createReportMutation.isPending}
+              insertPlaceholder={insertPlaceholder}
+            />
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Scheduled Reports List */}
+      <div className="grid gap-4">
+        {reportsLoading ? (
+          <div className="flex items-center justify-center h-32">
+            <div className="text-muted-foreground">Loading scheduled reports...</div>
+          </div>
+        ) : scheduledReports.length === 0 ? (
+          <Card>
+            <CardContent className="flex items-center justify-center h-32">
+              <div className="text-center">
+                <Calendar className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                <p className="text-muted-foreground">No scheduled reports yet</p>
+                <p className="text-sm text-muted-foreground">Create your first automated report</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          scheduledReports.map((report: ScheduledReport) => (
+            <Card key={report.id} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-lg">{report.name}</CardTitle>
+                      {getStatusBadge(report)}
+                    </div>
+                    <CardDescription>{report.description}</CardDescription>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Database className="h-3 w-3" />
+                        {presentations.find((p: Presentation) => p.id === report.presentationId)?.title || "Unknown Report"}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {report.cronExpression}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {report.recipientList.length} recipients
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleToggleActive(report.id, report.isActive)}
+                    >
+                      {report.isActive ? (
+                        <>
+                          <Pause className="h-3 w-3 mr-1" />
+                          Pause
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-3 w-3 mr-1" />
+                          Resume
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEditDialog(report)}
+                    >
+                      <Settings className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteReport(report.id)}
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">NEXT EXECUTION</Label>
+                    <p className="font-medium">{formatNextExecution(report.nextExecution)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">EXECUTIONS</Label>
+                    <p className="font-medium">{report.executionCount} sent</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">LAST SENT</Label>
+                    <p className="font-medium">
+                      {report.lastExecuted ? new Date(report.lastExecuted).toLocaleDateString() : "Never"}
+                    </p>
+                  </div>
+                </div>
+                {report.lastError && (
+                  <div className="mt-3 p-2 bg-destructive/10 border border-destructive/20 rounded text-sm text-destructive">
+                    <strong>Last Error:</strong> {report.lastError}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Scheduled Report</DialogTitle>
+            <DialogDescription>
+              Update report schedule and email configuration
+            </DialogDescription>
+          </DialogHeader>
+          <SchedulerForm
+            formData={formData}
+            setFormData={setFormData}
+            presentations={presentations}
+            mailingLists={mailingLists}
+            onSubmit={handleUpdateReport}
+            onCancel={() => setIsEditDialogOpen(false)}
+            isLoading={updateReportMutation.isPending}
+            insertPlaceholder={insertPlaceholder}
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+interface SchedulerFormProps {
+  formData: any;
+  setFormData: (data: any) => void;
+  presentations: Presentation[];
+  mailingLists: MailingList[];
+  onSubmit: () => void;
+  onCancel: () => void;
+  isLoading: boolean;
+  insertPlaceholder: (placeholder: string, field: "emailSubject" | "emailBody") => void;
+}
+
+function SchedulerForm({
+  formData,
+  setFormData,
+  presentations,
+  mailingLists,
+  onSubmit,
+  onCancel,
+  isLoading,
+  insertPlaceholder
+}: SchedulerFormProps) {
+  const [selectedCronPreset, setSelectedCronPreset] = useState("");
+  const [emailsInput, setEmailsInput] = useState("");
+
+  const handleCronPresetChange = (value: string) => {
+    setSelectedCronPreset(value);
+    if (value !== "custom") {
+      setFormData((prev: any) => ({ ...prev, cronExpression: value }));
+    }
+  };
+
+  const addEmailsFromInput = () => {
+    if (emailsInput.trim()) {
+      const newEmails = emailsInput.split(',').map(email => email.trim()).filter(email => email);
+      setFormData((prev: any) => ({
+        ...prev,
+        recipientList: [...prev.recipientList, ...newEmails]
+      }));
+      setEmailsInput("");
+    }
+  };
+
+  const removeEmail = (index: number) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      recipientList: prev.recipientList.filter((_: any, i: number) => i !== index)
+    }));
+  };
+
+  const addMailingList = (mailingList: MailingList) => {
+    const emails = mailingList.emails.map(contact => contact.email);
+    setFormData((prev: any) => ({
+      ...prev,
+      recipientList: [...new Set([...prev.recipientList, ...emails])]
+    }));
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Basic Information */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Report Name</Label>
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) => setFormData((prev: any) => ({ ...prev, name: e.target.value }))}
+            placeholder="Weekly Sales Report"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="presentationId">Select Report</Label>
+          <Select
+            value={formData.presentationId}
+            onValueChange={(value) => setFormData((prev: any) => ({ ...prev, presentationId: value }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose a report to schedule" />
+            </SelectTrigger>
+            <SelectContent>
+              {presentations.map((presentation: Presentation) => (
+                <SelectItem key={presentation.id} value={presentation.id}>
+                  {presentation.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData((prev: any) => ({ ...prev, description: e.target.value }))}
+          placeholder="Automated weekly sales performance report for stakeholders"
+        />
+      </div>
+
+      {/* Schedule Configuration */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <CalendarDays className="h-5 w-5" />
+            Schedule Configuration
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Schedule Preset</Label>
+            <Select value={selectedCronPreset} onValueChange={handleCronPresetChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a schedule preset" />
+              </SelectTrigger>
+              <SelectContent>
+                {CRON_PRESETS.map((preset) => (
+                  <SelectItem key={preset.value} value={preset.value}>
+                    <div>
+                      <div className="font-medium">{preset.label}</div>
+                      <div className="text-xs text-muted-foreground">{preset.description}</div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {(selectedCronPreset === "custom" || !selectedCronPreset) && (
+            <div className="space-y-2">
+              <Label htmlFor="cronExpression">Cron Expression</Label>
+              <Input
+                id="cronExpression"
+                value={formData.cronExpression}
+                onChange={(e) => setFormData((prev: any) => ({ ...prev, cronExpression: e.target.value }))}
+                placeholder="0 9 * * 1 (Every Monday at 9 AM)"
+              />
+              <p className="text-xs text-muted-foreground">
+                Format: minute hour day month weekday (e.g., "0 9 * * 1" for Monday 9 AM)
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="timezone">Timezone</Label>
+            <Select
+              value={formData.timezone}
+              onValueChange={(value) => setFormData((prev: any) => ({ ...prev, timezone: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="UTC">UTC</SelectItem>
+                <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
+                <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
+                <SelectItem value="America/Denver">Mountain Time (MT)</SelectItem>
+                <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
+                <SelectItem value="Europe/London">London</SelectItem>
+                <SelectItem value="Europe/Paris">Paris</SelectItem>
+                <SelectItem value="Asia/Tokyo">Tokyo</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Email Configuration */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Email Configuration
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="emailSubject">Email Subject</Label>
+              <div className="flex gap-1">
+                {AVAILABLE_PLACEHOLDERS.slice(0, 4).map((placeholder) => (
+                  <Button
+                    key={placeholder.key}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => insertPlaceholder(placeholder.key, "emailSubject")}
+                    className="text-xs"
+                  >
+                    {placeholder.key}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <Input
+              id="emailSubject"
+              value={formData.emailSubject}
+              onChange={(e) => setFormData((prev: any) => ({ ...prev, emailSubject: e.target.value }))}
+              placeholder="Weekly Sales Report - {date}"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="emailBody">Email Body</Label>
+              <div className="flex gap-1 flex-wrap">
+                {AVAILABLE_PLACEHOLDERS.map((placeholder) => (
+                  <Button
+                    key={placeholder.key}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => insertPlaceholder(placeholder.key, "emailBody")}
+                    className="text-xs"
+                    title={placeholder.description}
+                  >
+                    {placeholder.key}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <Textarea
+              id="emailBody"
+              value={formData.emailBody}
+              onChange={(e) => setFormData((prev: any) => ({ ...prev, emailBody: e.target.value }))}
+              placeholder="Dear Team,&#10;&#10;Please find attached the {report_name} for the week ending {date}.&#10;&#10;Best regards"
+              rows={6}
+            />
+          </div>
+
+          {/* Recipients */}
+          <div className="space-y-4">
+            <Label>Recipients</Label>
+            
+            {/* Mailing Lists */}
+            {mailingLists.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm">Add from Mailing Lists</Label>
+                <div className="flex gap-2 flex-wrap">
+                  {mailingLists.map((list: MailingList) => (
+                    <Button
+                      key={list.id}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addMailingList(list)}
+                      disabled={!list.isActive}
+                    >
+                      <Users className="h-3 w-3 mr-1" />
+                      {list.name} ({list.subscriberCount})
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Manual Email Entry */}
+            <div className="space-y-2">
+              <Label className="text-sm">Add Emails Manually</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={emailsInput}
+                  onChange={(e) => setEmailsInput(e.target.value)}
+                  placeholder="email1@example.com, email2@example.com"
+                  onKeyPress={(e) => e.key === 'Enter' && addEmailsFromInput()}
+                />
+                <Button onClick={addEmailsFromInput} size="sm">
+                  Add
+                </Button>
+              </div>
+            </div>
+
+            {/* Current Recipients */}
+            {formData.recipientList.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm">Current Recipients ({formData.recipientList.length})</Label>
+                <div className="flex gap-1 flex-wrap max-h-32 overflow-y-auto">
+                  {formData.recipientList.map((email: string, index: number) => (
+                    <Badge key={index} variant="secondary" className="cursor-pointer" onClick={() => removeEmail(index)}>
+                      {email} ×
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Actions */}
+      <div className="flex items-center justify-between pt-4">
+        <div className="flex items-center space-x-2">
+          <Switch
+            checked={formData.isActive}
+            onCheckedChange={(checked) => setFormData((prev: any) => ({ ...prev, isActive: checked }))}
+          />
+          <Label>Active</Label>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button onClick={onSubmit} disabled={isLoading}>
+            {isLoading ? "Saving..." : "Save Schedule"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
