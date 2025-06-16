@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import RoleManagement from './RoleManagement';
-import { ConsoleLogModal } from '@/components/migration/ConsoleLogModal';
+import { BasicMigrationPopup } from '@/components/migration/BasicMigrationPopup';
 
 
 
@@ -1290,9 +1290,9 @@ export default function Admin() {
             </DialogContent>
           </Dialog>
 
-          {/* Console Log Modal - Simple Output Display */}
-          <ConsoleLogModal
-            isOpen={showMigrationProgress}
+          {/* Basic Migration Popup - Console Output Display */}
+          <BasicMigrationPopup
+            isVisible={showMigrationProgress}
             sessionId={migrationSessionId}
             onClose={() => setShowMigrationProgress(false)}
           />
