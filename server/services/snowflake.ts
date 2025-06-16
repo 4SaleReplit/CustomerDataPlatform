@@ -164,12 +164,5 @@ export async function getDynamicSnowflakeService(): Promise<SnowflakeService | n
   return new SnowflakeService(credentials);
 }
 
-// Legacy service instance for backward compatibility (will be removed)
-export const snowflakeService = new SnowflakeService({
-  account: "q84sale",
-  username: "CDP_USER",
-  password: "P0PmCtwMKOIFi6F",
-  warehouse: "LOOKER",
-  database: "DBT_CORE_PROD_DATABASE",
-  schema: "USER_SEGMENTATION_PROJECT_V4"
-});
+// All Snowflake operations now use getDynamicSnowflakeService() 
+// which loads credentials from database integration
