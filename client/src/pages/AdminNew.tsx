@@ -341,6 +341,70 @@ export default function AdminNew() {
     });
   };
 
+  const handleStartMigration = async () => {
+    if (!selectedSourceEnv || !selectedTargetEnv) {
+      toast({
+        title: "Error",
+        description: "Please select both source and destination databases",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (selectedSourceEnv === selectedTargetEnv) {
+      toast({
+        title: "Error", 
+        description: "Source and destination databases must be different",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsMigrating(true);
+    
+    try {
+      // Get source and target integration details
+      const sourceIntegration = integrations.find((int: any) => int.id === selectedSourceEnv);
+      const targetIntegration = integrations.find((int: any) => int.id === selectedTargetEnv);
+
+      if (!sourceIntegration || !targetIntegration) {
+        throw new Error("Could not find selected database integrations");
+      }
+
+      // Start the migration
+      const response = await apiRequest('/api/migrate-data', {
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'postgresql',
+          sourceIntegrationId: selectedSourceEnv,
+          targetIntegrationId: selectedTargetEnv,
+          sourceEnvironment: sourceIntegration.name,
+          targetEnvironment: targetIntegration.name,
+          sourceConfig: sourceIntegration.credentials,
+          targetConfig: targetIntegration.credentials
+        })
+      });
+
+      if (response.success) {
+        toast({
+          title: "Migration Completed",
+          description: `Successfully migrated ${response.details.migratedTables} of ${response.details.totalTables} tables from ${sourceIntegration.name} to ${targetIntegration.name}`,
+        });
+        setShowMigrationModal(false);
+        setSelectedSourceEnv('');
+        setSelectedTargetEnv('');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Migration Failed",
+        description: error.message || "An error occurred during migration",
+        variant: "destructive"
+      });
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
   const handleConfigureEnvironment = (envId: string) => {
     setSelectedConfigEnv(envId);
     
@@ -559,124 +623,6 @@ export default function AdminNew() {
       }));
     }
   }, [environmentConfigurations, integrations, activeIntegrationTypes]);
-
-  const handleStartMigration = async () => {
-    if (!selectedSourceEnv || !selectedTargetEnv) {
-      toast({
-        title: "Migration error",
-        description: "Please select both source and target environments",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (selectedSourceEnv === selectedTargetEnv) {
-      toast({
-        title: "Migration error",
-        description: "Source and target environments cannot be the same",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const sourceEnv = environments.find(e => e.id === selectedSourceEnv);
-    const targetEnv = environments.find(e => e.id === selectedTargetEnv);
-
-    if (!sourceEnv || !targetEnv) {
-      toast({
-        title: "Migration error",
-        description: "Invalid environment selection",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsMigrating(true);
-
-    try {
-      // Get configured integrations for migration - only PostgreSQL, Redis, and S3 for now
-      const migrableTypes = ['postgresql', 'redis', 's3'].filter(type => 
-        activeIntegrationTypes.includes(type) &&
-        sourceEnv.databases?.[type]?.integrationId &&
-        targetEnv.databases?.[type]?.integrationId &&
-        sourceEnv.databases[type].integrationId !== targetEnv.databases[type].integrationId
-      );
-
-      if (migrableTypes.length === 0) {
-        toast({
-          title: "Migration error",
-          description: "No valid migration paths found. Both environments need different configured integrations for PostgreSQL, Redis, or S3.",
-          variant: "destructive"
-        });
-        setIsMigrating(false);
-        return;
-      }
-
-      // Start migration process
-      const migrationResults = [];
-
-      for (const type of migrableTypes) {
-        const sourceIntegration = integrations.find((int: any) => int.id === sourceEnv.databases[type].integrationId);
-        const targetIntegration = integrations.find((int: any) => int.id === targetEnv.databases[type].integrationId);
-
-        if (sourceIntegration && targetIntegration) {
-          try {
-            const result = await apiRequest('/api/migrate-data', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                type,
-                sourceIntegrationId: sourceIntegration.id,
-                targetIntegrationId: targetIntegration.id,
-                sourceEnvironment: sourceEnv.name,
-                targetEnvironment: targetEnv.name,
-                sourceConfig: sourceIntegration.configuration,
-                targetConfig: targetIntegration.configuration
-              })
-            });
-
-            migrationResults.push({
-              type,
-              status: 'success',
-              message: result.message || `${type} migration completed successfully`
-            });
-          } catch (error: any) {
-            migrationResults.push({
-              type,
-              status: 'error',
-              message: error.message || `Failed to migrate ${type}`
-            });
-          }
-        }
-      }
-
-      const successCount = migrationResults.filter(r => r.status === 'success').length;
-      const errorCount = migrationResults.filter(r => r.status === 'error').length;
-
-      if (successCount > 0) {
-        toast({
-          title: "Migration completed",
-          description: `Successfully migrated ${successCount} service(s) from ${sourceEnv.name} to ${targetEnv.name}${errorCount > 0 ? ` (${errorCount} failed)` : ''}`
-        });
-      } else {
-        toast({
-          title: "Migration failed",
-          description: "All migration attempts failed. Check your integration configurations.",
-          variant: "destructive"
-        });
-      }
-
-      setShowMigrationModal(false);
-    } catch (error: any) {
-      toast({
-        title: "Migration failed",
-        description: error.message || "An unexpected error occurred during migration",
-        variant: "destructive"
-      });
-    } finally {
-      setIsMigrating(false);
-    }
-  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
