@@ -566,8 +566,31 @@ export function DataStudioReports() {
 
   // Slide preview component
   const SlidePreview = ({ slideData, presentationId }: { slideData: any; presentationId: string }) => {
+    // First check if presentation has a generated preview image
+    const presentation = presentations.find(p => p.id === presentationId);
+    if (presentation?.previewImageUrl) {
+      const thumbnailUrl = presentation.previewImageUrl.startsWith('/uploads/') 
+        ? `${window.location.origin}${presentation.previewImageUrl}`
+        : presentation.previewImageUrl;
+      
+      return (
+        <div className="w-full h-20 bg-white rounded border border-gray-200 overflow-hidden">
+          <img 
+            src={thumbnailUrl} 
+            alt="Report preview" 
+            className="w-full h-full object-cover"
+          />
+        </div>
+      );
+    }
+
+    // Fallback to existing thumbnail cache system
     if (!slideData || !slideData.elements?.length) {
-      return null;
+      return (
+        <div className="w-full h-20 bg-gradient-to-r from-blue-50 to-blue-100 rounded border border-blue-200 flex items-center justify-center">
+          <Presentation className="h-8 w-8 text-blue-400" />
+        </div>
+      );
     }
 
     const thumbnailUrl = thumbnailCache[presentationId];

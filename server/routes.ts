@@ -3191,7 +3191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/presentations/:id", async (req, res) => {
     try {
       // Allow partial updates including preview image and refresh timestamp
-      const allowedFields = ['previewImageId', 'lastRefreshed', 'title', 'description'];
+      const allowedFields = ['previewImageUrl', 'lastRefreshed', 'title', 'description'];
       const updates: any = {};
       
       for (const field of allowedFields) {
