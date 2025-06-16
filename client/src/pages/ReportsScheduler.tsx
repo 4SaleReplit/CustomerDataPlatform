@@ -55,15 +55,50 @@ interface MailingList {
   isActive: boolean;
 }
 
-const CRON_PRESETS = [
-  { label: "Every Monday 9 AM", value: "0 9 * * 1", description: "Weekly on Monday morning" },
-  { label: "Every Day 8 AM", value: "0 8 * * *", description: "Daily morning" },
-  { label: "Every Weekday 9 AM", value: "0 9 * * 1-5", description: "Monday to Friday" },
-  { label: "Every Friday 5 PM", value: "0 17 * * 5", description: "Weekly on Friday evening" },
-  { label: "First of Month 10 AM", value: "0 10 1 * *", description: "Monthly on 1st" },
-  { label: "Every Hour", value: "0 * * * *", description: "Hourly execution" },
-  { label: "Custom", value: "custom", description: "Enter your own cron expression" }
+// Schedule configuration options
+const FREQUENCY_OPTIONS = [
+  { label: "Daily", value: "daily" },
+  { label: "Weekly", value: "weekly" },
+  { label: "Monthly", value: "monthly" },
+  { label: "Custom", value: "custom" }
 ];
+
+const TIME_OPTIONS = Array.from({ length: 24 }, (_, i) => {
+  const hour = i.toString().padStart(2, '0');
+  const time12 = i === 0 ? '12:00 AM' : i < 12 ? `${i}:00 AM` : i === 12 ? '12:00 PM' : `${i - 12}:00 PM`;
+  return { label: time12, value: `${hour}:00` };
+});
+
+const WEEKDAY_OPTIONS = [
+  { label: "Monday", value: "1" },
+  { label: "Tuesday", value: "2" },
+  { label: "Wednesday", value: "3" },
+  { label: "Thursday", value: "4" },
+  { label: "Friday", value: "5" },
+  { label: "Saturday", value: "6" },
+  { label: "Sunday", value: "0" }
+];
+
+const MONTH_DAY_OPTIONS = Array.from({ length: 28 }, (_, i) => ({
+  label: `${i + 1}${i + 1 === 1 ? 'st' : i + 1 === 2 ? 'nd' : i + 1 === 3 ? 'rd' : 'th'}`,
+  value: (i + 1).toString()
+}));
+
+// Function to generate cron expression from user-friendly inputs
+function generateCronExpression(frequency: string, time: string, weekday?: string, monthDay?: string): string {
+  const [hour, minute] = time.split(':');
+  
+  switch (frequency) {
+    case 'daily':
+      return `${minute} ${hour} * * *`;
+    case 'weekly':
+      return `${minute} ${hour} * * ${weekday || '1'}`;
+    case 'monthly':
+      return `${minute} ${hour} ${monthDay || '1'} * *`;
+    default:
+      return '0 9 * * 1'; // Default to Monday 9 AM
+  }
+}
 
 const AVAILABLE_PLACEHOLDERS = [
   { key: "{date}", description: "Current date (YYYY-MM-DD)" },
@@ -441,14 +476,22 @@ function SchedulerForm({
   isLoading,
   insertPlaceholder
 }: SchedulerFormProps) {
-  const [selectedCronPreset, setSelectedCronPreset] = useState("");
+  const [frequency, setFrequency] = useState("weekly");
+  const [time, setTime] = useState("09:00");
+  const [weekday, setWeekday] = useState("1");
+  const [monthDay, setMonthDay] = useState("1");
   const [emailsInput, setEmailsInput] = useState("");
 
-  const handleCronPresetChange = (value: string) => {
-    setSelectedCronPreset(value);
-    if (value !== "custom") {
-      setFormData((prev: any) => ({ ...prev, cronExpression: value }));
+  // Generate cron expression when schedule options change
+  useEffect(() => {
+    if (frequency !== "custom") {
+      const cronExpression = generateCronExpression(frequency, time, weekday, monthDay);
+      setFormData((prev: any) => ({ ...prev, cronExpression }));
     }
+  }, [frequency, time, weekday, monthDay, setFormData]);
+
+  const handleFrequencyChange = (value: string) => {
+    setFrequency(value);
   };
 
   const addEmailsFromInput = () => {
@@ -529,28 +572,79 @@ function SchedulerForm({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Schedule Preset</Label>
-            <Select value={selectedCronPreset} onValueChange={handleCronPresetChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a schedule preset" />
-              </SelectTrigger>
-              <SelectContent>
-                {CRON_PRESETS.map((preset) => (
-                  <SelectItem key={preset.value} value={preset.value}>
-                    <div>
-                      <div className="font-medium">{preset.label}</div>
-                      <div className="text-xs text-muted-foreground">{preset.description}</div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Frequency</Label>
+              <Select value={frequency} onValueChange={handleFrequencyChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="How often?" />
+                </SelectTrigger>
+                <SelectContent>
+                  {FREQUENCY_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Time</Label>
+              <Select value={time} onValueChange={setTime}>
+                <SelectTrigger>
+                  <SelectValue placeholder="What time?" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIME_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          {(selectedCronPreset === "custom" || !selectedCronPreset) && (
+          {frequency === "weekly" && (
             <div className="space-y-2">
-              <Label htmlFor="cronExpression">Cron Expression</Label>
+              <Label>Day of Week</Label>
+              <Select value={weekday} onValueChange={setWeekday}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Which day?" />
+                </SelectTrigger>
+                <SelectContent>
+                  {WEEKDAY_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {frequency === "monthly" && (
+            <div className="space-y-2">
+              <Label>Day of Month</Label>
+              <Select value={monthDay} onValueChange={setMonthDay}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Which day?" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MONTH_DAY_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {frequency === "custom" && (
+            <div className="space-y-2">
+              <Label htmlFor="cronExpression">Custom Cron Expression</Label>
               <Input
                 id="cronExpression"
                 value={formData.cronExpression}
@@ -559,6 +653,22 @@ function SchedulerForm({
               />
               <p className="text-xs text-muted-foreground">
                 Format: minute hour day month weekday (e.g., "0 9 * * 1" for Monday 9 AM)
+              </p>
+            </div>
+          )}
+
+          {frequency !== "custom" && (
+            <div className="p-3 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                <strong>Schedule:</strong> {
+                  frequency === 'daily' ? `Every day at ${TIME_OPTIONS.find(t => t.value === time)?.label}` :
+                  frequency === 'weekly' ? `Every ${WEEKDAY_OPTIONS.find(w => w.value === weekday)?.label} at ${TIME_OPTIONS.find(t => t.value === time)?.label}` :
+                  frequency === 'monthly' ? `${MONTH_DAY_OPTIONS.find(d => d.value === monthDay)?.label} of every month at ${TIME_OPTIONS.find(t => t.value === time)?.label}` :
+                  'Custom schedule'
+                }
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Cron: {formData.cronExpression}
               </p>
             </div>
           )}
