@@ -64,7 +64,8 @@ const navigation = [
     icon: FileText, 
     children: [
       { name: 'All Reports', href: '/reports', icon: FileText },
-      { name: 'Design Studio', href: '/reports/designer', icon: Edit3 }
+      { name: 'Design Studio', href: '/reports/designer', icon: Edit3 },
+      { name: 'Scheduler', href: '/reports/scheduler', icon: Calendar }
     ]
   },
 
