@@ -336,8 +336,17 @@ export default function Admin() {
       return;
     }
 
+    // Show progress popup immediately before starting migration
+    setShowMigrationModal(false);
+    setShowMigrationProgress(true);
+    setMigrationSessionId('initializing');
     setIsMigrating(true);
     
+    toast({
+      title: "Migration Starting",
+      description: "Progress popup is now displaying - migration will begin momentarily"
+    });
+
     try {
       // Start PostgreSQL migration with real-time progress tracking
       const response = await apiRequest('/api/migrate-data', {
@@ -358,26 +367,21 @@ export default function Admin() {
       });
 
       if (response.success && response.sessionId) {
-        // Hide migration modal and show progress tracking immediately
+        // Update with real session ID
         setMigrationSessionId(response.sessionId);
-        setShowMigrationModal(false);
-        setShowMigrationProgress(true);
-        setIsMigrating(false); // Reset this to allow popup interaction
+        setIsMigrating(false); // Allow popup interaction
         
         toast({
-          title: "Migration Started",
-          description: "Progress popup is now displaying with live updates"
+          title: "Migration Active",
+          description: "Real-time progress tracking with session ID: " + response.sessionId.substring(0, 8)
         });
       } else {
-        // Fallback if no session ID - still show progress popup
-        setShowMigrationModal(false);
-        setShowMigrationProgress(true);
-        setMigrationSessionId('fallback-session');
+        // Keep showing progress even without session ID
         setIsMigrating(false);
         
         toast({
-          title: "Migration Started",
-          description: "Migration running - check progress popup"
+          title: "Migration Running",
+          description: "Progress tracking active - check server logs for details"
         });
       }
     } catch (error: any) {

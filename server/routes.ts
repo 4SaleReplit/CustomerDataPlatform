@@ -3570,6 +3570,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Handle JSON/JSONB columns properly
             if (col.udt_name === 'json' || col.udt_name === 'jsonb') {
               columnDef += col.udt_name;
+            } else if (col.data_type === 'ARRAY' || col.udt_name.startsWith('_')) {
+              // Handle array types properly
+              const baseType = col.udt_name.startsWith('_') ? col.udt_name.substring(1) : 'text';
+              columnDef += `${baseType}[]`;
             } else if (col.data_type === 'character varying' && col.character_maximum_length) {
               columnDef += `VARCHAR(${col.character_maximum_length})`;
             } else {
