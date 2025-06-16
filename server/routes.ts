@@ -55,7 +55,7 @@ const upload = multer({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Add middleware to handle JSON parsing errors
   app.use((err: any, req: any, res: any, next: any) => {
-    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    if (err instanceof SyntaxError && 'body' in err) {
       console.error('JSON parsing error:', err.message);
       return res.status(400).json({
         error: 'Invalid JSON format in request body',
@@ -175,7 +175,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Query is required" });
       }
 
-      const result = await snowflakeService.executeQuery(query);
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const dynamicService = await getDynamicSnowflakeService();
+      
+      if (!dynamicService) {
+        return res.status(400).json({ 
+          error: "Snowflake integration not configured",
+          details: "Please configure a Snowflake integration in the Integrations page"
+        });
+      }
+
+      const result = await dynamicService.executeQuery(query);
       
       if (!result.success) {
         return res.status(400).json({ error: result.error });
@@ -894,8 +904,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get Snowflake column schema for segment attributes
   app.get("/api/snowflake/schema", async (req, res) => {
     try {
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const dynamicService = await getDynamicSnowflakeService();
+      
+      if (!dynamicService) {
+        return res.status(400).json({ 
+          error: "Snowflake integration not configured",
+          details: "Please configure a Snowflake integration in the Integrations page"
+        });
+      }
+
       const query = "DESCRIBE TABLE DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4";
-      const result = await snowflakeService.executeQuery(query);
+      const result = await dynamicService.executeQuery(query);
       
       if (!result.success) {
         return res.status(500).json({ 
@@ -1171,8 +1191,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Test Snowflake connection using existing service
-      const testResult = await snowflakeService.executeQuery('SELECT 1 as test');
+      // Test Snowflake connection using dynamic service
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const dynamicService = await getDynamicSnowflakeService();
+      
+      if (!dynamicService) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Snowflake integration not configured. Please configure a Snowflake integration first." 
+        });
+      }
+
+      const testResult = await dynamicService.executeQuery('SELECT 1 as test');
       
       if (testResult.success) {
         res.json({ success: true, message: "Snowflake connection successful" });

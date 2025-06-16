@@ -147,8 +147,24 @@ export class SnowflakeService {
 
 // Load environment variables
 import { config } from "dotenv";
+import { credentialManager } from './credentialManager';
 config();
 
+/**
+ * Get dynamic Snowflake service instance using integration credentials
+ */
+export async function getDynamicSnowflakeService(): Promise<SnowflakeService | null> {
+  const credentials = await credentialManager.getSnowflakeCredentials();
+  
+  if (!credentials) {
+    console.warn('No Snowflake integration credentials found. Please configure Snowflake integration.');
+    return null;
+  }
+
+  return new SnowflakeService(credentials);
+}
+
+// Legacy service instance for backward compatibility (will be removed)
 export const snowflakeService = new SnowflakeService({
   account: "q84sale",
   username: "CDP_USER",
