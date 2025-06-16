@@ -3585,65 +3585,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
           updateProgress('Data Migration', `Migrating ${totalRows} rows from table: ${table}`, 
             tableProgress + 5, totalTables, migratedTables);
 
-          // Migrate data with strict timeout protection
+          // Migrate limited data efficiently
+          let processedRows = 0;
           if (totalRows > 0) {
-            let processedRows = 0;
-            const maxRowsToMigrate = Math.min(totalRows, 1000); // Limit to 1000 rows max per table
+            const maxRowsToMigrate = Math.min(totalRows, 100); // Strict limit: 100 rows max per table
             
             console.log(`Starting data migration for table ${table}: processing ${maxRowsToMigrate} of ${totalRows} rows`);
             
             try {
-              // Use Promise.race to implement timeout
-              const migrationPromise = (async () => {
-                const dataResult = await sourcePool.query(`
-                  SELECT * FROM "${table}" 
-                  ORDER BY ${primaryKeys.length > 0 ? primaryKeys.map(pk => `"${pk}"`).join(', ') : '1'}
-                  LIMIT ${maxRowsToMigrate}
-                `);
-                
-                const columns = structureResult.rows.map((col: any) => `"${col.column_name}"`).join(', ');
-                
-                for (const row of dataResult.rows) {
-                  try {
-                    const values = structureResult.rows.map((col: any) => {
-                      const value = row[col.column_name];
-                      
-                      // Convert JSON columns to null to avoid parsing issues
-                      if (col.udt_name === 'json' || col.udt_name === 'jsonb') {
-                        return null;
-                      }
-                      
-                      return value;
-                    });
+              const dataResult = await sourcePool.query(`
+                SELECT * FROM "${table}" 
+                ORDER BY ${primaryKeys.length > 0 ? primaryKeys.map(pk => `"${pk}"`).join(', ') : '1'}
+                LIMIT ${maxRowsToMigrate}
+              `);
+              
+              const columns = structureResult.rows.map((col: any) => `"${col.column_name}"`).join(', ');
+              
+              for (const row of dataResult.rows) {
+                try {
+                  const values = structureResult.rows.map((col: any) => {
+                    const value = row[col.column_name];
                     
-                    const placeholders = values.map((_: any, i: number) => `$${i + 1}`).join(', ');
+                    // Convert JSON columns to null to avoid parsing issues
+                    if (col.udt_name === 'json' || col.udt_name === 'jsonb') {
+                      return null;
+                    }
                     
-                    await targetPool.query(
-                      `INSERT INTO "${table}" (${columns}) VALUES (${placeholders})`,
-                      values
-                    );
-                    
-                    processedRows++;
-                    
-                  } catch (rowError: any) {
-                    console.warn(`Skipping problematic row in ${table}:`, rowError.message);
-                    processedRows++;
-                  }
+                    return value;
+                  });
+                  
+                  const placeholders = values.map((_: any, i: number) => `$${i + 1}`).join(', ');
+                  
+                  await targetPool.query(
+                    `INSERT INTO "${table}" (${columns}) VALUES (${placeholders})`,
+                    values
+                  );
+                  
+                  processedRows++;
+                  
+                } catch (rowError: any) {
+                  console.warn(`Skipping problematic row in ${table}:`, rowError.message);
+                  processedRows++;
                 }
-                
-                return processedRows;
-              })();
+              }
               
-              const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('Table migration timeout')), maxTableTimeout);
-              });
-              
-              // Race between migration and timeout
-              processedRows = await Promise.race([migrationPromise, timeoutPromise]) as number;
-              
-            } catch (timeoutError: any) {
-              console.log(`Table ${table} migration timed out after ${maxTableTimeout/1000}s, skipping to next table`);
-              processedRows = 0;
+            } catch (migrationError: any) {
+              console.log(`Table ${table} migration failed: ${migrationError.message}, skipping to next table`);
             }
             
             console.log(`Completed data migration for table ${table}: ${processedRows} rows processed`);
@@ -3662,6 +3649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (tableError: any) {
           console.error(`Error migrating table ${table}:`, tableError.message);
           migratedTables++; // Still count as attempted to continue with other tables
+          const processedRows = 0; // Initialize for error recovery
           
           // Try creating table with simplified schema (no constraints) for problematic tables
           try {
