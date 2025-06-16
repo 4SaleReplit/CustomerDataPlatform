@@ -3627,7 +3627,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (totalRows > 0) {
             const maxRowsToMigrate = Math.min(totalRows, 100); // Strict limit: 100 rows max per table
             
-            console.log(`Starting data migration for table ${table}: processing ${maxRowsToMigrate} of ${totalRows} rows`);
+            logMessage(`Starting data migration for table ${table}: processing ${maxRowsToMigrate} of ${totalRows} rows`);
             
             try {
               const dataResult = await sourcePool.query(`
