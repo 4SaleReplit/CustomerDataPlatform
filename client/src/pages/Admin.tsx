@@ -1153,9 +1153,9 @@ export default function Admin() {
                         {migration.status === 'in_progress' && <Clock className="h-4 w-4 text-blue-600 mr-3" />}
                         {migration.status === 'pending' && <AlertTriangle className="h-4 w-4 text-yellow-600 mr-3" />}
                         <div>
-                          <p className="font-medium">{migration.sourceName} → {migration.targetName}</p>
+                          <p className="font-medium">{migration.sourceIntegrationName || 'Unknown Source'} → {migration.targetIntegrationName || 'Unknown Target'}</p>
                           <p className="text-sm text-muted-foreground">
-                            {migration.metadata?.totalRowsMigrated ? `Migrated ${migration.metadata.totalRowsMigrated} records` : 'Migration details'} • 
+                            {migration.completedItems ? `Migrated ${migration.completedItems} of ${migration.totalItems || 0} records` : 'Migration details'} • 
                             {migration.createdAt ? new Date(migration.createdAt).toLocaleString() : 'Unknown time'}
                           </p>
                         </div>
