@@ -3449,7 +3449,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   async function migratePostgreSQL(sourceConfig: any, targetConfig: any, sessionId?: string, broadcastProgress?: Function) {
     // PostgreSQL migration logic with cleanup and overwrite support
     
-    const updateProgress = (stage: string, currentJob: string, progress: number, totalItems = 0, completedItems = 0) => {
+    const updateProgress = (stage: string, currentJob: string, progress: number, totalItems = 0, completedItems = 0, metadata?: any) => {
       if (sessionId && broadcastProgress) {
         const progressData: MigrationProgress = {
           sessionId,
@@ -3459,8 +3459,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           progress,
           totalItems,
           completedItems,
-          status: 'running',
-          startTime: migrationSessions.get(sessionId)?.startTime || new Date()
+          status: progress >= 100 ? 'completed' : 'running',
+          startTime: migrationSessions.get(sessionId)?.startTime || new Date(),
+          migrationMetadata: metadata
         };
         migrationSessions.set(sessionId, progressData);
         broadcastProgress(sessionId, progressData);
@@ -3798,14 +3799,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      updateProgress('Completed', `Migration successful: ${migratedTables} tables, ${totalRowsMigrated} total rows`, 100, totalTables, migratedTables);
-      console.log(`Migration completed successfully: ${migratedTables} tables, ${totalRowsMigrated} total rows`);
+      // Create comprehensive migration metadata
+      const endTime = new Date();
+      const startTimeObj = migrationSessions.get(sessionId)?.startTime || new Date();
+      const duration = endTime.getTime() - startTimeObj.getTime();
+      
+      const migrationMetadata = {
+        sourceDatabase: sourceDbName,
+        targetDatabase: targetDbName,
+        totalTables: totalTables,
+        totalSchemas: 1, // PostgreSQL public schema
+        totalColumns: totalColumns,
+        totalRowsMigrated: totalRowsMigrated,
+        tablesCompleted: tablesCompleted,
+        startTime: startTimeObj.toISOString(),
+        endTime: endTime.toISOString(),
+        duration: duration
+      };
+
+      updateProgress('Completed', `Migration successful: ${migratedTables} tables, ${totalRowsMigrated} total rows`, 100, totalTables, migratedTables, migrationMetadata);
+      console.log(`Migration completed successfully: ${migratedTables} tables, ${totalRowsMigrated} total rows, ${totalColumns} columns`);
       
       return { 
         migratedTables, 
         totalTables: tables.length, 
         totalRowsMigrated,
-        tablesCompleted: tables 
+        totalColumns,
+        tablesCompleted,
+        migrationMetadata
       };
     } finally {
       await sourcePool.end();
