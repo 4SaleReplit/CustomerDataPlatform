@@ -3450,7 +3450,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   async function migratePostgreSQL(sourceConfig: any, targetConfig: any, sessionId?: string, broadcastProgress?: Function) {
     // PostgreSQL migration logic with cleanup and overwrite support
     
+    const consoleMessages: string[] = [];
+    
+    const logMessage = (message: string) => {
+      console.log(message);
+      consoleMessages.push(message);
+    };
+    
     const updateProgress = (stage: string, currentJob: string, progress: number, totalItems = 0, completedItems = 0, metadata?: any) => {
+      const logEntry = `[${stage}] ${currentJob} - ${progress}%`;
+      logMessage(logEntry);
+      
       if (sessionId && broadcastProgress) {
         const progressData: MigrationProgress = {
           sessionId,
@@ -3462,12 +3472,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           completedItems,
           status: progress >= 100 ? 'completed' : 'running',
           startTime: migrationSessions.get(sessionId)?.startTime || new Date(),
+          logs: [...consoleMessages],
           migrationMetadata: metadata
         };
         migrationSessions.set(sessionId, progressData);
         broadcastProgress(sessionId, progressData);
       }
-      console.log(`[${stage}] ${currentJob} - ${progress}%`);
     };
 
     updateProgress('Initializing', 'Starting migration process', 0);
@@ -3485,11 +3495,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       updateProgress('Connecting', 'Establishing source database connection', 5);
       await sourcePool.query('SELECT 1');
-      console.log('Source database connected successfully');
+      logMessage('Source database connected successfully');
       
       updateProgress('Connecting', 'Establishing target database connection', 10);
       await targetPool.query('SELECT 1');
-      console.log('Target database connected successfully');
+      logMessage('Target database connected successfully');
 
       updateProgress('Schema Discovery', 'Analyzing source database tables and structure', 15);
       // Get table list from source
@@ -3513,16 +3523,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const targetDbName = targetConfig.name || targetConfig.connectionString?.split('/').pop()?.split('?')[0] || 'Target Database';
 
       updateProgress('Schema Discovery', `Found ${totalTables} tables to migrate`, 20, totalTables, 0);
-      console.log(`Tables to migrate: ${tables.join(', ')}`);
+      logMessage(`Tables to migrate: ${tables.join(', ')}`);
 
       // First pass: Drop and recreate all tables for clean migration
       updateProgress('Schema Cleanup', 'Removing existing tables in target database', 25);
       for (const table of tables) {
         try {
           await targetPool.query(`DROP TABLE IF EXISTS "${table}" CASCADE`);
-          console.log(`Dropped existing table: ${table}`);
+          logMessage(`Dropped existing table: ${table}`);
         } catch (error) {
-          console.log(`Table ${table} did not exist, continuing...`);
+          logMessage(`Table ${table} did not exist, continuing...`);
         }
       }
 
@@ -3538,7 +3548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           updateProgress('Schema Creation', `Creating table structure: ${table}`, 
             tableProgress, totalTables, migratedTables);
           
-          console.log(`\n=== STARTING MIGRATION FOR TABLE: ${table} (${migratedTables + 1}/${totalTables}) ===`);
+          logMessage(`=== STARTING MIGRATION FOR TABLE: ${table} (${migratedTables + 1}/${totalTables}) ===`);
 
           // Get table structure with proper data types
           structureResult = await sourcePool.query(`
@@ -3600,7 +3610,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `;
           
           await targetPool.query(createTableQuery);
-          console.log(`Created table schema: ${table}`);
+          logMessage(`Created table schema: ${table}`);
           
           // Count columns for metadata
           totalColumns += structureResult.rows.length;
