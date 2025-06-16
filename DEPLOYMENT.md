@@ -2,7 +2,7 @@
 
 ## Quick Start
 
-The Customer Data Platform uses a simplified single-container architecture optimized for production deployment.
+The Customer Data Platform is designed for simple deployment on Replit with Autoscale.
 
 ### Development Environment (Replit)
 ```bash
@@ -13,26 +13,22 @@ npm run dev
 ### Production Deployment
 
 #### Prerequisites
-- Docker installed
+- Replit account with Autoscale
 - PostgreSQL database (Neon recommended)
-- Environment variables configured
+- Environment variables configured in Replit Secrets
 
-#### Single Container Deployment
-```bash
-# Build production image
-./build-production.sh
-
-# Deploy to production
-./deploy-production.sh
-```
+#### Replit Autoscale Deployment
+1. Click the "Deploy" button in Replit
+2. Configure environment secrets
+3. Deploy with Autoscale for production traffic
 
 ## Architecture
 
-**Simplified Container Strategy:**
-- Single Express.js container serving both API and static files
-- No nginx required - 40-50% memory reduction
-- ARM64 optimized for AWS Graviton processors
-- 70-75% infrastructure cost savings
+**Replit-Optimized Strategy:**
+- Single Express.js application serving both API and static files
+- No containerization required
+- Automatic scaling and load balancing
+- Simplified deployment process
 
 ## Environment Configuration
 
@@ -73,25 +69,18 @@ For production file storage:
 node migrate-images-to-s3.js
 ```
 
-## Production Files
-
-- `Dockerfile.production` - Production container configuration
-- `docker-compose.production.yml` - Production orchestration
-- `build-production.sh` - Automated build script
-- `deploy-production.sh` - Automated deployment script
-
 ## Platform Support
 
 - **Development**: Replit cloud environment
-- **Production**: AWS, Google Cloud, Azure, or any Docker-compatible platform
-- **Database**: Neon PostgreSQL, AWS RDS, or any PostgreSQL provider
+- **Production**: Replit Autoscale deployment
+- **Database**: Neon PostgreSQL or any PostgreSQL provider
 - **Analytics**: Snowflake for data warehousing
 - **File Storage**: Local filesystem (development) or AWS S3 (production)
 
 ## Monitoring
 
-The application includes built-in health checks and comprehensive Amplitude analytics for monitoring user interactions and system performance.
+The application includes comprehensive Amplitude analytics for monitoring user interactions and system performance.
 
 ## Support
 
-For deployment issues, check the application logs and ensure all required environment variables are properly configured.
+For deployment issues, check the Replit console logs and ensure all required environment variables are properly configured in Replit Secrets.d.
