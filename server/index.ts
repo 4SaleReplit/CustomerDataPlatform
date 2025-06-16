@@ -61,10 +61,6 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    // Import Vite module based on environment
-    const viteModulePath = process.env.NODE_ENV === "production" ? "./vite-production" : "./vite";
-    const { serveStatic, log, setupVite } = await import(viteModulePath);
-    
     const server = await registerRoutes(app);
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -73,21 +69,19 @@ app.use((req, res, next) => {
 
       console.error('Error handled by middleware:', err);
       res.status(status).json({ message });
-      // Don't throw the error - just log it and send response
     });
 
-    // importantly only setup vite in development and after
-    // setting up all the other routes so the catch-all route
-    // doesn't interfere with the other routes
-    if (app.get("env") === "development") {
-      await setupVite(app, server);
-    } else {
+    // Handle development vs production serving
+    if (process.env.NODE_ENV === "production") {
+      // Production: serve static files directly without Vite
+      const { serveStatic } = await import("./vite-production.js");
       serveStatic(app);
+    } else {
+      // Development: use Vite for hot reloading
+      const { setupVite } = await import("./vite.js");
+      await setupVite(app, server);
     }
 
-    // ALWAYS serve the app on port 5000
-    // this serves both the API and the client.
-    // It is the only port that is not firewalled.
     const port = 5000;
     server.listen({
       port,
@@ -103,14 +97,25 @@ app.use((req, res, next) => {
     });
   } catch (error) {
     console.error('Failed to start server:', error);
-    // Create a minimal server that can still serve the frontend
+    // Fallback server with minimal static serving
+    const express = require('express');
+    const path = require('path');
+    
+    if (process.env.NODE_ENV === "production") {
+      const distPath = path.resolve(__dirname, "public");
+      app.use(express.static(distPath));
+      app.use("*", (_req: Request, res: Response) => {
+        res.sendFile(path.resolve(distPath, "index.html"));
+      });
+    }
+    
     const server = app.listen(5000, "0.0.0.0", () => {
       console.log(`${new Date().toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
         second: "2-digit",
         hour12: true,
-      })} [express] serving on port 5000 (minimal mode due to startup error)`);
+      })} [express] serving on port 5000 (fallback mode)`);
     });
   }
 })();
