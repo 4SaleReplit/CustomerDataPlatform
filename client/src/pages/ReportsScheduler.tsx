@@ -241,24 +241,6 @@ export function ReportsScheduler() {
     }
   });
 
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      description: "",
-      presentationId: "",
-      cronExpression: "",
-      timezone: "UTC",
-      emailSubject: "",
-      emailBody: "",
-      recipientList: [],
-      ccList: [],
-      bccList: [],
-      isActive: true,
-      placeholderConfig: {},
-      formatSettings: { format: "pdf", includeCharts: true }
-    });
-  };
-
   const handleCreateReport = () => {
     createReportMutation.mutate(formData);
   };
@@ -310,6 +292,49 @@ export function ReportsScheduler() {
     setIsEditDialogOpen(true);
   };
 
+
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      description: "",
+      presentationId: "",
+      cronExpression: "",
+      timezone: "UTC",
+      emailSubject: "",
+      emailBody: "",
+      recipientList: [] as string[],
+      ccList: [] as string[],
+      bccList: [] as string[],
+      isActive: true,
+      airflowDagId: "",
+      airflowTaskId: "send_report",
+      airflowConfiguration: {
+        dag_id: "",
+        schedule_interval: null,
+        start_date: new Date().toISOString(),
+        catchup: false,
+        max_active_runs: 1,
+        tasks: [{
+          task_id: "generate_report",
+          operator: "PythonOperator",
+          python_callable: "generate_pdf_report",
+          op_kwargs: {}
+        }, {
+          task_id: "send_report",
+          operator: "EmailOperator",
+          to: [],
+          subject: "",
+          html_content: "",
+          files: []
+        }]
+      },
+      pdfDeliveryUrl: "",
+      placeholderConfig: {},
+      formatSettings: { format: "pdf", includeCharts: true }
+    });
+  };
+
   const insertPlaceholder = (placeholder: string, field: "emailSubject" | "emailBody") => {
     setFormData(prev => ({
       ...prev,
@@ -342,7 +367,7 @@ export function ReportsScheduler() {
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => { resetForm(); setIsCreateDialogOpen(true); }}>
+            <Button onClick={() => setIsCreateDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Schedule New Report
             </Button>
