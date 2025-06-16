@@ -3969,6 +3969,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // Migration History endpoints
+  app.get("/api/migration-history", async (req, res) => {
+    try {
+      const migrations = await storage.getMigrationHistory();
+      res.json(migrations);
+    } catch (error) {
+      console.error("Error fetching migration history:", error);
+      res.status(500).json({ error: "Failed to fetch migration history" });
+    }
+  });
+
+  app.get("/api/migration-history/:id", async (req, res) => {
+    try {
+      const migration = await storage.getMigrationHistoryById(req.params.id);
+      if (!migration) {
+        return res.status(404).json({ error: "Migration not found" });
+      }
+      res.json(migration);
+    } catch (error) {
+      console.error("Error fetching migration:", error);
+      res.status(500).json({ error: "Failed to fetch migration" });
+    }
+  });
+
+  app.post("/api/migration-history", async (req, res) => {
+    try {
+      const migration = await storage.createMigrationHistory(req.body);
+      res.status(201).json(migration);
+    } catch (error) {
+      console.error("Error creating migration history:", error);
+      res.status(500).json({ error: "Failed to create migration history" });
+    }
+  });
+
+  app.put("/api/migration-history/:id", async (req, res) => {
+    try {
+      const migration = await storage.updateMigrationHistory(req.params.id, req.body);
+      if (!migration) {
+        return res.status(404).json({ error: "Migration not found" });
+      }
+      res.json(migration);
+    } catch (error) {
+      console.error("Error updating migration history:", error);
+      res.status(500).json({ error: "Failed to update migration history" });
+    }
+  });
+
+  app.delete("/api/migration-history/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteMigrationHistory(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Migration not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting migration history:", error);
+      res.status(500).json({ error: "Failed to delete migration history" });
+    }
+  });
+
   // Serve uploaded images statically
   app.use('/uploads', (req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');

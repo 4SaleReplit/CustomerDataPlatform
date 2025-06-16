@@ -125,8 +125,27 @@ export default function Admin() {
   });
 
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const filteredUsers = [].filter((user: any) =>
+  // Fetch migration history from database
+  const { data: migrationHistory = [], isLoading: migrationHistoryLoading } = useQuery({
+    queryKey: ['/api/migration-history'],
+    queryFn: () => apiRequest('/api/migration-history')
+  });
+
+  // Fetch team members from database
+  const { data: teamMembers = [], isLoading: teamMembersLoading } = useQuery({
+    queryKey: ['/api/team'],
+    queryFn: () => apiRequest('/api/team')
+  });
+
+  // Fetch roles from database
+  const { data: roles = [], isLoading: rolesLoading } = useQuery({
+    queryKey: ['/api/roles'],
+    queryFn: () => apiRequest('/api/roles')
+  });
+
+  const filteredUsers = teamMembers.filter((user: any) =>
     user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -647,7 +666,7 @@ export default function Admin() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockRoles.map((role) => (
+                    {roles?.map((role: any) => (
                       <SelectItem key={role.id} value={role.name}>
                         {role.name}
                       </SelectItem>
