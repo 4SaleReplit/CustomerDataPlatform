@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer } from "ws";
 import { storage } from "./storage";
 import { insertIntegrationSchema, type InsertIntegration } from "@shared/schema";
 // Snowflake service is now dynamically imported where needed
@@ -21,6 +22,22 @@ import { nanoid } from "nanoid";
 import { Pool } from "pg";
 import Redis from "ioredis";
 import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+
+// Global migration progress tracking
+const migrationSessions = new Map();
+
+interface MigrationProgress {
+  sessionId: string;
+  type: string;
+  stage: string;
+  currentJob: string;
+  progress: number;
+  totalItems: number;
+  completedItems: number;
+  status: 'running' | 'completed' | 'error' | 'cancelled';
+  startTime: Date;
+  error?: string;
+}
 
 // Configure multer for file uploads
 const storage_config = multer.diskStorage({
@@ -56,6 +73,43 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  const server = createServer(app);
+  
+  // Setup WebSocket server for real-time migration progress
+  const wss = new WebSocketServer({ server });
+  
+  wss.on('connection', (ws: any) => {
+    console.log('WebSocket client connected for migration progress');
+    
+    ws.on('message', (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        if (data.type === 'subscribe' && data.sessionId) {
+          ws.sessionId = data.sessionId;
+          console.log(`Client subscribed to migration session: ${data.sessionId}`);
+        }
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+      }
+    });
+    
+    ws.on('close', () => {
+      console.log('WebSocket client disconnected');
+    });
+  });
+
+  // Function to broadcast progress updates
+  const broadcastProgress = (sessionId: string, progress: MigrationProgress) => {
+    wss.clients.forEach((client: any) => {
+      if (client.readyState === client.OPEN && client.sessionId === sessionId) {
+        client.send(JSON.stringify({
+          type: 'progress',
+          data: progress
+        }));
+      }
+    });
+  };
+
   // Add middleware to handle JSON parsing errors
   app.use((err: any, req: any, res: any, next: any) => {
     if (err instanceof SyntaxError && 'body' in err) {
@@ -3265,28 +3319,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Missing required migration parameters' });
       }
 
-      console.log(`Starting ${type} migration from ${sourceEnvironment} to ${targetEnvironment}`);
-
-      let migrationResult = null;
-
-      switch (type) {
-        case 'postgresql':
-          migrationResult = await migratePostgreSQL(sourceConfig, targetConfig);
-          break;
-        case 'redis':
-          migrationResult = await migrateRedis(sourceConfig, targetConfig);
-          break;
-        case 's3':
-          migrationResult = await migrateS3(sourceConfig, targetConfig);
-          break;
-        default:
-          return res.status(400).json({ error: `Unsupported migration type: ${type}` });
-      }
-
+      // Generate unique session ID for this migration
+      const sessionId = nanoid();
+      
+      // Initialize progress tracking
+      const initialProgress: MigrationProgress = {
+        sessionId,
+        type,
+        stage: 'Initializing',
+        currentJob: 'Setting up migration',
+        progress: 0,
+        totalItems: 0,
+        completedItems: 0,
+        status: 'running',
+        startTime: new Date()
+      };
+      
+      migrationSessions.set(sessionId, initialProgress);
+      
+      console.log(`Starting ${type} migration from ${sourceEnvironment} to ${targetEnvironment} (Session: ${sessionId})`);
+      
+      // Send initial response with session ID
       res.json({
         success: true,
-        message: `${type} migration completed successfully`,
-        details: migrationResult
+        sessionId,
+        message: `${type} migration started`,
+        status: 'running'
+      });
+
+      // Run migration asynchronously with progress tracking
+      setImmediate(async () => {
+        try {
+          let migrationResult = null;
+
+          switch (type) {
+            case 'postgresql':
+              migrationResult = await migratePostgreSQLWithProgress(sourceConfig, targetConfig, sessionId, broadcastProgress);
+              break;
+            case 'redis':
+              migrationResult = await migrateRedisWithProgress(sourceConfig, targetConfig, sessionId, broadcastProgress);
+              break;
+            case 's3':
+              migrationResult = await migrateS3WithProgress(sourceConfig, targetConfig, sessionId, broadcastProgress);
+              break;
+            default:
+              throw new Error(`Unsupported migration type: ${type}`);
+          }
+
+          // Mark as completed
+          const finalProgress: MigrationProgress = {
+            ...migrationSessions.get(sessionId),
+            stage: 'Completed',
+            currentJob: 'Migration finished successfully',
+            progress: 100,
+            status: 'completed'
+          };
+          
+          migrationSessions.set(sessionId, finalProgress);
+          broadcastProgress(sessionId, finalProgress);
+          
+        } catch (error: any) {
+          console.error('Migration error:', error);
+          
+          const errorProgress: MigrationProgress = {
+            ...migrationSessions.get(sessionId),
+            stage: 'Error',
+            currentJob: 'Migration failed',
+            status: 'error',
+            error: error.message
+          };
+          
+          migrationSessions.set(sessionId, errorProgress);
+          broadcastProgress(sessionId, errorProgress);
+        }
       });
 
     } catch (error: any) {
@@ -3298,9 +3403,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Migration progress API endpoint
+  app.get('/api/migration-progress/:sessionId', async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const progress = migrationSessions.get(sessionId);
+      
+      if (!progress) {
+        return res.status(404).json({ error: 'Migration session not found' });
+      }
+      
+      res.json(progress);
+    } catch (error) {
+      console.error('Error getting migration progress:', error);
+      res.status(500).json({ error: 'Failed to get migration progress' });
+    }
+  });
+
+  // Helper functions for migrations with progress tracking
+  async function migratePostgreSQLWithProgress(sourceConfig: any, targetConfig: any, sessionId: string, broadcastProgress: Function) {
+    return await migratePostgreSQL(sourceConfig, targetConfig, sessionId, broadcastProgress);
+  }
+
+  async function migrateRedisWithProgress(sourceConfig: any, targetConfig: any, sessionId: string, broadcastProgress: Function) {
+    return await migrateRedis(sourceConfig, targetConfig, sessionId, broadcastProgress);
+  }
+
+  async function migrateS3WithProgress(sourceConfig: any, targetConfig: any, sessionId: string, broadcastProgress: Function) {
+    return await migrateS3(sourceConfig, targetConfig, sessionId, broadcastProgress);
+  }
+
   // Helper functions for migrations
-  async function migratePostgreSQL(sourceConfig: any, targetConfig: any) {
+  async function migratePostgreSQL(sourceConfig: any, targetConfig: any, sessionId?: string, broadcastProgress?: Function) {
     // PostgreSQL migration logic
+    
+    const updateProgress = (stage: string, currentJob: string, progress: number, totalItems = 0, completedItems = 0) => {
+      if (sessionId && broadcastProgress) {
+        const progressData: MigrationProgress = {
+          sessionId,
+          type: 'postgresql',
+          stage,
+          currentJob,
+          progress,
+          totalItems,
+          completedItems,
+          status: 'running',
+          startTime: migrationSessions.get(sessionId)?.startTime || new Date()
+        };
+        migrationSessions.set(sessionId, progressData);
+        broadcastProgress(sessionId, progressData);
+      }
+    };
+
+    updateProgress('Connecting', 'Establishing database connections', 5);
     
     const sourcePool = new Pool({
       connectionString: sourceConfig.connectionString || sourceConfig.url,
@@ -3313,10 +3468,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
 
     try {
-      // Test connections
+      updateProgress('Testing Connections', 'Verifying source database connection', 10);
       await sourcePool.query('SELECT 1');
+      
+      updateProgress('Testing Connections', 'Verifying target database connection', 15);
       await targetPool.query('SELECT 1');
 
+      updateProgress('Analyzing Schema', 'Discovering tables and structure', 20);
       // Get table list from source
       const tablesResult = await sourcePool.query(`
         SELECT table_name 
