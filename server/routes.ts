@@ -2310,12 +2310,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           break;
         case 'postgresql':
+          console.log(`Testing PostgreSQL integration: ${integration.name}`);
           try {
             const { Pool } = await import('pg');
             let poolConfig: any;
 
             // Check if integration uses connection string or individual parameters
             const credentials = integration.credentials as any;
+            console.log(`PostgreSQL credentials type: ${credentials.connectionString ? 'connection string' : 'individual params'}`);
+            
             if (credentials.connectionString) {
               poolConfig = { connectionString: credentials.connectionString };
             } else {
@@ -2329,6 +2332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               };
             }
 
+            console.log(`Creating PostgreSQL pool with config...`);
             const testPool = new Pool(poolConfig);
             
             try {
@@ -2382,19 +2386,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           break;
         default:
+          console.log(`Unknown integration type for testing: ${integration.type}`);
           testResult = { success: true, message: "Connection test passed" };
       }
 
       // Update integration status based on test result
       const currentMetadata = integration.metadata || {};
-      await storage.updateIntegration(id, {
-        status: testResult.success ? 'connected' : 'error',
+      const newStatus = testResult.success ? 'connected' : 'error';
+      const updateData = {
+        status: newStatus,
         metadata: {
           ...currentMetadata,
           lastTestResult: testResult,
           lastTested: new Date().toISOString()
         }
-      });
+      };
+      
+      console.log(`Updating integration ${id} status to: ${newStatus}`, updateData);
+      const updatedIntegration = await storage.updateIntegration(id, updateData);
+      console.log(`Integration updated result:`, updatedIntegration);
 
       if (testResult.success) {
         await storage.updateIntegrationLastUsed(id);
