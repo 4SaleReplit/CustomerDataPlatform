@@ -84,15 +84,15 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
         const parsedData = JSON.parse(storedData);
         // Pre-populate the cache with stored data to prevent initial queries
         queryClient.setQueryData(['/api/dashboard/tiles', tile.databaseId || tile.id, 'data'], parsedData);
-        console.log(`Loaded cached data for tile ${tile.id}`);
+
       } catch (error) {
-        console.error(`Failed to parse cached data for tile ${tile.id}:`, error);
+
         // Clean up invalid cached data
         localStorage.removeItem(`tile-${tile.id}-data`);
         localStorage.removeItem(`tile-${tile.id}-lastRefresh`);
       }
     } else {
-      console.log(`No cached data found for tile ${tile.id}`);
+
     }
   }, [tile.id, queryClient]);
 
@@ -104,7 +104,7 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
         const parsedData = JSON.parse(storedData);
         queryClient.setQueryData(['/api/snowflake/query', tile.id], parsedData);
       } catch (error) {
-        console.error('Failed to parse cached data:', error);
+
       }
     }
   }, [tile.id, queryClient]);

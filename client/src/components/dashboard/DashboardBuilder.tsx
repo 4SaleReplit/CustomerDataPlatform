@@ -129,24 +129,24 @@ export function DashboardBuilder({
   };
 
   const handleTileMove = (tileId: string, newPosition: { x: number; y: number }) => {
-    console.log(`DRAG: Moving tile ${tileId} from (${tiles.find(t => t.id === tileId)?.x}, ${tiles.find(t => t.id === tileId)?.y}) to (${newPosition.x}, ${newPosition.y})`);
+
     const updatedTiles = tiles.map(tile => 
       tile.id === tileId 
         ? { ...tile, x: newPosition.x, y: newPosition.y }
         : tile
     );
-    console.log(`DRAG: Updated tiles state:`, updatedTiles.map(t => ({ id: t.id, x: t.x, y: t.y })));
+
     onTilesChange(updatedTiles);
   };
 
   const handleTileResize = (tileId: string, newSize: { width: number; height: number }) => {
-    console.log(`DRAG: Resizing tile ${tileId} from (${tiles.find(t => t.id === tileId)?.width}x${tiles.find(t => t.id === tileId)?.height}) to (${newSize.width}x${newSize.height})`);
+
     const updatedTiles = tiles.map(tile => 
       tile.id === tileId 
         ? { ...tile, width: newSize.width, height: newSize.height }
         : tile
     );
-    console.log(`DRAG: Updated tiles state:`, updatedTiles.map(t => ({ id: t.id, width: t.width, height: t.height })));
+
     onTilesChange(updatedTiles);
   };
 
