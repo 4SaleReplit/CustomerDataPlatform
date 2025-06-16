@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import RoleManagement from './RoleManagement';
-import { SimpleMigrationModal } from '@/components/migration/SimpleMigrationModal';
+import { ConsoleLogModal } from '@/components/migration/ConsoleLogModal';
 
 
 
@@ -1290,22 +1290,12 @@ export default function Admin() {
             </DialogContent>
           </Dialog>
 
-          {/* Simple Migration Modal - Fixed Implementation */}
-          {console.log('Rendering SimpleMigrationModal with:', { showMigrationProgress, migrationSessionId })}
-          <SimpleMigrationModal
+          {/* Console Log Modal - Simple Output Display */}
+          <ConsoleLogModal
             isOpen={showMigrationProgress}
             sessionId={migrationSessionId}
             onClose={() => setShowMigrationProgress(false)}
-            onComplete={handleMigrationComplete}
-            onError={handleMigrationError}
           />
-          
-          {/* Debug overlay to verify state */}
-          {showMigrationProgress && (
-            <div className="fixed top-4 right-4 bg-red-500 text-white p-2 text-xs z-[9999]">
-              DEBUG: Modal should be showing. SessionId: {migrationSessionId}
-            </div>
-          )}
         </TabsContent>
       </Tabs>
     </div>

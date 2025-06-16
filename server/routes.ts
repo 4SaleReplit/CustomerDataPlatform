@@ -37,6 +37,7 @@ interface MigrationProgress {
   status: 'running' | 'completed' | 'error' | 'cancelled';
   startTime: Date;
   error?: string;
+  logs?: string[];
   migrationMetadata?: {
     sourceDatabase: string;
     targetDatabase: string;
