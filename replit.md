@@ -111,6 +111,15 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 16, 2025**: Complete Thumbnail Generation System for Report Card Previews
+  - Implemented automatic thumbnail generation from first slide images for report card previews
+  - Added preview_image_url database field to presentations table for thumbnail storage
+  - Enhanced SlidePreview component to display actual slide images with proper 16:9 aspect ratio
+  - Updated all preview containers to use aspect-video CSS class with object-contain for full image visibility
+  - Fixed image detection logic to support both content URLs and uploadedImageId references
+  - Added batch thumbnail generation for existing presentations without preview images
+  - Report cards now show complete slide thumbnails instead of cropped or empty placeholders
+
 - **June 16, 2025**: Fixed Report Builder Data Persistence and Image Upload Issues
   - Fixed report form data persistence from "New Report" dialog to Report Builder
   - Report name, description, schedule, recipients, and auto-refresh settings now carry over automatically
