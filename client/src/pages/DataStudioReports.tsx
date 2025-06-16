@@ -205,8 +205,7 @@ export function DataStudioReports() {
                       'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                      previewImageUrl: previewUrl,
-                      lastRefreshed: new Date().toISOString()
+                      previewImageUrl: previewUrl
                     })
                   });
                   console.log(`Generated thumbnail for presentation: ${presentation.title}`);
@@ -629,11 +628,11 @@ export function DataStudioReports() {
         : presentation.previewImageUrl;
       
       return (
-        <div className="w-full h-20 bg-white rounded border border-gray-200 overflow-hidden">
+        <div className="w-full aspect-video bg-white rounded border border-gray-200 overflow-hidden">
           <img 
             src={thumbnailUrl} 
             alt="Report preview" 
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
           />
         </div>
       );
@@ -659,11 +658,11 @@ export function DataStudioReports() {
                 : imageUrl;
               
               return (
-                <div className="w-full h-20 bg-white rounded border border-gray-200 overflow-hidden">
+                <div className="w-full aspect-video bg-white rounded border border-gray-200 overflow-hidden">
                   <img 
                     src={thumbnailUrl} 
                     alt="Slide preview" 
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                     onError={(e) => {
                       // Hide broken images
                       e.currentTarget.style.display = 'none';
@@ -681,11 +680,11 @@ export function DataStudioReports() {
     const thumbnailUrl = thumbnailCache[presentationId];
     if (thumbnailUrl) {
       return (
-        <div className="w-full h-20 bg-white rounded border border-gray-200 overflow-hidden">
+        <div className="w-full aspect-video bg-white rounded border border-gray-200 overflow-hidden">
           <img 
             src={thumbnailUrl} 
             alt="Slide preview" 
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
           />
         </div>
       );
@@ -693,7 +692,7 @@ export function DataStudioReports() {
 
     // Default empty state with presentation icon
     return (
-      <div className="w-full h-20 bg-gradient-to-r from-blue-50 to-blue-100 rounded border border-blue-200 flex items-center justify-center">
+      <div className="w-full aspect-video bg-gradient-to-r from-blue-50 to-blue-100 rounded border border-blue-200 flex items-center justify-center">
         <Presentation className="h-8 w-8 text-blue-400" />
       </div>
     );
