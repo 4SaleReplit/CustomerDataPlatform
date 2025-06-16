@@ -569,40 +569,63 @@ export default function Integrations() {
     }
   };
 
-  const handleTestConnection = async (integration: Integration) => {
+  const handleTestConnection = async (integration?: Integration) => {
     setIsTestingConnection(true);
     
-    if (selectedIntegration && Object.keys(formData).length > 0) {
-      try {
-        const response = await fetch(`/api/integrations/${integration.id}/test`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ credentials: formData })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-          toast({
-            title: "Connection successful",
-            description: "Integration is working correctly with current settings."
-          });
-        } else {
-          toast({
-            title: "Connection failed",
-            description: result.error || "Please check your credentials.",
-            variant: "destructive"
-          });
-        }
-      } catch (error) {
+    try {
+      let endpoint = '';
+      let body: any = {};
+      
+      if (integration) {
+        // Testing existing integration
+        endpoint = `/api/integrations/${integration.id}/test`;
+        body = selectedIntegration && Object.keys(formData).length > 0 
+          ? { credentials: formData } 
+          : {};
+      } else if (selectedTemplate && Object.keys(formData).length > 0) {
+        // Testing new integration during creation
+        endpoint = `/api/integrations/test-new`;
+        body = {
+          type: selectedTemplate,
+          credentials: formData
+        };
+      } else {
         toast({
           title: "Test failed",
-          description: "Unable to test connection. Please try again.",
+          description: "Please fill in the required fields before testing.",
+          variant: "destructive"
+        });
+        setIsTestingConnection(false);
+        return;
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: "Connection successful",
+          description: result.message || "Integration is working correctly."
+        });
+      } else {
+        toast({
+          title: "Connection failed",
+          description: result.error || "Please check your credentials.",
           variant: "destructive"
         });
       }
-    } else {
-      testConnectionMutation.mutate(integration.id);
+    } catch (error) {
+      console.error('Test connection error:', error);
+      toast({
+        title: "Test failed",
+        description: "Unable to test connection. Please try again.",
+        variant: "destructive"
+      });
     }
     
     setIsTestingConnection(false);
@@ -847,13 +870,39 @@ export default function Integrations() {
                   ))}
                 </div>
 
-                <div className="flex justify-end space-x-3 pt-4">
-                  <Button variant="outline" onClick={() => setShowAddModal(false)}>
-                    Cancel
+                <div className="flex justify-between space-x-3 pt-4">
+                  <Button 
+                    variant="outline"
+                    onClick={() => handleTestConnection()}
+                    disabled={isTestingConnection || Object.keys(formData).length === 0}
+                  >
+                    {isTestingConnection ? (
+                      <>
+                        <LoadingSpinner size="sm" className="mr-2" />
+                        Testing...
+                      </>
+                    ) : (
+                      'Test Connection'
+                    )}
                   </Button>
-                  <Button onClick={handleSaveIntegration}>
-                    Create Integration
-                  </Button>
+                  <div className="flex space-x-3">
+                    <Button variant="outline" onClick={() => setShowAddModal(false)}>
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={handleSaveIntegration}
+                      disabled={createIntegrationMutation.isPending}
+                    >
+                      {createIntegrationMutation.isPending ? (
+                        <>
+                          <LoadingSpinner size="sm" className="mr-2" />
+                          Creating...
+                        </>
+                      ) : (
+                        'Create Integration'
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}

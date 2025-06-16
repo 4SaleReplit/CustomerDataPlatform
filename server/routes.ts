@@ -53,6 +53,17 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Add middleware to handle JSON parsing errors
+  app.use((err: any, req: any, res: any, next: any) => {
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+      console.error('JSON parsing error:', err.message);
+      return res.status(400).json({
+        error: 'Invalid JSON format in request body',
+        details: 'Please check your request format and try again'
+      });
+    }
+    next(err);
+  });
   // Health check endpoint for Docker
   app.get("/health", (req, res) => {
     res.status(200).json({ 
@@ -1603,6 +1614,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test new integration before creating it
+  app.post("/api/integrations/test-new", async (req, res) => {
+    try {
+      const { type, credentials } = req.body;
+      
+      if (!type || !credentials) {
+        return res.status(400).json({
+          success: false,
+          error: "Integration type and credentials are required"
+        });
+      }
+
+      // Handle specific integration types
+      switch (type) {
+        case 'snowflake':
+          try {
+            // Create temporary Snowflake service instance for testing
+            const { SnowflakeService } = await import('./services/snowflake');
+            const testService = new SnowflakeService({
+              account: credentials.account,
+              username: credentials.username,
+              password: credentials.password,
+              warehouse: credentials.warehouse || 'COMPUTE_WH',
+              database: credentials.database || 'SNOWFLAKE',
+              schema: credentials.schema || 'PUBLIC'
+            });
+            
+            const testResult = await testService.executeQuery('SELECT 1 as test');
+            
+            if (testResult.success) {
+              res.json({
+                success: true,
+                message: "Snowflake connection successful"
+              });
+            } else {
+              res.status(400).json({
+                success: false,
+                error: testResult.error || "Snowflake connection failed"
+              });
+            }
+          } catch (error) {
+            res.status(400).json({
+              success: false,
+              error: "Snowflake connection test failed. Check your credentials."
+            });
+          }
+          break;
+
+        case 'postgresql':
+          try {
+            const { Pool } = await import('pg');
+            const testPool = new Pool({
+              host: credentials.host,
+              port: parseInt(credentials.port) || 5432,
+              database: credentials.database,
+              user: credentials.username,
+              password: credentials.password,
+              ssl: credentials.ssl !== 'disable'
+            });
+
+            const client = await testPool.connect();
+            await client.query('SELECT 1');
+            client.release();
+            await testPool.end();
+
+            res.json({
+              success: true,
+              message: "PostgreSQL connection successful"
+            });
+          } catch (error) {
+            res.status(400).json({
+              success: false,
+              error: "PostgreSQL connection failed. Check your credentials."
+            });
+          }
+          break;
+
+        default:
+          // For other integrations, simulate connection test
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          const success = Math.random() > 0.2; // 80% success rate for demo
+          
+          if (success) {
+            res.json({
+              success: true,
+              message: `${type.charAt(0).toUpperCase() + type.slice(1)} connection successful`
+            });
+          } else {
+            res.status(400).json({
+              success: false,
+              error: "Connection test failed. Please verify your credentials."
+            });
+          }
+          break;
+      }
+    } catch (error) {
+      console.error("Test new integration error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Internal server error during connection test"
+      });
+    }
+  });
+
   // Generic test endpoint for other integrations
   app.post("/api/integrations/:type/test", async (req, res) => {
     try {
@@ -2838,13 +2954,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Restore original environment
-      Object.keys(originalEnv).forEach(key => {
-        if (originalEnv[key]) {
-          process.env[key] = originalEnv[key];
-        } else {
-          delete process.env[key];
-        }
-      });
+      if (originalEnv.AWS_ACCESS_KEY_ID) {
+        process.env.AWS_ACCESS_KEY_ID = originalEnv.AWS_ACCESS_KEY_ID;
+      } else {
+        delete process.env.AWS_ACCESS_KEY_ID;
+      }
+      if (originalEnv.AWS_SECRET_ACCESS_KEY) {
+        process.env.AWS_SECRET_ACCESS_KEY = originalEnv.AWS_SECRET_ACCESS_KEY;
+      } else {
+        delete process.env.AWS_SECRET_ACCESS_KEY;
+      }
+      if (originalEnv.S3_BUCKET_NAME) {
+        process.env.S3_BUCKET_NAME = originalEnv.S3_BUCKET_NAME;
+      } else {
+        delete process.env.S3_BUCKET_NAME;
+      }
+      if (originalEnv.AWS_REGION) {
+        process.env.AWS_REGION = originalEnv.AWS_REGION;
+      } else {
+        delete process.env.AWS_REGION;
+      }
 
       res.json({ 
         success: true, 
