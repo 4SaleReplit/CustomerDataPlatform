@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertIntegrationSchema, type InsertIntegration } from "@shared/schema";
-import { snowflakeService } from "./services/snowflake";
+// Snowflake service now uses getDynamicSnowflakeService() for all operations
 import * as BrazeModule from "./services/braze";
 import { s3Storage } from "./services/s3Storage";
 import { db } from "./db";
