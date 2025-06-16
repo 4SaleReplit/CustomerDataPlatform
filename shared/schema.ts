@@ -334,6 +334,8 @@ export const insertPresentationSchema = createInsertSchema(presentations).omit({
   updatedAt: true,
 });
 
+
+
 // Type exports
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -361,6 +363,18 @@ export type UpdateSlide = z.infer<typeof updateSlideSchema>;
 export type Slide = typeof slides.$inferSelect;
 export type InsertPresentation = z.infer<typeof insertPresentationSchema>;
 export type Presentation = typeof presentations.$inferSelect;
+
+// Scheduler type exports
+export type InsertScheduledReport = z.infer<typeof insertScheduledReportSchema>;
+export type ScheduledReport = typeof scheduledReports.$inferSelect;
+export type InsertEmailTemplate = z.infer<typeof insertEmailTemplateSchema>;
+export type EmailTemplate = typeof emailTemplates.$inferSelect;
+export type InsertMailingList = z.infer<typeof insertMailingListSchema>;
+export type MailingList = typeof mailingLists.$inferSelect;
+export type InsertReportExecution = z.infer<typeof insertReportExecutionSchema>;
+export type ReportExecution = typeof reportExecutions.$inferSelect;
+export type InsertAirflowConfiguration = z.infer<typeof insertAirflowConfigurationSchema>;
+export type AirflowConfiguration = typeof airflowConfigurations.$inferSelect;
 
 // Role and permission schemas
 export const insertRoleSchema = createInsertSchema(roles).omit({
@@ -397,8 +411,134 @@ export const environmentConfigurations = pgTable("environment_configurations", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
 });
 
+// Scheduled Reports System
+export const scheduledReports = pgTable("scheduled_reports", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  presentationId: uuid("presentation_id").references(() => presentations.id, { onDelete: 'cascade' }).notNull(),
+  cronExpression: varchar("cron_expression", { length: 100 }).notNull(), // "0 9 * * 1" for weekly Monday 9AM
+  timezone: varchar("timezone", { length: 50 }).default('UTC'),
+  emailSubject: text("email_subject").notNull(),
+  emailBody: text("email_body").notNull(), // Template with {placeholders}
+  recipientList: jsonb("recipient_list").notNull().default('[]'), // Array of email addresses
+  ccList: jsonb("cc_list").default('[]'),
+  bccList: jsonb("bcc_list").default('[]'),
+  isActive: boolean("is_active").default(true),
+  lastExecuted: timestamp("last_executed", { withTimezone: true }),
+  nextExecution: timestamp("next_execution", { withTimezone: true }),
+  executionCount: integer("execution_count").default(0),
+  errorCount: integer("error_count").default(0),
+  lastError: text("last_error"),
+  airflowDagId: varchar("airflow_dag_id", { length: 255 }),
+  airflowTaskId: varchar("airflow_task_id", { length: 255 }),
+  placeholderConfig: jsonb("placeholder_config").default('{}'), // Available placeholders and their sources
+  formatSettings: jsonb("format_settings").default('{}'), // PDF/Excel export settings
+  createdBy: uuid("created_by").references(() => team.id, { onDelete: 'set null' }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
+// Email Templates for Reports
+export const emailTemplates = pgTable("email_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  templateType: varchar("template_type", { length: 50 }).notNull(), // 'report_delivery', 'alert', 'summary'
+  subject: text("subject").notNull(),
+  bodyHtml: text("body_html").notNull(),
+  bodyText: text("body_text"),
+  availablePlaceholders: jsonb("available_placeholders").default('[]'),
+  isSystemTemplate: boolean("is_system_template").default(false),
+  isActive: boolean("is_active").default(true),
+  createdBy: uuid("created_by").references(() => team.id, { onDelete: 'set null' }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
+// Mailing Lists Management
+export const mailingLists = pgTable("mailing_lists", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  emails: jsonb("emails").notNull().default('[]'), // Array of email objects with name/email
+  tags: jsonb("tags").default('[]'), // Array of tags for categorization
+  isActive: boolean("is_active").default(true),
+  subscriberCount: integer("subscriber_count").default(0),
+  lastUsed: timestamp("last_used", { withTimezone: true }),
+  createdBy: uuid("created_by").references(() => team.id, { onDelete: 'set null' }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
+// Report Execution History
+export const reportExecutions = pgTable("report_executions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  scheduledReportId: uuid("scheduled_report_id").references(() => scheduledReports.id, { onDelete: 'cascade' }).notNull(),
+  executionStatus: varchar("execution_status", { length: 50 }).notNull(), // 'pending', 'running', 'completed', 'failed', 'cancelled'
+  startedAt: timestamp("started_at", { withTimezone: true }).defaultNow(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  executionDuration: integer("execution_duration"), // Duration in seconds
+  recipientCount: integer("recipient_count").default(0),
+  successfulDeliveries: integer("successful_deliveries").default(0),
+  failedDeliveries: integer("failed_deliveries").default(0),
+  errorMessage: text("error_message"),
+  airflowRunId: varchar("airflow_run_id", { length: 255 }),
+  airflowTaskInstanceId: varchar("airflow_task_instance_id", { length: 255 }),
+  executionMetadata: jsonb("execution_metadata").default('{}'), // Additional execution details
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
+// Airflow Configuration
+export const airflowConfigurations = pgTable("airflow_configurations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  airflowBaseUrl: text("airflow_base_url").notNull(),
+  airflowUsername: varchar("airflow_username", { length: 255 }),
+  airflowPassword: text("airflow_password"), // Encrypted
+  authType: varchar("auth_type", { length: 50 }).default('basic'), // 'basic', 'oauth', 'api_key'
+  apiKey: text("api_key"), // For API key authentication
+  defaultDagPrefix: varchar("default_dag_prefix", { length: 100 }).default('report_scheduler'),
+  isActive: boolean("is_active").default(true),
+  connectionStatus: varchar("connection_status", { length: 50 }).default('disconnected'),
+  lastConnectionTest: timestamp("last_connection_test", { withTimezone: true }),
+  createdBy: uuid("created_by").references(() => team.id, { onDelete: 'set null' }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
 // Environment configuration schemas
 export const insertEnvironmentConfigurationSchema = createInsertSchema(environmentConfigurations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Scheduler insert schemas
+export const insertScheduledReportSchema = createInsertSchema(scheduledReports).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEmailTemplateSchema = createInsertSchema(emailTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMailingListSchema = createInsertSchema(mailingLists).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertReportExecutionSchema = createInsertSchema(reportExecutions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAirflowConfigurationSchema = createInsertSchema(airflowConfigurations).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
