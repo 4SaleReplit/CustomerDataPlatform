@@ -208,7 +208,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/snowflake/test", async (req, res) => {
     try {
       const testQuery = "SELECT 1 as test_column";
-      const result = await snowflakeService.executeQuery(testQuery);
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const dynamicService = await getDynamicSnowflakeService();
+      
+      if (!dynamicService) {
+        return res.status(400).json({ 
+          connected: false,
+          error: "Snowflake integration not configured"
+        });
+      }
+
+      const result = await dynamicService.executeQuery(testQuery);
       
       res.json({
         connected: result.success,
@@ -402,7 +412,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Execute the Snowflake query
-      const result = await snowflakeService.executeQuery(dataSource.query);
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const dynamicService = await getDynamicSnowflakeService();
+      
+      if (!dynamicService) {
+        return res.status(400).json({ 
+          error: "Snowflake integration not configured",
+          details: "Please configure a Snowflake integration in the Integrations page"
+        });
+      }
+
+      const result = await dynamicService.executeQuery(dataSource.query);
       
       if (!result.success) {
         return res.status(400).json({ 
@@ -435,8 +455,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Query is required" });
       }
 
-      // Execute the Snowflake query
-      const result = await snowflakeService.executeQuery(query);
+      // Execute the Snowflake query using dynamic credentials
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const dynamicService = await getDynamicSnowflakeService();
+      
+      if (!dynamicService) {
+        return res.status(400).json({ 
+          error: "Snowflake integration not configured",
+          details: "Please configure a Snowflake integration in the Integrations page"
+        });
+      }
+
+      const result = await dynamicService.executeQuery(query);
       
       if (!result.success) {
         return res.status(400).json({ 
