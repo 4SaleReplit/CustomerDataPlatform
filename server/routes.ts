@@ -3508,6 +3508,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Second pass: Create tables and migrate data
       for (const table of tables) {
+        let structureResult: any;
+        
         try {
           const tableProgress = 30 + (migratedTables / totalTables) * 60;
           
@@ -3515,7 +3517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             tableProgress, totalTables, migratedTables);
 
           // Get table structure with proper data types
-          const structureResult = await sourcePool.query(`
+          structureResult = await sourcePool.query(`
             SELECT 
               column_name, 
               data_type, 
@@ -3602,12 +3604,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     const value = row[col.column_name];
                     
                     // Handle JSON/JSONB data properly
-                    if ((col.udt_name === 'json' || col.udt_name === 'jsonb') && typeof value === 'object') {
-                      return JSON.stringify(value);
+                    if (col.udt_name === 'json' || col.udt_name === 'jsonb') {
+                      if (value === null || value === undefined) {
+                        return null;
+                      }
+                      
+                      // If it's already a string, parse and re-stringify to ensure valid JSON
+                      if (typeof value === 'string') {
+                        try {
+                          const parsed = JSON.parse(value);
+                          return JSON.stringify(parsed);
+                        } catch (e) {
+                          // If parsing fails, treat as invalid JSON and return null
+                          console.warn(`Invalid JSON data in ${col.column_name}:`, value);
+                          return null;
+                        }
+                      }
+                      
+                      // If it's an object, stringify it
+                      if (typeof value === 'object') {
+                        return JSON.stringify(value);
+                      }
+                      
+                      // For other types, try to convert to valid JSON
+                      try {
+                        return JSON.stringify(value);
+                      } catch (e) {
+                        console.warn(`Cannot convert to JSON in ${col.column_name}:`, value);
+                        return null;
+                      }
                     }
                     
+                    // Return the value as-is, PostgreSQL will handle null values properly
                     return value;
                   });
+                  
+                  // Filter out rows where all values are null to avoid insert issues
+                  const hasValidData = values.some(v => v !== null && v !== undefined);
+                  if (!hasValidData) {
+                    console.log(`Skipping row with all null values in table: ${table}`);
+                    processedRows++;
+                    continue;
+                  }
                   
                   const placeholders = values.map((_: any, i: number) => `$${i + 1}`).join(', ');
                   
@@ -3627,7 +3665,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   }
                 } catch (rowError: any) {
                   console.error(`Error inserting row into ${table}:`, rowError.message);
-                  // Continue with next row
+                  
+                  // Try inserting row with NULL values for problematic JSON columns
+                  if (rowError.code === '22P02' && rowError.message.includes('json')) {
+                    try {
+                      const safeValues = structureResult.rows.map((col: any) => {
+                        const value = row[col.column_name];
+                        
+                        // Set problematic JSON columns to NULL
+                        if (col.udt_name === 'json' || col.udt_name === 'jsonb') {
+                          return null;
+                        }
+                        
+                        return value;
+                      });
+                      
+                      const safePlaceholders = safeValues.map((_: any, i: number) => `$${i + 1}`).join(', ');
+                      
+                      await targetPool.query(
+                        `INSERT INTO "${table}" (${columns}) VALUES (${safePlaceholders})`,
+                        safeValues
+                      );
+                      
+                      console.log(`Row inserted with NULL JSON values for table: ${table}`);
+                    } catch (retryError: any) {
+                      console.error(`Failed to insert row even with NULL JSON values:`, retryError.message);
+                    }
+                  }
                 }
               }
               
@@ -3643,8 +3707,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         } catch (tableError: any) {
           console.error(`Error migrating table ${table}:`, tableError.message);
-          updateProgress('Table Error', `✗ Failed to migrate table: ${table} - ${tableError.message}`, 
-            30 + (migratedTables / totalTables) * 60, totalTables, migratedTables);
+          
+          // Try creating table with simplified schema (no constraints) for problematic tables
+          try {
+            console.log(`Attempting simplified schema migration for table: ${table}`);
+            
+            // Drop table if exists
+            await targetPool.query(`DROP TABLE IF EXISTS "${table}" CASCADE`);
+            
+            // Re-fetch table structure for error recovery
+            if (!structureResult) {
+              structureResult = await sourcePool.query(`
+                SELECT 
+                  column_name, 
+                  data_type, 
+                  character_maximum_length,
+                  is_nullable, 
+                  column_default,
+                  udt_name
+                FROM information_schema.columns
+                WHERE table_name = $1 AND table_schema = 'public'
+                ORDER BY ordinal_position
+              `, [table]);
+            }
+            
+            // Create simplified table structure
+            const simpleColumns = structureResult.rows.map((col: any) => {
+              let columnDef = `"${col.column_name}" `;
+              
+              // Use TEXT for all JSON columns to avoid parsing issues
+              if (col.udt_name === 'json' || col.udt_name === 'jsonb') {
+                columnDef += 'TEXT';
+              } else if (col.data_type === 'character varying' && col.character_maximum_length) {
+                columnDef += `VARCHAR(${col.character_maximum_length})`;
+              } else {
+                columnDef += col.data_type;
+              }
+              
+              return columnDef;
+            });
+
+            const simpleCreateQuery = `
+              CREATE TABLE "${table}" (
+                ${simpleColumns.join(',\n                ')}
+              )
+            `;
+            
+            await targetPool.query(simpleCreateQuery);
+            console.log(`Created simplified table schema: ${table}`);
+            
+            // Migrate data with TEXT conversion for JSON columns
+            const dataResult = await sourcePool.query(`SELECT * FROM "${table}"`);
+            const totalRows = dataResult.rows.length;
+            let processedRows = 0;
+            
+            if (totalRows > 0) {
+              const columns = structureResult.rows.map((col: any) => `"${col.column_name}"`).join(', ');
+              
+              for (const row of dataResult.rows) {
+                try {
+                  const values = structureResult.rows.map((col: any) => {
+                    const value = row[col.column_name];
+                    
+                    // Convert JSON columns to string representation
+                    if (col.udt_name === 'json' || col.udt_name === 'jsonb') {
+                      if (value === null || value === undefined) {
+                        return null;
+                      }
+                      return typeof value === 'string' ? value : JSON.stringify(value);
+                    }
+                    
+                    // Return the value as-is, PostgreSQL handles null values properly
+                    return value;
+                  });
+                  
+                  const placeholders = values.map((_: any, i: number) => `$${i + 1}`).join(', ');
+                  
+                  await targetPool.query(
+                    `INSERT INTO "${table}" (${columns}) VALUES (${placeholders})`,
+                    values
+                  );
+                  
+                  processedRows++;
+                } catch (rowError: any) {
+                  console.error(`Error inserting row into ${table} (simplified):`, rowError.message);
+                }
+              }
+            }
+            
+            console.log(`Completed simplified migration for table: ${table} (${processedRows}/${totalRows} rows)`);
+            updateProgress('Table Recovered', `⚠ Table ${table}: simplified migration (${processedRows}/${totalRows} rows)`, 
+              30 + (migratedTables / totalTables) * 60, totalTables, migratedTables);
+              
+          } catch (simplifiedError: any) {
+            console.error(`Failed to migrate table ${table} even with simplified schema:`, simplifiedError.message);
+            updateProgress('Table Failed', `✗ Table ${table}: migration failed completely`, 
+              30 + (migratedTables / totalTables) * 60, totalTables, migratedTables);
+          }
         }
       }
 
