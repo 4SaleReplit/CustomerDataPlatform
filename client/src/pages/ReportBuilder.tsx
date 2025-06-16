@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -96,6 +97,7 @@ interface Report {
 export default function ReportBuilder() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [currentReport, setCurrentReport] = useState<Report | null>(null);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
@@ -344,6 +346,9 @@ export default function ReportBuilder() {
         const savedPresentation = await response.json();
         console.log('Presentation saved successfully:', savedPresentation.id);
         
+        // Generate thumbnail from first slide with image content
+        await generateThumbnailForPresentation(savedPresentation.id);
+        
         // Invalidate cache to refresh reports list
         queryClient.invalidateQueries({ queryKey: ['/api/presentations'] });
         
@@ -352,9 +357,13 @@ export default function ReportBuilder() {
         setReportTitle('');
         setIsSaving(false);
         
-        // Show success message
-        const action = isExistingReport ? 'updated' : 'saved';
-        alert(`Report "${reportTitle}" ${action} successfully!`);
+        // Show success toast notification
+        const action = isExistingReport ? 'updated' : 'created';
+        toast({
+          title: "Report Saved Successfully",
+          description: `Report "${reportTitle}" has been ${action} and saved to your reports library.`,
+          duration: 4000,
+        });
       } else {
         console.error('Failed to save presentation');
         setIsSaving(false);
@@ -497,6 +506,38 @@ export default function ReportBuilder() {
     // If it was a cut operation, clear clipboard
     if (clipboard.operation === 'cut') {
       setClipboard(null);
+    }
+  };
+
+  // Generate thumbnail for presentation using first slide with image
+  const generateThumbnailForPresentation = async (presentationId: string): Promise<void> => {
+    try {
+      if (!currentReport?.slides?.length) return;
+      
+      // Find first slide with an image element
+      const slideWithImage = currentReport.slides.find(slide => 
+        slide.elements.some(element => element.type === 'image' && element.content)
+      );
+      
+      if (slideWithImage) {
+        const imageElement = slideWithImage.elements.find(el => el.type === 'image' && el.content);
+        if (imageElement?.content) {
+          // Update presentation with the first image as preview
+          await fetch(`/api/presentations/${presentationId}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              previewImageUrl: imageElement.content,
+              lastRefreshed: new Date().toISOString()
+            })
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error generating thumbnail:', error);
+      // Don't throw - thumbnail generation should not block report saving
     }
   };
 
