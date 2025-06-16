@@ -18,6 +18,9 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { nanoid } from "nanoid";
+import { Pool } from "pg";
+import Redis from "ioredis";
+import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 
 // Configure multer for file uploads
 const storage_config = multer.diskStorage({
@@ -267,7 +270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Import the migration module
-      const { DatabaseMigrator } = require('../migrate-production-database.js');
+      const { DatabaseMigrator } = await import('../migrate-production-database.js');
       const migrator = new DatabaseMigrator();
       
       // Get current database URL
@@ -3298,7 +3301,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Helper functions for migrations
   async function migratePostgreSQL(sourceConfig: any, targetConfig: any) {
     // PostgreSQL migration logic
-    const { Pool } = require('pg');
     
     const sourcePool = new Pool({
       connectionString: sourceConfig.connectionString || sourceConfig.url,

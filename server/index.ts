@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { config } from "dotenv";
 import { registerRoutes } from "./routes";
+import path from "path";
 
 // Load environment variables
 config();
@@ -98,8 +99,7 @@ app.use((req, res, next) => {
   } catch (error) {
     console.error('Failed to start server:', error);
     // Fallback server with minimal static serving
-    const express = require('express');
-    const path = require('path');
+    // express and path already imported at top
     
     if (process.env.NODE_ENV === "production") {
       const distPath = path.resolve(__dirname, "public");
