@@ -44,11 +44,12 @@ interface Integration {
 interface IntegrationField {
   key: string;
   label: string;
-  type: 'text' | 'password' | 'email' | 'url' | 'textarea' | 'select';
+  type: 'text' | 'password' | 'email' | 'url' | 'textarea' | 'select' | 'checkbox';
   placeholder?: string;
   required?: boolean;
   options?: string[];
   description?: string;
+  conditional?: string; // Field only shows when this field is checked
 }
 
 interface IntegrationTemplate {
@@ -68,12 +69,25 @@ const integrationTemplates: Record<string, IntegrationTemplate> = {
     icon: Database,
     color: 'blue',
     fields: [
-      { key: 'host', label: 'Host', type: 'text', placeholder: 'localhost', required: true },
-      { key: 'port', label: 'Port', type: 'text', placeholder: '5432', required: true },
-      { key: 'database', label: 'Database Name', type: 'text', placeholder: 'mydatabase', required: true },
-      { key: 'username', label: 'Username', type: 'text', placeholder: 'postgres', required: true },
-      { key: 'password', label: 'Password', type: 'password', required: true },
-      { key: 'ssl', label: 'SSL Mode', type: 'select', options: ['disable', 'require', 'prefer'], placeholder: 'require' }
+      { 
+        key: 'connectionString', 
+        label: 'Connection String', 
+        type: 'text', 
+        placeholder: 'postgresql://username:password@host:5432/database?sslmode=require',
+        description: 'Complete PostgreSQL connection string (recommended)'
+      },
+      { 
+        key: 'useIndividualFields', 
+        label: 'Use Individual Fields', 
+        type: 'checkbox', 
+        description: 'Check to configure connection using separate host, port, database fields instead'
+      },
+      { key: 'host', label: 'Host', type: 'text', placeholder: 'localhost', required: true, conditional: 'useIndividualFields' },
+      { key: 'port', label: 'Port', type: 'text', placeholder: '5432', required: true, conditional: 'useIndividualFields' },
+      { key: 'database', label: 'Database Name', type: 'text', placeholder: 'mydatabase', required: true, conditional: 'useIndividualFields' },
+      { key: 'username', label: 'Username', type: 'text', placeholder: 'postgres', required: true, conditional: 'useIndividualFields' },
+      { key: 'password', label: 'Password', type: 'password', required: true, conditional: 'useIndividualFields' },
+      { key: 'ssl', label: 'SSL Mode', type: 'select', options: ['disable', 'require', 'prefer'], placeholder: 'require', conditional: 'useIndividualFields' }
     ]
   },
   redis: {
@@ -666,6 +680,18 @@ export default function Integrations() {
             placeholder={field.placeholder}
           />
         );
+      case 'checkbox':
+        return (
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={value || false}
+              onChange={(e) => onChange(e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <span className="text-sm text-gray-700">{field.label}</span>
+          </div>
+        );
       default:
         return (
           <Input
@@ -858,20 +884,29 @@ export default function Integrations() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-4">
-                  {integrationTemplates[selectedTemplate].fields.map((field) => (
-                    <div key={field.key} className="space-y-2">
-                      <Label htmlFor={field.key} className="text-sm font-medium">
-                        {field.label}
-                        {field.required && <span className="text-red-500 ml-1">*</span>}
-                      </Label>
-                      {renderField(field, formData[field.key], (value) => 
-                        setFormData(prev => ({ ...prev, [field.key]: value }))
-                      )}
-                      {field.description && (
-                        <p className="text-xs text-gray-500">{field.description}</p>
-                      )}
-                    </div>
-                  ))}
+                  {integrationTemplates[selectedTemplate].fields.map((field) => {
+                    // Handle conditional field visibility
+                    if (field.conditional && !formData[field.conditional]) {
+                      return null;
+                    }
+
+                    return (
+                      <div key={field.key} className="space-y-2">
+                        {field.type !== 'checkbox' && (
+                          <Label htmlFor={field.key} className="text-sm font-medium">
+                            {field.label}
+                            {field.required && <span className="text-red-500 ml-1">*</span>}
+                          </Label>
+                        )}
+                        {renderField(field, formData[field.key], (value) => 
+                          setFormData(prev => ({ ...prev, [field.key]: value }))
+                        )}
+                        {field.description && (
+                          <p className="text-xs text-gray-500">{field.description}</p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
 
                 <div className="flex justify-between space-x-3 pt-4">
