@@ -3435,7 +3435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Helper functions for migrations
   async function migratePostgreSQL(sourceConfig: any, targetConfig: any, sessionId?: string, broadcastProgress?: Function) {
-    // PostgreSQL migration logic
+    // PostgreSQL migration logic with cleanup and overwrite support
     
     const updateProgress = (stage: string, currentJob: string, progress: number, totalItems = 0, completedItems = 0) => {
       if (sessionId && broadcastProgress) {
@@ -3453,9 +3453,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         migrationSessions.set(sessionId, progressData);
         broadcastProgress(sessionId, progressData);
       }
+      console.log(`[${stage}] ${currentJob} - ${progress}%`);
     };
 
-    updateProgress('Connecting', 'Establishing database connections', 5);
+    updateProgress('Initializing', 'Starting migration process', 0);
     
     const sourcePool = new Pool({
       connectionString: sourceConfig.connectionString || sourceConfig.url,
@@ -3468,101 +3469,220 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
 
     try {
-      updateProgress('Testing Connections', 'Verifying source database connection', 10);
+      updateProgress('Connecting', 'Establishing source database connection', 5);
       await sourcePool.query('SELECT 1');
+      console.log('Source database connected successfully');
       
-      updateProgress('Testing Connections', 'Verifying target database connection', 15);
+      updateProgress('Connecting', 'Establishing target database connection', 10);
       await targetPool.query('SELECT 1');
+      console.log('Target database connected successfully');
 
-      updateProgress('Analyzing Schema', 'Discovering tables and structure', 20);
+      updateProgress('Schema Discovery', 'Analyzing source database tables and structure', 15);
       // Get table list from source
       const tablesResult = await sourcePool.query(`
         SELECT table_name 
         FROM information_schema.tables 
         WHERE table_schema = 'public' 
         AND table_type = 'BASE TABLE'
+        ORDER BY table_name
       `);
 
       const tables = tablesResult.rows.map((row: any) => row.table_name);
-      let migratedTables = 0;
       const totalTables = tables.length;
+      let migratedTables = 0;
+      let totalRowsMigrated = 0;
 
-      updateProgress('Migrating Tables', `Preparing to migrate ${totalTables} tables`, 25, totalTables, 0);
+      updateProgress('Schema Discovery', `Found ${totalTables} tables to migrate`, 20, totalTables, 0);
+      console.log(`Tables to migrate: ${tables.join(', ')}`);
 
+      // First pass: Drop and recreate all tables for clean migration
+      updateProgress('Schema Cleanup', 'Removing existing tables in target database', 25);
       for (const table of tables) {
         try {
-          updateProgress('Creating Schema', `Creating table structure: ${table}`, 
-            25 + (migratedTables / totalTables) * 70, totalTables, migratedTables);
+          await targetPool.query(`DROP TABLE IF EXISTS "${table}" CASCADE`);
+          console.log(`Dropped existing table: ${table}`);
+        } catch (error) {
+          console.log(`Table ${table} did not exist, continuing...`);
+        }
+      }
 
-          // Get table structure
+      // Second pass: Create tables and migrate data
+      for (const table of tables) {
+        try {
+          const tableProgress = 30 + (migratedTables / totalTables) * 60;
+          
+          updateProgress('Schema Creation', `Creating table structure: ${table}`, 
+            tableProgress, totalTables, migratedTables);
+
+          // Get table structure with proper data types
           const structureResult = await sourcePool.query(`
-            SELECT column_name, data_type, is_nullable, column_default
+            SELECT 
+              column_name, 
+              data_type, 
+              character_maximum_length,
+              is_nullable, 
+              column_default,
+              udt_name
             FROM information_schema.columns
             WHERE table_name = $1 AND table_schema = 'public'
             ORDER BY ordinal_position
           `, [table]);
 
-          // Create table in target if it doesn't exist
+          // Get primary key information
+          const primaryKeyResult = await sourcePool.query(`
+            SELECT a.attname
+            FROM pg_index i
+            JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+            WHERE i.indrelid = $1::regclass AND i.indisprimary
+          `, [table]);
+          
+          const primaryKeys = primaryKeyResult.rows.map(row => row.attname);
+
+          // Create table with proper data types
+          const columnDefinitions = structureResult.rows.map((col: any) => {
+            let columnDef = `"${col.column_name}" `;
+            
+            // Handle JSON/JSONB columns properly
+            if (col.udt_name === 'json' || col.udt_name === 'jsonb') {
+              columnDef += col.udt_name;
+            } else if (col.data_type === 'character varying' && col.character_maximum_length) {
+              columnDef += `VARCHAR(${col.character_maximum_length})`;
+            } else {
+              columnDef += col.data_type;
+            }
+            
+            if (col.is_nullable === 'NO') {
+              columnDef += ' NOT NULL';
+            }
+            
+            if (col.column_default && !col.column_default.includes('nextval')) {
+              columnDef += ` DEFAULT ${col.column_default}`;
+            }
+            
+            return columnDef;
+          });
+
           const createTableQuery = `
-            CREATE TABLE IF NOT EXISTS "${table}" (
-              ${structureResult.rows.map((col: any) => 
-                `"${col.column_name}" ${col.data_type}${col.is_nullable === 'NO' ? ' NOT NULL' : ''}${col.column_default ? ` DEFAULT ${col.column_default}` : ''}`
-              ).join(',\n              ')}
+            CREATE TABLE "${table}" (
+              ${columnDefinitions.join(',\n              ')}
+              ${primaryKeys.length > 0 ? `,\n              PRIMARY KEY (${primaryKeys.map(pk => `"${pk}"`).join(', ')})` : ''}
             )
           `;
           
           await targetPool.query(createTableQuery);
+          console.log(`Created table schema: ${table}`);
 
           // Get row count for progress tracking
           const countResult = await sourcePool.query(`SELECT COUNT(*) FROM "${table}"`);
           const totalRows = parseInt(countResult.rows[0].count);
 
-          updateProgress('Migrating Data', `Copying ${totalRows} rows from table: ${table}`, 
-            25 + (migratedTables / totalTables) * 70, totalTables, migratedTables);
+          updateProgress('Data Migration', `Migrating ${totalRows} rows from table: ${table}`, 
+            tableProgress + 5, totalTables, migratedTables);
 
-          // Migrate data
-          const dataResult = await sourcePool.query(`SELECT * FROM "${table}"`);
-          
-          if (dataResult.rows.length > 0) {
-            const columns = structureResult.rows.map((col: any) => `"${col.column_name}"`).join(', ');
-            const placeholders = structureResult.rows.map((_: any, i: number) => `$${i + 1}`).join(', ');
-            
+          // Migrate data in batches for better performance
+          if (totalRows > 0) {
+            const batchSize = 1000;
+            let offset = 0;
             let processedRows = 0;
-            for (const row of dataResult.rows) {
-              const values = structureResult.rows.map((col: any) => row[col.column_name]);
-              try {
-                await targetPool.query(
-                  `INSERT INTO "${table}" (${columns}) VALUES (${placeholders}) ON CONFLICT DO NOTHING`,
-                  values
-                );
-                processedRows++;
-                
-                // Update progress every 100 rows
-                if (processedRows % 100 === 0 || processedRows === totalRows) {
-                  updateProgress('Migrating Data', 
-                    `Copied ${processedRows}/${totalRows} rows from table: ${table}`, 
-                    25 + (migratedTables / totalTables) * 70, totalTables, migratedTables);
+            
+            while (offset < totalRows) {
+              const batchResult = await sourcePool.query(`
+                SELECT * FROM "${table}" 
+                ORDER BY ${primaryKeys.length > 0 ? primaryKeys.map(pk => `"${pk}"`).join(', ') : '1'}
+                LIMIT ${batchSize} OFFSET ${offset}
+              `);
+              
+              if (batchResult.rows.length === 0) break;
+
+              const columns = structureResult.rows.map((col: any) => `"${col.column_name}"`).join(', ');
+              
+              for (const row of batchResult.rows) {
+                try {
+                  const values = structureResult.rows.map((col: any) => {
+                    const value = row[col.column_name];
+                    
+                    // Handle JSON/JSONB data properly
+                    if ((col.udt_name === 'json' || col.udt_name === 'jsonb') && typeof value === 'object') {
+                      return JSON.stringify(value);
+                    }
+                    
+                    return value;
+                  });
+                  
+                  const placeholders = values.map((_: any, i: number) => `$${i + 1}`).join(', ');
+                  
+                  await targetPool.query(
+                    `INSERT INTO "${table}" (${columns}) VALUES (${placeholders})`,
+                    values
+                  );
+                  
+                  processedRows++;
+                  totalRowsMigrated++;
+                  
+                  // Update progress every 100 rows
+                  if (processedRows % 100 === 0 || processedRows === totalRows) {
+                    updateProgress('Data Migration', 
+                      `Migrated ${processedRows}/${totalRows} rows in table: ${table}`, 
+                      tableProgress + 10, totalTables, migratedTables);
+                  }
+                } catch (rowError: any) {
+                  console.error(`Error inserting row into ${table}:`, rowError.message);
+                  // Continue with next row
                 }
-              } catch (rowError) {
-                console.error(`Error inserting row into ${table}:`, rowError);
-                // Continue with next row
               }
+              
+              offset += batchSize;
             }
           }
 
           migratedTables++;
-          updateProgress('Table Complete', `Finished migrating table: ${table}`, 
-            25 + (migratedTables / totalTables) * 70, totalTables, migratedTables);
+          updateProgress('Table Complete', `✓ Table ${table}: schema created, ${totalRows} rows migrated`, 
+            30 + (migratedTables / totalTables) * 60, totalTables, migratedTables);
+          
+          console.log(`Completed migration for table: ${table} (${totalRows} rows)`);
 
-        } catch (tableError) {
-          console.error(`Error migrating table ${table}:`, tableError);
-          updateProgress('Error', `Failed to migrate table: ${table} - ${tableError.message}`, 
-            25 + (migratedTables / totalTables) * 70, totalTables, migratedTables);
+        } catch (tableError: any) {
+          console.error(`Error migrating table ${table}:`, tableError.message);
+          updateProgress('Table Error', `✗ Failed to migrate table: ${table} - ${tableError.message}`, 
+            30 + (migratedTables / totalTables) * 60, totalTables, migratedTables);
         }
       }
 
-      updateProgress('Finalizing', 'Migration completed successfully', 95, totalTables, migratedTables);
-      return { migratedTables, totalTables: tables.length };
+      // Recreate indexes and constraints
+      updateProgress('Post-Migration', 'Recreating indexes and constraints', 95);
+      
+      for (const table of tables) {
+        try {
+          // Recreate indexes (excluding primary key indexes)
+          const indexResult = await sourcePool.query(`
+            SELECT indexname, indexdef 
+            FROM pg_indexes 
+            WHERE tablename = $1 AND schemaname = 'public'
+            AND indexname NOT LIKE '%_pkey'
+          `, [table]);
+          
+          for (const index of indexResult.rows) {
+            try {
+              await targetPool.query(index.indexdef);
+              console.log(`Recreated index: ${index.indexname}`);
+            } catch (indexError) {
+              console.log(`Could not recreate index ${index.indexname}, continuing...`);
+            }
+          }
+        } catch (error) {
+          console.log(`Could not recreate indexes for ${table}, continuing...`);
+        }
+      }
+
+      updateProgress('Completed', `Migration successful: ${migratedTables} tables, ${totalRowsMigrated} total rows`, 100, totalTables, migratedTables);
+      console.log(`Migration completed successfully: ${migratedTables} tables, ${totalRowsMigrated} total rows`);
+      
+      return { 
+        migratedTables, 
+        totalTables: tables.length, 
+        totalRowsMigrated,
+        tablesCompleted: tables 
+      };
     } finally {
       await sourcePool.end();
       await targetPool.end();
