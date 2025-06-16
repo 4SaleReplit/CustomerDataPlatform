@@ -3121,7 +3121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       process.env.AWS_REGION = region;
 
       // Import and run migration
-      const { S3ImageMigrator } = require('../migrate-images-to-s3.js');
+      const { S3ImageMigrator } = await import('../migrate-images-to-s3.js');
       const migrator = new S3ImageMigrator();
 
       await migrator.migrate({ 
@@ -3380,7 +3380,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   async function migrateRedis(sourceConfig: any, targetConfig: any) {
     // Redis migration logic
-    const Redis = require('ioredis');
+    // Redis already imported at top
     
     const sourceRedis = new Redis({
       host: sourceConfig.host,
@@ -3462,7 +3462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   async function migrateS3(sourceConfig: any, targetConfig: any) {
     // S3 migration logic
-    const { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
+    // S3Client already imported at top
     
     const sourceS3 = new S3Client({
       region: sourceConfig.region,
