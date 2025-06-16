@@ -579,9 +579,13 @@ export default function Integrations() {
       if (integration) {
         // Testing existing integration
         endpoint = `/api/integrations/${integration.id}/test`;
-        body = selectedIntegration && Object.keys(formData).length > 0 
-          ? { credentials: formData } 
-          : {};
+        // If we're editing and have form data, use that; otherwise use stored credentials
+        if (selectedIntegration && selectedIntegration.id === integration.id && Object.keys(formData).length > 0) {
+          body = { credentials: formData };
+        } else {
+          // Test with existing stored credentials
+          body = {};
+        }
       } else if (selectedTemplate && Object.keys(formData).length > 0) {
         // Testing new integration during creation
         endpoint = `/api/integrations/test-new`;

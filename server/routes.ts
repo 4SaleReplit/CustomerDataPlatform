@@ -2152,6 +2152,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
         case 'snowflake':
           try {
+            // Create Snowflake service directly with this integration's credentials
+            const { SnowflakeService } = await import('./services/snowflake');
+            const { credentialManager } = await import('./services/credentialManager');
+            
+            // Decrypt credentials for this specific integration
+            const credentials = credentialManager.decryptCredentials(integration.credentials as string);
+            
+            const snowflakeService = new SnowflakeService({
+              account: credentials.account,
+              username: credentials.username,
+              password: credentials.password,
+              warehouse: credentials.warehouse,
+              database: credentials.database,
+              schema: credentials.schema
+            });
+
             // Get comprehensive Snowflake metadata
             const queries = [
               "SELECT CURRENT_VERSION() as version, CURRENT_DATABASE() as database, CURRENT_WAREHOUSE() as warehouse",
@@ -2162,21 +2178,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 SUM(BYTES) / (1024*1024*1024) as size_gb,
                 COUNT(*) as file_count
                FROM INFORMATION_SCHEMA.TABLES 
-               WHERE TABLE_SCHEMA = '${(integration.credentials as any)?.schema || 'USER_SEGMENTATION_PROJECT_V4'}'`
+               WHERE TABLE_SCHEMA = '${credentials.schema || 'USER_SEGMENTATION_PROJECT_V4'}'`
             ];
 
-            const { getDynamicSnowflakeService } = await import('./services/snowflake');
-            const dynamicService = await getDynamicSnowflakeService();
-            
-            if (!dynamicService) {
-              return res.status(400).json({ 
-                success: false, 
-                error: "Snowflake integration not configured. Please configure a Snowflake integration first." 
-              });
-            }
-
             const results = await Promise.all(
-              queries.map(query => dynamicService.executeQuery(query))
+              queries.map(query => snowflakeService.executeQuery(query))
             );
 
             if (results.every(r => r.success)) {
