@@ -143,6 +143,7 @@ export default function AdminNew() {
   const [showMigrationModal, setShowMigrationModal] = useState(false);
   const [showEnvConfigModal, setShowEnvConfigModal] = useState(false);
   const [showIntegrationTypesModal, setShowIntegrationTypesModal] = useState(false);
+  const [selectedMigrationType, setSelectedMigrationType] = useState('');
   const [selectedSourceEnv, setSelectedSourceEnv] = useState('');
   const [selectedTargetEnv, setSelectedTargetEnv] = useState('');
   const [selectedConfigEnv, setSelectedConfigEnv] = useState('');
@@ -151,17 +152,17 @@ export default function AdminNew() {
 
   // Generic function to get integrations by type
   const getIntegrationsByType = (type: string) => {
-    return integrations.filter((int: any) => 
-      int.type === type || 
-      int.name?.toLowerCase().includes(type) ||
-      (type === 'postgresql' && (int.type === 'database' || int.name?.toLowerCase().includes('postgres'))) ||
-      (type === 'redis' && int.name?.toLowerCase().includes('redis')) ||
-      (type === 's3' && (int.type === 'aws' || int.name?.toLowerCase().includes('s3'))) ||
-      (type === 'amplitude' && int.name?.toLowerCase().includes('amplitude')) ||
-      (type === 'braze' && int.name?.toLowerCase().includes('braze')) ||
-      (type === 'snowflake' && int.name?.toLowerCase().includes('snowflake')) ||
-      (type === 'sendgrid' && int.name?.toLowerCase().includes('sendgrid'))
-    );
+    return integrations.filter((int: any) => int.type === type);
+  };
+
+  // Get available integration types for migration
+  const getMigratableIntegrationTypes = () => {
+    const typeCounts: { [key: string]: number } = {};
+    integrations.forEach((int: any) => {
+      const type = int.type as string;
+      typeCounts[type] = (typeCounts[type] || 0) + 1;
+    });
+    return Object.keys(typeCounts).filter(type => typeCounts[type] >= 2);
   };
 
   // Fetch team members
@@ -342,10 +343,19 @@ export default function AdminNew() {
   };
 
   const handleStartMigration = async () => {
+    if (!selectedMigrationType) {
+      toast({
+        title: "Error",
+        description: "Please select an integration type first",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!selectedSourceEnv || !selectedTargetEnv) {
       toast({
         title: "Error",
-        description: "Please select both source and destination databases",
+        description: "Please select both source and destination integrations",
         variant: "destructive"
       });
       return;
@@ -354,7 +364,7 @@ export default function AdminNew() {
     if (selectedSourceEnv === selectedTargetEnv) {
       toast({
         title: "Error", 
-        description: "Source and destination databases must be different",
+        description: "Source and destination integrations must be different",
         variant: "destructive"
       });
       return;
@@ -368,14 +378,14 @@ export default function AdminNew() {
       const targetIntegration = integrations.find((int: any) => int.id === selectedTargetEnv);
 
       if (!sourceIntegration || !targetIntegration) {
-        throw new Error("Could not find selected database integrations");
+        throw new Error("Could not find selected integrations");
       }
 
       // Start the migration
       const response = await apiRequest('/api/migrate-data', {
         method: 'POST',
         body: JSON.stringify({
-          type: 'postgresql',
+          type: selectedMigrationType,
           sourceIntegrationId: selectedSourceEnv,
           targetIntegrationId: selectedTargetEnv,
           sourceEnvironment: sourceIntegration.name,
@@ -388,9 +398,10 @@ export default function AdminNew() {
       if (response.success) {
         toast({
           title: "Migration Completed",
-          description: `Successfully migrated ${response.details.migratedTables} of ${response.details.totalTables} tables from ${sourceIntegration.name} to ${targetIntegration.name}`,
+          description: `Successfully migrated ${response.details?.migratedTables || 'data'} from ${sourceIntegration.name} to ${targetIntegration.name}`,
         });
         setShowMigrationModal(false);
+        setSelectedMigrationType('');
         setSelectedSourceEnv('');
         setSelectedTargetEnv('');
       }
