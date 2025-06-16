@@ -308,9 +308,7 @@ function Dashboard() {
     }
   };
 
-  const handleTimeFiltersChange = (newFilters: TimeFilterState) => {
-    setTimeFilters(newFilters);
-  };
+  // Time filters removed from dashboard interface
 
 
 
