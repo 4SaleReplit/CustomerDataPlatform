@@ -69,12 +69,6 @@ export default function Admin() {
     permissions: [] as string[]
   });
 
-  // Fetch integrations data for migration
-  const { data: integrations = [] } = useQuery({
-    queryKey: ['/api/integrations'],
-    queryFn: () => apiRequest('/api/integrations')
-  });
-
   // Migration state management
   const [currentEnvironment, setCurrentEnvironment] = useState('dev');
   const [environments, setEnvironments] = useState([
@@ -143,6 +137,12 @@ export default function Admin() {
   const { data: roles = [], isLoading: rolesLoading } = useQuery({
     queryKey: ['/api/roles'],
     queryFn: () => apiRequest('/api/roles')
+  });
+
+  // Fetch integrations from database
+  const { data: integrations = [], isLoading: integrationsLoading } = useQuery({
+    queryKey: ['/api/integrations'],
+    queryFn: () => apiRequest('/api/integrations')
   });
 
   const filteredUsers = teamMembers.filter((user: any) =>
@@ -816,7 +816,7 @@ export default function Admin() {
           {/* Roles List */}
           <Card>
             <CardHeader>
-              <CardTitle>All Roles ({mockRoles.length})</CardTitle>
+              <CardTitle>All Roles ({roles.length})</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -831,7 +831,7 @@ export default function Admin() {
                     </tr>
                   </thead>
                   <tbody>
-                    {mockRoles.map((role) => (
+                    {roles.map((role: any) => (
                       <tr key={role.id} className="border-b hover:bg-gray-50">
                         <td className="py-3 px-4 font-medium">{role.name}</td>
                         <td className="py-3 px-4 text-gray-600">{role.description}</td>
@@ -1123,31 +1123,58 @@ export default function Admin() {
           {/* Migration History */}
           <Card>
             <CardHeader>
-              <CardTitle>Recent Migrations</CardTitle>
+              <CardTitle>Recent Migrations ({migrationHistory.length})</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-                  <div className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-600 mr-3" />
-                    <div>
-                      <p className="font-medium">Development → Staging</p>
-                      <p className="text-sm text-muted-foreground">Migrated 15,432 records • 2 hours ago</p>
-                    </div>
-                  </div>
-                  <Badge className="bg-green-100 text-green-800">Completed</Badge>
+              {migrationHistoryLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <span className="ml-2">Loading migration history...</span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="flex items-center">
-                    <Clock className="h-4 w-4 text-blue-600 mr-3" />
-                    <div>
-                      <p className="font-medium">Staging → Production</p>
-                      <p className="text-sm text-muted-foreground">Schema migration in progress • Started 30 minutes ago</p>
-                    </div>
-                  </div>
-                  <Badge className="bg-blue-100 text-blue-800">In Progress</Badge>
+              ) : migrationHistory.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No migrations found. Start your first migration to see history here.
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-3">
+                  {migrationHistory.slice(0, 5).map((migration: any) => (
+                    <div 
+                      key={migration.id}
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                        migration.status === 'completed' ? 'bg-green-50 border-green-200' :
+                        migration.status === 'failed' ? 'bg-red-50 border-red-200' :
+                        migration.status === 'in_progress' ? 'bg-blue-50 border-blue-200' :
+                        'bg-gray-50 border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center">
+                        {migration.status === 'completed' && <CheckCircle className="h-4 w-4 text-green-600 mr-3" />}
+                        {migration.status === 'failed' && <XCircle className="h-4 w-4 text-red-600 mr-3" />}
+                        {migration.status === 'in_progress' && <Clock className="h-4 w-4 text-blue-600 mr-3" />}
+                        {migration.status === 'pending' && <AlertTriangle className="h-4 w-4 text-yellow-600 mr-3" />}
+                        <div>
+                          <p className="font-medium">{migration.sourceName} → {migration.targetName}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {migration.metadata?.totalRowsMigrated ? `Migrated ${migration.metadata.totalRowsMigrated} records` : 'Migration details'} • 
+                            {migration.createdAt ? new Date(migration.createdAt).toLocaleString() : 'Unknown time'}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge className={
+                        migration.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        migration.status === 'failed' ? 'bg-red-100 text-red-800' :
+                        migration.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
+                      }>
+                        {migration.status === 'completed' ? 'Completed' :
+                         migration.status === 'failed' ? 'Failed' :
+                         migration.status === 'in_progress' ? 'In Progress' :
+                         'Pending'}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
