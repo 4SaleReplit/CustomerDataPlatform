@@ -326,7 +326,7 @@ export default function Admin() {
     });
   };
 
-  const handleStartMigration = () => {
+  const handleStartMigration = async () => {
     if (!selectedSourceEnv || !selectedTargetEnv) {
       toast({
         title: "Migration error",
@@ -337,16 +337,69 @@ export default function Admin() {
     }
 
     setIsMigrating(true);
-    // Simulate migration process
-    setTimeout(() => {
-      setIsMigrating(false);
-      setShowMigrationModal(false);
-      toast({
-        title: "Migration completed",
-        description: `Successfully migrated data from ${selectedSourceEnv} to ${selectedTargetEnv}`
+    
+    try {
+      // Start PostgreSQL migration with real-time progress tracking
+      const response = await apiRequest('/api/migrate-data', {
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'postgresql',
+          sourceIntegrationId: selectedSourceEnv,
+          targetIntegrationId: selectedTargetEnv,
+          sourceEnvironment: selectedSourceEnv,
+          targetEnvironment: selectedTargetEnv,
+          sourceConfig: {
+            connectionString: environments.find(e => e.id === selectedSourceEnv)?.databases.postgres.url
+          },
+          targetConfig: {
+            connectionString: environments.find(e => e.id === selectedTargetEnv)?.databases.postgres.url
+          }
+        })
       });
-    }, 3000);
+
+      if (response.success && response.sessionId) {
+        // Hide migration modal and show progress tracking
+        setMigrationSessionId(response.sessionId);
+        setShowMigrationModal(false);
+        setShowMigrationProgress(true);
+        
+        toast({
+          title: "Migration Started",
+          description: "Real-time progress tracking is now active"
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Migration Failed",
+        description: error.message || "Failed to start migration",
+        variant: "destructive"
+      });
+      setIsMigrating(false);
+    }
   };
+
+  const handleMigrationComplete = () => {
+    setIsMigrating(false);
+    setShowMigrationProgress(false);
+    setMigrationSessionId('');
+    
+    toast({
+      title: "Migration Completed",
+      description: "Data migration finished successfully"
+    });
+  };
+
+  const handleMigrationError = (error: string) => {
+    setIsMigrating(false);
+    setShowMigrationProgress(false);
+    setMigrationSessionId('');
+    
+    toast({
+      title: "Migration Failed",
+      description: error,
+      variant: "destructive"
+    });
+  };;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -1199,6 +1252,36 @@ export default function Admin() {
                   </Button>
                   <Button onClick={handleSaveEnvironmentConfig}>
                     Save Configuration
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Real-time Migration Progress Dialog */}
+          <Dialog open={showMigrationProgress} onOpenChange={setShowMigrationProgress}>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>Migration Progress - Live Updates</DialogTitle>
+                <DialogDescription>
+                  Real-time progress tracking with detailed stage information
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                {migrationSessionId && (
+                  <MigrationProgress 
+                    sessionId={migrationSessionId}
+                    onComplete={handleMigrationComplete}
+                    onError={handleMigrationError}
+                  />
+                )}
+                <div className="flex justify-end">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowMigrationProgress(false)}
+                    disabled={isMigrating}
+                  >
+                    {isMigrating ? 'Migration Running...' : 'Close'}
                   </Button>
                 </div>
               </div>
