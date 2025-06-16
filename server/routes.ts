@@ -2377,6 +2377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               await testPool.end();
             }
           } catch (error: any) {
+            console.error("PostgreSQL connection test error:", error);
             testResult = { success: false, error: error.message || "PostgreSQL connection failed" };
           }
           break;
