@@ -198,7 +198,38 @@ export default function ReportBuilder() {
       setCurrentReport(report);
       setReportTitle(existingPresentation.title);
     } else if (!currentReport && !presentationId) {
-      // Create default report only if not loading existing presentation
+      // Check for persisted form data from new report creation
+      const savedFormData = localStorage.getItem('newReportFormData');
+      let reportData = {
+        name: 'New Report',
+        description: 'A new report created with the report builder',
+        schedule: 'manual',
+        recipients: [],
+        autoRefresh: false
+      };
+
+      if (savedFormData) {
+        try {
+          const parsedData = JSON.parse(savedFormData);
+          reportData = {
+            name: parsedData.name || 'New Report',
+            description: parsedData.description || 'A new report created with the report builder',
+            schedule: parsedData.schedule || 'manual',
+            recipients: parsedData.recipients ? parsedData.recipients.split(',').map((email: string) => email.trim()).filter(Boolean) : [],
+            autoRefresh: parsedData.autoRefresh || false
+          };
+          
+          // Set the report title from saved data
+          setReportTitle(reportData.name);
+          
+          // Clear the saved data after using it
+          localStorage.removeItem('newReportFormData');
+        } catch (error) {
+          console.error('Error parsing saved form data:', error);
+        }
+      }
+
+      // Create default report with persisted data
       const defaultSlide: Slide = {
         id: nanoid(),
         name: 'Slide 1',
@@ -208,13 +239,13 @@ export default function ReportBuilder() {
 
       const newReport: Report = {
         id: nanoid(),
-        name: 'New Report',
-        description: 'A new report created with the report builder',
+        name: reportData.name,
+        description: reportData.description,
         slides: [defaultSlide],
         settings: {
-          schedule: 'manual',
-          recipients: [],
-          autoRefresh: false
+          schedule: reportData.schedule,
+          recipients: reportData.recipients,
+          autoRefresh: reportData.autoRefresh
         },
         status: 'draft'
       };
@@ -517,19 +548,39 @@ export default function ReportBuilder() {
             uploadedImageId: uploadedImage.id
           };
 
-          const newSlide: Slide = {
-            id: nanoid(),
-            name: `${file.name.split('.')[0]}`,
-            elements: [imageElement],
-            backgroundColor: '#ffffff'
-          };
-
           setCurrentReport(prevReport => {
             if (!prevReport) return prevReport;
-            return {
-              ...prevReport,
-              slides: [...prevReport.slides, newSlide]
-            };
+            
+            // Find the first empty slide (no elements) starting from index 0
+            const emptySlideIndex = prevReport.slides.findIndex(slide => slide.elements.length === 0);
+            
+            if (emptySlideIndex !== -1) {
+              // Use the first empty slide found
+              const updatedSlides = [...prevReport.slides];
+              updatedSlides[emptySlideIndex] = {
+                ...updatedSlides[emptySlideIndex],
+                name: `${file.name.split('.')[0]}`,
+                elements: [imageElement]
+              };
+              
+              return {
+                ...prevReport,
+                slides: updatedSlides
+              };
+            } else {
+              // No empty slides found, create a new one
+              const newSlide: Slide = {
+                id: nanoid(),
+                name: `${file.name.split('.')[0]}`,
+                elements: [imageElement],
+                backgroundColor: '#ffffff'
+              };
+              
+              return {
+                ...prevReport,
+                slides: [...prevReport.slides, newSlide]
+              };
+            }
           });
           
           resolve();

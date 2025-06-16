@@ -83,6 +83,16 @@ export function DataStudioReports() {
   const [refreshingReports, setRefreshingReports] = useState<Set<string>>(new Set());
   const [refreshProgress, setRefreshProgress] = useState<Record<string, { current: number; total: number; startTime: number }>>({});
   const [showSuccessToast, setShowSuccessToast] = useState<{ show: boolean; message: string; reportId?: string }>({ show: false, message: '' });
+  
+  // New report form state
+  const [newReportForm, setNewReportForm] = useState({
+    name: '',
+    description: '',
+    schedule: 'manual',
+    recipients: '',
+    autoRefresh: false
+  });
+  
   const { toast } = useToast();
 
   // Fetch presentations from database
@@ -705,11 +715,19 @@ export function DataStudioReports() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="report-name">Report Name</Label>
-                    <Input id="report-name" placeholder="Enter report name" />
+                    <Input 
+                      id="report-name" 
+                      placeholder="Enter report name" 
+                      value={newReportForm.name}
+                      onChange={(e) => setNewReportForm(prev => ({ ...prev, name: e.target.value }))}
+                    />
                   </div>
                   <div>
                     <Label htmlFor="report-schedule">Schedule</Label>
-                    <Select>
+                    <Select 
+                      value={newReportForm.schedule} 
+                      onValueChange={(value) => setNewReportForm(prev => ({ ...prev, schedule: value }))}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select schedule" />
                       </SelectTrigger>
@@ -724,7 +742,12 @@ export function DataStudioReports() {
                 </div>
                 <div>
                   <Label htmlFor="report-description">Description</Label>
-                  <Textarea id="report-description" placeholder="Enter report description" />
+                  <Textarea 
+                    id="report-description" 
+                    placeholder="Enter report description" 
+                    value={newReportForm.description}
+                    onChange={(e) => setNewReportForm(prev => ({ ...prev, description: e.target.value }))}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="report-recipients">Recipients (email addresses)</Label>
@@ -732,19 +755,39 @@ export function DataStudioReports() {
                     id="report-recipients" 
                     placeholder="Enter email addresses separated by commas"
                     className="min-h-20"
+                    value={newReportForm.recipients}
+                    onChange={(e) => setNewReportForm(prev => ({ ...prev, recipients: e.target.value }))}
                   />
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Switch id="auto-refresh" />
+                  <Switch 
+                    id="auto-refresh" 
+                    checked={newReportForm.autoRefresh}
+                    onCheckedChange={(checked) => setNewReportForm(prev => ({ ...prev, autoRefresh: checked }))}
+                  />
                   <Label htmlFor="auto-refresh">Auto-refresh data before sending</Label>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setShowNewReport(false)}>Cancel</Button>
-                  <Button onClick={() => {
+                  <Button variant="outline" onClick={() => {
                     setShowNewReport(false);
-                    // Navigate to builder - would be handled by routing
-                    window.location.href = '/reports/builder';
-                  }}>Create & Open Builder</Button>
+                    // Reset form
+                    setNewReportForm({
+                      name: '',
+                      description: '',
+                      schedule: 'manual',
+                      recipients: '',
+                      autoRefresh: false
+                    });
+                  }}>Cancel</Button>
+                  <Button 
+                    onClick={() => {
+                      // Store form data in localStorage to persist across navigation
+                      localStorage.setItem('newReportFormData', JSON.stringify(newReportForm));
+                      setShowNewReport(false);
+                      window.location.href = '/reports/builder';
+                    }}
+                    disabled={!newReportForm.name.trim()}
+                  >Create & Open Builder</Button>
                 </div>
               </div>
             </DialogContent>

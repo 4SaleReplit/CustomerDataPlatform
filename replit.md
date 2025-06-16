@@ -111,6 +111,15 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 16, 2025**: Fixed Report Builder Data Persistence and Image Upload Issues
+  - Fixed report form data persistence from "New Report" dialog to Report Builder
+  - Report name, description, schedule, recipients, and auto-refresh settings now carry over automatically
+  - No longer asks for report name again after form submission - uses persisted data by default
+  - Fixed image upload to start from first empty slide instead of skipping to second slide
+  - Enhanced image upload logic to find and use first available empty slide before creating new ones
+  - Added localStorage-based data transfer between report creation form and builder interface
+  - Report builder now initializes with complete form data and pre-fills report title
+
 - **June 16, 2025**: Complete Mock Data Elimination Throughout Application
   - Completely removed all mock migration data from Admin.tsx and AdminNew.tsx files
   - Eliminated hardcoded "Development → Staging" and "Staging → Production" migration entries
