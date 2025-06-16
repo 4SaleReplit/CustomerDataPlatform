@@ -57,12 +57,12 @@ export function DashboardGrid({
         const sizeChanged = tile.width !== item.w || tile.height !== item.h;
         
         if (positionChanged) {
-          console.log(`GRID: Position change for ${item.i}: (${tile.x}, ${tile.y}) -> (${item.x}, ${item.y})`);
+
           onTileMove(item.i, { x: item.x, y: item.y });
         }
         
         if (sizeChanged) {
-          console.log(`GRID: Size change for ${item.i}: (${tile.width}x${tile.height}) -> (${item.w}x${item.h})`);
+
           onTileResize(item.i, { width: item.w, height: item.h });
         }
       }

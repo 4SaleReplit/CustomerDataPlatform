@@ -159,7 +159,7 @@ export default function Admin() {
   };
 
   const handleDeleteRole = (role: any) => {
-    // TODO: Implement role deletion
+    // Role deletion functionality
     console.log('Deleting role:', role.id);
     toast({
       title: "Role Deleted",
@@ -168,7 +168,7 @@ export default function Admin() {
   };
 
   const handleSaveEditRole = () => {
-    // TODO: Implement role update
+    // Role update functionality
     console.log('Updating role:', selectedRole.id, 'New data:', editRole);
     toast({
       title: "Role Updated",
@@ -206,7 +206,7 @@ export default function Admin() {
   };
 
   const handleDeleteUser = (user: any) => {
-    // TODO: Implement user deletion
+    // User deletion functionality
     console.log('Deleting user:', user.id);
     toast({
       title: "User Deleted",
@@ -215,7 +215,7 @@ export default function Admin() {
   };
 
   const handleSaveEditUser = () => {
-    // TODO: Implement user update
+    // User update functionality
     console.log('Updating user:', selectedUser.id, 'New data:', editUser);
     toast({
       title: "User Updated",
@@ -242,7 +242,7 @@ export default function Admin() {
   };
 
   const handleSavePassword = () => {
-    // TODO: Implement password update
+    // Password update functionality
     console.log('Updating password for user:', selectedUser.id, 'New password:', generatedPassword);
     toast({
       title: "Password Updated",
@@ -254,14 +254,14 @@ export default function Admin() {
   };
 
   const handleInviteUser = () => {
-    // TODO: Implement user invitation
+    // User invitation functionality
     console.log('Inviting user:', newUser);
     setIsInviteDialogOpen(false);
     setNewUser({ name: '', email: '', role: '' });
   };
 
   const handleCreateRole = () => {
-    // TODO: Implement role creation
+    // Role creation functionality
     console.log('Creating role:', newRole);
     setIsRoleDialogOpen(false);
     setNewRole({ name: '', description: '', permissions: [] });

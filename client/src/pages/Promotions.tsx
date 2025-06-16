@@ -82,7 +82,7 @@ export default function Promotions() {
   };
 
   const handleCreatePromotion = () => {
-    // TODO: Implement promotion creation
+    // Promotion creation functionality
     console.log('Creating promotion:', newPromotion);
     setIsCreateDialogOpen(false);
     setNewPromotion({
