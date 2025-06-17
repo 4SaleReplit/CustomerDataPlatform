@@ -943,6 +943,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/segments", async (req: Request, res: Response) => {
     try {
+      const { insertSegmentSchema } = await import('../shared/schema');
       const validatedData = insertSegmentSchema.parse(req.body);
       const segment = await storage.createSegment(validatedData);
       res.status(201).json(segment);
@@ -1036,8 +1037,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       const updatedSegment = await storage.updateSegment(id, { 
-        conditions: updatedConditions,
-        updatedAt: new Date()
+        conditions: updatedConditions
       });
 
       res.json({ 
@@ -1049,6 +1049,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Segment refresh error:", error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : "Failed to refresh segment" 
+      });
+    }
+  });
+
+  // Campaigns/Upselling API Endpoints
+  app.get("/api/campaigns", async (req: Request, res: Response) => {
+    try {
+      const campaigns = await storage.getCampaigns();
+      res.json(campaigns);
+    } catch (error) {
+      console.error("Get campaigns error:", error);
+      res.status(500).json({ error: "Failed to fetch campaigns" });
+    }
+  });
+
+  app.get("/api/campaigns/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const campaign = await storage.getCampaign(id);
+      if (!campaign) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      res.json(campaign);
+    } catch (error) {
+      console.error("Get campaign error:", error);
+      res.status(500).json({ error: "Failed to fetch campaign" });
+    }
+  });
+
+  app.post("/api/campaigns", async (req: Request, res: Response) => {
+    try {
+      const { insertCampaignSchema } = await import('../shared/schema');
+      const validatedData = insertCampaignSchema.parse(req.body);
+      const campaign = await storage.createCampaign(validatedData);
+      res.status(201).json(campaign);
+    } catch (error) {
+      console.error("Create campaign error:", error);
+      res.status(400).json({ 
+        error: error instanceof Error ? error.message : "Failed to create campaign" 
+      });
+    }
+  });
+
+  app.put("/api/campaigns/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const campaign = await storage.updateCampaign(id, updates);
+      if (!campaign) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      res.json(campaign);
+    } catch (error) {
+      console.error("Update campaign error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to update campaign" 
+      });
+    }
+  });
+
+  app.delete("/api/campaigns/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteCampaign(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete campaign error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to delete campaign" 
       });
     }
   });
