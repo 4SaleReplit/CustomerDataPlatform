@@ -100,6 +100,8 @@ export default function AdminNew() {
     message: ''
   });
   const [createdPassword, setCreatedPassword] = useState<string | null>(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [generatedUserData, setGeneratedUserData] = useState<any>(null);
 
   // Migration state management
   const [currentEnvironment, setCurrentEnvironment] = useState('dev');
@@ -191,17 +193,20 @@ export default function AdminNew() {
 
   // Create team member mutation
   const createTeamMemberMutation = useMutation({
-    mutationFn: (data: InvitationData) => apiRequest('/api/team/create', {
+    mutationFn: (data: InvitationData) => apiRequest('/api/team', {
       method: 'POST',
       body: JSON.stringify(data),
       headers: { 'Content-Type': 'application/json' }
     }),
     onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/team'] });
-      setCreatedPassword(response.member.temporaryPassword);
+      setGeneratedUserData(response);
+      setCreatedPassword(response.generatedPassword);
+      setShowPasswordModal(true);
+      setShowInviteModal(false);
       toast({
         title: "Team member created",
-        description: "New team member has been created with a temporary password.",
+        description: `${response.firstName} ${response.lastName} has been created successfully.`,
       });
     },
     onError: (error: any) => {
@@ -238,22 +243,65 @@ export default function AdminNew() {
     }
   });
 
-  // Reset password mutation
-  const resetPasswordMutation = useMutation({
-    mutationFn: (memberId: string) => apiRequest(`/api/team/${memberId}/reset-password`, {
+  // Change password mutation
+  const changePasswordMutation = useMutation({
+    mutationFn: (memberId: string) => apiRequest(`/api/team/${memberId}/change-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     }),
     onSuccess: (response: any) => {
-      setCreatedPassword(response.temporaryPassword);
+      setGeneratedUserData({ id: response.id, firstName: '', lastName: '' });
+      setCreatedPassword(response.newPassword);
+      setShowPasswordModal(true);
       toast({
-        title: "Password reset",
-        description: "A new temporary password has been generated.",
+        title: "Password changed",
+        description: "New password has been generated successfully.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Failed to reset password",
+        title: "Failed to change password",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Handle create user form submission
+  const handleCreateUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!invitationData.firstName || !invitationData.lastName || !invitationData.email) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+    createTeamMemberMutation.mutate(invitationData);
+  };
+
+  // Handle password change
+  const handleChangePassword = (memberId: string) => {
+    changePasswordMutation.mutate(memberId);
+  };
+
+  // Copy password to clipboard
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: "Copied to clipboard",
+        description: "Password has been copied to clipboard.",
+      });
+    } catch (error) {
+      toast({
+        title: "Copy failed",
+        description: "Failed to copy password to clipboard.",
+        variant: "destructive",
+      });
+    }
+  };
         description: error.message || "An error occurred",
         variant: "destructive",
       });
@@ -664,20 +712,20 @@ export default function AdminNew() {
           <DialogTrigger asChild>
             <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg">
               <UserPlus className="h-4 w-4 mr-2" />
-              Invite Team Member
+              Add Team Member
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Mail className="h-5 w-5" />
-                Send Team Invitation
+                <UserPlus className="h-5 w-5" />
+                Add New Team Member
               </DialogTitle>
               <DialogDescription>
-                Send an email invitation to add a new team member to your organization.
+                Create a new team member account with auto-generated password.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSendInvitation} className="space-y-4">
+            <form onSubmit={handleCreateUser} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="firstName">First Name</Label>

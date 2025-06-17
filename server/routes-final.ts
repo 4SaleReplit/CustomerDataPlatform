@@ -80,13 +80,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Password generation utility
+  function generateSecurePassword(length: number = 12): string {
+    const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+    let password = "";
+    for (let i = 0; i < length; i++) {
+      password += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    return password;
+  }
+
   // Team management endpoints
   app.post("/api/team", async (req: Request, res: Response) => {
     try {
-      const { insertTeamSchema } = await import('../shared/schema');
-      const validatedData = insertTeamSchema.parse(req.body);
-      const teamMember = await storage.createTeamMember(validatedData);
-      res.status(201).json(teamMember);
+      const { firstName, lastName, email, role } = req.body;
+      
+      if (!firstName || !lastName || !email) {
+        return res.status(400).json({ error: "Name and email are required" });
+      }
+
+      // Generate secure password
+      const plainPassword = generateSecurePassword(12);
+      const passwordHash = await bcrypt.hash(plainPassword, 10);
+
+      const teamMemberData = {
+        firstName,
+        lastName,
+        email,
+        role: role || 'analyst',
+        passwordHash,
+        temporaryPassword: plainPassword,
+        mustChangePassword: true
+      };
+
+      const teamMember = await storage.createTeamMember(teamMemberData);
+      
+      // Return the team member with the generated password
+      res.status(201).json({
+        ...teamMember,
+        generatedPassword: plainPassword
+      });
     } catch (error) {
       console.error("Create team member error:", error);
       res.status(400).json({ 
@@ -102,6 +135,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get team error:", error);
       res.status(500).json({ error: "Failed to fetch team" });
+    }
+  });
+
+  // Change user password endpoint
+  app.post("/api/team/:id/change-password", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      // Generate new secure password
+      const newPassword = generateSecurePassword(12);
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+
+      // Update team member with new password
+      const updated = await storage.updateTeamMember(id, {
+        passwordHash,
+        temporaryPassword: newPassword,
+        mustChangePassword: true
+      });
+
+      if (!updated) {
+        return res.status(404).json({ error: "Team member not found" });
+      }
+
+      res.json({
+        success: true,
+        newPassword,
+        message: "Password changed successfully"
+      });
+    } catch (error) {
+      console.error("Change password error:", error);
+      res.status(500).json({ error: "Failed to change password" });
     }
   });
 
