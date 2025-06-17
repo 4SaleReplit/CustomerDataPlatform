@@ -577,7 +577,7 @@ export function AddTileDialog({ isOpen, onClose, onSave, editTile }: AddTileDial
           </Button>
           <Button onClick={handleSave} disabled={!hasExecuted || !tileConfig.title.trim()}>
             <Save className="h-4 w-4 mr-2" />
-            Add Tile to Dashboard
+            {editTile ? 'Save Edits' : 'Add Tile to Dashboard'}
           </Button>
         </div>
       </DialogContent>
