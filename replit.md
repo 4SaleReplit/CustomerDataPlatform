@@ -40,8 +40,8 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 - **Authentication**: Custom JWT implementation with bcrypt password hashing
 
 ### Data Storage Solutions
-- **Primary Database**: PostgreSQL for application data (users, cohorts, campaigns, etc.)
-- **Data Warehouse**: Snowflake for analytics and user segmentation data
+- **Primary Database**: PostgreSQL (Supabase) for application data via .env DATABASE_URL
+- **Data Warehouse**: Snowflake for analytics via database-stored integration credentials
 - **File Storage**: Local filesystem for uploaded images and assets
 - **Cache/Queue**: Redis for background job processing and caching
 
@@ -185,6 +185,13 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
   - Enhanced integration form with custom name input field and proper error handling
   - Validated complete integration creation flow from frontend to database persistence
   - Removed credential encryption temporarily to ensure stable integration creation process
+
+- **June 17, 2025**: Hybrid Credential Management System
+  - Production database (Supabase) connection maintained via .env DATABASE_URL for deployment stability
+  - All other integrations (Snowflake, Amplitude, additional PostgreSQL instances) managed through database-stored credentials
+  - Updated database connection layer to use dotenv for production database while preserving integration system
+  - Maintained separation between application database connection and external service integrations
+  - Enhanced credential architecture with dual-mode support: .env for production DB, database storage for all other services
 
 - **June 16, 2025**: Complete Integration Management System
   - Completely replaced hardcoded Snowflake credentials with database-driven integration system
