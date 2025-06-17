@@ -80,6 +80,7 @@ export interface IStorage {
   createDashboardTile(tile: InsertDashboardTileInstance): Promise<DashboardTileInstance>;
   updateDashboardTile(tileId: string, updates: Partial<InsertDashboardTileInstance>): Promise<DashboardTileInstance | undefined>;
   deleteDashboardTile(tileId: string): Promise<boolean>;
+  updateTileLastRefresh(tileId: string, lastRefreshAt: Date): Promise<void>;
   saveDashboardLayout(tiles: InsertDashboardTileInstance[]): Promise<DashboardTileInstance[]>;
   
   // Cohort management
@@ -309,6 +310,13 @@ export class DatabaseStorage implements IStorage {
       .delete(dashboardTileInstances)
       .where(eq(dashboardTileInstances.tileId, tileId));
     return (result.rowCount || 0) > 0;
+  }
+
+  async updateTileLastRefresh(tileId: string, lastRefreshAt: Date): Promise<void> {
+    await db
+      .update(dashboardTileInstances)
+      .set({ lastRefreshAt, updatedAt: new Date() })
+      .where(eq(dashboardTileInstances.tileId, tileId));
   }
 
   async saveDashboardLayout(tiles: InsertDashboardTileInstance[]): Promise<DashboardTileInstance[]> {

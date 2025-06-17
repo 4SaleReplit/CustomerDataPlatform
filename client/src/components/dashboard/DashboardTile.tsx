@@ -61,11 +61,13 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
       });
-      const timestamp = new Date();
-      setLastRefreshTime(timestamp);
       
-      // Store both data and timestamp in localStorage for persistence
-      localStorage.setItem(`tile-${tile.id}-lastRefresh`, timestamp.toISOString());
+      // Update local state with the timestamp from server response
+      if (response.lastRefreshAt) {
+        setLastRefreshTime(new Date(response.lastRefreshAt));
+      }
+      
+      // Store data in localStorage for caching
       localStorage.setItem(`tile-${tile.id}-data`, JSON.stringify(response));
       
       return response;
@@ -79,29 +81,23 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
   });
 
   useEffect(() => {
-    const storedTimestamp = localStorage.getItem(`tile-${tile.id}-lastRefresh`);
-    const storedData = localStorage.getItem(`tile-${tile.id}-data`);
-    
-    if (storedTimestamp) {
-      setLastRefreshTime(new Date(storedTimestamp));
+    // Load authentic last refresh timestamp from database
+    if (tile.lastRefreshAt) {
+      setLastRefreshTime(new Date(tile.lastRefreshAt));
     }
     
+    const storedData = localStorage.getItem(`tile-${tile.id}-data`);
     if (storedData) {
       try {
         const parsedData = JSON.parse(storedData);
         // Pre-populate the cache with stored data to prevent initial queries
         queryClient.setQueryData(['/api/dashboard/tiles', tile.databaseId || tile.id, 'data'], parsedData);
-
       } catch (error) {
-
         // Clean up invalid cached data
         localStorage.removeItem(`tile-${tile.id}-data`);
-        localStorage.removeItem(`tile-${tile.id}-lastRefresh`);
       }
-    } else {
-
     }
-  }, [tile.id, queryClient]);
+  }, [tile.id, tile.lastRefreshAt, queryClient]);
 
   // Load cached data on mount
   useEffect(() => {

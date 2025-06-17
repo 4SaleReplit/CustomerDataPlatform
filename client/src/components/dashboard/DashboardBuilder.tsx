@@ -25,6 +25,7 @@ export interface DashboardTile {
     refreshOnLoad: boolean;
     lastRefreshed?: Date;
   };
+  lastRefreshAt?: string; // Database timestamp for last refresh
 }
 
 interface DashboardBuilderProps {
