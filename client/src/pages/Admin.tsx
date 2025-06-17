@@ -234,7 +234,7 @@ export default function AdminClean() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {teamMembers.map((member: TeamMember) => (
+                    {(teamMembers as TeamMember[]).map((member: TeamMember) => (
                       <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
                         <div className="flex items-center space-x-4">
                           <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -296,20 +296,20 @@ export default function AdminClean() {
             {/* Migration History */}
             <Card>
               <CardHeader>
-                <CardTitle>Recent Migrations ({migrationHistory.length})</CardTitle>
+                <CardTitle>Recent Migrations ({(migrationHistory as any[])?.length || 0})</CardTitle>
               </CardHeader>
               <CardContent>
                 {isLoadingMigrations ? (
                   <div className="flex justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin" />
                   </div>
-                ) : migrationHistory.length === 0 ? (
+                ) : (migrationHistory as any[])?.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     No migrations found. Start your first migration to see history here.
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {migrationHistory.map((migration: MigrationHistory) => (
+                    {(migrationHistory as MigrationHistory[]).map((migration: MigrationHistory) => (
                       <div key={migration.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex items-center">
                           {migration.status === 'completed' && <CheckCircle className="h-4 w-4 text-green-600 mr-3" />}
@@ -410,7 +410,7 @@ export default function AdminClean() {
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
-                    {roles.map((role: Role) => (
+                    {(roles as Role[]).map((role: Role) => (
                       <SelectItem key={role.id} value={role.name}>
                         {role.displayName}
                       </SelectItem>
@@ -465,7 +465,7 @@ export default function AdminClean() {
                       <SelectValue placeholder="Select source database" />
                     </SelectTrigger>
                     <SelectContent>
-                      {integrations.filter((i: any) => i.type === 'postgresql').map((integration: any) => (
+                      {(integrations as any[]).filter((i: any) => i.type === 'postgresql').map((integration: any) => (
                         <SelectItem key={integration.id} value={integration.id}>
                           {integration.name} ({integration.status})
                         </SelectItem>
@@ -480,7 +480,7 @@ export default function AdminClean() {
                       <SelectValue placeholder="Select target database" />
                     </SelectTrigger>
                     <SelectContent>
-                      {integrations.filter((i: any) => i.type === 'postgresql' && i.id !== selectedSourceEnv).map((integration: any) => (
+                      {(integrations as any[]).filter((i: any) => i.type === 'postgresql' && i.id !== selectedSourceEnv).map((integration: any) => (
                         <SelectItem key={integration.id} value={integration.id}>
                           {integration.name} ({integration.status})
                         </SelectItem>
