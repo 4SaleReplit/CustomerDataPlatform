@@ -22,6 +22,7 @@ export const initializeAmplitude = async () => {
         defaultTracking: false, // Disable all default tracking
         autocapture: false, // Disable all autocapture
       });
+      isAmplitudeInitialized = true;
       console.log('Amplitude initialized successfully');
     } else {
       console.warn('Amplitude API key not found in integration. Analytics tracking disabled.');
@@ -45,7 +46,7 @@ export const setUserContext = (userId: string, userProperties: {
   userType?: string;
   role?: string;
 }) => {
-  if (AMPLITUDE_API_KEY) {
+  if (isAmplitudeInitialized) {
     amplitude.setUserId(userId);
     
     const identify = new amplitude.Identify();
