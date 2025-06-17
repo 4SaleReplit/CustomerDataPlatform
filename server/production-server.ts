@@ -71,7 +71,7 @@ function serveStaticFiles(app: express.Express) {
     path.resolve(__dirname, "public")
   ];
 
-  let staticPath = null;
+  let staticPath: string | null = null;
   for (const checkPath of possiblePaths) {
     if (fs.existsSync(checkPath) && fs.existsSync(path.join(checkPath, "index.html"))) {
       staticPath = checkPath;
