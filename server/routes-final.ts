@@ -384,6 +384,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Snowflake query execution endpoint
+  app.post("/api/snowflake/query", async (req: Request, res: Response) => {
+    try {
+      const { query } = req.body;
+      
+      if (!query) {
+        return res.status(400).json({ error: "Query is required" });
+      }
+
+      // Execute the Snowflake query using dynamic credentials
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const dynamicService = await getDynamicSnowflakeService();
+      
+      if (!dynamicService) {
+        return res.status(400).json({ 
+          error: "Snowflake integration not configured",
+          details: "Please configure a Snowflake integration in the Integrations page"
+        });
+      }
+
+      const result = await dynamicService.executeQuery(query);
+      
+      if (!result.success) {
+        return res.status(400).json({ 
+          error: result.error,
+          query: query 
+        });
+      }
+
+      res.json({
+        columns: result.columns,
+        rows: result.rows,
+        success: true,
+        query: query
+      });
+    } catch (error) {
+      console.error("Snowflake query execution error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to execute query" 
+      });
+    }
+  });
+
   // Airflow Test Connection
   app.post("/api/airflow/test-connection", async (req: Request, res: Response) => {
     try {
