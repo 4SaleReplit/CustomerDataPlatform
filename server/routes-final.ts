@@ -92,17 +92,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updatedReport = await storage.updateScheduledReport(id, updateData);
       
-      // Reschedule cron job if necessary
-      if (activeCronJobs.has(id)) {
-        activeCronJobs.get(id).destroy();
-        activeCronJobs.delete(id);
+      if (updatedReport) {
+        // Reschedule cron job if necessary
+        if (activeCronJobs.has(id)) {
+          activeCronJobs.get(id).destroy();
+          activeCronJobs.delete(id);
+        }
+        
+        if (updatedReport.isActive && updatedReport.cronExpression) {
+          scheduleReportJob(updatedReport);
+        }
+        
+        res.json(updatedReport);
+      } else {
+        res.status(404).json({ error: "Scheduled report not found" });
       }
-      
-      if (updatedReport.isActive && updatedReport.cronExpression) {
-        scheduleReportJob(updatedReport);
-      }
-      
-      res.json(updatedReport);
     } catch (error) {
       console.error("Error updating scheduled report:", error);
       res.status(500).json({ error: "Failed to update scheduled report" });
@@ -248,7 +252,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }, {
-        scheduled: false,
         timezone: scheduledReport.timezone || 'Africa/Cairo'
       });
       
