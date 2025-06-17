@@ -2,25 +2,34 @@
 
 ## Quick Start
 
-The Customer Data Platform is designed for simple deployment on Replit with Autoscale.
+The Customer Data Platform supports both Replit deployment and Docker deployment.
 
-### Development Environment (Replit)
+### Development Environment
 ```bash
 npm install
 npm run dev
 ```
 
-### Production Deployment
+### Production Deployment Options
 
-#### Prerequisites
-- Replit account with Autoscale
-- PostgreSQL database (Neon recommended)
-- Environment variables configured in Replit Secrets
+#### Option 1: Replit Autoscale (Recommended)
+1. Configure .env file with DATABASE_URL for production database
+2. Set up integrations through the admin interface 
+3. Click "Deploy" button in Replit
+4. Deploy with Autoscale for production traffic
 
-#### Replit Autoscale Deployment
-1. Click the "Deploy" button in Replit
-2. Configure environment secrets
-3. Deploy with Autoscale for production traffic
+#### Option 2: Docker Deployment
+```bash
+# Build the frontend
+npm run build
+
+# Build and run with Docker
+docker build -t cdp-app .
+docker run -p 5000:5000 --env-file .env cdp-app
+
+# Or use the dedicated production server
+NODE_ENV=production tsx server/production-server.ts
+```
 
 ## Architecture
 

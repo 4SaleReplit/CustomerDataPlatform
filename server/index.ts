@@ -75,11 +75,11 @@ app.use((req, res, next) => {
     // Handle development vs production serving
     if (process.env.NODE_ENV === "production") {
       // Production: serve static files directly without Vite
-      const { serveStatic } = await import("./vite-production.js");
+      const { serveStatic } = await import("./vite-production");
       serveStatic(app);
     } else {
       // Development: use Vite for hot reloading
-      const { setupVite } = await import("./vite.js");
+      const { setupVite } = await import("./vite");
       await setupVite(app, server);
     }
 
