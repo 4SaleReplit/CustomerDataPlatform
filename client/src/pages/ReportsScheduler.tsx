@@ -104,6 +104,11 @@ function generateCronExpression(frequency: string, time: string, weekday?: strin
   }
 }
 
+const TIMEZONE_OPTIONS = [
+  { value: "Africa/Cairo", label: "Cairo (GMT+2)" },
+  { value: "Asia/Kuwait", label: "Kuwait (GMT+3)" }
+];
+
 const AVAILABLE_PLACEHOLDERS = [
   { key: "{date}", description: "Current date (YYYY-MM-DD)" },
   { key: "{time}", description: "Current time (HH:MM)" },
@@ -189,7 +194,14 @@ export function ReportsScheduler() {
 
   // Create scheduled report mutation
   const createReportMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/scheduled-reports", "POST", data),
+    mutationFn: (data: any) => {
+      // Auto-generate Airflow configuration based on form data
+      const airflowConfig = generateAirflowConfiguration(data);
+      return apiRequest("/api/scheduled-reports", "POST", {
+        ...data,
+        airflowConfiguration: airflowConfig
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/scheduled-reports"] });
       setIsCreateDialogOpen(false);
@@ -333,6 +345,39 @@ export function ReportsScheduler() {
       placeholderConfig: {},
       formatSettings: { format: "pdf", includeCharts: true }
     });
+  };
+
+  const generateAirflowConfiguration = (data: any) => {
+    return {
+      dag_id: data.airflowDagId || `report_${data.name?.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`,
+      schedule_interval: data.cronExpression || null,
+      start_date: new Date().toISOString(),
+      catchup: false,
+      max_active_runs: 1,
+      timezone: data.timezone || "Africa/Cairo",
+      tasks: [{
+        task_id: "generate_report",
+        operator: "PythonOperator",
+        python_callable: "generate_pdf_report",
+        op_kwargs: {
+          presentation_id: data.presentationId,
+          format: data.formatSettings?.format || "pdf",
+          include_charts: data.formatSettings?.includeCharts || true
+        }
+      }, {
+        task_id: data.airflowTaskId || "send_report",
+        operator: "EmailOperator",
+        to: data.recipientList || [],
+        cc: data.ccList || [],
+        bcc: data.bccList || [],
+        subject: data.emailSubject || "",
+        html_content: data.emailBody || "",
+        files: [{
+          file_path: data.pdfDeliveryUrl || "/tmp/report.pdf",
+          file_name: `${data.name || 'report'}.pdf`
+        }]
+      }]
+    };
   };
 
   const insertPlaceholder = (placeholder: string, field: "emailSubject" | "emailBody") => {
