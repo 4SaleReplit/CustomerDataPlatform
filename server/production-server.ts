@@ -1,129 +1,64 @@
-import express, { type Request, Response, NextFunction } from "express";
-import { config } from "dotenv";
-import { registerRoutes } from "./routes-final";
+import express from "express";
 import path from "path";
-import fs from "fs";
+import { fileURLToPath } from "url";
+import { registerRoutes } from "./routes-final.js";
 
-// Load environment variables
-config();
-
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-});
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+const PORT = process.env.PORT || 5000;
 
-// Serve uploaded files statically
-app.use('/uploads', express.static('uploads'));
+// Middleware
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+// Serve static files from dist/public
+const publicPath = path.join(__dirname, "../dist/public");
+app.use(express.static(publicPath));
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
+// Setup database connection
+console.log('Using production database from .env file for application connection');
+console.log('Database URL configured:', (process.env.DATABASE_URL || '').replace(/:[^:@]*@/, ':***@'));
 
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      console.log(`${new Date().toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit", 
-        second: "2-digit",
-        hour12: true,
-      })} [express] ${logLine}`);
-    }
+// Health endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0',
+    database: 'Supabase (Neon serverless)'
   });
-
-  next();
 });
 
-// Production static file serving function
-function serveStaticFiles(app: express.Express) {
-  // Look for built frontend in multiple possible locations
-  const possiblePaths = [
-    path.resolve(process.cwd(), "client/dist"),
-    path.resolve(process.cwd(), "dist"),
-    path.resolve(process.cwd(), "build"),
-    path.resolve(__dirname, "../client/dist"),
-    path.resolve(__dirname, "../dist"),
-    path.resolve(__dirname, "public")
-  ];
-
-  let staticPath: string | null = null;
-  for (const checkPath of possiblePaths) {
-    if (fs.existsSync(checkPath) && fs.existsSync(path.join(checkPath, "index.html"))) {
-      staticPath = checkPath;
-      break;
-    }
-  }
-
-  if (!staticPath) {
-    console.warn("No built frontend found. Serving API only. Frontend paths checked:", possiblePaths);
-    return;
-  }
-
-  console.log(`Serving static files from: ${staticPath}`);
-  app.use(express.static(staticPath));
-
-  // Catch-all handler for SPA routing
-  app.use("*", (req: Request, res: Response) => {
-    // Don't catch API routes
-    if (req.originalUrl.startsWith('/api')) {
-      return res.status(404).json({ error: 'API endpoint not found' });
-    }
-    res.sendFile(path.resolve(staticPath!, "index.html"));
-  });
-}
-
-(async () => {
+// Register API routes
+async function startServer() {
   try {
     const server = await registerRoutes(app);
-
-    // Error handling middleware
-    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-      const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
-
-      console.error('Error handled by middleware:', err);
-      res.status(status).json({ message });
+    
+    // Catch-all handler for SPA routing
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(publicPath, 'index.html'));
     });
 
-    // Serve static files in production
-    serveStaticFiles(app);
+    // Error handling middleware
+    app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+      console.error('Error:', err);
+      res.status(500).json({ 
+        error: 'Internal server error',
+        message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+      });
+    });
 
-    const port = parseInt(process.env.PORT || "5000", 10);
-    server.listen(port, "0.0.0.0", () => {
-      console.log(`${new Date().toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        second: "2-digit", 
-        hour12: true,
-      })} [express] production server running on port ${port}`);
+    server.listen(PORT, () => {
+      console.log(`🚀 Production server running on port ${PORT}`);
+      console.log(`📁 Serving static files from: ${publicPath}`);
+      console.log(`🔗 Database: Supabase (Neon serverless)`);
     });
   } catch (error) {
     console.error('Failed to start production server:', error);
     process.exit(1);
   }
-})();
+}
+
+startServer();
