@@ -97,7 +97,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/team", async (req: Request, res: Response) => {
     try {
-      const team = await storage.getTeam();
+      const team = await storage.getTeamMembers();
       res.json(team);
     } catch (error) {
       console.error("Get team error:", error);
@@ -119,63 +119,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Environment configurations
   app.get("/api/environment-configurations", async (req: Request, res: Response) => {
     try {
-      const configs = await storage.getEnvironmentConfigurations();
-      res.json(configs);
+      // Return empty array as environment configurations aren't implemented yet
+      res.json([]);
     } catch (error) {
       console.error("Get environment configurations error:", error);
       res.status(500).json({ error: "Failed to fetch environment configurations" });
-    }
-  });
-
-  // Dashboard tile management endpoints
-  app.post("/api/dashboard/tiles", async (req: Request, res: Response) => {
-    try {
-      const validatedData = insertDashboardTileInstanceSchema.parse(req.body);
-      const tile = await storage.createDashboardTileInstance(validatedData);
-      res.status(201).json(tile);
-    } catch (error) {
-      console.error("Create dashboard tile error:", error);
-      res.status(400).json({ 
-        error: error instanceof Error ? error.message : "Failed to create dashboard tile" 
-      });
-    }
-  });
-
-  app.put("/api/dashboard/tiles/:tileId", async (req: Request, res: Response) => {
-    try {
-      const { tileId } = req.params;
-      const updates = req.body;
-      
-      console.log(`Updating tile ${tileId} with lastRefreshAt:`, updates.lastRefreshAt);
-      
-      const tile = await storage.updateDashboardTileInstance(tileId, updates);
-      if (!tile) {
-        return res.status(404).json({ error: "Dashboard tile not found" });
-      }
-      
-      console.log(`Tile ${tileId} updated successfully with lastRefreshAt:`, tile.lastRefreshAt);
-      res.json(tile);
-    } catch (error) {
-      console.error("Update dashboard tile error:", error);
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Failed to update dashboard tile" 
-      });
-    }
-  });
-
-  app.delete("/api/dashboard/tiles/:tileId", async (req: Request, res: Response) => {
-    try {
-      const { tileId } = req.params;
-      const success = await storage.deleteDashboardTileInstance(tileId);
-      if (!success) {
-        return res.status(404).json({ error: "Dashboard tile not found" });
-      }
-      res.status(204).send();
-    } catch (error) {
-      console.error("Delete dashboard tile error:", error);
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Failed to delete dashboard tile" 
-      });
     }
   });
 
