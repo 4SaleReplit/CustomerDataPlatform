@@ -637,5 +637,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // Cohorts API Endpoints
+  app.get("/api/cohorts", async (req: Request, res: Response) => {
+    try {
+      const cohorts = await storage.getCohorts();
+      res.json(cohorts);
+    } catch (error) {
+      console.error("Get cohorts error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get cohorts" 
+      });
+    }
+  });
+
+  app.get("/api/cohorts/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const cohort = await storage.getCohort(id);
+      
+      if (!cohort) {
+        return res.status(404).json({ error: "Cohort not found" });
+      }
+      
+      res.json(cohort);
+    } catch (error) {
+      console.error("Get cohort error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get cohort" 
+      });
+    }
+  });
+
+  app.post("/api/cohorts", async (req: Request, res: Response) => {
+    try {
+      console.log("Saving cohort:", req.body);
+      const { insertCohortSchema } = await import('../shared/schema');
+      const validatedData = insertCohortSchema.parse(req.body);
+      
+      // Add createdBy field with a default team member ID or null
+      const cohortData = {
+        ...validatedData,
+        createdBy: null // Set to null since we don't have user context yet
+      };
+      
+      const cohort = await storage.createCohort(cohortData);
+      res.status(201).json(cohort);
+    } catch (error) {
+      console.error("Create cohort error:", error);
+      res.status(400).json({ 
+        error: error instanceof Error ? error.message : "Failed to create cohort" 
+      });
+    }
+  });
+
+  app.put("/api/cohorts/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const cohort = await storage.updateCohort(id, updates);
+      
+      if (!cohort) {
+        return res.status(404).json({ error: "Cohort not found" });
+      }
+      
+      res.json(cohort);
+    } catch (error) {
+      console.error("Update cohort error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to update cohort" 
+      });
+    }
+  });
+
+  app.delete("/api/cohorts/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteCohort(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Cohort not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete cohort error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to delete cohort" 
+      });
+    }
+  });
+
   return server;
 }
