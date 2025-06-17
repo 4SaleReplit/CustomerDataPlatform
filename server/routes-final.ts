@@ -1125,6 +1125,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Amplitude configuration endpoint
+  app.get("/api/amplitude/config", async (req: Request, res: Response) => {
+    try {
+      const { CredentialManager } = await import('./services/credentialManager');
+      const credentialManager = new CredentialManager();
+      const credentials = await credentialManager.getAmplitudeCredentials();
+      
+      if (!credentials) {
+        return res.status(404).json({ 
+          error: "Amplitude integration not configured",
+          details: "Please configure an Amplitude integration in the Integrations page"
+        });
+      }
+
+      res.json({
+        apiKey: credentials.apiKey,
+        projectId: credentials.projectId,
+        environment: credentials.environment
+      });
+    } catch (error) {
+      console.error("Get Amplitude config error:", error);
+      res.status(500).json({ error: "Failed to fetch Amplitude configuration" });
+    }
+  });
+
   // Snowflake schema endpoint for segments page
   app.get("/api/snowflake/schema", async (req: Request, res: Response) => {
     try {

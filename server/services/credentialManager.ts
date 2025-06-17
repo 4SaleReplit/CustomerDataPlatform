@@ -143,6 +143,28 @@ export class CredentialManager {
   }
 
   /**
+   * Get Amplitude credentials from database integration
+   */
+  async getAmplitudeCredentials(): Promise<{
+    apiKey: string;
+    projectId?: string;
+    environment?: string;
+  } | null> {
+    const credentials = await this.getIntegrationCredentials('amplitude');
+    
+    if (!credentials) {
+      console.warn('No Amplitude integration found or not connected');
+      return null;
+    }
+
+    return {
+      apiKey: credentials.apiKey || '',
+      projectId: credentials.projectId || '',
+      environment: credentials.environment || 'production'
+    };
+  }
+
+  /**
    * Get PostgreSQL credentials from database integration
    */
   async getPostgreSQLCredentials(): Promise<{

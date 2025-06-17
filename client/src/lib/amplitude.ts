@@ -1,24 +1,33 @@
 import * as amplitude from '@amplitude/analytics-browser';
 
 // Amplitude configuration
-const AMPLITUDE_API_KEY = import.meta.env.VITE_AMPLITUDE_API_KEY;
-
 /**
  * Clean Amplitude Analytics Implementation
  * Following comprehensive event naming convention with Title Case events
  * and camelCase properties for consistency and clarity
  */
 
-// Initialize Amplitude with all automatic tracking disabled
-export const initializeAmplitude = () => {
-  if (AMPLITUDE_API_KEY) {
-    amplitude.init(AMPLITUDE_API_KEY, undefined, {
-      defaultTracking: false, // Disable all default tracking
-      autocapture: false, // Disable all autocapture
-    });
-    console.log('Amplitude initialized successfully');
-  } else {
-    console.warn('Amplitude API key not found. Analytics tracking disabled.');
+// Initialize Amplitude with credentials from database integration
+export const initializeAmplitude = async () => {
+  try {
+    const response = await fetch('/api/amplitude/config');
+    if (!response.ok) {
+      console.warn('Amplitude integration not configured. Analytics tracking disabled.');
+      return;
+    }
+    
+    const config = await response.json();
+    if (config.apiKey) {
+      amplitude.init(config.apiKey, undefined, {
+        defaultTracking: false, // Disable all default tracking
+        autocapture: false, // Disable all autocapture
+      });
+      console.log('Amplitude initialized successfully');
+    } else {
+      console.warn('Amplitude API key not found in integration. Analytics tracking disabled.');
+    }
+  } catch (error) {
+    console.warn('Failed to initialize Amplitude from database integration:', error);
   }
 };
 
@@ -58,15 +67,16 @@ export const setUserContext = (userId: string, userProperties: {
 
 // Clear user context on logout
 export const clearUserContext = () => {
-  if (AMPLITUDE_API_KEY) {
-    amplitude.setUserId(undefined);
-    amplitude.reset();
-  }
+  amplitude.setUserId(undefined);
+  amplitude.reset();
 };
+
+// Check if Amplitude is initialized
+let isAmplitudeInitialized = false;
 
 // Core event tracking function following Title Case + camelCase convention
 const trackEvent = (eventName: string, eventProperties?: Record<string, any>) => {
-  if (AMPLITUDE_API_KEY) {
+  if (isAmplitudeInitialized) {
     // Merge user properties with event properties
     const enrichedProperties = {
       ...currentUserProperties,
