@@ -210,13 +210,18 @@ export function SimpleDashboardGrid({
         // Resolve collisions and apply all changes
         const resolvedTiles = resolveCollisions(updatedTiles, draggedTile);
         
-        // Apply position changes for all affected tiles
-        resolvedTiles.forEach(resolvedTile => {
-          const originalTile = tiles.find(t => t.id === resolvedTile.id);
-          if (originalTile && (originalTile.x !== resolvedTile.x || originalTile.y !== resolvedTile.y)) {
-            onTileMove?.(resolvedTile.id, { x: resolvedTile.x, y: resolvedTile.y });
-          }
-        });
+        // Apply layout changes through onLayoutChange
+        if (onLayoutChange) {
+          onLayoutChange(resolvedTiles);
+        } else {
+          // Fallback to individual callbacks
+          resolvedTiles.forEach(resolvedTile => {
+            const originalTile = tiles.find(t => t.id === resolvedTile.id);
+            if (originalTile && (originalTile.x !== resolvedTile.x || originalTile.y !== resolvedTile.y)) {
+              onTileMove?.(resolvedTile.id, { x: resolvedTile.x, y: resolvedTile.y });
+            }
+          });
+        }
       }
     }
 
@@ -233,17 +238,20 @@ export function SimpleDashboardGrid({
         // Resolve collisions and apply all changes
         const resolvedTiles = resolveCollisions(updatedTiles, resizingTile);
         
-        // Apply size change first
-        onTileResize?.(resizingTile, tempSize);
-        
-        // Then apply position changes for displaced tiles
-        resolvedTiles.forEach(resolvedTile => {
-          const originalTile = tiles.find(t => t.id === resolvedTile.id);
-          if (originalTile && resolvedTile.id !== resizingTile && 
-              (originalTile.x !== resolvedTile.x || originalTile.y !== resolvedTile.y)) {
-            onTileMove?.(resolvedTile.id, { x: resolvedTile.x, y: resolvedTile.y });
-          }
-        });
+        // Apply layout changes through onLayoutChange
+        if (onLayoutChange) {
+          onLayoutChange(resolvedTiles);
+        } else {
+          // Fallback to individual callbacks
+          onTileResize?.(resizingTile, tempSize);
+          resolvedTiles.forEach(resolvedTile => {
+            const originalTile = tiles.find(t => t.id === resolvedTile.id);
+            if (originalTile && resolvedTile.id !== resizingTile && 
+                (originalTile.x !== resolvedTile.x || originalTile.y !== resolvedTile.y)) {
+              onTileMove?.(resolvedTile.id, { x: resolvedTile.x, y: resolvedTile.y });
+            }
+          });
+        }
       }
     }
 
