@@ -117,7 +117,8 @@ export function DataStudioFiles() {
       let parent = folder.parentId ? folders.find(f => f.id === folder.parentId) : undefined;
       while (parent) {
         breadcrumbs.unshift({ name: parent.name, id: parent.id });
-        parent = parent.parentId ? folders.find(f => f.id === parent.parentId) : undefined;
+        const nextParentId = parent.parentId;
+        parent = nextParentId ? folders.find(f => f.id === nextParentId) : undefined;
       }
     }
   }

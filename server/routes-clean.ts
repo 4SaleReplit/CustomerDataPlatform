@@ -142,7 +142,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }, {
-        scheduled: false,
         timezone: scheduledReport.timezone || 'Africa/Cairo'
       });
       

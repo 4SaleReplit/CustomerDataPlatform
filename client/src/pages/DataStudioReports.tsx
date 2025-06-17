@@ -181,7 +181,7 @@ export function DataStudioReports() {
   // Refresh report data function
   // Generate thumbnails for presentations that don't have preview images
   const generateMissingThumbnails = async () => {
-    const presentationsWithoutThumbnails = presentations.filter(p => !p.previewImageUrl);
+    const presentationsWithoutThumbnails = presentations.filter((p: any) => !p.previewImageUrl);
     
     for (const presentation of presentationsWithoutThumbnails) {
       const presentationData = allSlidesData[presentation.id];
@@ -258,7 +258,7 @@ export function DataStudioReports() {
       console.log('Found slides:', allSlides.length);
       
       // Extract all actual queries from slide elements
-      allSlides.forEach((slide, slideIndex) => {
+      allSlides.forEach((slide: any, slideIndex: number) => {
         console.log(`Processing slide ${slideIndex + 1}:`, slide.title || slide.id);
         if (slide?.elements) {
           console.log(`  Found ${slide.elements.length} elements`);
@@ -621,7 +621,7 @@ export function DataStudioReports() {
   // Slide preview component
   const SlidePreview = ({ slideData, presentationId }: { slideData: any; presentationId: string }) => {
     // First check if presentation has a generated preview image
-    const presentation = presentations.find(p => p.id === presentationId);
+    const presentation = presentations.find((p: any) => p.id === presentationId);
     if (presentation?.previewImageUrl) {
       const thumbnailUrl = presentation.previewImageUrl.startsWith('/uploads/') 
         ? `${window.location.origin}${presentation.previewImageUrl}`
