@@ -14,9 +14,15 @@ neonConfig.pipelineConnect = false;
 
 // Use .env DATABASE_URL for production database connection
 // All other integrations are managed through database-stored credentials
-const DATABASE_URL = process.env.DATABASE_URL || "postgresql://postgres.oolcnbxrnuefxfdpvsfn:dsadasSDASdsaDASDASasdsadas3434@aws-0-eu-north-1.pooler.supabase.com:6543/postgres";
+const DATABASE_URL = process.env.DATABASE_URL;
+
+if (!DATABASE_URL) {
+  console.error('DATABASE_URL not found in .env file. Please check your environment configuration.');
+  throw new Error('DATABASE_URL is required for production database connection');
+}
 
 console.log('Using production database from .env file for application connection');
+console.log('Database URL configured:', DATABASE_URL.replace(/:[^:@]*@/, ':***@')); // Mask password
 
 // Create pool with production database connection
 export const pool = new Pool({ 
