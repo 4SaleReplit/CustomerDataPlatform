@@ -234,14 +234,15 @@ function Dashboard() {
             body: JSON.stringify({})
           });
           
-          // Store refreshed data in localStorage
-          const timestamp = new Date();
-          localStorage.setItem(`tile-${tile.id}-lastRefresh`, timestamp.toISOString());
+          // Store refreshed data in localStorage for caching
           localStorage.setItem(`tile-${tile.id}-data`, JSON.stringify(response));
           
           return response;
         }
       });
+      
+      // Reload tiles to get updated timestamp from database
+      await loadTiles();
       
       toast({
         title: "Tile Refreshed",
@@ -317,9 +318,7 @@ function Dashboard() {
               body: JSON.stringify({})
             });
             
-            // Store refreshed data in localStorage to match tile behavior
-            const timestamp = new Date();
-            localStorage.setItem(`tile-${tile.id}-lastRefresh`, timestamp.toISOString());
+            // Store refreshed data in localStorage for caching
             localStorage.setItem(`tile-${tile.id}-data`, JSON.stringify(apiResponse));
             
             return apiResponse;
@@ -330,6 +329,9 @@ function Dashboard() {
       });
       
       await Promise.all(refreshPromises);
+      
+      // Reload tiles to get updated timestamps from database
+      await loadTiles();
       
       toast({
         title: "Dashboard Refreshed",
