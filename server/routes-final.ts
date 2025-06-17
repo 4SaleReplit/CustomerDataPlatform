@@ -727,6 +727,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Integrations API Endpoints
+  app.get("/api/integrations", async (req: Request, res: Response) => {
+    try {
+      const integrations = await storage.getIntegrations();
+      res.json(integrations);
+    } catch (error) {
+      console.error("Get integrations error:", error);
+      res.status(500).json({ error: "Failed to fetch integrations" });
+    }
+  });
+
+  app.get("/api/integrations/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const integration = await storage.getIntegration(id);
+      if (!integration) {
+        return res.status(404).json({ error: "Integration not found" });
+      }
+      res.json(integration);
+    } catch (error) {
+      console.error("Get integration error:", error);
+      res.status(500).json({ error: "Failed to fetch integration" });
+    }
+  });
+
+  app.post("/api/integrations", async (req: Request, res: Response) => {
+    try {
+      console.log("Creating integration with data:", JSON.stringify(req.body, null, 2));
+      const { insertIntegrationSchema } = await import('../shared/schema');
+      const validatedData = insertIntegrationSchema.parse(req.body);
+      
+      // Store credentials directly without encryption for now to fix the JSON parsing issue
+      console.log("Validated data credentials:", validatedData.credentials);
+      
+      const integration = await storage.createIntegration(validatedData);
+      console.log("Integration created successfully:", integration.id);
+      res.status(201).json(integration);
+    } catch (error) {
+      console.error("Create integration error:", error);
+      console.error("Error details:", error instanceof Error ? error.message : String(error));
+      res.status(400).json({ 
+        error: error instanceof Error ? error.message : "Failed to create integration" 
+      });
+    }
+  });
+
+  app.patch("/api/integrations/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const integration = await storage.updateIntegration(id, updates);
+      if (!integration) {
+        return res.status(404).json({ error: "Integration not found" });
+      }
+      res.json(integration);
+    } catch (error) {
+      console.error("Update integration error:", error);
+      res.status(500).json({ error: "Failed to update integration" });
+    }
+  });
+
+  app.delete("/api/integrations/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteIntegration(id);
+      if (!success) {
+        return res.status(404).json({ error: "Integration not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Delete integration error:", error);
+      res.status(500).json({ error: "Failed to delete integration" });
+    }
+  });
+
   // Amplitude sync endpoint
   app.post("/api/cohorts/:id/sync-amplitude", async (req: Request, res: Response) => {
     try {
