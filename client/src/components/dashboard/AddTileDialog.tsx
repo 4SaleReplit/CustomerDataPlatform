@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Table as TableComponent, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Play, Database, BarChart, LineChart, PieChart, Table, Activity, Eye, Save, Loader2 } from 'lucide-react';
 import { CodeMirrorSQLEditor } from './CodeMirrorSQLEditor';
 import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart as RechartsBarChart, Bar, PieChart as RechartsPieChart, Cell, Pie } from 'recharts';
@@ -66,8 +68,7 @@ export function AddTileDialog({ isOpen, onClose, onSave }: AddTileDialogProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          query: tileConfig.query,
-          limit: 100
+          query: tileConfig.query
         }),
       });
 
@@ -76,13 +77,28 @@ export function AddTileDialog({ isOpen, onClose, onSave }: AddTileDialogProps) {
       }
 
       const result = await response.json();
-      setQueryResult(result.data || []);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Query execution failed');
+      }
+
+      // Convert rows array to objects using column names
+      const columns = result.columns || [];
+      const rows = result.rows || [];
+      const convertedData = rows.map((row: any[]) => {
+        const obj: Record<string, any> = {};
+        columns.forEach((col: any, index: number) => {
+          obj[col.name] = row[index];
+        });
+        return obj;
+      });
+
+      setQueryResult(convertedData);
       setHasExecuted(true);
-      setCurrentTab('preview');
       
       toast({
         title: "Query executed successfully",
-        description: `Retrieved ${result.data?.length || 0} rows`
+        description: `Retrieved ${rows.length} rows`
       });
     } catch (error) {
       setExecutionError(error instanceof Error ? error.message : 'Query execution failed');
@@ -416,6 +432,52 @@ export function AddTileDialog({ isOpen, onClose, onSave }: AddTileDialogProps) {
                     />
                   </div>
                 </div>
+
+                {/* Data Preview Section */}
+                {hasExecuted && (
+                  <div className="space-y-2">
+                    <Label>Data Preview</Label>
+                    <div className="h-48 border rounded-lg overflow-hidden">
+                      {executionError ? (
+                        <div className="p-4 text-destructive">
+                          <strong>Error:</strong> {executionError}
+                        </div>
+                      ) : queryResult.length > 0 ? (
+                        <ScrollArea className="h-full">
+                          <TableComponent>
+                            <TableHeader>
+                              <TableRow>
+                                {Object.keys(queryResult[0] || {}).map((column) => (
+                                  <TableHead key={column}>{column}</TableHead>
+                                ))}
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {queryResult.slice(0, 10).map((row, idx) => (
+                                <TableRow key={idx}>
+                                  {Object.values(row).map((value, colIdx) => (
+                                    <TableCell key={colIdx}>
+                                      {value?.toString() || 'NULL'}
+                                    </TableCell>
+                                  ))}
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </TableComponent>
+                          {queryResult.length > 10 && (
+                            <div className="p-2 text-sm text-muted-foreground text-center">
+                              Showing first 10 rows of {queryResult.length} total rows
+                            </div>
+                          )}
+                        </ScrollArea>
+                      ) : (
+                        <div className="p-4 text-muted-foreground">
+                          No data returned from query
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
