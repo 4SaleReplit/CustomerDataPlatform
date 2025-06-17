@@ -249,7 +249,10 @@ export function ReportsScheduler() {
   // Toggle active status mutation
   const toggleActiveMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => 
-      apiRequest(`/api/scheduled-reports/${id}`, "PATCH", { isActive }),
+      apiRequest(`/api/scheduled-reports/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isActive })
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/scheduled-reports"] });
       toast({ title: "Report status updated successfully" });
@@ -295,7 +298,7 @@ export function ReportsScheduler() {
       isActive: report.isActive,
       airflowDagId: report.airflowDagId || "",
       airflowTaskId: report.airflowTaskId || "send_report",
-      airflowConfiguration: report.airflowConfiguration || {
+      airflowConfiguration: (report.airflowConfiguration as any) || {
         dag_id: "",
         schedule_interval: null,
         start_date: new Date().toISOString(),
@@ -305,7 +308,7 @@ export function ReportsScheduler() {
       },
       pdfDeliveryUrl: report.pdfDeliveryUrl || "",
       placeholderConfig: report.placeholderConfig,
-      formatSettings: report.formatSettings
+      formatSettings: (report.formatSettings as any) || { format: "pdf", includeCharts: true }
     });
     setIsEditDialogOpen(true);
   };
@@ -435,7 +438,7 @@ export function ReportsScheduler() {
               setFormData={setFormData}
               presentations={presentations}
               presentationsLoading={presentationsLoading}
-              mailingLists={mailingLists}
+              mailingLists={mailingLists as MailingList[]}
               onSubmit={handleCreateReport}
               onCancel={() => setIsCreateDialogOpen(false)}
               isLoading={createReportMutation.isPending}
@@ -451,7 +454,7 @@ export function ReportsScheduler() {
           <div className="flex items-center justify-center h-32">
             <div className="text-muted-foreground">Loading scheduled reports...</div>
           </div>
-        ) : scheduledReports.length === 0 ? (
+        ) : (scheduledReports as any[])?.length === 0 ? (
           <Card>
             <CardContent className="flex items-center justify-center h-32">
               <div className="text-center">
@@ -462,7 +465,7 @@ export function ReportsScheduler() {
             </CardContent>
           </Card>
         ) : (
-          scheduledReports.map((report: ScheduledReport) => (
+          (scheduledReports as ScheduledReport[]).map((report: ScheduledReport) => (
             <Card key={report.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -566,7 +569,7 @@ export function ReportsScheduler() {
             setFormData={setFormData}
             presentations={presentations}
             presentationsLoading={presentationsLoading}
-            mailingLists={mailingLists}
+            mailingLists={mailingLists as MailingList[]}
             onSubmit={handleUpdateReport}
             onCancel={() => setIsEditDialogOpen(false)}
             isLoading={updateReportMutation.isPending}
@@ -641,7 +644,7 @@ function SchedulerForm({
     const emails = mailingList.emails.map(contact => contact.email);
     setFormData((prev: any) => ({
       ...prev,
-      recipientList: [...new Set([...prev.recipientList, ...emails])]
+      recipientList: [...Array.from(new Set([...prev.recipientList, ...emails]))]
     }));
   };
 
