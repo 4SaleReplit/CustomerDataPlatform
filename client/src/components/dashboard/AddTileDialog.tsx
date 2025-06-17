@@ -33,21 +33,38 @@ const TILE_TYPES = [
 
 const CHART_COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe'];
 
-export function AddTileDialog({ isOpen, onClose, onSave }: AddTileDialogProps) {
+export function AddTileDialog({ isOpen, onClose, onSave, editTile }: AddTileDialogProps) {
   const { toast } = useToast();
   const [currentTab, setCurrentTab] = useState('query');
   const [tileConfig, setTileConfig] = useState({
-    title: '',
-    type: 'metric' as DashboardTile['type'],
-    query: 'SELECT COUNT(*) as total_users FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4',
-    width: 4,
-    height: 2
+    title: editTile?.title || '',
+    type: (editTile?.type || 'metric') as DashboardTile['type'],
+    query: editTile?.dataSource?.query || 'SELECT COUNT(*) as total_users FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4',
+    width: editTile?.width || 4,
+    height: editTile?.height || 2
   });
   
   const [queryResult, setQueryResult] = useState<any[]>([]);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionError, setExecutionError] = useState<string | null>(null);
   const [hasExecuted, setHasExecuted] = useState(false);
+
+  // Reset form when editTile changes or dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setTileConfig({
+        title: editTile?.title || '',
+        type: (editTile?.type || 'metric') as DashboardTile['type'],
+        query: editTile?.dataSource?.query || 'SELECT COUNT(*) as total_users FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4',
+        width: editTile?.width || 4,
+        height: editTile?.height || 2
+      });
+      setQueryResult([]);
+      setExecutionError(null);
+      setHasExecuted(false);
+      setCurrentTab('query');
+    }
+  }, [isOpen, editTile]);
 
   const executeQuery = async () => {
     if (!tileConfig.query.trim()) {
@@ -315,11 +332,11 @@ export function AddTileDialog({ isOpen, onClose, onSave }: AddTileDialogProps) {
     }
 
     const newTile: DashboardTile = {
-      id: `tile-${Date.now()}`,
+      id: editTile?.id || `tile-${Date.now()}`,
       type: tileConfig.type,
       title: tileConfig.title,
-      x: 0,
-      y: 0,
+      x: editTile?.x || 0,
+      y: editTile?.y || 0,
       width: tileConfig.width,
       height: tileConfig.height,
       dataSource: {
@@ -328,8 +345,8 @@ export function AddTileDialog({ isOpen, onClose, onSave }: AddTileDialogProps) {
         aggregation: 'custom'
       },
       refreshConfig: {
-        autoRefresh: false,
-        refreshOnLoad: true
+        autoRefresh: editTile?.refreshConfig?.autoRefresh || false,
+        refreshOnLoad: editTile?.refreshConfig?.refreshOnLoad || true
       }
     };
 
@@ -359,7 +376,7 @@ export function AddTileDialog({ isOpen, onClose, onSave }: AddTileDialogProps) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Add New Tile</DialogTitle>
+          <DialogTitle>{editTile ? 'Edit Tile' : 'Add New Tile'}</DialogTitle>
         </DialogHeader>
         
         <div className="flex-1 overflow-hidden">
