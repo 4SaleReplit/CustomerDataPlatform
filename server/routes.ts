@@ -4445,9 +4445,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   return server;
 }
-
-      // Generate report (PDF/Excel)
-      const reportBuffer = await generateReportFile(presentation, scheduledReport.formatSettings);
       
       // Send emails with report attachment
       let successfulDeliveries = 0;

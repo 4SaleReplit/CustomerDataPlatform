@@ -1,6 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { config } from "dotenv";
-import { registerRoutes } from "./routes";
+import { registerRoutes } from "./routes-final";
 import path from "path";
 
 // Load environment variables
