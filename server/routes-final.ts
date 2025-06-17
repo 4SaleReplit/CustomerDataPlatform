@@ -916,6 +916,182 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Segments API Endpoints
+  app.get("/api/segments", async (req: Request, res: Response) => {
+    try {
+      const segments = await storage.getSegments();
+      res.json(segments);
+    } catch (error) {
+      console.error("Get segments error:", error);
+      res.status(500).json({ error: "Failed to fetch segments" });
+    }
+  });
+
+  app.get("/api/segments/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const segment = await storage.getSegment(id);
+      if (!segment) {
+        return res.status(404).json({ error: "Segment not found" });
+      }
+      res.json(segment);
+    } catch (error) {
+      console.error("Get segment error:", error);
+      res.status(500).json({ error: "Failed to fetch segment" });
+    }
+  });
+
+  app.post("/api/segments", async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertSegmentSchema.parse(req.body);
+      const segment = await storage.createSegment(validatedData);
+      res.status(201).json(segment);
+    } catch (error) {
+      console.error("Create segment error:", error);
+      res.status(400).json({ 
+        error: error instanceof Error ? error.message : "Failed to create segment" 
+      });
+    }
+  });
+
+  app.put("/api/segments/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const segment = await storage.updateSegment(id, updates);
+      if (!segment) {
+        return res.status(404).json({ error: "Segment not found" });
+      }
+      res.json(segment);
+    } catch (error) {
+      console.error("Update segment error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to update segment" 
+      });
+    }
+  });
+
+  app.delete("/api/segments/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteSegment(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Segment not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete segment error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to delete segment" 
+      });
+    }
+  });
+
+  app.post("/api/segments/:id/refresh", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      // Get segment details
+      const segment = await storage.getSegment(id);
+      if (!segment) {
+        return res.status(404).json({ error: "Segment not found" });
+      }
+
+      // Execute segment calculation query
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const dynamicService = await getDynamicSnowflakeService();
+      
+      if (!dynamicService) {
+        return res.status(400).json({ 
+          error: "Snowflake integration not configured",
+          details: "Please configure a Snowflake integration in the Integrations page"
+        });
+      }
+
+      // Build SQL query from segment conditions
+      const conditions = segment.conditions as any;
+      let query = `SELECT COUNT(*) as user_count FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4`;
+      
+      if (conditions && conditions.rule) {
+        query += ` WHERE ${conditions.rule}`;
+      } else if (conditions && conditions.attribute && conditions.operator && conditions.value) {
+        const operator = conditions.operator;
+        const value = operator.includes('LIKE') ? `'%${conditions.value}%'` : 
+                     isNaN(Number(conditions.value)) ? `'${conditions.value}'` : conditions.value;
+        query += ` WHERE ${conditions.attribute} ${operator} ${value}`;
+      }
+
+      const queryResult = await dynamicService.executeQuery(query);
+      if (!queryResult.success) {
+        return res.status(500).json({ error: "Failed to execute segment query" });
+      }
+
+      const userCount = queryResult.rows[0]?.[0] || 0;
+
+      // Update segment with new user count
+      const updatedConditions = { 
+        ...conditions, 
+        userCount: Number(userCount),
+        lastCalculatedAt: new Date().toISOString()
+      };
+      
+      const updatedSegment = await storage.updateSegment(id, { 
+        conditions: updatedConditions,
+        updatedAt: new Date()
+      });
+
+      res.json({ 
+        segment: updatedSegment,
+        userCount: Number(userCount),
+        message: "Segment refreshed successfully"
+      });
+    } catch (error) {
+      console.error("Segment refresh error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to refresh segment" 
+      });
+    }
+  });
+
+  // Snowflake schema endpoint for segments page
+  app.get("/api/snowflake/schema", async (req: Request, res: Response) => {
+    try {
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const dynamicService = await getDynamicSnowflakeService();
+      
+      if (!dynamicService) {
+        return res.status(400).json({ 
+          error: "Snowflake integration not configured",
+          details: "Please configure a Snowflake integration in the Integrations page"
+        });
+      }
+
+      // Get table schema information
+      const schemaQuery = `
+        SELECT COLUMN_NAME, DATA_TYPE 
+        FROM DBT_CORE_PROD_DATABASE.INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = 'OPERATIONS' 
+        AND TABLE_NAME = 'USER_SEGMENTATION_PROJECT_V4'
+        ORDER BY ORDINAL_POSITION
+      `;
+
+      const result = await dynamicService.executeQuery(schemaQuery);
+      if (!result.success) {
+        return res.status(500).json({ error: "Failed to fetch schema information" });
+      }
+
+      const columns = result.rows.map(row => ({
+        name: row[0],
+        type: row[1]
+      }));
+
+      res.json({ columns });
+    } catch (error) {
+      console.error("Get schema error:", error);
+      res.status(500).json({ error: "Failed to fetch schema" });
+    }
+  });
+
   // Amplitude sync endpoint
   app.post("/api/cohorts/:id/sync-amplitude", async (req: Request, res: Response) => {
     try {
