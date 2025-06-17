@@ -303,35 +303,50 @@ function Dashboard() {
     setIsLoading(true);
     
     try {
-      // Refresh all tiles using the correct query pattern that matches DashboardTile.tsx
+      console.log('Starting global refresh for', tiles.length, 'tiles');
+      
+      // Refresh all tiles using direct API calls
       const refreshPromises = tiles.map(async (tile) => {
-        const tileIdForApi = tile.databaseId || tile.id;
-        const queryKey = ['/api/dashboard/tiles', tileIdForApi, 'data'];
-        
-        // Force refetch the tile data
-        const response = await queryClient.fetchQuery({
-          queryKey,
-          queryFn: async () => {
-            const apiResponse = await apiRequest(`/api/dashboard/tiles/${tileIdForApi}/data`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({})
-            });
-            
-            // Store refreshed data in localStorage for caching
-            localStorage.setItem(`tile-${tile.id}-data`, JSON.stringify(apiResponse));
-            
-            return apiResponse;
+        try {
+          const tileIdForApi = tile.databaseId || tile.id;
+          console.log(`Refreshing tile: ${tile.title} (ID: ${tileIdForApi})`);
+          
+          // Build request body with query if it's a custom tile
+          const requestBody: any = {};
+          if (tileIdForApi.startsWith('tile-') && tile.dataSource?.query) {
+            requestBody.query = tile.dataSource.query;
           }
-        });
-        
-        return response;
+          
+          const response = await apiRequest(`/api/dashboard/tiles/${tileIdForApi}/data`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+          });
+          
+          console.log(`Tile ${tile.title} refreshed successfully`);
+          
+          // Store refreshed data in localStorage for caching
+          localStorage.setItem(`tile-${tile.id}-data`, JSON.stringify(response));
+          
+          // Invalidate the query cache to force re-render
+          const queryKey = ['/api/dashboard/tiles', tileIdForApi, 'data'];
+          queryClient.setQueryData(queryKey, response);
+          
+          return response;
+        } catch (error) {
+          console.error(`Failed to refresh tile ${tile.title}:`, error);
+          throw error;
+        }
       });
       
       await Promise.all(refreshPromises);
       
+      console.log('All tiles refreshed, reloading metadata...');
+      
       // Reload tiles to get updated timestamps from database
       await loadTiles();
+      
+      console.log('Global refresh completed successfully');
       
       toast({
         title: "Dashboard Refreshed",
