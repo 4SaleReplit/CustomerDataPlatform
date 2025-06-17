@@ -1,4 +1,4 @@
-import { SnowflakeService } from './snowflake';
+import { getDynamicSnowflakeService } from './snowflake';
 
 interface UserProfile {
   userId: string;
@@ -88,7 +88,10 @@ export class DataSyncService {
       LIMIT 1000
     `;
 
-    const snowflakeService = new SnowflakeService();
+    const snowflakeService = await getDynamicSnowflakeService();
+    if (!snowflakeService) {
+      throw new Error('Snowflake integration not configured');
+    }
     const result = await snowflakeService.executeQuery(query);
     
     if (!result.success || !result.rows) {
@@ -323,7 +326,10 @@ export class DataSyncService {
       )
     `;
 
-    const snowflakeService2 = new SnowflakeService();
+    const snowflakeService2 = await getDynamicSnowflakeService();
+    if (!snowflakeService2) {
+      throw new Error('Snowflake integration not configured');
+    }
     await snowflakeService2.executeQuery(createTableQuery);
 
     // Insert enriched user data
@@ -388,7 +394,7 @@ export class DataSyncService {
       `;
 
       try {
-        await snowflakeService.executeQuery(simpleInsertQuery);
+        await snowflakeService2.executeQuery(simpleInsertQuery);
       } catch (error) {
         console.error(`Failed to insert user ${user.userId}:`, error);
       }

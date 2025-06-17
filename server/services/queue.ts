@@ -2,7 +2,7 @@ import Bull from 'bull';
 import { db } from '../db';
 import { campaignJobs, campaigns, cohorts } from '../../shared/schema';
 import { eq } from 'drizzle-orm';
-import { SnowflakeService } from './snowflake';
+import { getDynamicSnowflakeService } from './snowflake';
 
 // Initialize Redis queue with error handling
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
@@ -93,6 +93,10 @@ async function processCampaign(campaignId: string, cohortId: string, upsellItems
     }
     
     // Execute the cohort query to get user IDs
+    const snowflakeService = await getDynamicSnowflakeService();
+    if (!snowflakeService) {
+      throw new Error('Snowflake integration not configured');
+    }
     const queryResult = await snowflakeService.executeQuery(calculationQuery);
     
     if (!queryResult.success) {
