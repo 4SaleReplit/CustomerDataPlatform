@@ -245,6 +245,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // SQL Execution endpoint for tile creation
+  app.post("/api/sql/execute", async (req: Request, res: Response) => {
+    try {
+      const { query } = req.body;
+      
+      if (!query) {
+        return res.status(400).json({ error: "Query is required" });
+      }
+
+      // Execute the Snowflake query using dynamic credentials
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const dynamicService = await getDynamicSnowflakeService();
+      
+      if (!dynamicService) {
+        return res.status(400).json({ 
+          error: "Snowflake integration not configured",
+          details: "Please configure a Snowflake integration in the Integrations page"
+        });
+      }
+
+      const result = await dynamicService.executeQuery(query);
+      
+      if (!result.success) {
+        return res.status(400).json({ 
+          error: result.error,
+          query: query 
+        });
+      }
+
+      res.json({
+        columns: result.columns,
+        rows: result.rows,
+        success: true,
+        query: query
+      });
+    } catch (error) {
+      console.error("Query execution error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to execute query" 
+      });
+    }
+  });
+
+  // Dashboard APIs
+  app.get("/api/dashboard/tiles", async (req: Request, res: Response) => {
+    try {
+      const tiles = await storage.getDashboardTiles();
+      res.json(tiles);
+    } catch (error) {
+      console.error("Get dashboard tiles error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get dashboard tiles" 
+      });
+    }
+  });
+
+  app.post("/api/dashboard/layout", async (req: Request, res: Response) => {
+    try {
+      const { tiles } = req.body;
+      console.log("Saving dashboard layout with tiles:", tiles.map((t: any) => ({ id: t.id, x: t.x, y: t.y, width: t.width, height: t.height })));
+      
+      // Convert tiles to the format expected by storage
+      const tileInstances = tiles.map((tile: any) => ({
+        tileId: tile.id || tile.tileId,
+        dashboardId: tile.dashboardId || null,
+        type: tile.type,
+        title: tile.title,
+        x: tile.x,
+        y: tile.y,
+        width: tile.width,
+        height: tile.height,
+        icon: tile.icon,
+        dataSource: tile.dataSource,
+        refreshConfig: tile.refreshConfig
+      }));
+      
+      const savedTiles = await storage.saveDashboardLayout(tileInstances);
+      console.log("Dashboard layout saved successfully");
+      res.json({ success: true, tiles: savedTiles });
+    } catch (error) {
+      console.error("Save dashboard layout error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to save dashboard layout" 
+      });
+    }
+  });
+
   // Airflow Test Connection
   app.post("/api/airflow/test-connection", async (req: Request, res: Response) => {
     try {

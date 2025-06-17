@@ -553,8 +553,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Query execution endpoint for report builder
-  app.post("/api/dashboard/tiles/execute-query", async (req, res) => {
+  // Query execution endpoint for SQL editor
+  app.post("/api/sql/execute", async (req, res) => {
     try {
       const { query } = req.body;
       
