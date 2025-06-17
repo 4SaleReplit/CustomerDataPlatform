@@ -195,7 +195,7 @@ export function AddTileDialog({ isOpen, onClose, onSave }: AddTileDialogProps) {
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="text-4xl font-bold text-blue-600 mb-2">
-                {typeof metricValue === 'number' ? metricValue.toLocaleString() : metricValue}
+                {typeof metricValue === 'number' ? metricValue.toLocaleString() : String(metricValue || 0)}
               </div>
               <div className="text-muted-foreground">{tileConfig.title || 'Metric Value'}</div>
             </div>
@@ -413,7 +413,6 @@ export function AddTileDialog({ isOpen, onClose, onSave }: AddTileDialogProps) {
                     <CodeMirrorSQLEditor
                       value={tileConfig.query}
                       onChange={(value) => setTileConfig({ ...tileConfig, query: value })}
-                      height="100%"
                     />
                   </div>
                 </div>

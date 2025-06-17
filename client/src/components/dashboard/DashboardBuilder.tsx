@@ -87,10 +87,10 @@ export function DashboardBuilder({
         tiles={tiles}
         onLayoutChange={handleLayoutChange}
         isEditMode={isEditMode}
-        onEditTile={onEditTile}
-        onRemoveTile={handleRemoveTile}
-        onDuplicateTile={handleDuplicateTile}
-        onRefreshTile={onRefreshTile}
+        onEditTile={onEditTile || (() => {})}
+        onRemoveTile={onRemoveTile || handleRemoveTile}
+        onDuplicateTile={onDuplicateTile || handleDuplicateTile}
+        onRefreshTile={onRefreshTile || (() => {})}
       />
 
       <AddTileDialog

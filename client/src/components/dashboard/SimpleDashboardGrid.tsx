@@ -9,8 +9,9 @@ interface SimpleDashboardGridProps {
   onRemoveTile: (tileId: string) => void;
   onDuplicateTile: (tile: DashboardTile) => void;
   onRefreshTile: (tileId: string) => void;
-  onTileMove: (tileId: string, newPosition: { x: number; y: number }) => void;
-  onTileResize: (tileId: string, newSize: { width: number; height: number }) => void;
+  onLayoutChange?: (updatedTiles: DashboardTile[]) => void;
+  onTileMove?: (tileId: string, newPosition: { x: number; y: number }) => void;
+  onTileResize?: (tileId: string, newSize: { width: number; height: number }) => void;
 }
 
 export function SimpleDashboardGrid({
@@ -20,6 +21,7 @@ export function SimpleDashboardGrid({
   onRemoveTile,
   onDuplicateTile,
   onRefreshTile,
+  onLayoutChange,
   onTileMove,
   onTileResize
 }: SimpleDashboardGridProps) {
@@ -212,7 +214,7 @@ export function SimpleDashboardGrid({
         resolvedTiles.forEach(resolvedTile => {
           const originalTile = tiles.find(t => t.id === resolvedTile.id);
           if (originalTile && (originalTile.x !== resolvedTile.x || originalTile.y !== resolvedTile.y)) {
-            onTileMove(resolvedTile.id, { x: resolvedTile.x, y: resolvedTile.y });
+            onTileMove?.(resolvedTile.id, { x: resolvedTile.x, y: resolvedTile.y });
           }
         });
       }
@@ -232,14 +234,14 @@ export function SimpleDashboardGrid({
         const resolvedTiles = resolveCollisions(updatedTiles, resizingTile);
         
         // Apply size change first
-        onTileResize(resizingTile, tempSize);
+        onTileResize?.(resizingTile, tempSize);
         
         // Then apply position changes for displaced tiles
         resolvedTiles.forEach(resolvedTile => {
           const originalTile = tiles.find(t => t.id === resolvedTile.id);
           if (originalTile && resolvedTile.id !== resizingTile && 
               (originalTile.x !== resolvedTile.x || originalTile.y !== resolvedTile.y)) {
-            onTileMove(resolvedTile.id, { x: resolvedTile.x, y: resolvedTile.y });
+            onTileMove?.(resolvedTile.id, { x: resolvedTile.x, y: resolvedTile.y });
           }
         });
       }
