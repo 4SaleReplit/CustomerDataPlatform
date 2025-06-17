@@ -58,8 +58,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate next execution based on cron expression and timezone
       const nextExecution = calculateNextExecution(reportData.cronExpression, reportData.timezone);
       
+      // Auto-generate PDF delivery URL based on report ID and domain
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN ? 
+        `https://${process.env.REPLIT_DEV_DOMAIN}` : 
+        `${req.protocol}://${req.get('host')}`;
+      const pdfDeliveryUrl = `${baseUrl}/api/reports/pdf/${reportData.presentationId}`;
+      
       const scheduledReport = await storage.createScheduledReport({
         ...reportData,
+        pdfDeliveryUrl,
         nextExecution,
         executionCount: 0,
         errorCount: 0,
@@ -202,6 +209,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching report executions:", error);
       res.status(500).json({ error: "Failed to fetch report executions" });
+    }
+  });
+
+  // Presentations API endpoint for Reports Scheduler dropdown
+  app.get("/api/presentations", async (req: Request, res: Response) => {
+    try {
+      const presentations = await storage.getPresentations();
+      res.json(presentations);
+    } catch (error) {
+      console.error("Error fetching presentations:", error);
+      res.status(500).json({ error: "Failed to fetch presentations" });
+    }
+  });
+
+  // PDF Report Generation Endpoint
+  app.get("/api/reports/pdf/:presentationId", async (req: Request, res: Response) => {
+    try {
+      const { presentationId } = req.params;
+      const presentation = await storage.getPresentationById(presentationId);
+      
+      if (!presentation) {
+        return res.status(404).json({ error: "Presentation not found" });
+      }
+      
+      // Generate PDF from presentation data
+      const pdfBuffer = await generateReportFile(presentation, { format: 'pdf', includeCharts: true });
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${presentation.title}.pdf"`);
+      res.send(pdfBuffer.content);
+    } catch (error) {
+      console.error("Error generating PDF report:", error);
+      res.status(500).json({ error: "Failed to generate PDF report" });
     }
   });
 

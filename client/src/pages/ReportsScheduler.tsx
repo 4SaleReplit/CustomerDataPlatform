@@ -973,15 +973,16 @@ function SchedulerForm({
 
           <div className="space-y-2">
             <Label htmlFor="pdfDeliveryUrl">PDF Delivery URL</Label>
-            <Input
-              id="pdfDeliveryUrl"
-              value={formData.pdfDeliveryUrl}
-              onChange={(e) => setFormData((prev: any) => ({ ...prev, pdfDeliveryUrl: e.target.value }))}
-              placeholder="https://your-domain.com/reports/public/{report_id}"
-            />
-            <p className="text-sm text-muted-foreground">
-              Public URL where the generated PDF will be accessible for email delivery
-            </p>
+            <div className="p-3 bg-muted rounded-md">
+              <p className="text-sm text-muted-foreground">
+                PDF delivery URL will be automatically generated based on selected report
+              </p>
+              {formData.presentationId && (
+                <p className="text-sm font-mono mt-1">
+                  {window.location.origin}/api/reports/pdf/{formData.presentationId}
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">
