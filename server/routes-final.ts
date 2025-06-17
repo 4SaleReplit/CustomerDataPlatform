@@ -406,12 +406,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Update the tile's last refresh timestamp in the database
+      try {
+        await storage.updateTileLastRefresh(tileId, new Date());
+      } catch (error) {
+        console.warn(`Failed to update last refresh timestamp for tile ${tileId}:`, error);
+      }
+
       res.json({
         columns: result.columns,
         rows: result.rows,
         success: true,
         tileId: tileId,
-        query: dataSource.query
+        query: dataSource.query,
+        lastRefreshAt: new Date().toISOString()
       });
     } catch (error) {
       console.error("Dashboard tile data loading error:", error);

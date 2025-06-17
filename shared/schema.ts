@@ -156,6 +156,7 @@ export const dashboardTileInstances = pgTable("dashboard_tile_instances", {
   icon: varchar("icon", { length: 50 }),
   dataSource: jsonb("data_source").notNull(), // Contains table, query, aggregation, etc.
   refreshConfig: jsonb("refresh_config").notNull(), // Contains autoRefresh, refreshOnLoad, etc.
+  lastRefreshAt: timestamp("last_refresh_at", { withTimezone: true }), // Track last refresh time
   createdBy: uuid("created_by").references(() => team.id, { onDelete: 'set null' }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
