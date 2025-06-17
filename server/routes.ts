@@ -4290,6 +4290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Update execution metadata
           await storage.updateScheduledReport(jobId, {
             executionCount: (scheduledReport.executionCount || 0) + 1,
+            successCount: (scheduledReport.successCount || 0) + 1,
             lastExecutionAt: new Date(),
             nextExecution: calculateNextExecution(scheduledReport.cronExpression, scheduledReport.timezone)
           });
@@ -4376,18 +4377,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   async function executeScheduledReport(scheduledReport: any) {
     try {
-      // Create execution record
-      const execution = await storage.createReportExecution({
-        scheduledReportId: scheduledReport.id,
-        executionStatus: 'running',
-        recipientCount: scheduledReport.recipientList.length
-      });
-
-      // Get presentation data
+      console.log(`Starting execution of scheduled report: ${scheduledReport.name}`);
+      
+      // Get the presentation/report
       const presentation = await storage.getPresentationById(scheduledReport.presentationId);
       if (!presentation) {
-        throw new Error('Presentation not found');
+        throw new Error(`Presentation not found: ${scheduledReport.presentationId}`);
       }
+      
+      // Generate the report file (PDF/PowerPoint)
+      const reportFile = await generateReportFile(presentation, scheduledReport.formatSettings || { format: 'pdf', includeCharts: true });
+      
+      // Process email template with placeholders
+      const processedSubject = processEmailTemplate(scheduledReport.emailSubject, scheduledReport);
+      const processedBody = processEmailTemplate(scheduledReport.emailBody, scheduledReport);
+      
+      // Prepare email data
+      const emailData = {
+        to: scheduledReport.recipientList || [],
+        cc: scheduledReport.ccList || [],
+        bcc: scheduledReport.bccList || [],
+        subject: processedSubject,
+        html: processedBody,
+        attachments: reportFile ? [reportFile] : []
+      };
+      
+      // Send email
+      await sendReportEmail(emailData);
+      
+      console.log(`Successfully executed scheduled report: ${scheduledReport.name}`);
+      
+    } catch (error) {
+      console.error(`Error in executeScheduledReport for ${scheduledReport.name}:`, error);
+      throw error;
+    }
+
+  function processEmailTemplate(template: string, scheduledReport: any): string {
+    return template
+      .replace(/\{report_name\}/g, scheduledReport.name)
+      .replace(/\{execution_date\}/g, new Date().toLocaleDateString())
+      .replace(/\{execution_time\}/g, new Date().toLocaleTimeString())
+      .replace(/\{next_execution\}/g, scheduledReport.nextExecution ? new Date(scheduledReport.nextExecution).toLocaleDateString() : 'TBD');
+  }
+
+  async function generateReportFile(presentation: any, formatSettings: any) {
+    // Mock implementation - replace with actual report generation
+    return {
+      filename: `${presentation.title}_${new Date().toISOString().split('T')[0]}.pdf`,
+      content: Buffer.from('Mock PDF content')
+    };
+  }
+
+  async function sendReportEmail(emailData: any) {
+    // Mock implementation - replace with actual email sending using SendGrid
+    console.log('Sending email:', emailData.subject, 'to:', emailData.to);
+    return true;
+  }
+
+  async function testAirflowConnection(baseUrl: string, username: string, password: string): Promise<boolean> {
+    try {
+      // Mock implementation - replace with actual Airflow API test
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  return server;
+}
 
       // Generate report (PDF/Excel)
       const reportBuffer = await generateReportFile(presentation, scheduledReport.formatSettings);
