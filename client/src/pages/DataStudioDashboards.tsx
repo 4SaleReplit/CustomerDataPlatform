@@ -251,14 +251,14 @@ export function DataStudioDashboards() {
                           isSelected ? 'text-blue-600' : 'text-blue-500'
                         }`} />
                         <div className="min-w-0 flex-1">
-                          <h4 className={`font-medium truncate ${
+                          <h4 className={`font-medium ${
                             isSelected ? 'text-blue-900 dark:text-blue-100' : ''
-                          }`}>{folder.name}</h4>
-                          <p className="text-sm text-muted-foreground truncate">
+                          } break-words`}>{folder.name}</h4>
+                          <p className="text-sm text-muted-foreground break-words">
                             {folder.dashboardCount} dashboards • {folder.lastModified}
                           </p>
                           {folder.description && (
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                            <p className="text-xs text-muted-foreground mt-1 break-words line-clamp-2">
                               {folder.description}
                             </p>
                           )}
@@ -318,25 +318,25 @@ export function DataStudioDashboards() {
                       <LayoutDashboard className="h-8 w-8 text-purple-500 flex-shrink-0 mt-1" />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium truncate">{dashboard.name}</h4>
+                          <h4 className="font-medium break-words">{dashboard.name}</h4>
                           {dashboard.isPublic && (
                             <Badge variant="secondary" className="text-xs">Public</Badge>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                        <p className="text-sm text-muted-foreground break-words line-clamp-2 mb-2">
                           {dashboard.description}
                         </p>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
                           <span>{dashboard.tileCount} tiles</span>
                           <span>•</span>
-                          <span>{dashboard.lastModified}</span>
+                          <span className="break-words">{dashboard.lastModified}</span>
                           <span>•</span>
-                          <span>{dashboard.createdBy}</span>
+                          <span className="break-words">{dashboard.createdBy}</span>
                         </div>
                         {dashboard.folderName && (
                           <div className="flex items-center gap-1 mt-2">
                             <Folder className="h-3 w-3" />
-                            <span className="text-xs text-muted-foreground">{dashboard.folderName}</span>
+                            <span className="text-xs text-muted-foreground break-words">{dashboard.folderName}</span>
                           </div>
                         )}
                       </div>

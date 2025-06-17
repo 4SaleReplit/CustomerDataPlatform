@@ -316,7 +316,7 @@ const IntegrationCard = ({ integration, onConfigure, onTest, onPause, onDelete, 
     }
 
     return connectionDetails.length > 0 ? (
-      <div className="mt-2 text-xs text-gray-500 truncate">
+      <div className="mt-2 text-xs text-gray-500 break-words">
         {connectionDetails.join(' • ')}
       </div>
     ) : null;
@@ -331,8 +331,8 @@ const IntegrationCard = ({ integration, onConfigure, onTest, onPause, onDelete, 
               <Icon className={`h-5 w-5 text-${template?.color || 'gray'}-600`} />
             </div>
             <div className="min-w-0 flex-1">
-              <CardTitle className="text-lg font-semibold truncate">{integration.name}</CardTitle>
-              <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{integration.description}</p>
+              <CardTitle className="text-lg font-semibold break-words">{integration.name}</CardTitle>
+              <p className="text-sm text-muted-foreground mt-0.5 break-words line-clamp-2">{integration.description}</p>
               {renderConnectionInfo()}
             </div>
           </div>
