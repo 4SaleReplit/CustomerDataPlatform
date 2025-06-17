@@ -19,17 +19,28 @@ npm run dev
 4. Deploy with Autoscale for production traffic
 
 #### Option 2: Docker Deployment
+
+**Fix for "Vite requires" error:**
+The issue you encountered was caused by the original build trying to use Vite in production. Use the dedicated production server instead:
+
 ```bash
-# Build the frontend
+# Method 1: Use the build script (recommended)
+./build-docker.sh
+
+# Method 2: Manual build process
 npm run build
+npx esbuild server/production-server.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --target=node18
+docker build -t cdp-platform .
+docker run -p 5000:5000 --env-file .env cdp-platform
 
-# Build and run with Docker
-docker build -t cdp-app .
-docker run -p 5000:5000 --env-file .env cdp-app
-
-# Or use the dedicated production server
+# Method 3: Direct production server (no Docker)
 NODE_ENV=production tsx server/production-server.ts
 ```
+
+**Key changes that fix the Vite issue:**
+- Uses `server/production-server.ts` instead of `server/index.ts`
+- Eliminates all Vite dependencies in production
+- Properly serves static files without development tools
 
 ## Architecture
 
