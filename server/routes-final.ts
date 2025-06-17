@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer } from "ws";
 import { storage } from "./storage";
 import { insertIntegrationSchema, type InsertIntegration } from "@shared/schema";
+import bcrypt from "bcrypt";
 import * as BrazeModule from "./services/braze";
 import { s3Storage } from "./services/s3Storage";
 import { db } from "./db";
@@ -14,7 +15,6 @@ import {
   environmentConfigurations, insertEnvironmentConfigurationSchema,
   scheduledReports, mailingLists, reportExecutions
 } from "@shared/schema";
-import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -25,6 +25,172 @@ const activeCronJobs = new Map<string, any>();
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const server = createServer(app);
+
+  // Health check endpoint
+  app.get("/health", (req: Request, res: Response) => {
+    res.status(200).json({ 
+      status: "healthy", 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
+  });
+
+  // Authentication routes
+  app.post("/api/auth/login", async (req: Request, res: Response) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password are required" });
+      }
+
+      // Check if it's a team member login
+      const teamMember = await storage.getTeamMemberByEmail(username);
+      if (teamMember) {
+        const isValid = await bcrypt.compare(password, teamMember.passwordHash);
+        if (isValid) {
+          return res.json({
+            id: teamMember.id,
+            username: teamMember.email,
+            email: teamMember.email,
+            role: teamMember.role,
+            firstName: teamMember.firstName,
+            lastName: teamMember.lastName,
+            tempPassword: teamMember.temporaryPassword,
+            mustChangePassword: teamMember.mustChangePassword
+          });
+        }
+      }
+
+      // Check regular users table
+      const user = await storage.getUserByUsername(username);
+      if (user && user.password === password) {
+        return res.json({
+          id: user.id.toString(),
+          username: user.username,
+          email: user.username + '@company.com',
+          role: user.username === 'admin' ? 'administrator' : 'user'
+        });
+      }
+
+      res.status(401).json({ error: "Invalid credentials" });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  // Team management endpoints
+  app.post("/api/team", async (req: Request, res: Response) => {
+    try {
+      const { insertTeamSchema } = await import('../shared/schema');
+      const validatedData = insertTeamSchema.parse(req.body);
+      const teamMember = await storage.createTeamMember(validatedData);
+      res.status(201).json(teamMember);
+    } catch (error) {
+      console.error("Create team member error:", error);
+      res.status(400).json({ 
+        error: error instanceof Error ? error.message : "Failed to create team member" 
+      });
+    }
+  });
+
+  app.get("/api/team", async (req: Request, res: Response) => {
+    try {
+      const team = await storage.getTeam();
+      res.json(team);
+    } catch (error) {
+      console.error("Get team error:", error);
+      res.status(500).json({ error: "Failed to fetch team" });
+    }
+  });
+
+  // Roles management
+  app.get("/api/roles", async (req: Request, res: Response) => {
+    try {
+      const roles = await storage.getRoles();
+      res.json(roles);
+    } catch (error) {
+      console.error("Get roles error:", error);
+      res.status(500).json({ error: "Failed to fetch roles" });
+    }
+  });
+
+  // Environment configurations
+  app.get("/api/environment-configurations", async (req: Request, res: Response) => {
+    try {
+      const configs = await storage.getEnvironmentConfigurations();
+      res.json(configs);
+    } catch (error) {
+      console.error("Get environment configurations error:", error);
+      res.status(500).json({ error: "Failed to fetch environment configurations" });
+    }
+  });
+
+  // Dashboard tile management endpoints
+  app.post("/api/dashboard/tiles", async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertDashboardTileInstanceSchema.parse(req.body);
+      const tile = await storage.createDashboardTileInstance(validatedData);
+      res.status(201).json(tile);
+    } catch (error) {
+      console.error("Create dashboard tile error:", error);
+      res.status(400).json({ 
+        error: error instanceof Error ? error.message : "Failed to create dashboard tile" 
+      });
+    }
+  });
+
+  app.put("/api/dashboard/tiles/:tileId", async (req: Request, res: Response) => {
+    try {
+      const { tileId } = req.params;
+      const updates = req.body;
+      
+      console.log(`Updating tile ${tileId} with lastRefreshAt:`, updates.lastRefreshAt);
+      
+      const tile = await storage.updateDashboardTileInstance(tileId, updates);
+      if (!tile) {
+        return res.status(404).json({ error: "Dashboard tile not found" });
+      }
+      
+      console.log(`Tile ${tileId} updated successfully with lastRefreshAt:`, tile.lastRefreshAt);
+      res.json(tile);
+    } catch (error) {
+      console.error("Update dashboard tile error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to update dashboard tile" 
+      });
+    }
+  });
+
+  app.delete("/api/dashboard/tiles/:tileId", async (req: Request, res: Response) => {
+    try {
+      const { tileId } = req.params;
+      const success = await storage.deleteDashboardTileInstance(tileId);
+      if (!success) {
+        return res.status(404).json({ error: "Dashboard tile not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Delete dashboard tile error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to delete dashboard tile" 
+      });
+    }
+  });
+
+  app.post("/api/dashboard/save-layout", async (req: Request, res: Response) => {
+    try {
+      const { tiles } = req.body;
+      await storage.saveDashboardLayout(tiles);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Save dashboard layout error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to save dashboard layout" 
+      });
+    }
+  });
 
   // Scheduled Reports API Endpoints
   app.get("/api/scheduled-reports", async (req: Request, res: Response) => {
