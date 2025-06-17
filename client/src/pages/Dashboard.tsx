@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw, Settings, X, Save, Plus } from 'lucide-react';
 import { DashboardBuilder, type DashboardTile } from '@/components/dashboard/DashboardBuilder';
-import { TileEditDialog } from '@/components/dashboard/TileEditDialog';
 import { AddTileDialog } from '@/components/dashboard/AddTileDialog';
 
 
@@ -128,7 +127,6 @@ function Dashboard() {
   // State management
   const [tiles, setTiles] = useState<DashboardTile[]>(initialTiles);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editingTile, setEditingTile] = useState<DashboardTile | null>(null);
   const [editTileForDialog, setEditTileForDialog] = useState<DashboardTile | null>(null);
 
 
