@@ -22,6 +22,10 @@ import { nanoid } from "nanoid";
 import { Pool } from "pg";
 import Redis from "ioredis";
 import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import cron from "node-cron";
+
+// Store active cron jobs
+const activeCronJobs = new Map<string, any>();
 
 // Global migration progress tracking
 const migrationSessions = new Map();
@@ -4093,17 +4097,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const reportData = req.body;
       
-      // Calculate next execution based on cron expression
+      // Calculate next execution based on cron expression and timezone
       const nextExecution = calculateNextExecution(reportData.cronExpression, reportData.timezone);
       
       const scheduledReport = await storage.createScheduledReport({
         ...reportData,
         nextExecution,
-        createdBy: req.session.user?.id
+        executionCount: 0,
+        errorCount: 0,
+        successCount: 0,
+        lastExecutionAt: null,
+        lastError: null,
+        createdBy: req.session?.user?.id || 'system'
       });
       
+      // Schedule the actual cron job
+      if (scheduledReport.isActive && scheduledReport.cronExpression) {
+        scheduleReportJob(scheduledReport);
+      }
+      
       // Create Airflow DAG if configured
-      await createOrUpdateAirflowDAG(scheduledReport);
+      if (scheduledReport.airflowDagId) {
+        await createOrUpdateAirflowDAG(scheduledReport);
+      }
       
       res.status(201).json(scheduledReport);
     } catch (error) {
@@ -4256,6 +4272,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Helper functions for scheduler functionality
+  // Function to schedule a real cron job for a report
+  function scheduleReportJob(scheduledReport: any) {
+    const jobId = scheduledReport.id;
+    
+    // Cancel existing job if it exists
+    if (activeCronJobs.has(jobId)) {
+      activeCronJobs.get(jobId).destroy();
+    }
+    
+    try {
+      const task = cron.schedule(scheduledReport.cronExpression, async () => {
+        console.log(`Executing scheduled report: ${scheduledReport.name}`);
+        try {
+          await executeScheduledReport(scheduledReport);
+          
+          // Update execution metadata
+          await storage.updateScheduledReport(jobId, {
+            executionCount: (scheduledReport.executionCount || 0) + 1,
+            lastExecutionAt: new Date(),
+            nextExecution: calculateNextExecution(scheduledReport.cronExpression, scheduledReport.timezone)
+          });
+        } catch (error) {
+          console.error(`Error executing scheduled report ${scheduledReport.name}:`, error);
+          
+          // Update error metadata
+          await storage.updateScheduledReport(jobId, {
+            executionCount: (scheduledReport.executionCount || 0) + 1,
+            errorCount: (scheduledReport.errorCount || 0) + 1,
+            lastExecutionAt: new Date(),
+            lastError: error instanceof Error ? error.message : 'Unknown error',
+            nextExecution: calculateNextExecution(scheduledReport.cronExpression, scheduledReport.timezone)
+          });
+        }
+      }, {
+        scheduled: false,
+        timezone: scheduledReport.timezone || 'Africa/Cairo'
+      });
+      
+      task.start();
+      activeCronJobs.set(jobId, task);
+      
+      console.log(`Scheduled cron job for report: ${scheduledReport.name} with expression: ${scheduledReport.cronExpression}`);
+    } catch (error) {
+      console.error(`Error scheduling cron job for report ${scheduledReport.name}:`, error);
+    }
+  }
+
   function calculateNextExecution(cronExpression: string, timezone: string = 'UTC'): Date {
     const cronParser = require('cron-parser');
     try {
