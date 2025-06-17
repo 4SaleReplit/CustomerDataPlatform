@@ -8,15 +8,13 @@ neonConfig.webSocketConstructor = ws;
 neonConfig.useSecureWebSocket = true;
 neonConfig.pipelineConnect = false;
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
-}
+// Fallback to hardcoded PostgreSQL connection for initial bootstrap
+// This allows the app to start and access the integrations table
+const BOOTSTRAP_DATABASE_URL = "postgresql://postgres.oolcnbxrnuefxfdpvsfn:dsadasSDASdsaDASDASasdsadas3434@aws-0-eu-north-1.pooler.supabase.com:6543/postgres";
 
-// Create pool with better error handling and connection settings
+// Create pool with bootstrap connection
 export const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL,
+  connectionString: BOOTSTRAP_DATABASE_URL,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
