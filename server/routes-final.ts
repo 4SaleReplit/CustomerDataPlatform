@@ -727,5 +727,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Amplitude sync endpoint
+  app.post("/api/cohorts/:id/sync-amplitude", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { ownerEmail = "data-team@yourcompany.com" } = req.body;
+      
+      console.log(`Starting Amplitude sync for cohort ${id} with owner ${ownerEmail}`);
+      
+      // Get cohort details
+      const cohort = await storage.getCohort(id);
+      if (!cohort) {
+        return res.status(404).json({ error: "Cohort not found" });
+      }
+
+      // Execute the cohort query to get user IDs
+      if (!cohort.calculationQuery) {
+        return res.status(400).json({ error: "Cohort has no calculation query" });
+      }
+
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const dynamicService = await getDynamicSnowflakeService();
+      
+      if (!dynamicService) {
+        return res.status(400).json({ 
+          error: "Snowflake integration not configured",
+          details: "Please configure a Snowflake integration in the Integrations page"
+        });
+      }
+
+      console.log(`Executing cohort query: ${cohort.calculationQuery}`);
+      const queryResult = await dynamicService.executeQuery(cohort.calculationQuery);
+      if (!queryResult.success) {
+        console.error("Cohort query failed:", queryResult.error);
+        return res.status(500).json({ error: "Failed to execute cohort query" });
+      }
+
+      // Extract user IDs from query result
+      const userIds = queryResult.rows.map(row => row[0]?.toString()).filter(Boolean);
+      console.log(`Found ${userIds.length} user IDs for cohort sync`);
+      
+      // Sync to Amplitude
+      const { amplitudeService } = await import('./services/amplitude');
+      console.log(`Syncing cohort "${cohort.name}" to Amplitude...`);
+      const syncResult = await amplitudeService.syncCohort(cohort.name, userIds, ownerEmail);
+
+      if (syncResult.success) {
+        console.log(`Amplitude sync successful, cohort ID: ${syncResult.cohortId}`);
+        // Update cohort sync status
+        await storage.updateCohort(id, { 
+          syncStatus: 'synced',
+          lastSyncedAt: new Date(),
+          amplitudeCohortId: syncResult.cohortId
+        });
+
+        res.json({ 
+          message: "Successfully synced to Amplitude",
+          amplitudeCohortId: syncResult.cohortId,
+          syncedUserCount: userIds.length
+        });
+      } else {
+        console.error("Amplitude sync failed:", syncResult.error);
+        res.status(500).json({ 
+          error: `Amplitude sync failed: ${syncResult.error}` 
+        });
+      }
+
+    } catch (error) {
+      console.error("Amplitude sync error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to sync to Amplitude" 
+      });
+    }
+  });
+
   return server;
 }
