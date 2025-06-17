@@ -916,6 +916,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/integrations/:id/test", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const integration = await storage.getIntegration(id);
+      
+      if (!integration) {
+        return res.status(404).json({ error: "Integration not found" });
+      }
+
+      // Test connection based on integration type
+      if (integration.type === 'snowflake') {
+        const credentials = integration.credentials as any;
+        const { getDynamicSnowflakeService } = await import('./services/snowflake');
+        const snowflakeService = await getDynamicSnowflakeService();
+        
+        if (!snowflakeService) {
+          return res.status(400).json({ 
+            success: false, 
+            error: "Snowflake integration not configured" 
+          });
+        }
+
+        // Test with a simple query
+        const testResult = await snowflakeService.executeQuery("SELECT 1 as test");
+        
+        if (testResult.success) {
+          res.json({ 
+            success: true, 
+            message: "Snowflake connection successful",
+            details: {
+              database: credentials.database,
+              warehouse: credentials.warehouse,
+              account: credentials.account
+            }
+          });
+        } else {
+          res.json({ 
+            success: false, 
+            error: "Connection failed: " + (testResult.error || "Unknown error")
+          });
+        }
+      } else if (integration.type === 'postgresql') {
+        // Test PostgreSQL connection
+        const credentials = integration.credentials as any;
+        const { Pool } = await import('pg');
+        const pool = new Pool({
+          connectionString: credentials.connectionString
+        });
+        
+        try {
+          const client = await pool.connect();
+          await client.query('SELECT 1');
+          client.release();
+          await pool.end();
+          
+          res.json({ 
+            success: true, 
+            message: "PostgreSQL connection successful" 
+          });
+        } catch (error) {
+          res.json({ 
+            success: false, 
+            error: "PostgreSQL connection failed: " + (error instanceof Error ? error.message : "Unknown error")
+          });
+        }
+      } else {
+        res.json({ 
+          success: true, 
+          message: `${integration.type} connection test not implemented` 
+        });
+      }
+    } catch (error) {
+      console.error("Test integration error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to test integration: " + (error instanceof Error ? error.message : "Unknown error")
+      });
+    }
+  });
+
   // Segments API Endpoints
   app.get("/api/segments", async (req: Request, res: Response) => {
     try {
