@@ -49,10 +49,17 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
     queryKey: ['/api/dashboard/tiles', tile.databaseId || tile.id, 'data'],
     queryFn: async () => {
       const tileIdForApi = tile.databaseId || tile.id;
+      const requestBody: any = {};
+      
+      // For temporary tiles, include the query in the request
+      if (tileIdForApi.startsWith('tile-') && tile.dataSource?.query) {
+        requestBody.query = tile.dataSource.query;
+      }
+      
       const response = await apiRequest(`/api/dashboard/tiles/${tileIdForApi}/data`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
+        body: JSON.stringify(requestBody)
       });
       const timestamp = new Date();
       setLastRefreshTime(timestamp);

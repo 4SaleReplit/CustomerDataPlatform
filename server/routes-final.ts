@@ -336,12 +336,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/dashboard/tiles/:tileId/data", async (req: Request, res: Response) => {
     try {
       const { tileId } = req.params;
-      const tile = await storage.getDashboardTiles().then(tiles => 
-        tiles.find(t => t.id === tileId)
-      );
+      
+      // For temporary tiles (not yet saved), use the query from request body
+      if (tileId.startsWith('tile-')) {
+        const { query } = req.body;
+        if (!query) {
+          return res.status(400).json({ error: "Query is required for temporary tiles" });
+        }
+
+        // Execute the Snowflake query directly
+        const { getDynamicSnowflakeService } = await import('./services/snowflake');
+        const dynamicService = await getDynamicSnowflakeService();
+        
+        if (!dynamicService) {
+          return res.status(400).json({ 
+            error: "Snowflake integration not configured",
+            details: "Please configure a Snowflake integration in the Integrations page"
+          });
+        }
+
+        const result = await dynamicService.executeQuery(query);
+        
+        if (!result.success) {
+          return res.status(400).json({ 
+            error: result.error,
+            query: query 
+          });
+        }
+
+        return res.json({
+          columns: result.columns,
+          rows: result.rows,
+          success: true,
+          tileId: tileId,
+          query: query
+        });
+      }
+
+      // For saved tiles, look up from database
+      const tiles = await storage.getDashboardTiles();
+      const tile = tiles.find(t => t.id === tileId || t.tileId === tileId);
       
       if (!tile) {
-        return res.status(404).json({ error: "Dashboard tile not found" });
+        return res.status(404).json({ error: `Dashboard tile not found: ${tileId}` });
       }
 
       const dataSource = tile.dataSource as Record<string, any>;

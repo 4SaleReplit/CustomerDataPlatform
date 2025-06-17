@@ -20,6 +20,7 @@ interface AddTileDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (tile: DashboardTile) => void;
+  editTile?: DashboardTile | null;
 }
 
 const TILE_TYPES = [
@@ -363,9 +364,8 @@ export function AddTileDialog({ isOpen, onClose, onSave }: AddTileDialogProps) {
         
         <div className="flex-1 overflow-hidden">
           <Tabs value={currentTab} onValueChange={setCurrentTab} className="h-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="query">SQL Query</TabsTrigger>
-              <TabsTrigger value="preview">Data Preview</TabsTrigger>
               <TabsTrigger value="visualization">Visualization</TabsTrigger>
             </TabsList>
 
@@ -443,12 +443,14 @@ export function AddTileDialog({ isOpen, onClose, onSave }: AddTileDialogProps) {
                           <strong>Error:</strong> {executionError}
                         </div>
                       ) : queryResult.length > 0 ? (
-                        <ScrollArea className="h-full">
-                          <TableComponent>
-                            <TableHeader>
+                        <div className="h-full overflow-auto">
+                          <TableComponent className="min-w-full">
+                            <TableHeader className="sticky top-0 z-10 bg-background">
                               <TableRow>
                                 {Object.keys(queryResult[0] || {}).map((column) => (
-                                  <TableHead key={column}>{column}</TableHead>
+                                  <TableHead key={column} className="whitespace-nowrap px-4 py-2 font-semibold bg-muted">
+                                    {column}
+                                  </TableHead>
                                 ))}
                               </TableRow>
                             </TableHeader>
@@ -456,7 +458,7 @@ export function AddTileDialog({ isOpen, onClose, onSave }: AddTileDialogProps) {
                               {queryResult.slice(0, 10).map((row, idx) => (
                                 <TableRow key={idx}>
                                   {Object.values(row).map((value, colIdx) => (
-                                    <TableCell key={colIdx}>
+                                    <TableCell key={colIdx} className="whitespace-nowrap px-4 py-2">
                                       {value?.toString() || 'NULL'}
                                     </TableCell>
                                   ))}
@@ -465,11 +467,11 @@ export function AddTileDialog({ isOpen, onClose, onSave }: AddTileDialogProps) {
                             </TableBody>
                           </TableComponent>
                           {queryResult.length > 10 && (
-                            <div className="p-2 text-sm text-muted-foreground text-center">
+                            <div className="p-2 text-sm text-muted-foreground text-center bg-background border-t sticky bottom-0">
                               Showing first 10 rows of {queryResult.length} total rows
                             </div>
                           )}
-                        </ScrollArea>
+                        </div>
                       ) : (
                         <div className="p-4 text-muted-foreground">
                           No data returned from query
