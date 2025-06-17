@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { RefreshCw, Settings, X, Save, Plus } from 'lucide-react';
 import { DashboardBuilder, type DashboardTile } from '@/components/dashboard/DashboardBuilder';
 import { TileEditDialog } from '@/components/dashboard/TileEditDialog';
+import { AddTileDialog } from '@/components/dashboard/AddTileDialog';
 
 
 import { useToast } from '@/hooks/use-toast';
@@ -128,6 +129,7 @@ function Dashboard() {
   const [tiles, setTiles] = useState<DashboardTile[]>(initialTiles);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingTile, setEditingTile] = useState<DashboardTile | null>(null);
+  const [editTileForDialog, setEditTileForDialog] = useState<DashboardTile | null>(null);
 
 
   const [isLoaded, setIsLoaded] = useState(false);
@@ -175,14 +177,14 @@ function Dashboard() {
   }, []);
 
   const handleEditTile = (tile: DashboardTile) => {
-    setEditingTile(tile);
+    setEditTileForDialog(tile);
   };
 
   const handleSaveEditedTile = (updatedTile: DashboardTile) => {
     setTiles(prev => prev.map(tile => 
       tile.id === updatedTile.id ? updatedTile : tile
     ));
-    setEditingTile(null);
+    setEditTileForDialog(null);
     
     toast({
       title: "Tile Updated",
@@ -466,12 +468,12 @@ function Dashboard() {
           </div>
 
           {/* Edit Dialog */}
-          {editingTile && (
-            <TileEditDialog
-              tile={editingTile}
-              isOpen={!!editingTile}
-              onClose={() => setEditingTile(null)}
+          {editTileForDialog && (
+            <AddTileDialog
+              isOpen={!!editTileForDialog}
+              onClose={() => setEditTileForDialog(null)}
               onSave={handleSaveEditedTile}
+              editTile={editTileForDialog}
             />
           )}
         </div>
