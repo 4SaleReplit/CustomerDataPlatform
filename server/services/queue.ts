@@ -2,7 +2,7 @@ import Bull from 'bull';
 import { db } from '../db';
 import { campaignJobs, campaigns, cohorts } from '../../shared/schema';
 import { eq } from 'drizzle-orm';
-import { snowflakeService } from './snowflake';
+import { SnowflakeService } from './snowflake';
 
 // Initialize Redis queue with error handling
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
@@ -100,7 +100,7 @@ async function processCampaign(campaignId: string, cohortId: string, upsellItems
     }
     
     // Process each user in the cohort
-    const userIds = queryResult.rows.map(row => row[0]); // Assuming USER_ID is the first column
+    const userIds = queryResult.rows.map((row: any) => row[0]); // Assuming USER_ID is the first column
     
     for (const userId of userIds) {
       const recommendation = createUpsellRecommendation(userId, upsellItems);

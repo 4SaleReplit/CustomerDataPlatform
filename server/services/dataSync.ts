@@ -1,4 +1,4 @@
-import { snowflakeService } from './snowflake';
+import { SnowflakeService } from './snowflake';
 
 interface UserProfile {
   userId: string;
@@ -88,13 +88,14 @@ export class DataSyncService {
       LIMIT 1000
     `;
 
+    const snowflakeService = new SnowflakeService();
     const result = await snowflakeService.executeQuery(query);
     
     if (!result.success || !result.rows) {
       throw new Error('Failed to fetch base user data from Snowflake');
     }
 
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
       userId: String(row[0]),
       email: row[1],
       firstName: row[2],
@@ -322,7 +323,8 @@ export class DataSyncService {
       )
     `;
 
-    await snowflakeService.executeQuery(createTableQuery);
+    const snowflakeService2 = new SnowflakeService();
+    await snowflakeService2.executeQuery(createTableQuery);
 
     // Insert enriched user data
     for (const user of users) {

@@ -70,7 +70,7 @@ export class AmplitudeService {
       
       return {
         success: true,
-        cohortId: result.cohort_id || result.id,
+        cohortId: (result as any).cohort_id || (result as any).id,
       };
 
     } catch (error) {
