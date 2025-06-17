@@ -197,9 +197,12 @@ export function ReportsScheduler() {
     mutationFn: (data: any) => {
       // Auto-generate Airflow configuration based on form data
       const airflowConfig = generateAirflowConfiguration(data);
-      return apiRequest("/api/scheduled-reports", "POST", {
-        ...data,
-        airflowConfiguration: airflowConfig
+      return apiRequest("/api/scheduled-reports", {
+        method: "POST",
+        body: JSON.stringify({
+          ...data,
+          airflowConfiguration: airflowConfig
+        })
       });
     },
     onSuccess: () => {
@@ -216,7 +219,10 @@ export function ReportsScheduler() {
   // Update scheduled report mutation
   const updateReportMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => 
-      apiRequest(`/api/scheduled-reports/${id}`, "PATCH", data),
+      apiRequest(`/api/scheduled-reports/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data)
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/scheduled-reports"] });
       setIsEditDialogOpen(false);
@@ -230,7 +236,7 @@ export function ReportsScheduler() {
 
   // Delete scheduled report mutation
   const deleteReportMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/scheduled-reports/${id}`, "DELETE"),
+    mutationFn: (id: string) => apiRequest(`/api/scheduled-reports/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/scheduled-reports"] });
       toast({ title: "Scheduled report deleted successfully" });

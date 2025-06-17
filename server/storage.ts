@@ -691,7 +691,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteUploadedImage(id: string): Promise<boolean> {
     const result = await db.delete(uploadedImages).where(eq(uploadedImages.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   // Slide management methods
@@ -720,7 +720,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSlide(id: string): Promise<boolean> {
     const result = await db.delete(slides).where(eq(slides.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   // Presentation management methods
@@ -749,7 +749,7 @@ export class DatabaseStorage implements IStorage {
 
   async deletePresentation(id: string): Promise<boolean> {
     const result = await db.delete(presentations).where(eq(presentations.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   // Migration History methods
@@ -872,7 +872,7 @@ export class DatabaseStorage implements IStorage {
   async updateReportExecution(id: string, updates: Partial<InsertReportExecution>): Promise<ReportExecution | undefined> {
     const [execution] = await db
       .update(reportExecutions)
-      .set({ ...updates, updatedAt: new Date() })
+      .set(updates)
       .where(eq(reportExecutions.id, id))
       .returning();
     return execution || undefined;
