@@ -332,6 +332,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Dashboard tile data loading endpoint
+  app.post("/api/dashboard/tiles/:tileId/data", async (req: Request, res: Response) => {
+    try {
+      const { tileId } = req.params;
+      const tile = await storage.getDashboardTiles().then(tiles => 
+        tiles.find(t => t.id === tileId)
+      );
+      
+      if (!tile) {
+        return res.status(404).json({ error: "Dashboard tile not found" });
+      }
+
+      const dataSource = tile.dataSource as Record<string, any>;
+      if (!dataSource?.query) {
+        return res.status(400).json({ error: "No query configured for this tile" });
+      }
+
+      // Execute the Snowflake query
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const dynamicService = await getDynamicSnowflakeService();
+      
+      if (!dynamicService) {
+        return res.status(400).json({ 
+          error: "Snowflake integration not configured",
+          details: "Please configure a Snowflake integration in the Integrations page"
+        });
+      }
+
+      const result = await dynamicService.executeQuery(dataSource.query);
+      
+      if (!result.success) {
+        return res.status(400).json({ 
+          error: result.error,
+          query: dataSource.query 
+        });
+      }
+
+      res.json({
+        columns: result.columns,
+        rows: result.rows,
+        success: true,
+        tileId: tileId,
+        query: dataSource.query
+      });
+    } catch (error) {
+      console.error("Dashboard tile data loading error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to load tile data" 
+      });
+    }
+  });
+
   // Airflow Test Connection
   app.post("/api/airflow/test-connection", async (req: Request, res: Response) => {
     try {
