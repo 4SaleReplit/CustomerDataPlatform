@@ -323,7 +323,7 @@ function Dashboard() {
             body: JSON.stringify(requestBody)
           });
           
-          console.log(`Tile ${tile.title} refreshed successfully`);
+          console.log(`Tile ${tile.title} refreshed successfully`, 'lastRefreshAt:', response.lastRefreshAt);
           
           // Store refreshed data in localStorage for caching
           localStorage.setItem(`tile-${tile.id}-data`, JSON.stringify(response));
@@ -331,6 +331,15 @@ function Dashboard() {
           // Invalidate the query cache to force re-render
           const queryKey = ['/api/dashboard/tiles', tileIdForApi, 'data'];
           queryClient.setQueryData(queryKey, response);
+          
+          // Update the tile in state with the new timestamp
+          if (response.lastRefreshAt) {
+            setTiles(prevTiles => 
+              prevTiles.map(t => 
+                t.id === tile.id ? { ...t, lastRefreshAt: response.lastRefreshAt } : t
+              )
+            );
+          }
           
           return response;
         } catch (error) {

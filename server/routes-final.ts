@@ -369,7 +369,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           rows: result.rows,
           success: true,
           tileId: tileId,
-          query: query
+          query: query,
+          lastRefreshAt: new Date().toISOString()
         });
       }
 
@@ -407,10 +408,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update the tile's last refresh timestamp in the database
+      const refreshTimestamp = new Date();
       try {
-        await storage.updateTileLastRefresh(tileId, new Date());
+        console.log(`Updating last refresh timestamp for tile ${tileId}`);
+        await storage.updateTileLastRefresh(tileId, refreshTimestamp);
+        console.log(`Successfully updated timestamp for tile ${tileId}`);
       } catch (error) {
-        console.warn(`Failed to update last refresh timestamp for tile ${tileId}:`, error);
+        console.error(`Failed to update last refresh timestamp for tile ${tileId}:`, error);
       }
 
       res.json({
@@ -419,7 +423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         tileId: tileId,
         query: dataSource.query,
-        lastRefreshAt: new Date().toISOString()
+        lastRefreshAt: refreshTimestamp.toISOString()
       });
     } catch (error) {
       console.error("Dashboard tile data loading error:", error);
