@@ -300,7 +300,7 @@ export function CodeMirrorSQLEditor({ value, onChange, placeholder, className, o
       if (!line) return '';
       
       // Use precise tokenization with comprehensive pattern matching
-      const tokens = [];
+      const tokens: string[] = [];
       let remaining = line;
       
       while (remaining) {

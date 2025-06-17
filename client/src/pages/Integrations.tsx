@@ -302,7 +302,7 @@ const IntegrationCard = ({ integration, onConfigure, onTest, onPause, onDelete, 
   const renderConnectionInfo = () => {
     if (!metadata) return null;
 
-    const connectionDetails = [];
+    const connectionDetails: string[] = [];
     
     if (metadata.database) {
       connectionDetails.push(`DB: ${metadata.database}`);

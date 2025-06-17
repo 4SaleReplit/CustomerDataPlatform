@@ -76,7 +76,7 @@ const applySyntaxHighlighting = (text: string): string => {
 
   // Sort tokens by start position and remove overlaps
   tokens.sort((a, b) => a.start - b.start);
-  const nonOverlappingTokens = [];
+  const nonOverlappingTokens: Array<{start: number; end: number; className: string}> = [];
   for (const token of tokens) {
     if (nonOverlappingTokens.length === 0 || token.start >= nonOverlappingTokens[nonOverlappingTokens.length - 1].end) {
       nonOverlappingTokens.push(token);

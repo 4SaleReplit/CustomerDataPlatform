@@ -1,0 +1,367 @@
+PS D:\Projects\CustomerDataPlatform> npx tsc
+client/src/components/dashboard/CodeMirrorSQLEditor.tsx:312:23 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+312           tokens.push(`<span style="color: ${tokenColors.comment}; font-style: italic;">${commentMatch[0]}</span>`);
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/CodeMirrorSQLEditor.tsx:321:25 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+321             tokens.push(`<span style="color: ${tokenColors.string};">${stringMatch[0]}</span>`);
+                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/CodeMirrorSQLEditor.tsx:331:25 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+331             tokens.push(`<span style="color: ${tokenColors.string};">${doubleStringMatch[0]}</span>`);
+                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/CodeMirrorSQLEditor.tsx:341:25 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+341             tokens.push(`<span style="color: ${tokenColors.null}; font-weight: 600;">${nullMatch[0]}</span>`);
+                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/CodeMirrorSQLEditor.tsx:351:25 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+351             tokens.push(`<span style="color: ${tokenColors.boolean}; font-weight: 600;">${boolMatch[0]}</span>`);
+                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/CodeMirrorSQLEditor.tsx:361:25 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+361             tokens.push(`<span style="color: ${tokenColors.ddlKeyword}; font-weight: 700;">${ddlMatch[0]}</span>`);
+                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/CodeMirrorSQLEditor.tsx:371:25 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+371             tokens.push(`<span style="color: ${tokenColors.dmlKeyword}; font-weight: 600;">${dmlMatch[0]}</span>`);
+                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/CodeMirrorSQLEditor.tsx:381:25 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+381             tokens.push(`<span style="color: ${tokenColors.transactionKeyword}; font-weight: 600;">${transactionMatch[0]}</span>`);
+                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/CodeMirrorSQLEditor.tsx:391:25 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+391             tokens.push(`<span style="color: ${tokenColors.primaryKeyword}; font-weight: 600;">${primaryMatch[0]}</span>`);
+                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/CodeMirrorSQLEditor.tsx:401:25 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+401             tokens.push(`<span style="color: ${tokenColors.clauseKeyword}; font-weight: 500;">${clauseMatch[0]}</span>`);
+                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/CodeMirrorSQLEditor.tsx:411:25 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+411             tokens.push(`<span style="color: ${tokenColors.function}; font-weight: 500;">${functionMatch[0]}</span>`);
+                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/CodeMirrorSQLEditor.tsx:421:25 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+421             tokens.push(`<span style="color: ${tokenColors.datatype}; font-weight: 500;">${datatypeMatch[0]}</span>`);
+                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/CodeMirrorSQLEditor.tsx:431:25 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+431             tokens.push(`<span style="color: ${tokenColors.number};">${numberMatch[0]}</span>`);
+                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/CodeMirrorSQLEditor.tsx:441:25 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+441             tokens.push(`<span style="color: ${tokenColors.operator};">${operatorMatch[0]}</span>`);
+                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/CodeMirrorSQLEditor.tsx:451:25 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+451             tokens.push(`<span style="color: ${tokenColors.punctuation};">${punctuationMatch[0]}</span>`);
+                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/CodeMirrorSQLEditor.tsx:459:23 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+459           tokens.push(remaining.charAt(0));
+                          ~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/SQLEditor.tsx:119:18 - error TS2345: Argument of type '{ type: string; label: string; icon: React.ForwardRefExoticComponent<Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>>; }' is not assignable to parameter of type 'never'.
+
+119     options.push({ type: 'table', label: 'Table View', icon: TableIcon });
+                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/SQLEditor.tsx:124:22 - error TS2345: Argument of type '{ type: string; label: string; icon: React.ForwardRefExoticComponent<Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>>; }' is not assignable to parameter of type 'never'.
+
+124         options.push({ type: 'bar', label: 'Bar Chart', icon: BarChart3 });
+                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/SQLEditor.tsx:125:22 - error TS2345: Argument of type '{ type: string; label: string; icon: React.ForwardRefExoticComponent<Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>>; }' is not assignable to parameter of type 'never'.
+
+125         options.push({ type: 'pie', label: 'Pie Chart', icon: PieChart });
+                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/SQLEditor.tsx:134:22 - error TS2345: Argument of type '{ type: string; label: string; icon: React.ForwardRefExoticComponent<Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>>; }' is not assignable to parameter of type 'never'.
+
+134         options.push({ type: 'line', label: 'Line Chart', icon: LineChart });
+                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/SQLEditor.tsx:139:22 - error TS2345: Argument of type '{ type: string; label: string; icon: React.ForwardRefExoticComponent<Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>>; }' is not assignable to parameter of type 'never'.
+
+139         options.push({ type: 'metric', label: 'Metric Card', icon: TrendingUp });
+                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/dashboard/SQLEditor.tsx:348:43 - error TS2339: Property 'icon' does not exist on type 'never'.
+
+348                       const Icon = option.icon;
+                                              ~~~~
+
+client/src/components/dashboard/SQLEditor.tsx:350:50 - error TS2339: Property 'type' does not exist on type 'never'.
+
+350                         <TabsTrigger key={option.type} value={option.type} className="flex items-center">
+                                                     ~~~~
+
+client/src/components/dashboard/SQLEditor.tsx:350:70 - error TS2339: Property 'type' does not exist on type 'never'.
+
+350                         <TabsTrigger key={option.type} value={option.type} className="flex items-center">
+                                                                         ~~~~
+
+client/src/components/dashboard/SQLEditor.tsx:352:35 - error TS2339: Property 'label' does not exist on type 'never'.
+
+352                           {option.label}
+                                      ~~~~~
+
+client/src/components/dashboard/SQLEditor.tsx:393:46 - error TS2339: Property 'type' does not exist on type 'never'.
+
+393                     .filter(option => option.type !== 'table')
+                                                 ~~~~
+
+client/src/components/dashboard/SQLEditor.tsx:395:48 - error TS2339: Property 'type' does not exist on type 'never'.
+
+395                       <TabsContent key={option.type} value={option.type} className="flex-1">
+                                                   ~~~~
+
+client/src/components/dashboard/SQLEditor.tsx:395:68 - error TS2339: Property 'type' does not exist on type 'never'.
+
+395                       <TabsContent key={option.type} value={option.type} className="flex-1">
+                                                                       ~~~~
+
+client/src/components/dashboard/SQLEditor.tsx:398:57 - error TS2339: Property 'type' does not exist on type 'never'.
+
+398                             {renderVisualization(option.type)}
+                                                            ~~~~
+
+client/src/components/dashboard/SQLEditor.tsx:404:64 - error TS2339: Property 'type' does not exist on type 'never'.
+
+404                                   transformDataForChart(option.type),
+                                                                   ~~~~
+
+client/src/components/dashboard/SQLEditor.tsx:405:42 - error TS2339: Property 'type' does not exist on type 'never'.
+
+405                                   option.type,
+                                             ~~~~
+
+client/src/components/dashboard/SQLSyntaxHighlighter.tsx:81:115 - error TS2339: Property 'end' does not exist on type 'never'.
+
+81     if (nonOverlappingTokens.length === 0 || token.start >= nonOverlappingTokens[nonOverlappingTokens.length - 1].end) {
+                                                                                                                     ~~~
+
+client/src/components/dashboard/SQLSyntaxHighlighter.tsx:82:33 - error TS2345: Argument of type '{ start: number; end: number; className: string; }' is not assignable to parameter of type 'never'.
+
+82       nonOverlappingTokens.push(token);
+                                   ~~~~~
+
+client/src/components/dashboard/SQLSyntaxHighlighter.tsx:88:55 - error TS2339: Property 'start' does not exist on type 'never'.
+
+88     const before = highlightedText.substring(0, token.start);
+                                                         ~~~~~
+
+client/src/components/dashboard/SQLSyntaxHighlighter.tsx:89:53 - error TS2339: Property 'start' does not exist on type 'never'.
+
+89     const content = highlightedText.substring(token.start, token.end);
+                                                       ~~~~~
+
+client/src/components/dashboard/SQLSyntaxHighlighter.tsx:89:66 - error TS2339: Property 'end' does not exist on type 'never'.
+
+89     const content = highlightedText.substring(token.start, token.end);
+                                                                    ~~~
+
+client/src/components/dashboard/SQLSyntaxHighlighter.tsx:90:51 - error TS2339: Property 'end' does not exist on type 'never'.
+
+90     const after = highlightedText.substring(token.end);
+                                                     ~~~
+
+client/src/components/dashboard/SQLSyntaxHighlighter.tsx:91:54 - error TS2339: Property 'className' does not exist on type 'never'.
+
+91     highlightedText = before + `<span class="${token.className}">${content}</span>` + after;
+                                                        ~~~~~~~~~
+
+client/src/components/layout/AppSidebar.tsx:98:5 - error TS2322: Type 'User | null' is not assignable to type 'null'.
+  Type 'User' is not assignable to type 'null'.
+
+98     user = userContext?.user;
+       ~~~~
+
+client/src/components/layout/AppSidebar.tsx:99:5 - error TS2322: Type '() => void' is not assignable to type 'null'.
+
+99     logout = userContext?.logout;
+       ~~~~~~
+
+client/src/components/layout/AppSidebar.tsx:107:7 - error TS2349: This expression is not callable.
+  Type 'never' has no call signatures.
+
+107       logout();
+          ~~~~~~
+
+client/src/components/layout/AppSidebar.tsx:225:25 - error TS2339: Property 'username' does not exist on type 'never'.
+
+225                   {user.username.charAt(0).toUpperCase()}
+                            ~~~~~~~~
+
+client/src/components/layout/AppSidebar.tsx:231:27 - error TS2339: Property 'username' does not exist on type 'never'.
+
+231                     {user.username}
+                              ~~~~~~~~
+
+client/src/components/layout/AppSidebar.tsx:234:27 - error TS2339: Property 'role' does not exist on type 'never'.
+
+234                     {user.role === 'administrator' ? 'Administrator' : 'User'}
+                              ~~~~
+
+client/src/pages/Calendar.tsx:57:23 - error TS2345: Argument of type '{ date: Date; isCurrentMonth: boolean; day: number; }' is not assignable to parameter of type 'never'.
+
+ 57     calendarDays.push({
+                          ~
+ 58       date: prevMonthDay,
+    ~~~~~~~~~~~~~~~~~~~~~~~~~
+...
+ 60       day: prevMonthDay.getDate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 61     });
+    ~~~~~
+
+client/src/pages/Calendar.tsx:67:23 - error TS2345: Argument of type '{ date: Date; isCurrentMonth: boolean; day: number; }' is not assignable to parameter of type 'never'.
+
+ 67     calendarDays.push({
+                          ~
+ 68       date,
+    ~~~~~~~~~~~
+...
+ 70       day
+    ~~~~~~~~~
+ 71     });
+    ~~~~~
+
+client/src/pages/Calendar.tsx:78:23 - error TS2345: Argument of type '{ date: Date; isCurrentMonth: boolean; day: number; }' is not assignable to parameter of type 'never'.
+
+ 78     calendarDays.push({
+                          ~
+ 79       date: nextMonthDay,
+    ~~~~~~~~~~~~~~~~~~~~~~~~~
+...
+ 81       day: nextMonthDay.getDate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 82     });
+    ~~~~~
+
+client/src/pages/Calendar.tsx:230:59 - error TS2339: Property 'date' does not exist on type 'never'.
+
+230               const events = getEventsForDate(calendarDay.date);
+                                                              ~~~~
+
+client/src/pages/Calendar.tsx:231:43 - error TS2339: Property 'date' does not exist on type 'never'.
+
+231               const isToday = calendarDay.date.toDateString() === new Date().toDateString();
+                                              ~~~~
+
+client/src/pages/Calendar.tsx:238:36 - error TS2339: Property 'isCurrentMonth' does not exist on type 'never'.
+
+238                     ${!calendarDay.isCurrentMonth ? 'bg-gray-50 text-gray-400' : 'bg-white'}
+                                       ~~~~~~~~~~~~~~
+
+client/src/pages/Calendar.tsx:246:34 - error TS2339: Property 'day' does not exist on type 'never'.
+
+246                     {calendarDay.day}
+                                     ~~~
+
+client/src/pages/DataStudioFiles.tsx:115:24 - error TS2345: Argument of type '{ name: string; id: string; }' is not assignable to parameter of type 'never'.
+
+115       breadcrumbs.push({ name: folder.name, id: folder.id });
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/pages/DataStudioFiles.tsx:119:29 - error TS2345: Argument of type '{ name: string; id: string; }' is not assignable to parameter of type 'never'.
+
+119         breadcrumbs.unshift({ name: parent.name, id: parent.id });
+                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/pages/DataStudioFiles.tsx:311:40 - error TS2339: Property 'id' does not exist on type 'never'.
+
+311             <React.Fragment key={crumb.id}>
+                                           ~~
+
+client/src/pages/DataStudioFiles.tsx:316:55 - error TS2339: Property 'id' does not exist on type 'never'.
+
+316                 onClick={() => setCurrentFolder(crumb.id)}
+                                                          ~~
+
+client/src/pages/DataStudioFiles.tsx:319:24 - error TS2339: Property 'name' does not exist on type 'never'.
+
+319                 {crumb.name}
+                           ~~~~
+
+client/src/pages/DataStudioReports.tsx:303:63 - error TS2339: Property 'trim' does not exist on type 'never'.
+
+303               if (query && typeof query === 'string' && query.trim().toLowerCase().includes('select')) {
+                                                                  ~~~~
+
+client/src/pages/DataStudioReports.tsx:304:66 - error TS2339: Property 'substring' does not exist on type 'never'.
+
+304                 console.log('    Adding valid SQL query:', query.substring(0, 50) + '...');
+                                                                     ~~~~~~~~~
+
+client/src/pages/DataStudioReports.tsx:308:32 - error TS2339: Property 'trim' does not exist on type 'never'.
+
+308                   query: query.trim(),
+                                   ~~~~
+
+client/src/pages/Integrations.tsx:308:30 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+308       connectionDetails.push(`DB: ${metadata.database}`);
+                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/pages/Integrations.tsx:311:30 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+311       connectionDetails.push(`WH: ${metadata.warehouse}`);
+                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/pages/Integrations.tsx:315:30 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+315       connectionDetails.push(`v${shortVersion}`);
+                                 ~~~~~~~~~~~~~~~~~~
+
+server/production-server.ts:77:7 - error TS2322: Type 'string' is not assignable to type 'null'.
+
+77       staticPath = checkPath;
+         ~~~~~~~~~~
+
+server/vite-production.ts:36:9 - error TS2322: Type 'string' is not assignable to type 'null'.
+
+36         foundPath = fallbackPath;
+           ~~~~~~~~~
+
+server/vite.ts:39:5 - error TS2322: Type '{ middlewareMode: boolean; hmr: { server: Server<typeof IncomingMessage, typeof ServerResponse>; }; allowedHosts: boolean; }' is not assignable to type 'ServerOptions'.
+  Types of property 'allowedHosts' are incompatible.
+    Type 'boolean' is not assignable to type 'true | string[] | undefined'.
+
+39     server: serverOptions,
+       ~~~~~~
+
+
+Found 65 errors in 11 files.
+
+Errors  Files
+    16  client/src/components/dashboard/CodeMirrorSQLEditor.tsx:312
+    15  client/src/components/dashboard/SQLEditor.tsx:119
+     7  client/src/components/dashboard/SQLSyntaxHighlighter.tsx:81
+     6  client/src/components/layout/AppSidebar.tsx:98
+     7  client/src/pages/Calendar.tsx:57
+     5  client/src/pages/DataStudioFiles.tsx:115
+     3  client/src/pages/DataStudioReports.tsx:303
+     3  client/src/pages/Integrations.tsx:308
+     1  server/production-server.ts:77
+     1  server/vite-production.ts:36
+     1  server/vite.ts:39
+PS D:\Projects\CustomerDataPlatform>

@@ -110,7 +110,7 @@ export function SQLEditor({ onCreateVisualization }: SQLEditorProps) {
   const getVisualizationOptions = () => {
     if (!queryResult?.success || !queryResult.rows.length) return [];
     
-    const options = [];
+    const options: Array<{type: string; label: string; icon: any}> = [];
     const hasNumericColumns = queryResult.columns.some(col => 
       col.type === 'fixed' || col.type === 'real' || col.type === 'number'
     );

@@ -108,7 +108,7 @@ export function DataStudioFiles() {
   const currentFolderItems = currentFolder ? folders.filter(f => f.parentId === currentFolder) : folders.filter(f => !f.parentId);
   const currentFiles = currentFolder ? files.filter(f => f.folderId === currentFolder) : files.filter(f => !f.folderId);
 
-  const breadcrumbs = [];
+  const breadcrumbs: Array<{name: string; id: string}> = [];
   if (currentFolder) {
     const folder = folders.find(f => f.id === currentFolder);
     if (folder) {

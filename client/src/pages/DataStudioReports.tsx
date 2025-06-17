@@ -275,7 +275,7 @@ export function DataStudioReports() {
               fullContent: element.content
             });
 
-            let query = null;
+            let query: string | null = null;
             
             // Check for queries in ALL elements that might have data
             if (element.type === 'chart' || element.type === 'table' || element.type === 'metric') {
