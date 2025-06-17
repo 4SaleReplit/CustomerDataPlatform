@@ -1,0 +1,43 @@
+PS D:\Projects\CustomerDataPlatform> npx tsc
+client/src/components/dashboard/TimeFilter.tsx:172:17 - error TS2322: Type '(range: { from: Date | undefined; to: Date | undefined; }) => void' is not assignable to type 'SelectRangeEventHandler'.
+  Types of parameters 'range' and 'range' are incompatible.
+    Type 'DateRange | undefined' is not assignable to type '{ from: Date | undefined; to: Date | undefined; }'.
+      Type 'undefined' is not assignable to type '{ from: Date | undefined; to: Date | undefined; }'.
+
+172                 onSelect={handleDateRangeSelect}
+                    ~~~~~~~~
+
+client/src/components/integrations/ConnectionForm.tsx:30:17 - error TS7006: Parameter 'prev' implicitly has an 'any' type.
+
+30     setFormData(prev => ({ ...prev, [field]: value }));
+                   ~~~~
+
+client/src/components/integrations/ConnectionForm.tsx:34:17 - error TS7006: Parameter 'prev' implicitly has an 'any' type.
+
+34     setFormData(prev => ({ ...prev, [field]: value }));
+                   ~~~~
+
+client/src/pages/ActivityLog.tsx:45:24 - error TS2552: Cannot find name 'mockActivityLogs'. Did you mean 'activityLogs'?
+
+45   const filteredLogs = mockActivityLogs.filter(log => {
+                          ~~~~~~~~~~~~~~~~
+
+  client/src/pages/ActivityLog.tsx:17:7
+    17 const activityLogs: any[] = [];
+             ~~~~~~~~~~~~
+    'activityLogs' is declared here.
+
+client/src/pages/ActivityLog.tsx:45:48 - error TS7006: Parameter 'log' implicitly has an 'any' type.
+
+45   const filteredLogs = mockActivityLogs.filter(log => {
+                                                  ~~~
+
+client/src/pages/ActivityLog.tsx:127:50 - error TS2552: Cannot find name 'mockActivityLogs'. Did you mean 'activityLogs'?
+
+127             <div className="text-2xl font-bold">{mockActivityLogs.length}</div>
+                                                     ~~~~~~~~~~~~~~~~
+
+  client/src/pages/ActivityLog.tsx:17:7
+    17 const activityLogs: any[] = [];
+             ~~~~~~~~~~~~
+    'activityLogs' is declared here.

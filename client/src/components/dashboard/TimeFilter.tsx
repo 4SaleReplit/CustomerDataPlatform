@@ -66,15 +66,21 @@ export function TimeFilter({ filters, onFiltersChange }: TimeFilterProps) {
     onFiltersChange({ ...filters, granularity: value });
   };
 
-  const handleDateRangeSelect = (range: {from: Date | undefined; to: Date | undefined}) => {
-    setDateRange(range);
-    if (range.from && range.to) {
-      onFiltersChange({
-        ...filters,
-        timeRange: 'custom',
-        customDateRange: { from: range.from, to: range.to }
-      });
-      setIsDatePickerOpen(false);
+  const handleDateRangeSelect = (range: any) => {
+    if (range && range.from !== undefined) {
+      const dateRange = {
+        from: range.from,
+        to: range.to || range.from
+      };
+      setDateRange(dateRange);
+      if (dateRange.from && dateRange.to) {
+        onFiltersChange({
+          ...filters,
+          timeRange: 'custom',
+          customDateRange: { from: dateRange.from, to: dateRange.to }
+        });
+        setIsDatePickerOpen(false);
+      }
     }
   };
 

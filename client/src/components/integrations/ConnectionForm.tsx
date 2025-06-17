@@ -27,11 +27,11 @@ export function ConnectionForm({ onSave, onCancel }: ConnectionFormProps) {
   ];
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev: any) => ({ ...prev, [field]: value }));
   };
 
   const handleBooleanChange = (field: string, value: boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev: any) => ({ ...prev, [field]: value }));
   };
 
   const handleTestConnection = async () => {

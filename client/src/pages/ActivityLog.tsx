@@ -42,7 +42,7 @@ export default function ActivityLog() {
     { value: 'refresh', label: 'Refresh' }
   ];
 
-  const filteredLogs = mockActivityLogs.filter(log => {
+  const filteredLogs = activityLogs.filter((log: any) => {
     const matchesSearch = 
       log.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.entityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -124,7 +124,7 @@ export default function ActivityLog() {
             <CardTitle className="text-sm font-medium">Total Actions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockActivityLogs.length}</div>
+            <div className="text-2xl font-bold">{activityLogs.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -132,7 +132,7 @@ export default function ActivityLog() {
             <CardTitle className="text-sm font-medium">Today's Actions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockActivityLogs.length}</div>
+            <div className="text-2xl font-bold">{activityLogs.length}</div>
           </CardContent>
         </Card>
         <Card>
