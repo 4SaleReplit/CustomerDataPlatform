@@ -19,6 +19,14 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+# Step 2.1: Build the production Vite module
+echo "Building production Vite module..."
+npx esbuild server/vite-production.ts --platform=node --packages=external --bundle --format=esm --outfile=server/vite-production.js --target=node18
+if [ $? -ne 0 ]; then
+    echo "Production Vite module build failed"
+    exit 1
+fi
+
 # Step 3: Copy client build to dist directory for Docker
 echo "Preparing files for Docker..."
 mkdir -p dist/client

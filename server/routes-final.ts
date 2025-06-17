@@ -19,7 +19,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { nanoid } from "nanoid";
-import * as cron from "node-cron";
+const cron = require("node-cron");
 
 const activeCronJobs = new Map<string, any>();
 
