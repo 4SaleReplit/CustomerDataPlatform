@@ -1,0 +1,296 @@
+PS D:\Projects\CustomerDataPlatform> npx tsc
+client/src/components/dashboard/TimeFilter.tsx:172:17 - error TS2322: Type '(range: { from: Date | undefined; to: Date | undefined; }) => void' is not assignable to type 'SelectRangeEventHandler'.
+  Types of parameters 'range' and 'range' are incompatible.
+    Type 'DateRange | undefined' is not assignable to type '{ from: Date | undefined; to: Date | undefined; }'.
+      Type 'undefined' is not assignable to type '{ from: Date | undefined; to: Date | undefined; }'.
+
+172                 onSelect={handleDateRangeSelect}
+                    ~~~~~~~~
+
+client/src/components/integrations/ConnectionForm.tsx:30:17 - error TS7006: Parameter 'prev' implicitly has an 'any' type.
+
+30     setFormData(prev => ({ ...prev, [field]: value }));
+                   ~~~~
+
+client/src/components/integrations/ConnectionForm.tsx:34:17 - error TS7006: Parameter 'prev' implicitly has an 'any' type.
+
+34     setFormData(prev => ({ ...prev, [field]: value }));
+                   ~~~~
+
+client/src/pages/ActivityLog.tsx:45:24 - error TS2552: Cannot find name 'mockActivityLogs'. Did you mean 'activityLogs'?
+
+45   const filteredLogs = mockActivityLogs.filter(log => {
+                          ~~~~~~~~~~~~~~~~
+
+  client/src/pages/ActivityLog.tsx:17:7
+    17 const activityLogs: any[] = [];
+             ~~~~~~~~~~~~
+    'activityLogs' is declared here.
+
+client/src/pages/ActivityLog.tsx:45:48 - error TS7006: Parameter 'log' implicitly has an 'any' type.
+
+45   const filteredLogs = mockActivityLogs.filter(log => {
+                                                  ~~~
+
+client/src/pages/ActivityLog.tsx:127:50 - error TS2552: Cannot find name 'mockActivityLogs'. Did you mean 'activityLogs'?
+
+127             <div className="text-2xl font-bold">{mockActivityLogs.length}</div>
+                                                     ~~~~~~~~~~~~~~~~
+
+  client/src/pages/ActivityLog.tsx:17:7
+    17 const activityLogs: any[] = [];
+             ~~~~~~~~~~~~
+    'activityLogs' is declared here.
+
+client/src/pages/ActivityLog.tsx:135:50 - error TS2552: Cannot find name 'mockActivityLogs'. Did you mean 'activityLogs'?
+
+135             <div className="text-2xl font-bold">{mockActivityLogs.length}</div>
+                                                     ~~~~~~~~~~~~~~~~
+
+  client/src/pages/ActivityLog.tsx:17:7
+    17 const activityLogs: any[] = [];
+             ~~~~~~~~~~~~
+    'activityLogs' is declared here.
+
+client/src/pages/ActivityLog.tsx:247:34 - error TS7006: Parameter 'log' implicitly has an 'any' type.
+
+247               {filteredLogs.map((log) => (
+                                     ~~~
+
+client/src/pages/Admin.tsx:224:43 - error TS18046: 'teamMembers' is of type 'unknown'.
+
+224                 <CardTitle>Team Members ({teamMembers.length})</CardTitle>
+                                              ~~~~~~~~~~~
+
+client/src/pages/Admin.tsx:231:21 - error TS18046: 'teamMembers' is of type 'unknown'.
+
+231                 ) : teamMembers.length === 0 ? (
+                        ~~~~~~~~~~~
+
+client/src/pages/Admin.tsx:237:22 - error TS18046: 'teamMembers' is of type 'unknown'.
+
+237                     {teamMembers.map((member: TeamMember) => (
+                         ~~~~~~~~~~~
+
+client/src/pages/Admin.tsx:299:48 - error TS18046: 'migrationHistory' is of type 'unknown'.
+
+299                 <CardTitle>Recent Migrations ({migrationHistory.length})</CardTitle>
+                                                   ~~~~~~~~~~~~~~~~
+
+client/src/pages/Admin.tsx:306:21 - error TS18046: 'migrationHistory' is of type 'unknown'.
+
+306                 ) : migrationHistory.length === 0 ? (
+                        ~~~~~~~~~~~~~~~~
+
+client/src/pages/Admin.tsx:312:22 - error TS18046: 'migrationHistory' is of type 'unknown'.
+
+312                     {migrationHistory.map((migration: MigrationHistory) => (
+                         ~~~~~~~~~~~~~~~~
+
+client/src/pages/Admin.tsx:413:22 - error TS18046: 'roles' is of type 'unknown'.
+
+413                     {roles.map((role: Role) => (
+                         ~~~~~
+
+client/src/pages/Admin.tsx:468:24 - error TS18046: 'integrations' is of type 'unknown'.
+
+468                       {integrations.filter((i: any) => i.type === 'postgresql').map((integration: any) => (
+                           ~~~~~~~~~~~~
+
+client/src/pages/Admin.tsx:483:24 - error TS18046: 'integrations' is of type 'unknown'.
+
+483                       {integrations.filter((i: any) => i.type === 'postgresql' && i.id !== selectedSourceEnv).map((integration: any) => (
+                           ~~~~~~~~~~~~
+
+client/src/pages/DataStudioFiles.tsx:120:63 - error TS18048: 'parent' is possibly 'undefined'.
+
+120         parent = parent.parentId ? folders.find(f => f.id === parent.parentId) : undefined;
+                                                                  ~~~~~~
+
+client/src/pages/DataStudioReports.tsx:184:65 - error TS7006: Parameter 'p' implicitly has an 'any' type.
+
+184     const presentationsWithoutThumbnails = presentations.filter(p => !p.previewImageUrl);
+                                                                    ~
+
+client/src/pages/DataStudioReports.tsx:261:26 - error TS7006: Parameter 'slide' implicitly has an 'any' type.
+
+261       allSlides.forEach((slide, slideIndex) => {
+                             ~~~~~
+
+client/src/pages/DataStudioReports.tsx:261:33 - error TS7006: Parameter 'slideIndex' implicitly has an 'any' type.
+
+261       allSlides.forEach((slide, slideIndex) => {
+                                    ~~~~~~~~~~
+
+client/src/pages/DataStudioReports.tsx:624:45 - error TS7006: Parameter 'p' implicitly has an 'any' type.
+
+624     const presentation = presentations.find(p => p.id === presentationId);
+                                                ~
+
+client/src/pages/ReportsScheduler.tsx:200:59 - error TS2554: Expected 1-2 arguments, but got 3.
+
+200       return apiRequest("/api/scheduled-reports", "POST", {
+                                                              ~
+201         ...data,
+    ~~~~~~~~~~~~~~~~
+202         airflowConfiguration: airflowConfig
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+203       });
+    ~~~~~~~
+
+client/src/pages/ReportsScheduler.tsx:219:59 - error TS2554: Expected 1-2 arguments, but got 3.
+
+219       apiRequest(`/api/scheduled-reports/${id}`, "PATCH", data),
+                                                              ~~~~
+
+client/src/pages/ReportsScheduler.tsx:233:76 - error TS2559: Type '"DELETE"' has no properties in common with type 'RequestInit'.
+
+233     mutationFn: (id: string) => apiRequest(`/api/scheduled-reports/${id}`, "DELETE"),
+                                                                               ~~~~~~~~
+
+client/src/pages/ReportsScheduler.tsx:246:59 - error TS2554: Expected 1-2 arguments, but got 3.
+
+246       apiRequest(`/api/scheduled-reports/${id}`, "PATCH", { isActive }),
+                                                              ~~~~~~~~~~~~
+
+client/src/pages/ReportsScheduler.tsx:292:7 - error TS2740: Type 'Record<string, any>' is missing the following properties from type '{ dag_id: string; schedule_interval: null; start_date: string; catchup: boolean; max_active_runs: number; tasks: ({ task_id: string; operator: string; python_callable: string; op_kwargs: {}; to?: undefined; subject?: undefined; html_content?: undefined; files?: undefined; } | { ...; })[]; }': dag_id, schedule_interval, start_date, catchup, and 2 more.
+
+292       airflowConfiguration: report.airflowConfiguration || {
+          ~~~~~~~~~~~~~~~~~~~~
+
+client/src/pages/ReportsScheduler.tsx:302:7 - error TS2739: Type 'Record<string, any>' is missing the following properties from type '{ format: string; includeCharts: boolean; }': format, includeCharts
+
+302       formatSettings: report.formatSettings
+          ~~~~~~~~~~~~~~
+
+client/src/pages/ReportsScheduler.tsx:432:15 - error TS2322: Type 'unknown' is not assignable to type 'MailingList[]'.
+
+432               mailingLists={mailingLists}
+                  ~~~~~~~~~~~~
+
+  client/src/pages/ReportsScheduler.tsx:580:3
+    580   mailingLists: MailingList[];
+          ~~~~~~~~~~~~
+    The expected type comes from property 'mailingLists' which is declared here on type 'IntrinsicAttributes & SchedulerFormProps'
+
+client/src/pages/ReportsScheduler.tsx:448:13 - error TS18046: 'scheduledReports' is of type 'unknown'.
+
+448         ) : scheduledReports.length === 0 ? (
+                ~~~~~~~~~~~~~~~~
+
+client/src/pages/ReportsScheduler.tsx:459:11 - error TS18046: 'scheduledReports' is of type 'unknown'.
+
+459           scheduledReports.map((report: ScheduledReport) => (
+              ~~~~~~~~~~~~~~~~
+
+client/src/pages/ReportsScheduler.tsx:563:13 - error TS2322: Type 'unknown' is not assignable to type 'MailingList[]'.
+
+563             mailingLists={mailingLists}
+                ~~~~~~~~~~~~
+
+  client/src/pages/ReportsScheduler.tsx:580:3
+    580   mailingLists: MailingList[];
+          ~~~~~~~~~~~~
+    The expected type comes from property 'mailingLists' which is declared here on type 'IntrinsicAttributes & SchedulerFormProps'
+
+client/src/pages/ReportsScheduler.tsx:638:26 - error TS2802: Type 'Set<any>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+638       recipientList: [...new Set([...prev.recipientList, ...emails])]
+                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+server/routes-clean.ts:25:18 - error TS2307: Cannot find module 'node-cron' or its corresponding type declarations.
+
+25 import cron from "node-cron";
+                    ~~~~~~~~~~~
+
+server/routes-final.ts:22:18 - error TS2307: Cannot find module 'node-cron' or its corresponding type declarations.
+
+22 import cron from "node-cron";
+                    ~~~~~~~~~~~
+
+server/services/amplitude.ts:73:19 - error TS18046: 'result' is of type 'unknown'.
+
+73         cohortId: result.cohort_id || result.id,
+                     ~~~~~~
+
+server/services/amplitude.ts:73:39 - error TS18046: 'result' is of type 'unknown'.
+
+73         cohortId: result.cohort_id || result.id,
+                                         ~~~~~~
+
+server/services/dataSync.ts:1:10 - error TS2724: '"./snowflake"' has no exported member named 'snowflakeService'. Did you mean 'SnowflakeService'?
+
+1 import { snowflakeService } from './snowflake';
+           ~~~~~~~~~~~~~~~~
+
+  server/services/snowflake.ts:22:14
+    22 export class SnowflakeService {
+                    ~~~~~~~~~~~~~~~~
+    'SnowflakeService' is declared here.
+
+server/services/dataSync.ts:97:28 - error TS7006: Parameter 'row' implicitly has an 'any' type.
+
+97     return result.rows.map(row => ({
+                              ~~~
+
+server/services/queue.ts:5:10 - error TS2724: '"./snowflake"' has no exported member named 'snowflakeService'. Did you mean 'SnowflakeService'?
+
+5 import { snowflakeService } from './snowflake';
+           ~~~~~~~~~~~~~~~~
+
+  server/services/snowflake.ts:22:14
+    22 export class SnowflakeService {
+                    ~~~~~~~~~~~~~~~~
+    'SnowflakeService' is declared here.
+
+server/services/queue.ts:103:42 - error TS7006: Parameter 'row' implicitly has an 'any' type.
+
+103     const userIds = queryResult.rows.map(row => row[0]); // Assuming USER_ID is the first column
+                                             ~~~
+
+server/storage.ts:694:12 - error TS18047: 'result.rowCount' is possibly 'null'.
+
+694     return result.rowCount > 0;
+               ~~~~~~~~~~~~~~~
+
+server/storage.ts:723:12 - error TS18047: 'result.rowCount' is possibly 'null'.
+
+723     return result.rowCount > 0;
+               ~~~~~~~~~~~~~~~
+
+server/storage.ts:752:12 - error TS18047: 'result.rowCount' is possibly 'null'.
+
+752     return result.rowCount > 0;
+               ~~~~~~~~~~~~~~~
+
+server/storage.ts:875:26 - error TS2353: Object literal may only specify known properties, and 'updatedAt' does not exist in type '{ scheduledReportId?: string | SQL<unknown> | PgColumn<ColumnBaseConfig<ColumnDataType, string>, {}, {}> | undefined; executionStatus?: string | ... 2 more ... | undefined; ... 11 more ...; executionMetadata?: unknown; }'.
+
+875       .set({ ...updates, updatedAt: new Date() })
+                             ~~~~~~~~~
+
+server/vite.ts:39:5 - error TS2322: Type '{ middlewareMode: boolean; hmr: { server: Server<typeof IncomingMessage, typeof ServerResponse>; }; allowedHosts: boolean; }' is not assignable to type 'ServerOptions'.
+  Types of property 'allowedHosts' are incompatible.
+    Type 'boolean' is not assignable to type 'true | string[] | undefined'.
+
+39     server: serverOptions,
+       ~~~~~~
+
+
+Found 46 errors in 14 files.
+
+Errors  Files
+     1  client/src/components/dashboard/TimeFilter.tsx:172
+     2  client/src/components/integrations/ConnectionForm.tsx:30
+     5  client/src/pages/ActivityLog.tsx:45
+     9  client/src/pages/Admin.tsx:224
+     1  client/src/pages/DataStudioFiles.tsx:120
+     4  client/src/pages/DataStudioReports.tsx:184
+    11  client/src/pages/ReportsScheduler.tsx:200
+     1  server/routes-clean.ts:25
+     1  server/routes-final.ts:22
+     2  server/services/amplitude.ts:73
+     2  server/services/dataSync.ts:1
+     2  server/services/queue.ts:5
+     4  server/storage.ts:694
+     1  server/vite.ts:39
+PS D:\Projects\CustomerDataPlatform>

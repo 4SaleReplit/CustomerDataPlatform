@@ -67,7 +67,7 @@ export function TimeFilter({ filters, onFiltersChange }: TimeFilterProps) {
   };
 
   const handleDateRangeSelect = (range: any) => {
-    if (range && range.from !== undefined) {
+    if (range) {
       const dateRange = {
         from: range.from,
         to: range.to || range.from

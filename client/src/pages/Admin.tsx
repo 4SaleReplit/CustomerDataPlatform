@@ -221,14 +221,14 @@ export default function AdminClean() {
             {/* Team Members List */}
             <Card>
               <CardHeader>
-                <CardTitle>Team Members ({teamMembers.length})</CardTitle>
+                <CardTitle>Team Members ({(teamMembers as any[])?.length || 0})</CardTitle>
               </CardHeader>
               <CardContent>
                 {isLoadingTeam ? (
                   <div className="flex justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin" />
                   </div>
-                ) : teamMembers.length === 0 ? (
+                ) : (teamMembers as any[])?.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     No team members found. Invite your first team member to get started.
                   </div>
