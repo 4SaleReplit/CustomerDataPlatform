@@ -35,6 +35,15 @@ interface ScheduledReport {
   updatedAt: string;
   sentImmediately?: boolean;
   sentAt?: string;
+  emailTemplate?: {
+    templateId: string;
+    subject: string;
+    customContent: string;
+    templateVariables: Record<string, string>;
+  };
+  pdfDeliveryUrl?: string;
+  placeholderConfig?: Record<string, any>;
+  formatSettings?: { format: string; includeCharts: boolean };
 }
 
 interface Presentation {
@@ -152,7 +161,10 @@ export function EmailSender() {
 
   const toggleActiveMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => 
-      apiRequest(`/api/scheduled-reports/${id}`, { method: 'PATCH', body: { isActive: !isActive } }),
+      apiRequest(`/api/scheduled-reports/${id}`, { 
+        method: 'PATCH', 
+        body: { isActive: !isActive }
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/scheduled-reports'] });
       toast({
@@ -234,15 +246,15 @@ export function EmailSender() {
       bccList: duplicatedData.bccList,
       isActive: false,
       sendOption: duplicatedData.cronExpression ? 'schedule' : 'now',
-      emailTemplate: duplicatedData.emailTemplate || {
+      emailTemplate: {
         templateId: "",
         subject: duplicatedData.emailSubject,
         customContent: "",
         templateVariables: {}
       },
-      pdfDeliveryUrl: duplicatedData.pdfDeliveryUrl || "",
-      placeholderConfig: duplicatedData.placeholderConfig || {},
-      formatSettings: duplicatedData.formatSettings || { format: "pdf", includeCharts: true },
+      pdfDeliveryUrl: "",
+      placeholderConfig: {},
+      formatSettings: { format: "pdf", includeCharts: true },
       customVariables: []
     });
     

@@ -437,7 +437,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('Generated email HTML length:', emailHtml.length);
         
         // Create professional business email subject
-        const businessSubject = reportData.emailTemplate?.subject || `Business Analytics Report - ${reportData.name} [${reportId}]`;
+        const currentDate = new Date();
+        const businessSubject = reportData.emailTemplate?.subject || `Business Analytics Report - ${reportData.name} [${reportData.id}]`;
         
         // Enhanced plain text version for better deliverability
         const textVersion = `
@@ -451,7 +452,7 @@ Dear Valued Client,
 ${reportData.emailTemplate?.customContent || 'Your report is ready.'}
 
 REPORT INFORMATION:
-Report ID: ${reportId}
+Report ID: ${reportData.id}
 Generated: ${currentDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} at ${currentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}
 Report Type: Business Intelligence Dashboard
 

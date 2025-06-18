@@ -768,7 +768,7 @@ export function EnhancedSchedulerForm({
               </p>
             </div>
           </CardContent>
-        </Card>
+          </Card>
         )}
 
         {/* Send Options */}
