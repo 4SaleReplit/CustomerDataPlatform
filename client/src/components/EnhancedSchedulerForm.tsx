@@ -338,46 +338,23 @@ export function EnhancedSchedulerForm({
             </CardContent>
           </Card>
 
-          {/* Email Configuration */}
+          {/* Email Template Designer */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Mail className="w-5 h-5" />
-                Email Configuration
+                Email Template Designer
               </CardTitle>
+              <CardDescription>
+                Design your email with live preview and template variables
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="subject">Email Subject *</Label>
-                <Input
-                  id="subject"
-                  value={formData.emailTemplate.subject}
-                  onChange={(e) => updateFormData({
-                    emailTemplate: {
-                      ...formData.emailTemplate,
-                      subject: e.target.value
-                    }
-                  })}
-                  placeholder="Enter email subject"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="content">Email Content</Label>
-                <Textarea
-                  id="content"
-                  value={formData.emailTemplate.customContent}
-                  onChange={(e) => updateFormData({
-                    emailTemplate: {
-                      ...formData.emailTemplate,
-                      customContent: e.target.value
-                    }
-                  })}
-                  placeholder="Enter email content"
-                  rows={6}
-                />
-              </div>
+            <CardContent>
+              <EmailTemplateBuilder
+                value={formData.emailTemplate}
+                onChange={(template) => updateFormData({ emailTemplate: template })}
+                presentations={presentations}
+              />
             </CardContent>
           </Card>
 

@@ -111,6 +111,16 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 18, 2025**: Complete Email Template Designer Integration with WYSIWYG Preview
+  - Restored comprehensive EmailTemplateBuilder with live WYSIWYG email preview functionality
+  - Integrated professional email template designer with three template options (Professional, Minimal, Dashboard)
+  - Added side-by-side layout with configuration panel and real-time HTML preview
+  - Enhanced template variable system with dynamic content replacement ({report_name}, {current_date}, etc.)
+  - Fixed form field freezing issue by implementing proper state management with EnhancedSchedulerForm
+  - Both Scheduler and One-Time Email tabs now use the same advanced template designer interface
+  - Email preview shows exact HTML rendering with 4Sale branding and professional business formatting
+  - Template selection includes radio buttons, content editor, and comprehensive variable management system
+
 - **June 18, 2025**: Complete Email Card UI Enhancement with Preview and Edit Functionality
   - Enhanced one-time email cards to display "Sent At" instead of "Last Execution" for better context
   - Removed success/error counts from one-time email cards to simplify interface as requested
