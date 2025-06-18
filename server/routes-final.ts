@@ -2264,6 +2264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(environmentConfigurations.isActive, true));
       
       console.log('Raw configs from database:', configs);
+      console.log('Query executed successfully, found', configs.length, 'configurations');
       
       // Group by environment for easy frontend consumption
       const groupedConfigs = {
