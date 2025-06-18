@@ -2051,8 +2051,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     return `ARRAY[${arrayElements}]`;
                   }
                   
-                  // Handle other JSON objects as JSONB
-                  if (typeof val === 'object') {
+                  // Handle timestamp columns
+                  if (colType && (colType.dataType === 'timestamp with time zone' || colType.dataType === 'timestamp without time zone')) {
+                    return val instanceof Date ? `'${val.toISOString()}'` : `'${String(val)}'`;
+                  }
+                  
+                  // Handle date columns
+                  if (colType && colType.dataType === 'date') {
+                    return val instanceof Date ? `'${val.toISOString().split('T')[0]}'` : `'${String(val)}'`;
+                  }
+                  
+                  // Handle other JSON objects as JSONB (but only if not a date/timestamp)
+                  if (typeof val === 'object' && !(val instanceof Date)) {
                     return `'${JSON.stringify(val).replace(/'/g, "''")}'::jsonb`;
                   }
                   
