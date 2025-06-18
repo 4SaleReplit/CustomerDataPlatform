@@ -1436,17 +1436,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
           addLog('Connecting to source database...');
           updateProgress({ stage: 'Connecting', currentJob: 'Establishing source connection', progress: 10 });
 
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate connection time
+          // Get actual integration credentials from database
+          const { integrations } = await import('../shared/schema');
+          const { eq } = await import('drizzle-orm');
+          
+          const sourceIntegration = await db.select().from(integrations)
+            .where(eq(integrations.id, sourceIntegrationId))
+            .limit(1);
+            
+          const targetIntegration = await db.select().from(integrations)
+            .where(eq(integrations.id, targetIntegrationId))
+            .limit(1);
+            
+          if (!sourceIntegration.length || !targetIntegration.length) {
+            throw new Error('Source or target integration not found');
+          }
+          
+          addLog(`Source integration: ${sourceIntegration[0].name}`);
+          addLog(`Target integration: ${targetIntegration[0].name}`);
 
           if (type === 'postgresql') {
             const { Pool } = await import('pg');
+            
+            // Use actual integration credentials
+            const sourceCredentials = sourceIntegration[0].credentials as any;
+            const targetCredentials = targetIntegration[0].credentials as any;
+            
+            let sourceConnectionString: string;
+            let targetConnectionString: string;
+            
+            // Handle different credential formats
+            if (sourceCredentials.connectionString) {
+              sourceConnectionString = sourceCredentials.connectionString;
+            } else {
+              sourceConnectionString = `postgresql://${sourceCredentials.username}:${sourceCredentials.password}@${sourceCredentials.host}:${sourceCredentials.port}/${sourceCredentials.database}${sourceCredentials.ssl ? '?sslmode=require' : ''}`;
+            }
+            
+            if (targetCredentials.connectionString) {
+              targetConnectionString = targetCredentials.connectionString;
+            } else {
+              targetConnectionString = `postgresql://${targetCredentials.username}:${targetCredentials.password}@${targetCredentials.host}:${targetCredentials.port}/${targetCredentials.database}${targetCredentials.ssl ? '?sslmode=require' : ''}`;
+            }
             
             addLog('Source database connection established');
             addLog('Connecting to target database...');
             updateProgress({ stage: 'Connecting', currentJob: 'Establishing target connection', progress: 20 });
 
-            const sourcePool = new Pool({ connectionString: sourceConfig.connectionString });
-            const targetPool = new Pool({ connectionString: targetConfig.connectionString });
+            const sourcePool = new Pool({ connectionString: sourceConnectionString });
+            const targetPool = new Pool({ connectionString: targetConnectionString });
 
             await new Promise(resolve => setTimeout(resolve, 1000));
             addLog('Target database connection established');
