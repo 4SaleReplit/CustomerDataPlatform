@@ -66,6 +66,43 @@ export function EnhancedSchedulerForm({
   const [customVariables, setCustomVariables] = useState<CustomVariable[]>(formData.customVariables || []);
   const [previewHtml, setPreviewHtml] = useState('');
 
+  // Add custom variable
+  const addCustomVariable = () => {
+    const newVariable: CustomVariable = {
+      name: '',
+      type: 'static',
+      value: '',
+      description: ''
+    };
+    const updatedVariables = [...customVariables, newVariable];
+    setCustomVariables(updatedVariables);
+    setFormData({
+      ...formData,
+      customVariables: updatedVariables
+    });
+  };
+
+  // Update custom variable
+  const updateCustomVariable = (index: number, field: keyof CustomVariable, value: string) => {
+    const updatedVariables = [...customVariables];
+    updatedVariables[index] = { ...updatedVariables[index], [field]: value };
+    setCustomVariables(updatedVariables);
+    setFormData({
+      ...formData,
+      customVariables: updatedVariables
+    });
+  };
+
+  // Remove custom variable
+  const removeCustomVariable = (index: number) => {
+    const updatedVariables = customVariables.filter((_, i) => i !== index);
+    setCustomVariables(updatedVariables);
+    setFormData({
+      ...formData,
+      customVariables: updatedVariables
+    });
+  };
+
   // Generate email preview
   const generateEmailPreview = () => {
     // Use default template if no templateId is set (for editing existing reports)
