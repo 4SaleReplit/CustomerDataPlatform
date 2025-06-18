@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Link } from 'wouter';
-import { Search, Filter, Download, Eye, Hash, UserCheck, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, Download, Eye, Hash, UserCheck, RefreshCw, ChevronLeft, ChevronRight, X, PanelLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,6 +20,7 @@ function Users() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSearchingIds, setIsSearchingIds] = useState(false);
   const [searchExecuted, setSearchExecuted] = useState(false);
+  const [isUserIdPanelOpen, setIsUserIdPanelOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // Track page visit on component mount
@@ -202,18 +203,81 @@ function Users() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Users</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={exportUsers} disabled={!currentUsers.length}>
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
+    <>
+      {/* User ID Search Side Panel */}
+      {isUserIdPanelOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="fixed inset-0 bg-black/20" onClick={() => setIsUserIdPanelOpen(false)} />
+          <div className="relative bg-white w-80 shadow-lg">
+            <div className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Search with User ID(s)</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsUserIdPanelOpen(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">User IDs</label>
+                <div className="relative">
+                  <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Enter user IDs separated by commas..."
+                    value={userIdSearch}
+                    onChange={(e) => setUserIdSearch(e.target.value)}
+                    onKeyDown={handleUserIdKeyPress}
+                    className="pl-10"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Example: 123456, 789012, 654321
+                </p>
+              </div>
+              <Button
+                variant="default"
+                onClick={() => {
+                  executeUserIdSearch();
+                  setIsUserIdPanelOpen(false);
+                }}
+                disabled={!userIdSearch.trim() || isSearchingIds}
+                className="w-full"
+              >
+                {isSearchingIds ? (
+                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Search className="h-4 w-4 mr-2" />
+                )}
+                Search Snowflake
+              </Button>
+              {searchExecuted && idSearchData && (
+                <div className="mt-4 p-3 bg-green-50 rounded-lg">
+                  <p className="text-sm text-green-800">
+                    Found {idSearchData.rows.length} user(s)
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Data Info */}
+      <div className="space-y-6 p-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Users</h1>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={exportUsers} disabled={!currentUsers.length}>
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+          </div>
+        </div>
+
+        {/* Data Info */}
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
@@ -298,34 +362,18 @@ function Users() {
               </Button>
             </div>
 
-            {/* User ID Search */}
+            {/* User ID Search Button */}
             <div className="border-t pt-4">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Enter specific User IDs separated by commas (e.g., 123456, 789012)..."
-                    value={userIdSearch}
-                    onChange={(e) => setUserIdSearch(e.target.value)}
-                    onKeyDown={handleUserIdKeyPress}
-                    className="pl-10"
-                  />
-                </div>
-                <Button
-                  variant="default"
-                  onClick={executeUserIdSearch}
-                  disabled={!userIdSearch.trim() || isSearchingIds}
-                >
-                  {isSearchingIds ? (
-                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <Search className="h-4 w-4 mr-2" />
-                  )}
-                  Search with User ID(s)
-                </Button>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Search for specific users by their IDs - queries Snowflake directly and updates only the table
+              <Button
+                variant="outline"
+                onClick={() => setIsUserIdPanelOpen(true)}
+                className="w-full"
+              >
+                <Hash className="h-4 w-4 mr-2" />
+                Search with User ID(s)
+              </Button>
+              <p className="text-xs text-gray-500 mt-1 text-center">
+                Search for specific users by their IDs from Snowflake
               </p>
             </div>
           </div>
@@ -451,7 +499,8 @@ function Users() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }
 
