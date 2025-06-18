@@ -1259,21 +1259,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Test PostgreSQL connection
         const credentials = integration.credentials as any;
         const { Pool } = await import('pg');
-        const pool = new Pool({
-          connectionString: credentials.connectionString
+        
+        // Handle both connection string and individual fields
+        let poolConfig: any = {};
+        
+        if (credentials.connectionString) {
+          poolConfig.connectionString = credentials.connectionString;
+        } else {
+          poolConfig = {
+            host: credentials.host,
+            port: credentials.port || 5432,
+            database: credentials.database,
+            user: credentials.user || credentials.username,
+            password: credentials.password
+          };
+        }
+        
+        console.log('Testing PostgreSQL connection with config:', { 
+          ...poolConfig, 
+          password: poolConfig.password ? '[HIDDEN]' : undefined 
         });
+        
+        const pool = new Pool(poolConfig);
         
         try {
           const client = await pool.connect();
-          await client.query('SELECT 1');
+          const result = await client.query('SELECT 1 as test, current_database() as database, version() as version');
           client.release();
           await pool.end();
           
+          console.log('PostgreSQL connection successful');
           res.json({ 
             success: true, 
-            message: "PostgreSQL connection successful" 
+            message: "PostgreSQL connection successful",
+            details: {
+              database: result.rows[0].database,
+              version: result.rows[0].version.split(' ')[0]
+            }
           });
         } catch (error) {
+          console.error('PostgreSQL connection failed:', error);
           res.json({ 
             success: false, 
             error: "PostgreSQL connection failed: " + (error instanceof Error ? error.message : "Unknown error")

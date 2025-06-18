@@ -880,8 +880,18 @@ export default function AdminNew() {
                 {activeIntegrationTypes.map(type => {
                   const activeEnv = environments.find(e => e.status === 'active');
                   const selectedIntegrationId = activeEnv?.databases?.[type];
-                  const selectedIntegration = integrations.find((i: any) => i.id === selectedIntegrationId);
-                  const dbStatus = selectedIntegration?.status || 'disconnected';
+                  const typeIntegrations = integrations.filter((i: any) => i.type === type);
+                  
+                  // If no specific integration is assigned to this environment, show status of first connected integration of this type
+                  let dbStatus = 'disconnected';
+                  if (selectedIntegrationId) {
+                    const selectedIntegration = integrations.find((i: any) => i.id === selectedIntegrationId);
+                    dbStatus = selectedIntegration?.status || 'disconnected';
+                  } else if (typeIntegrations.length > 0) {
+                    // Show connected if any integration of this type is connected
+                    dbStatus = typeIntegrations.some((i: any) => i.status === 'connected') ? 'connected' : 'disconnected';
+                  }
+                  
                   const { icon: Icon, color } = getIntegrationDisplay(type);
                   
                   return (
@@ -918,8 +928,17 @@ export default function AdminNew() {
                   <div className="space-y-2">
                     {activeIntegrationTypes.map(type => {
                       const selectedIntegrationId = env.databases?.[type];
-                      const selectedIntegration = integrations.find((i: any) => i.id === selectedIntegrationId);
-                      const dbStatus = selectedIntegration?.status || 'disconnected';
+                      const typeIntegrations = integrations.filter((i: any) => i.type === type);
+                      
+                      // Same logic as Current Environment Status
+                      let dbStatus = 'disconnected';
+                      if (selectedIntegrationId) {
+                        const selectedIntegration = integrations.find((i: any) => i.id === selectedIntegrationId);
+                        dbStatus = selectedIntegration?.status || 'disconnected';
+                      } else if (typeIntegrations.length > 0) {
+                        dbStatus = typeIntegrations.some((i: any) => i.status === 'connected') ? 'connected' : 'disconnected';
+                      }
+                      
                       const { icon: Icon, color } = getIntegrationDisplay(type);
                       
                       return (
