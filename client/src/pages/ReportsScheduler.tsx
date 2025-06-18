@@ -12,6 +12,7 @@ import { Calendar, Clock, Mail, Send, Settings, Play, Pause, Trash2, Plus, Users
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { EmailTemplateBuilder } from "@/components/EmailTemplateBuilder";
 
 interface ScheduledReport {
   id: string;
@@ -32,9 +33,12 @@ interface ScheduledReport {
   executionCount: number;
   errorCount: number;
   lastError: string | null;
-  airflowDagId: string | null;
-  airflowTaskId: string | null;
-  airflowConfiguration: Record<string, any>;
+  emailTemplate: {
+    templateId: string;
+    subject: string;
+    customContent: string;
+    templateVariables: Record<string, string>;
+  };
   pdfDeliveryUrl: string | null;
   placeholderConfig: Record<string, any>;
   formatSettings: Record<string, any>;
@@ -134,33 +138,15 @@ export function ReportsScheduler() {
     presentationId: "",
     cronExpression: "",
     timezone: "Africa/Cairo",
-    emailSubject: "",
-    emailBody: "",
     recipientList: [] as string[],
     ccList: [] as string[],
     bccList: [] as string[],
     isActive: true,
-    airflowDagId: "",
-    airflowTaskId: "send_report",
-    airflowConfiguration: {
-      dag_id: "",
-      schedule_interval: null,
-      start_date: new Date().toISOString(),
-      catchup: false,
-      max_active_runs: 1,
-      tasks: [{
-        task_id: "generate_report",
-        operator: "PythonOperator",
-        python_callable: "generate_pdf_report",
-        op_kwargs: {}
-      }, {
-        task_id: "send_report",
-        operator: "EmailOperator",
-        to: [],
-        subject: "",
-        html_content: "",
-        files: []
-      }]
+    emailTemplate: {
+      templateId: "",
+      subject: "",
+      customContent: "",
+      templateVariables: {} as Record<string, string>
     },
     pdfDeliveryUrl: "",
     placeholderConfig: {},
@@ -329,33 +315,15 @@ export function ReportsScheduler() {
       presentationId: "",
       cronExpression: "",
       timezone: "Africa/Cairo",
-      emailSubject: "",
-      emailBody: "",
       recipientList: [] as string[],
       ccList: [] as string[],
       bccList: [] as string[],
       isActive: true,
-      airflowDagId: "",
-      airflowTaskId: "send_report",
-      airflowConfiguration: {
-        dag_id: "",
-        schedule_interval: null,
-        start_date: new Date().toISOString(),
-        catchup: false,
-        max_active_runs: 1,
-        tasks: [{
-          task_id: "generate_report",
-          operator: "PythonOperator",
-          python_callable: "generate_pdf_report",
-          op_kwargs: {}
-        }, {
-          task_id: "send_report",
-          operator: "EmailOperator",
-          to: [],
-          subject: "",
-          html_content: "",
-          files: []
-        }]
+      emailTemplate: {
+        templateId: "",
+        subject: "",
+        customContent: "",
+        templateVariables: {}
       },
       pdfDeliveryUrl: "",
       placeholderConfig: {},
