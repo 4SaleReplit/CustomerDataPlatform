@@ -71,6 +71,10 @@ export default function AdminNew() {
   const [createdPassword, setCreatedPassword] = useState<string | null>(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [generatedUserData, setGeneratedUserData] = useState<any>(null);
+  const [showMigrationModal, setShowMigrationModal] = useState(false);
+  const [selectedSourceEnv, setSelectedSourceEnv] = useState('');
+  const [selectedTargetEnv, setSelectedTargetEnv] = useState('');
+  const [isMigrating, setIsMigrating] = useState(false);
 
   // Fetch team members
   const { data: teamMembers = [], isLoading: membersLoading } = useQuery({
@@ -85,6 +89,22 @@ export default function AdminNew() {
     queryKey: ['/api/roles'],
     queryFn: () => apiRequest('/api/roles') as Promise<Role[]>,
     staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false
+  });
+
+  // Fetch integrations for migrations
+  const { data: integrations = [], isLoading: integrationsLoading } = useQuery({
+    queryKey: ['/api/integrations'],
+    queryFn: () => apiRequest('/api/integrations'),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false
+  });
+
+  // Fetch migration history
+  const { data: migrationHistory = [], isLoading: isLoadingMigrations } = useQuery({
+    queryKey: ['/api/migration-history'],
+    queryFn: () => apiRequest('/api/migration-history'),
+    staleTime: 30 * 1000,
     refetchOnWindowFocus: false
   });
 
@@ -251,6 +271,43 @@ export default function AdminNew() {
         description: "Failed to copy password to clipboard.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleStartMigration = async () => {
+    if (!selectedSourceEnv || !selectedTargetEnv) {
+      toast({
+        title: "Migration error",
+        description: "Please select both source and target integrations",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsMigrating(true);
+    try {
+      await apiRequest('/api/start-migration', {
+        method: 'POST',
+        body: JSON.stringify({
+          sourceIntegrationId: selectedSourceEnv,
+          targetIntegrationId: selectedTargetEnv
+        })
+      });
+      
+      setShowMigrationModal(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/migration-history'] });
+      toast({
+        title: "Migration started",
+        description: "The migration process has been initiated"
+      });
+    } catch (error: any) {
+      toast({
+        title: "Migration failed",
+        description: error.message || "Failed to start migration",
+        variant: "destructive"
+      });
+    } finally {
+      setIsMigrating(false);
     }
   };
 
@@ -514,13 +571,13 @@ export default function AdminNew() {
             <Shield className="h-4 w-4" />
             Roles & Permissions
           </TabsTrigger>
+          <TabsTrigger value="migrations" className="flex items-center gap-2">
+            <Database className="h-4 w-4" />
+            Migrations
+          </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             System Settings
-          </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2">
-            <Lock className="h-4 w-4" />
-            Security
           </TabsTrigger>
         </TabsList>
 
@@ -590,6 +647,84 @@ export default function AdminNew() {
 
         <TabsContent value="roles" className="space-y-6">
           <RoleManagement />
+        </TabsContent>
+
+        <TabsContent value="migrations" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Database Migrations</h2>
+              <p className="text-sm text-muted-foreground">Migrate data between different database integrations</p>
+            </div>
+            <Button 
+              onClick={() => setShowMigrationModal(true)} 
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={(integrations as any[]).filter((i: any) => i.type === 'postgresql').length < 2}
+            >
+              <Database className="h-4 w-4 mr-2" />
+              Start Migration
+            </Button>
+          </div>
+
+          {/* Integration Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Available Integrations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Configure database integrations in the Integrations tab to enable migrations between different data sources.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Migration History */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Migrations ({(migrationHistory as any[])?.length || 0})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingMigrations ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : (migrationHistory as any[])?.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No migrations found. Start your first migration to see history here.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {(migrationHistory as any[]).map((migration: any) => (
+                    <div key={migration.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center">
+                        {migration.status === 'completed' && <CheckCircle className="h-4 w-4 text-green-600 mr-3" />}
+                        {migration.status === 'failed' && <XCircle className="h-4 w-4 text-red-600 mr-3" />}
+                        {migration.status === 'in_progress' && <Clock className="h-4 w-4 text-blue-600 mr-3" />}
+                        {migration.status === 'pending' && <AlertTriangle className="h-4 w-4 text-yellow-600 mr-3" />}
+                        <div>
+                          <p className="font-medium">{migration.sourceIntegrationName || 'Unknown Source'} → {migration.targetIntegrationName || 'Unknown Target'}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {migration.completedItems ? `Migrated ${migration.completedItems} of ${migration.totalItems || 0} records` : 'Migration details'} • 
+                            {migration.createdAt ? new Date(migration.createdAt).toLocaleString() : 'Unknown time'}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge className={
+                        migration.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        migration.status === 'failed' ? 'bg-red-100 text-red-800' :
+                        migration.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }>
+                        {migration.status === 'completed' ? 'Completed' :
+                         migration.status === 'failed' ? 'Failed' :
+                         migration.status === 'in_progress' ? 'In Progress' :
+                         'Pending'}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-6">
