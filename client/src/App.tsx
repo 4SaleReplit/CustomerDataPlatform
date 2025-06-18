@@ -20,7 +20,7 @@ import { DataStudioExploreView } from "./pages/DataStudioExploreView";
 import { DataStudioExploreEdit } from "./pages/DataStudioExploreEdit";
 import { DataStudioReports } from "./pages/DataStudioReports";
 import ReportBuilder from "./pages/ReportBuilder";
-import { ReportsScheduler } from "./pages/ReportsScheduler";
+import { EmailSender } from "./pages/EmailSender";
 import { EmailTemplatesDesigner } from "./pages/EmailTemplatesDesigner";
 import { PresentationView } from "./pages/PresentationView";
 import Users from "./pages/Users";
@@ -83,7 +83,7 @@ const AppRouter = () => {
         <Route path="/reports" component={DataStudioReports} />
         <Route path="/reports/builder/:id?" component={ReportBuilder} />
         <Route path="/reports/designer" component={ReportBuilder} />
-        <Route path="/reports/scheduler" component={ReportsScheduler} />
+        <Route path="/reports/scheduler" component={EmailSender} />
         <Route path="/reports/email-templates" component={EmailTemplatesDesigner} />
         <Route path="/reports/presentation/:id" component={({ params }) => <PresentationView presentationId={params.id} />} />
         <Route path="/design-studio" component={ReportBuilder} />

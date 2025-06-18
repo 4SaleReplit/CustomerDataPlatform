@@ -50,10 +50,11 @@ interface EnhancedSchedulerFormProps {
   presentations: any[];
   presentationsLoading: boolean;
   mailingLists: any[];
-  onSubmit: () => void;
+  onSubmit: (data: any) => void;
   onCancel: () => void;
   isLoading: boolean;
   updateEmailTemplate: (template: any) => void;
+  mode?: 'one-time' | 'scheduled';
 }
 
 
@@ -67,7 +68,8 @@ export function EnhancedSchedulerForm({
   onSubmit,
   onCancel,
   isLoading,
-  updateEmailTemplate
+  updateEmailTemplate,
+  mode = 'scheduled'
 }: EnhancedSchedulerFormProps) {
   const [customVariables, setCustomVariables] = useState<CustomVariable[]>(formData.customVariables || []);
   const [previewHtml, setPreviewHtml] = useState('');
@@ -634,12 +636,13 @@ export function EnhancedSchedulerForm({
           </CardContent>
         </Card>
 
-        {/* Schedule Configuration */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Schedule Settings</CardTitle>
-            <CardDescription>Configure when and how often the report is sent</CardDescription>
-          </CardHeader>
+        {/* Schedule Configuration - Hide for one-time emails */}
+        {mode === 'scheduled' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Schedule Settings</CardTitle>
+              <CardDescription>Configure when and how often the report is sent</CardDescription>
+            </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -766,6 +769,7 @@ export function EnhancedSchedulerForm({
             </div>
           </CardContent>
         </Card>
+        )}
 
         {/* Send Options */}
         <Card>
