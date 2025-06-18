@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, Clock, Mail, Send, Settings, Play, Pause, Trash2, Plus, Users, Database, CalendarDays, TestTube } from "lucide-react";
+import { Calendar, Clock, Mail, Send, Settings, Play, Pause, Trash2, Plus, Users, Database, CalendarDays, TestTube, MoreVertical, Copy, Edit } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -154,6 +154,7 @@ export function ReportsScheduler() {
     ccList: [] as string[],
     bccList: [] as string[],
     isActive: true,
+    sendOption: 'schedule' as 'now' | 'schedule',
     emailTemplate: {
       templateId: "",
       subject: "",
@@ -345,6 +346,7 @@ export function ReportsScheduler() {
       ccList: report.ccList,
       bccList: report.bccList,
       isActive: report.isActive,
+      sendOption: 'schedule',
       emailTemplate: report.emailTemplate || {
         templateId: "",
         subject: "",
@@ -373,6 +375,7 @@ export function ReportsScheduler() {
       ccList: [] as string[],
       bccList: [] as string[],
       isActive: true,
+      sendOption: 'schedule',
       emailTemplate: {
         templateId: "",
         subject: "",

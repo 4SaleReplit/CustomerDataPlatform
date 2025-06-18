@@ -31,6 +31,7 @@ interface FormData {
   ccList: string[];
   bccList: string[];
   isActive: boolean;
+  sendOption: 'now' | 'schedule';
   emailTemplate: {
     templateId: string;
     subject: string;
@@ -751,13 +752,64 @@ export function EnhancedSchedulerForm({
           </CardContent>
         </Card>
 
+        {/* Send Options */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Delivery Options</CardTitle>
+            <CardDescription>Choose when to send the report</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="send-now"
+                  name="sendOption"
+                  value="now"
+                  checked={formData.sendOption === 'now'}
+                  onChange={(e) => setFormData({ ...formData, sendOption: e.target.value as 'now' | 'schedule' })}
+                />
+                <Label htmlFor="send-now" className="flex items-center gap-2">
+                  <Send className="h-4 w-4" />
+                  Send Now (One-time)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="schedule-later"
+                  name="sendOption"
+                  value="schedule"
+                  checked={formData.sendOption === 'schedule'}
+                  onChange={(e) => setFormData({ ...formData, sendOption: e.target.value as 'now' | 'schedule' })}
+                />
+                <Label htmlFor="schedule-later" className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Schedule for Later
+                </Label>
+              </div>
+            </div>
+            
+            {formData.sendOption === 'now' && (
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  The report will be sent immediately to all recipients when you click "Send Now".
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Action Buttons */}
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>
           <Button onClick={onSubmit} disabled={isLoading}>
-            {isLoading ? "Creating..." : "Create Report"}
+            {isLoading 
+              ? (formData.sendOption === 'now' ? "Sending..." : "Creating...") 
+              : (formData.sendOption === 'now' ? "Send Now" : "Create Report")
+            }
           </Button>
         </div>
       </div>
