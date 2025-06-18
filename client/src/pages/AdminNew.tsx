@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Eye, Edit, Trash2, UserPlus, Shield, Key, Copy, MoreHorizontal, Mail, Send, Crown, Users, Settings, Lock, Database, Server, Cloud, Target, CheckCircle, XCircle, Clock, AlertTriangle, Loader2, BarChart3 } from 'lucide-react';
-import { MigrationProgress } from '@/components/migration/MigrationProgress';
+import { SimpleMigrationModal } from '@/components/migration/SimpleMigrationModal';
+import { ConsoleLogModal } from '@/components/migration/ConsoleLogModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -73,11 +74,13 @@ export default function AdminNew() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [generatedUserData, setGeneratedUserData] = useState<any>(null);
   const [showMigrationModal, setShowMigrationModal] = useState(false);
+  const [selectedMigrationType, setSelectedMigrationType] = useState('');
   const [selectedSourceEnv, setSelectedSourceEnv] = useState('');
   const [selectedTargetEnv, setSelectedTargetEnv] = useState('');
   const [isMigrating, setIsMigrating] = useState(false);
   const [migrationSessionId, setMigrationSessionId] = useState<string | null>(null);
   const [showProgressModal, setShowProgressModal] = useState(false);
+  const [showConsoleModal, setShowConsoleModal] = useState(false);
 
   // Fetch team members
   const { data: teamMembers = [], isLoading: membersLoading } = useQuery({
@@ -277,45 +280,89 @@ export default function AdminNew() {
     }
   };
 
+  // Generic function to get integrations by type
+  const getIntegrationsByType = (type: string) => {
+    return integrations.filter((int: any) => int.type === type);
+  };
+
+  // Get available integration types for migration
+  const getMigratableIntegrationTypes = () => {
+    const typeCounts: { [key: string]: number } = {};
+    integrations.forEach((int: any) => {
+      const type = int.type as string;
+      typeCounts[type] = (typeCounts[type] || 0) + 1;
+    });
+    return Object.keys(typeCounts).filter(type => typeCounts[type] >= 2);
+  };
+
   const handleStartMigration = async () => {
+    if (!selectedMigrationType) {
+      toast({
+        title: "Error",
+        description: "Please select an integration type first",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!selectedSourceEnv || !selectedTargetEnv) {
       toast({
-        title: "Migration error",
-        description: "Please select both source and target integrations",
+        title: "Error",
+        description: "Please select both source and destination integrations",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (selectedSourceEnv === selectedTargetEnv) {
+      toast({
+        title: "Error", 
+        description: "Source and destination integrations must be different",
         variant: "destructive"
       });
       return;
     }
 
     setIsMigrating(true);
+    
     try {
-      const response = await apiRequest('/api/migrate/database', {
+      // Get source and target integration details
+      const sourceIntegration = integrations.find((int: any) => int.id === selectedSourceEnv);
+      const targetIntegration = integrations.find((int: any) => int.id === selectedTargetEnv);
+
+      if (!sourceIntegration || !targetIntegration) {
+        throw new Error("Could not find selected integrations");
+      }
+
+      // Start the migration using original API
+      const response = await apiRequest('/api/migrate-data', {
         method: 'POST',
         body: JSON.stringify({
+          type: selectedMigrationType,
           sourceIntegrationId: selectedSourceEnv,
           targetIntegrationId: selectedTargetEnv,
-          options: {
-            createSchema: true,
-            migrateData: true,
-            resetSequences: true,
-            batchSize: 1000
-          }
+          sourceEnvironment: sourceIntegration.name,
+          targetEnvironment: targetIntegration.name,
+          sourceConfig: sourceIntegration.credentials,
+          targetConfig: targetIntegration.credentials
         })
       });
-      
-      const { sessionId } = response as { sessionId: string };
-      setMigrationSessionId(sessionId);
-      setShowMigrationModal(false);
-      setShowProgressModal(true);
-      
-      toast({
-        title: "Migration started",
-        description: "Real-time progress tracking initiated"
-      });
+
+      if (response.success) {
+        setMigrationSessionId(response.sessionId);
+        setShowMigrationModal(false);
+        setShowProgressModal(true);
+        setShowConsoleModal(true);
+        
+        toast({
+          title: "Migration Started",
+          description: `Real-time migration from ${sourceIntegration.name} to ${targetIntegration.name}`,
+        });
+      }
     } catch (error: any) {
       toast({
-        title: "Migration failed",
-        description: error.message || "Failed to start migration",
+        title: "Migration Failed",
+        description: error.message || "An error occurred during migration",
         variant: "destructive"
       });
     } finally {
@@ -325,19 +372,21 @@ export default function AdminNew() {
 
   const handleMigrationComplete = () => {
     setShowProgressModal(false);
+    setShowConsoleModal(false);
     setMigrationSessionId(null);
     queryClient.invalidateQueries({ queryKey: ['/api/migration-history'] });
     toast({
-      title: "Migration completed",
+      title: "Migration Completed",
       description: "Database migration finished successfully"
     });
   };
 
   const handleMigrationError = (error: string) => {
     setShowProgressModal(false);
+    setShowConsoleModal(false);
     setMigrationSessionId(null);
     toast({
-      title: "Migration failed",
+      title: "Migration Failed",
       description: error,
       variant: "destructive"
     });
@@ -828,44 +877,120 @@ export default function AdminNew() {
       <Dialog open={showMigrationModal} onOpenChange={setShowMigrationModal}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Database Migration</DialogTitle>
+            <DialogTitle>Integration Migration</DialogTitle>
             <DialogDescription>
-              Migrate data and schema between integrations
+              Migrate data and schema between integrations of the same type
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Source Integration</Label>
-                <Select value={selectedSourceEnv} onValueChange={setSelectedSourceEnv}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select source database" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(integrations as any[]).filter((i: any) => i.type === 'postgresql').map((integration: any) => (
-                      <SelectItem key={integration.id} value={integration.id}>
-                        {integration.name} ({integration.status})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Target Integration</Label>
-                <Select value={selectedTargetEnv} onValueChange={setSelectedTargetEnv}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select target database" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(integrations as any[]).filter((i: any) => i.type === 'postgresql' && i.id !== selectedSourceEnv).map((integration: any) => (
-                      <SelectItem key={integration.id} value={integration.id}>
-                        {integration.name} ({integration.status})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Integration Type Selection */}
+            <div>
+              <Label>Integration Type</Label>
+              <Select value={selectedMigrationType} onValueChange={(value) => {
+                setSelectedMigrationType(value);
+                setSelectedSourceEnv('');
+                setSelectedTargetEnv('');
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select integration type to migrate" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getMigratableIntegrationTypes().map((type) => (
+                    <SelectItem key={type} value={type}>
+                      <div className="flex items-center space-x-2">
+                        <Database className="h-4 w-4" />
+                        <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {getIntegrationsByType(type).length} available
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">Choose the type of integration to migrate between</p>
             </div>
+
+            {/* Source and Destination Selection - Only show when type is selected */}
+            {selectedMigrationType && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Source Integration</Label>
+                  <Select value={selectedSourceEnv} onValueChange={setSelectedSourceEnv}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={`Select source ${selectedMigrationType}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getIntegrationsByType(selectedMigrationType)
+                        .map((integration: any) => (
+                          <SelectItem key={integration.id} value={integration.id}>
+                            <div className="flex items-center space-x-2">
+                              <Database className="h-4 w-4" />
+                              <span>{integration.name}</span>
+                              <Badge 
+                                variant={integration.status === 'connected' ? 'default' : 'secondary'} 
+                                className="text-xs"
+                              >
+                                {integration.status}
+                              </Badge>
+                            </div>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">Choose the integration to migrate FROM</p>
+                </div>
+                <div>
+                  <Label>Destination Integration</Label>
+                  <Select value={selectedTargetEnv} onValueChange={setSelectedTargetEnv}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={`Select destination ${selectedMigrationType}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getIntegrationsByType(selectedMigrationType)
+                        .filter((integration: any) => integration.id !== selectedSourceEnv)
+                        .map((integration: any) => (
+                          <SelectItem key={integration.id} value={integration.id}>
+                            <div className="flex items-center space-x-2">
+                              <Database className="h-4 w-4" />
+                              <span>{integration.name}</span>
+                              <Badge 
+                                variant={integration.status === 'connected' ? 'default' : 'secondary'} 
+                                className="text-xs"
+                              >
+                                {integration.status}
+                              </Badge>
+                            </div>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">Choose the integration to migrate TO</p>
+                </div>
+              </div>
+            )}
+
+            {/* Migration Options */}
+            {selectedMigrationType && selectedSourceEnv && selectedTargetEnv && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <AlertTriangle className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-medium text-blue-900">Migration Details</h4>
+                    <p className="text-sm text-blue-700 mt-1">
+                      This will migrate all data and schema from the source to the destination integration.
+                      The destination will be completely overwritten.
+                    </p>
+                    <ul className="text-sm text-blue-700 mt-2 space-y-1">
+                      <li>• Schema recreation with CASCADE drop</li>
+                      <li>• Batch data migration (1000 rows per batch)</li>
+                      <li>• Sequence reset for auto-increment fields</li>
+                      <li>• Real-time console logging</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
             
             <div className="space-y-3">
               <Label>Migration Options</Label>
