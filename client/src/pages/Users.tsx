@@ -19,7 +19,6 @@ function Users() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSearchingIds, setIsSearchingIds] = useState(false);
-  const [searchMode, setSearchMode] = useState<'all' | 'ids'>('all');
   const [searchExecuted, setSearchExecuted] = useState(false);
   const queryClient = useQueryClient();
 
@@ -30,8 +29,8 @@ function Users() {
 
   const usersPerPage = 10;
 
-  // Fetch 100 users for display with total count
-  const { data: allUsersData, isLoading: allUsersLoading, refetch: refetchAllUsers } = useQuery({
+  // Initial load of 100 users for display with total count
+  const { data: allUsersData, isLoading: allUsersLoading } = useQuery({
     queryKey: ['users', 'all'],
     queryFn: async () => {
       const response = await apiRequest('/api/users/all');
@@ -39,7 +38,7 @@ function Users() {
     },
     staleTime: 1000 * 60 * 30, // 30 minutes
     gcTime: 1000 * 60 * 60 * 24, // Cache for 24 hours
-    enabled: searchMode === 'all'
+    enabled: !searchExecuted
   });
 
   // Fetch users by specific IDs
@@ -310,49 +309,29 @@ function Users() {
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
-                    placeholder={searchMode === 'ids' 
-                      ? "Enter user IDs separated by commas (e.g., 12345, 67890, 54321)..." 
-                      : "Search by email, name, or user ID..."
-                    }
+                    placeholder="Enter user IDs separated by commas (e.g., 123456, 789012, 654321)..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onKeyDown={handleKeyPress}
                     className="pl-10"
                   />
                 </div>
-                {searchMode === 'ids' ? (
-                  <Button
-                    variant="default"
-                    onClick={executeUserIdSearch}
-                    disabled={!searchTerm.trim() || isSearchingIds}
-                  >
-                    {isSearchingIds ? (
-                      <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Search className="h-4 w-4 mr-2" />
-                    )}
-                    Search
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                  >
-                    {isRefreshing ? (
-                      <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                    )}
-                    Refresh
-                  </Button>
-                )}
+                <Button
+                  variant="default"
+                  onClick={executeUserIdSearch}
+                  disabled={!searchTerm.trim() || isSearchingIds}
+                >
+                  {isSearchingIds ? (
+                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Search className="h-4 w-4 mr-2" />
+                  )}
+                  Search
+                </Button>
               </div>
-              {searchMode === 'ids' && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Enter specific user IDs separated by commas (e.g., 12345, 67890) and click Search to query Snowflake
-                </p>
-              )}
+              <p className="text-xs text-gray-500 mt-1">
+                Enter specific user IDs separated by commas and click Search to query Snowflake
+              </p>
             </div>
             
             <Select value={userTypeFilter} onValueChange={setUserTypeFilter}>
