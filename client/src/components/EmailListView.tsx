@@ -45,15 +45,15 @@ export function EmailListView({
 }: EmailListViewProps) {
   const getStatusBadge = (report: any) => {
     if (isOneTime) {
-      // One-time email status - only Sent or Failed
-      if (report.sentImmediately || report.sentAt) {
-        return <Badge variant="default" className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Sent</Badge>;
-      }
+      // One-time email status - show status based on actual state
       if (report.lastError) {
         return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Failed</Badge>;
       }
-      // No pending status - return null for reports without sent/failed status
-      return null;
+      if (report.sentImmediately || report.sentAt) {
+        return <Badge variant="default" className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Sent</Badge>;
+      }
+      // For one-time emails that haven't been sent yet, show as pending for clarity
+      return <Badge variant="outline" className="bg-gray-50 text-gray-600"><Clock3 className="h-3 w-3 mr-1" />Draft</Badge>;
     } else {
       // Scheduled email status - cohort style (Active/Paused only)
       if (!report.isActive) {
@@ -145,7 +145,8 @@ export function EmailListView({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name & Status</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Report</TableHead>
                 <TableHead>Recipients</TableHead>
                 <TableHead>{isOneTime ? "Sent At" : "Schedule"}</TableHead>
@@ -157,17 +158,12 @@ export function EmailListView({
                 <TableRow key={report.id} className="hover:bg-muted/50">
                   <TableCell>
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{report.name}</span>
-                        {getStatusBadge(report) && getStatusBadge(report)}
-                      </div>
+                      <span className="font-medium">{report.name}</span>
                       <p className="text-sm text-muted-foreground">{report.description}</p>
-                      {isOneTime && (report.sentAt || report.sentImmediately) && (
-                        <p className="text-xs text-muted-foreground">
-                          Sent: {report.sentAt ? new Date(report.sentAt).toLocaleString() : 'Recently'}
-                        </p>
-                      )}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {getStatusBadge(report)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
@@ -187,7 +183,9 @@ export function EmailListView({
                     <div className="flex items-center gap-1 text-sm">
                       <Clock className="h-3 w-3 text-muted-foreground" />
                       {isOneTime 
-                        ? (report.sentAt ? new Date(report.sentAt).toLocaleString() : 'Pending')
+                        ? (report.sentAt ? new Date(report.sentAt).toLocaleString() : 
+                           report.sentImmediately ? 'Recently sent' : 
+                           '-')
                         : formatScheduleDescription(report.cronExpression, report.timezone)
                       }
                     </div>
