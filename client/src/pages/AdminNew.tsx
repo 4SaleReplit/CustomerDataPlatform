@@ -92,6 +92,11 @@ export default function AdminNew() {
     staging: {},
     production: {}
   });
+  const [environments, setEnvironments] = useState<Array<{id: string, name: string, status: string, databases: any}>>([
+    { id: 'development', name: 'Development', status: 'active', databases: {} },
+    { id: 'staging', name: 'Staging', status: 'inactive', databases: {} },
+    { id: 'production', name: 'Production', status: 'inactive', databases: {} }
+  ]);
 
   // Load existing environment configurations on component mount
   useEffect(() => {
@@ -110,12 +115,14 @@ export default function AdminNew() {
     loadEnvironmentConfigurations();
   }, []);
 
-  // Environment data
-  const environments = [
-    { id: 'development', name: 'Development', status: 'active', databases: environmentDatabases.development },
-    { id: 'staging', name: 'Staging', status: 'inactive', databases: environmentDatabases.staging },
-    { id: 'production', name: 'Production', status: 'inactive', databases: environmentDatabases.production }
-  ];
+  // Update environments when environmentDatabases changes
+  useEffect(() => {
+    setEnvironments([
+      { id: 'development', name: 'Development', status: currentEnvironment === 'development' ? 'active' : 'inactive', databases: environmentDatabases.development },
+      { id: 'staging', name: 'Staging', status: currentEnvironment === 'staging' ? 'active' : 'inactive', databases: environmentDatabases.staging },
+      { id: 'production', name: 'Production', status: currentEnvironment === 'production' ? 'active' : 'inactive', databases: environmentDatabases.production }
+    ]);
+  }, [environmentDatabases, currentEnvironment]);
 
   // Helper functions
   const getIntegrationDisplay = (type: string) => {
@@ -149,7 +156,7 @@ export default function AdminNew() {
     if (!environment) return;
 
     // Find the PostgreSQL integration for this environment
-    const postgresIntegrationId = environmentConfigs?.[environment.name.toLowerCase()]?.postgresql;
+    const postgresIntegrationId = environmentDatabases?.[environment.name.toLowerCase()]?.postgresql;
     if (!postgresIntegrationId) {
       toast({
         title: "Configuration Missing",

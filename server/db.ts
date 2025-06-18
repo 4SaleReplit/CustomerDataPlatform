@@ -35,25 +35,42 @@ function createPool(connectionString: string): Pool {
 export async function switchEnvironment(environment: string, connectionString: string): Promise<void> {
   console.log(`🔄 Switching to ${environment} environment...`);
   
-  // Close current pool if exists
-  if (currentPool) {
-    await currentPool.end();
-  }
+  // Create new pool first
+  const newPool = createPool(connectionString);
   
-  // Create new pool with environment-specific connection
-  currentPool = createPool(connectionString);
-  currentEnvironment = environment;
-  
-  // Test new connection
+  // Test new connection before switching
   try {
-    const client = await currentPool.connect();
+    const client = await newPool.connect();
     const result = await client.query('SELECT NOW()');
     client.release();
     
-    console.log(`✅ Successfully switched to ${environment} environment`);
+    console.log(`✅ New ${environment} connection tested successfully`);
     console.log(`🕐 Database time: ${result.rows[0]?.now}`);
+    
+    // Close old pool after successful test
+    if (currentPool) {
+      try {
+        await currentPool.end();
+        console.log(`🔒 Closed previous database connection`);
+      } catch (error) {
+        console.log(`⚠️ Warning: Error closing previous pool:`, error);
+      }
+    }
+    
+    // Switch to new pool
+    currentPool = newPool;
+    currentEnvironment = environment;
+    
+    console.log(`✅ Successfully switched to ${environment} environment`);
     console.log(`🔗 Connection: ${connectionString.replace(/:[^:@]*@/, ':***@')}`);
   } catch (error) {
+    // Clean up failed new pool
+    try {
+      await newPool.end();
+    } catch (cleanupError) {
+      console.log(`⚠️ Warning: Error cleaning up failed pool:`, cleanupError);
+    }
+    
     console.error(`❌ Failed to connect to ${environment} environment:`, error);
     throw error;
   }
