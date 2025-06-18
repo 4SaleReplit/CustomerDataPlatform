@@ -12,10 +12,12 @@ import { analytics } from '@/lib/amplitude';
 
 function Users() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [userIdSearch, setUserIdSearch] = useState('');
   const [userTypeFilter, setUserTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSearchingIds, setIsSearchingIds] = useState(false);
   const [searchExecuted, setSearchExecuted] = useState(false);
   const queryClient = useQueryClient();
@@ -28,7 +30,7 @@ function Users() {
   const usersPerPage = 10;
 
   // Initial load of 100 users for display with total count
-  const { data: allUsersData, isLoading: allUsersLoading } = useQuery({
+  const { data: allUsersData, isLoading: allUsersLoading, refetch: refetchAllUsers } = useQuery({
     queryKey: ['users', 'all'],
     queryFn: async () => {
       const response = await apiRequest('/api/users/all');
@@ -36,16 +38,15 @@ function Users() {
     },
     staleTime: 1000 * 60 * 30, // 30 minutes
     gcTime: 1000 * 60 * 60 * 24, // Cache for 24 hours
-    enabled: !searchExecuted
   });
 
   // Fetch users by specific IDs
   const { data: idSearchData, isLoading: idSearchLoading, refetch: refetchIdSearch } = useQuery({
-    queryKey: ['users', 'by-ids', searchTerm],
+    queryKey: ['users', 'by-ids', userIdSearch],
     queryFn: async () => {
-      if (!searchTerm.trim()) return null;
+      if (!userIdSearch.trim()) return null;
       
-      const userIds = searchTerm.split(',').map(id => id.trim()).filter(id => id);
+      const userIds = userIdSearch.split(',').map(id => id.trim()).filter(id => id);
       const response = await apiRequest('/api/users/by-ids', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -58,7 +59,7 @@ function Users() {
 
   // Execute user ID search
   const executeUserIdSearch = useCallback(async () => {
-    if (!searchTerm.trim()) return;
+    if (!userIdSearch.trim()) return;
     
     setIsSearchingIds(true);
     try {
@@ -66,7 +67,7 @@ function Users() {
       setSearchExecuted(true);
       setCurrentPage(1);
       analytics.buttonClicked('Search Users by IDs', 'Users', {
-        searchTerm,
+        searchTerm: userIdSearch,
         resultCount: result.data?.rows?.length || 0
       });
     } catch (error) {
@@ -74,11 +75,24 @@ function Users() {
     } finally {
       setIsSearchingIds(false);
     }
-  }, [searchTerm, refetchIdSearch]);
+  }, [userIdSearch, refetchIdSearch]);
+
+  // Handle refresh functionality
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      // Clear cache and refetch all users
+      await apiRequest('/api/users/clear-cache', { method: 'POST' });
+      await refetchAllUsers();
+      analytics.buttonClicked('Refresh All Users', 'Users', { cached: true, page: currentPage });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Handle Enter key press for ID search
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && searchTerm.trim()) {
+  const handleUserIdKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && userIdSearch.trim()) {
       e.preventDefault();
       executeUserIdSearch();
     }
@@ -102,10 +116,24 @@ function Users() {
     }) : [];
 
   const filteredUsers = processedUsers.filter((user: any) => {
+    // Search functionality for general search term
+    const searchableFields = [
+      user.USER_ID,
+      user.PHONE,
+      user.USER_TYPE
+    ].filter(Boolean).map(field => String(field).toLowerCase());
+    
+    const matchesSearch = !searchTerm || searchableFields.some(field => 
+      field.includes(searchTerm.toLowerCase())
+    );
+    
     const matchesType = userTypeFilter === 'all' || 
       (user.USER_TYPE && user.USER_TYPE.toLowerCase() === userTypeFilter);
     
-    return matchesType;
+    const matchesStatus = statusFilter === 'all' || 
+      (user.IS_BLOCK === '0' ? 'active' : 'blocked') === statusFilter;
+    
+    return matchesSearch && matchesType && matchesStatus;
   });
 
   // Pagination - simplified for 100 user display and ID search
@@ -215,51 +243,91 @@ function Users() {
         </CardContent>
       </Card>
 
-      {/* Filters */}
+      {/* Search and Filters */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative flex gap-2">
-                <div className="relative flex-1">
+          <div className="space-y-4">
+            {/* General Search */}
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
-                    placeholder="Enter user IDs separated by commas (e.g., 123456, 789012, 654321)..."
+                    placeholder="Search by User ID, Phone, or Type..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    onKeyDown={handleKeyPress}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              
+              <Select value={userTypeFilter} onValueChange={setUserTypeFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="User Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="premium">Premium</SelectItem>
+                  <SelectItem value="regular">Regular</SelectItem>
+                  <SelectItem value="normal">Normal</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="blocked">Blocked</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button
+                variant="outline"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+              >
+                {isRefreshing ? (
+                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Refresh
+              </Button>
+            </div>
+
+            {/* User ID Search */}
+            <div className="border-t pt-4">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Enter specific User IDs separated by commas (e.g., 123456, 789012)..."
+                    value={userIdSearch}
+                    onChange={(e) => setUserIdSearch(e.target.value)}
+                    onKeyDown={handleUserIdKeyPress}
                     className="pl-10"
                   />
                 </div>
                 <Button
                   variant="default"
                   onClick={executeUserIdSearch}
-                  disabled={!searchTerm.trim() || isSearchingIds}
+                  disabled={!userIdSearch.trim() || isSearchingIds}
                 >
                   {isSearchingIds ? (
                     <RefreshCw className="h-4 w-4 animate-spin mr-2" />
                   ) : (
                     <Search className="h-4 w-4 mr-2" />
                   )}
-                  Search
+                  Search with User ID(s)
                 </Button>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Enter specific user IDs separated by commas and click Search to query Snowflake
+                Search for specific users by their IDs - queries Snowflake directly and updates only the table
               </p>
             </div>
-            
-            <Select value={userTypeFilter} onValueChange={setUserTypeFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="User Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="premium">Premium</SelectItem>
-                <SelectItem value="regular">Regular</SelectItem>
-                <SelectItem value="normal">Normal</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </CardContent>
       </Card>
