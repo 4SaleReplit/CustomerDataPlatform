@@ -253,10 +253,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if this is a "Send Now" request
       const isSendNow = reportData.sendOption === 'now' || !reportData.cronExpression;
+      console.log('Send option check:', {
+        sendOption: reportData.sendOption,
+        cronExpression: reportData.cronExpression,
+        isSendNow: isSendNow
+      });
       
       if (isSendNow) {
         // Handle immediate send
-        console.log('Processing immediate send...');
+        console.log('Processing immediate send for recipients:', reportData.recipientList);
         
         // Generate the report first
         const presentation = await storage.getPresentationById(reportData.presentationId);
@@ -264,8 +269,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(404).json({ error: "Presentation not found" });
         }
 
+        // Validate recipients first
+        if (!reportData.recipientList || reportData.recipientList.length === 0) {
+          return res.status(400).json({ error: "No recipients specified for email delivery" });
+        }
+
         // Process email template with variables using the existing email service
         const { emailService } = await import('./services/emailService');
+        
+        // Test email service connection first
+        console.log('Testing email service connection...');
+        const connectionTest = await emailService.testConnection();
+        console.log('Email service connection test result:', connectionTest);
+        
+        if (!connectionTest) {
+          return res.status(500).json({ error: "Email service not configured properly" });
+        }
         
         // Generate HTML email content using template
         const emailHtml = processEmailTemplate(reportData.emailTemplate?.customContent || 'Your report is ready.', reportData);
@@ -280,13 +299,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           attachments: [] // TODO: Add PDF attachment generation
         };
 
-        console.log('Sending immediate email to:', emailData.to);
+        console.log('Sending immediate email with data:', {
+          to: emailData.to,
+          subject: emailData.subject,
+          recipientCount: emailData.to?.length || 0
+        });
         
         try {
           const success = await emailService.sendReportEmail(emailData);
+          console.log('Email service response:', success);
           
           if (!success) {
-            throw new Error('Email sending failed');
+            throw new Error('Email sending failed - service returned false');
           }
           
           console.log('Email sent successfully to:', emailData.to);

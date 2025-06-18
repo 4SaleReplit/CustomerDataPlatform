@@ -317,7 +317,21 @@ export function ReportsScheduler() {
   });
 
   const handleCreateReport = () => {
-    createReportMutation.mutate(formData);
+    // Check if this is a "Send Now" request
+    if (formData.sendOption === 'now') {
+      // For "Send Now", we need to prepare the data differently
+      const sendNowData = {
+        ...formData,
+        cronExpression: null, // Null for one-time sends
+        isActive: false, // One-time sends are not active schedules
+        sendOption: 'now'
+      };
+      console.log('Sending immediate email with data:', sendNowData);
+      createReportMutation.mutate(sendNowData);
+    } else {
+      // Regular scheduled report
+      createReportMutation.mutate(formData);
+    }
   };
 
   const handleUpdateReport = () => {
