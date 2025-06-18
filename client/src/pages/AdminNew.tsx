@@ -992,27 +992,6 @@ export default function AdminNew() {
               </div>
             )}
             
-            <div className="space-y-3">
-              <Label>Migration Options</Label>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="schema" defaultChecked />
-                  <Label htmlFor="schema">Create Schema</Label>
-                  <p className="text-xs text-muted-foreground ml-6">Create tables, indexes, and constraints in destination database</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="data" defaultChecked />
-                  <Label htmlFor="data">Migrate Data</Label>
-                  <p className="text-xs text-muted-foreground ml-6">Copy all table data from source to destination</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="sequences" defaultChecked />
-                  <Label htmlFor="sequences">Reset Sequences</Label>
-                  <p className="text-xs text-muted-foreground ml-6">Update auto-increment sequences to match data</p>
-                </div>
-              </div>
-            </div>
-            
             <div className="flex justify-end space-x-2">
               <Button variant="outline" onClick={() => setShowMigrationModal(false)}>
                 Cancel
