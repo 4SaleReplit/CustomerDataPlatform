@@ -1305,24 +1305,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         try {
           const client = await pool.connect();
-          const result = await client.query('SELECT 1 as test, current_database() as database, version() as version');
+          
+          // Collect database metadata
+          const basicInfo = await client.query('SELECT current_database() as database, version() as version');
+          const tableCount = await client.query(`
+            SELECT COUNT(*) as count 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public'
+          `);
+          const viewCount = await client.query(`
+            SELECT COUNT(*) as count 
+            FROM information_schema.views 
+            WHERE table_schema = 'public'
+          `);
+          const dbSize = await client.query(`
+            SELECT pg_size_pretty(pg_database_size(current_database())) as size
+          `);
+          
           client.release();
           await pool.end();
           
-          console.log('PostgreSQL connection successful');
+          console.log('PostgreSQL connection successful with metadata:', {
+            database: basicInfo.rows[0].database,
+            tables: tableCount.rows[0].count,
+            views: viewCount.rows[0].count,
+            size: dbSize.rows[0].size
+          });
           
-          // Update integration status to connected
-          const currentMetadata = integration.metadata || {};
+          // Update integration status to connected with detailed metadata
           await storage.updateIntegration(id, { 
             status: 'connected',
             metadata: {
-              ...currentMetadata,
+              tables: parseInt(tableCount.rows[0].count),
+              views: parseInt(viewCount.rows[0].count),
+              database: basicInfo.rows[0].database,
+              version: basicInfo.rows[0].version.split(' ')[0] + ' ' + basicInfo.rows[0].version.split(' ')[1],
+              size: dbSize.rows[0].size,
               lastTested: new Date().toISOString(),
               lastTestResult: {
                 success: true,
-                testedAt: new Date().toISOString(),
-                database: result.rows[0].database,
-                version: result.rows[0].version.split(' ')[0]
+                testedAt: new Date().toISOString()
               }
             }
           });
@@ -1331,8 +1353,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             success: true, 
             message: "PostgreSQL connection successful",
             details: {
-              database: result.rows[0].database,
-              version: result.rows[0].version.split(' ')[0]
+              database: basicInfo.rows[0].database,
+              version: basicInfo.rows[0].version.split(' ')[0] + ' ' + basicInfo.rows[0].version.split(' ')[1],
+              tables: parseInt(tableCount.rows[0].count),
+              views: parseInt(viewCount.rows[0].count),
+              size: dbSize.rows[0].size
             }
           });
         } catch (error) {
