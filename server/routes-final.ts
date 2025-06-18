@@ -1122,9 +1122,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   async function sendReportEmail(emailData: any) {
-    // Implementation would use SendGrid to send actual emails
-    console.log('Sending scheduled report email:', emailData.subject, 'to:', emailData.to.length, 'recipients');
-    return true;
+    const { emailService } = await import('../services/emailService');
+    
+    try {
+      const success = await emailService.sendReportEmail({
+        to: emailData.to || [],
+        cc: emailData.cc || [],
+        bcc: emailData.bcc || [],
+        subject: emailData.subject || 'Scheduled Report',
+        html: emailData.html || emailData.html_content || 'Please find your scheduled report attached.',
+        attachments: emailData.attachments || []
+      });
+      
+      if (success) {
+        console.log(`Successfully sent scheduled report email to ${emailData.to?.length || 0} recipients`);
+      } else {
+        console.error('Failed to send scheduled report email');
+      }
+      
+      return success;
+    } catch (error) {
+      console.error('Error in sendReportEmail:', error);
+      return false;
+    }
   }
 
   async function testAirflowConnection(baseUrl: string, username: string, password: string): Promise<boolean> {
@@ -1135,6 +1155,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return false;
     }
   }
+
+  // Email testing endpoint
+  app.post("/api/test-email", async (req: Request, res: Response) => {
+    try {
+      const { emailService } = await import('./services/emailService');
+      const { to, subject, message } = req.body;
+      
+      if (!to || !subject) {
+        return res.status(400).json({ error: "Email recipient and subject are required" });
+      }
+      
+      const success = await emailService.sendEmail({
+        to: to,
+        subject: subject || "Test Email from 4Sale Analytics",
+        html: `
+          <h2>Test Email from 4Sale Analytics Platform</h2>
+          <p>${message || "This is a test email to verify the email sending functionality."}</p>
+          <p>Sent from: ${process.env.GMAIL_USER}</p>
+          <p>Time: ${new Date().toLocaleString()}</p>
+        `
+      });
+      
+      if (success) {
+        res.json({ success: true, message: "Test email sent successfully" });
+      } else {
+        res.status(500).json({ error: "Failed to send test email" });
+      }
+    } catch (error) {
+      console.error("Error sending test email:", error);
+      res.status(500).json({ error: "Email service error" });
+    }
+  });
+
+  // Email connection test endpoint
+  app.get("/api/email/test-connection", async (req: Request, res: Response) => {
+    try {
+      const { emailService } = await import('./services/emailService');
+      const connected = await emailService.testConnection();
+      
+      res.json({ 
+        connected,
+        service: "Gmail SMTP",
+        user: process.env.GMAIL_USER,
+        message: connected ? "Email service is ready" : "Email service connection failed"
+      });
+    } catch (error) {
+      console.error("Error testing email connection:", error);
+      res.status(500).json({ 
+        connected: false, 
+        error: "Failed to test email connection" 
+      });
+    }
+  });
 
   // Cohorts API Endpoints
   app.get("/api/cohorts", async (req: Request, res: Response) => {
