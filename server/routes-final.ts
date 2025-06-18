@@ -663,32 +663,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 10000; // Default 10k per page for UI
+      const limit = parseInt(req.query.limit as string) || 100; // Default 100 users per page for UI
 
       // Check if cache is valid
       const now = Date.now();
       if (userCache && (now - userCacheTimestamp) < CACHE_DURATION) {
         console.log('Serving users from cache');
         
-        // Return paginated results from cache
-        const startIndex = (page - 1) * limit;
-        const endIndex = startIndex + limit;
-        const paginatedRows = userCache.rows.slice(startIndex, endIndex);
-        
         return res.json({
           columns: userCache.columns,
-          rows: paginatedRows,
+          rows: userCache.rows,
           success: true,
           cached: true,
           cacheTimestamp: userCache.cacheTimestamp,
-          pagination: {
-            page,
-            limit,
-            total: userCache.totalCount,
-            totalPages: Math.ceil(userCache.totalCount / limit),
-            hasNext: endIndex < userCache.totalCount,
-            hasPrev: page > 1
-          }
+          totalCount: userCache.totalCount,
+          displayedCount: userCache.rows?.length || 0,
+          isLimitedDisplay: true
         });
       }
 
@@ -706,10 +696,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalUsers = countResult.rows[0][0];
       console.log(`Total users in database: ${totalUsers}`);
       
-      // For large datasets, fetch a reasonable sample that fits in memory
-      const sampleSize = Math.min(50000, totalUsers); // Max 50k for stable memory usage
-      const query = `SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 ORDER BY USER_ID LIMIT ${sampleSize}`;
-      console.log(`Fetching ${sampleSize} users for memory-efficient caching...`);
+      // Fetch only 100 users for display but track total count
+      const displayLimit = 100;
+      const query = `SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 ORDER BY USER_ID LIMIT ${displayLimit}`;
+      console.log(`Fetching ${displayLimit} users for display (total: ${totalUsers})...`);
       
       const result = await snowflakeService.executeQuery(query);
       
@@ -726,26 +716,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userCacheTimestamp = now;
         console.log(`Cached ${result.rows?.length || 0} of ${totalUsers} users`);
         
-        // Return paginated results
-        const startIndex = (page - 1) * limit;
-        const endIndex = startIndex + limit;
-        const paginatedRows = result.rows.slice(startIndex, endIndex);
-        
         res.json({
           columns: result.columns,
-          rows: paginatedRows,
+          rows: result.rows,
           success: true,
           cached: true,
           cacheTimestamp: now,
-          pagination: {
-            page,
-            limit,
-            total: totalUsers,
-            totalPages: Math.ceil(totalUsers / limit),
-            hasNext: endIndex < totalUsers,
-            hasPrev: page > 1,
-            cachedUpTo: result.rows?.length || 0
-          }
+          totalCount: totalUsers,
+          displayedCount: result.rows?.length || 0,
+          isLimitedDisplay: true
         });
       } else {
         res.status(500).json({ error: result.error });

@@ -30,11 +30,11 @@ function Users() {
 
   const usersPerPage = 10;
 
-  // Fetch all users with server-side caching and pagination
+  // Fetch 100 users for display with total count
   const { data: allUsersData, isLoading: allUsersLoading, refetch: refetchAllUsers } = useQuery({
-    queryKey: ['users', 'all', currentPage],
+    queryKey: ['users', 'all'],
     queryFn: async () => {
-      const response = await apiRequest(`/api/users/all?page=${currentPage}&limit=100`);
+      const response = await apiRequest('/api/users/all');
       return response;
     },
     staleTime: 1000 * 60 * 30, // 30 minutes
@@ -163,15 +163,15 @@ function Users() {
     return matchesSearch && matchesType;
   });
 
-  // Pagination - handle server-side pagination for all users mode
+  // Pagination - simplified for 100 user display and ID search
   let totalPages, currentUsers;
   
-  if (searchMode === 'all' && usersData?.pagination) {
-    // Use server-side pagination
-    totalPages = usersData.pagination.totalPages;
-    currentUsers = processedUsers; // Already paginated from server
+  if (searchMode === 'all') {
+    // For all users mode, show all 100 fetched users without pagination
+    totalPages = 1;
+    currentUsers = processedUsers;
   } else {
-    // Use client-side pagination for ID search
+    // Use client-side pagination for ID search results
     totalPages = Math.ceil(filteredUsers.length / usersPerPage);
     const startIndex = (currentPage - 1) * usersPerPage;
     const endIndex = startIndex + usersPerPage;
@@ -290,9 +290,9 @@ function Users() {
                 <Badge variant="secondary">
                   Cached Data
                 </Badge>
-                {usersData?.pagination && (
+                {usersData?.totalCount && (
                   <Badge variant="outline" className="text-xs">
-                    {usersData.pagination.total.toLocaleString()} total users
+                    Sample of {usersData.totalCount.toLocaleString()} users
                   </Badge>
                 )}
               </div>
@@ -320,20 +320,25 @@ function Users() {
                     className="pl-10"
                   />
                 </div>
-                {searchMode === 'ids' && (
-                  <Button
-                    variant="default"
-                    onClick={executeUserIdSearch}
-                    disabled={!searchTerm.trim() || isSearchingIds}
-                  >
-                    {isSearchingIds ? (
-                      <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Search className="h-4 w-4 mr-2" />
-                    )}
-                    Search Users
-                  </Button>
-                )}
+                <Button
+                  variant="default"
+                  onClick={() => {
+                    if (searchMode === 'ids') {
+                      executeUserIdSearch();
+                    } else {
+                      // For all users mode, refresh the data
+                      handleRefresh();
+                    }
+                  }}
+                  disabled={searchMode === 'ids' ? (!searchTerm.trim() || isSearchingIds) : isRefreshing}
+                >
+                  {(searchMode === 'ids' && isSearchingIds) || (searchMode === 'all' && isRefreshing) ? (
+                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Search className="h-4 w-4 mr-2" />
+                  )}
+                  {searchMode === 'ids' ? 'Fetch Users' : 'Refresh'}
+                </Button>
               </div>
               {searchMode === 'ids' && (
                 <p className="text-xs text-gray-500 mt-1">
@@ -390,7 +395,10 @@ function Users() {
             <div className="flex items-center gap-3">
               <CardTitle>
                 {searchMode === 'ids' && searchTerm ? 'Search Results' : 'Users'} 
-                ({filteredUsers.length} total)
+                ({searchMode === 'all' && usersData?.totalCount ? 
+                  `${usersData.displayedCount} of ${usersData.totalCount.toLocaleString()} total` : 
+                  `${filteredUsers.length} total`
+                })
               </CardTitle>
               {searchMode === 'ids' && isSearchingIds && (
                 <Badge variant="secondary" className="animate-pulse">
