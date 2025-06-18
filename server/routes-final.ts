@@ -1606,6 +1606,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 return def;
               }).join(', ');
 
+              // Check for sequence dependencies and create them first
+              const sequenceColumns = schemaResult.rows.filter(col => 
+                col.column_default && col.column_default.includes('nextval(')
+              );
+              
+              for (const seqCol of sequenceColumns) {
+                const sequenceMatch = seqCol.column_default.match(/nextval\('([^']+)'/);
+                if (sequenceMatch) {
+                  const sequenceName = sequenceMatch[1];
+                  addLog(`Creating sequence: ${sequenceName}`);
+                  await targetClient.query(`CREATE SEQUENCE IF NOT EXISTS "${sequenceName}"`);
+                }
+              }
+
               addLog(`Creating table schema: ${table}`);
               await targetClient.query(`CREATE TABLE "${table}" (${columns})`);
 
