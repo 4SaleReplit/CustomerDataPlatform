@@ -1358,14 +1358,42 @@ export default function AdminNew() {
                     <select
                       id={`${type}-integration`}
                       value={currentSelection}
-                      onChange={(e) => {
+                      onChange={async (e) => {
+                        const newValue = e.target.value;
+                        
+                        // Update local state
                         setEnvironmentDatabases(prev => ({
                           ...prev,
                           [selectedConfigEnv]: {
                             ...prev[selectedConfigEnv],
-                            [type]: e.target.value
+                            [type]: newValue
                           }
                         }));
+                        
+                        // Save to database
+                        try {
+                          await fetch('/api/environment-configurations', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              environmentId: selectedConfigEnv,
+                              integrationType: type,
+                              integrationId: newValue
+                            })
+                          });
+                          
+                          toast({
+                            title: "Configuration saved",
+                            description: `${type} integration assigned to ${environments.find(e => e.id === selectedConfigEnv)?.name}`
+                          });
+                        } catch (error) {
+                          console.error('Failed to save environment configuration:', error);
+                          toast({
+                            title: "Save failed",
+                            description: "Could not save environment configuration",
+                            variant: "destructive"
+                          });
+                        }
                       }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >

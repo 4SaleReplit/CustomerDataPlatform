@@ -2253,6 +2253,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Snowflake schema endpoint for segments page
+  // Environment Configuration Management
+  app.get("/api/environment-configurations", async (req: Request, res: Response) => {
+    try {
+      const { environmentConfigurations } = await import('../shared/schema');
+      const { eq, and } = await import('drizzle-orm');
+      
+      // Fetch all environment configurations from database
+      const configs = await db.select().from(environmentConfigurations)
+        .where(eq(environmentConfigurations.isActive, true));
+      
+      // Group by environment for easy frontend consumption
+      const groupedConfigs = {
+        development: {},
+        staging: {},
+        production: {}
+      };
+      
+      configs.forEach(config => {
+        if (!groupedConfigs[config.environmentId as keyof typeof groupedConfigs]) {
+          groupedConfigs[config.environmentId as keyof typeof groupedConfigs] = {};
+        }
+        groupedConfigs[config.environmentId as keyof typeof groupedConfigs][config.integrationType] = config.integrationId;
+      });
+      
+      res.json(groupedConfigs);
+    } catch (error) {
+      console.error("Error fetching environment configurations:", error);
+      res.status(500).json({ error: "Failed to fetch environment configurations" });
+    }
+  });
+
+  app.post("/api/environment-configurations", async (req: Request, res: Response) => {
+    try {
+      const { environmentId, integrationType, integrationId } = req.body;
+      const { environmentConfigurations } = await import('../shared/schema');
+      const { eq, and } = await import('drizzle-orm');
+      
+      // Find the environment name mapping
+      const environmentNames = {
+        development: 'Development',
+        staging: 'Staging', 
+        production: 'Production'
+      };
+      
+      const environmentName = environmentNames[environmentId as keyof typeof environmentNames];
+      
+      if (!environmentName) {
+        return res.status(400).json({ error: "Invalid environment ID" });
+      }
+      
+      // Check if configuration already exists
+      const existingConfig = await db.select().from(environmentConfigurations)
+        .where(and(
+          eq(environmentConfigurations.environmentId, environmentId),
+          eq(environmentConfigurations.integrationType, integrationType),
+          eq(environmentConfigurations.isActive, true)
+        ));
+      
+      if (existingConfig.length > 0) {
+        // Update existing configuration
+        await db.update(environmentConfigurations)
+          .set({ 
+            integrationId: integrationId || null,
+            updatedAt: new Date()
+          })
+          .where(eq(environmentConfigurations.id, existingConfig[0].id));
+      } else {
+        // Insert new configuration
+        await db.insert(environmentConfigurations).values({
+          environmentId,
+          environmentName,
+          integrationType,
+          integrationId: integrationId || null,
+          isActive: true
+        });
+      }
+      
+      console.log(`Saved environment config: ${environmentId} -> ${integrationType} -> ${integrationId}`);
+      
+      res.json({ 
+        success: true, 
+        message: "Environment configuration saved successfully" 
+      });
+    } catch (error) {
+      console.error("Error saving environment configuration:", error);
+      res.status(500).json({ error: "Failed to save environment configuration" });
+    }
+  });
+
   app.get("/api/snowflake/schema", async (req: Request, res: Response) => {
     try {
       const { getDynamicSnowflakeService } = await import('./services/snowflake');
