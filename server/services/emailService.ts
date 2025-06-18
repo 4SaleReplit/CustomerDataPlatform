@@ -48,11 +48,20 @@ class EmailService {
         text: options.text,
         replyTo: process.env.GMAIL_USER,
         headers: {
-          'X-Mailer': '4Sale Analytics Platform',
+          'X-Mailer': '4Sale Analytics Platform v2.0',
           'X-Priority': '3',
           'Importance': 'Normal',
-          'List-Unsubscribe': `<mailto:${process.env.GMAIL_USER}?subject=Unsubscribe>`,
-          'Return-Path': process.env.GMAIL_USER
+          'X-Auto-Response-Suppress': 'OOF, DR, RN, NRN, AutoReply',
+          'X-Entity-ID': '4sale-analytics-platform',
+          'X-Report-Abuse': `abuse@4sale.tech`,
+          'List-Unsubscribe': `<mailto:${process.env.GMAIL_USER}?subject=Unsubscribe>, <https://4sale.tech/unsubscribe>`,
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+          'Return-Path': process.env.GMAIL_USER,
+          'Message-ID': `<${Date.now()}-${Math.random().toString(36)}@4sale.tech>`,
+          'MIME-Version': '1.0',
+          'Content-Type': 'text/html; charset=UTF-8',
+          'X-Spam-Status': 'No',
+          'X-Authenticated-Sender': process.env.GMAIL_USER
         },
         attachments: options.attachments?.map(att => ({
           filename: att.filename,
