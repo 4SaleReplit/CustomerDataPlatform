@@ -20,7 +20,7 @@ import { DataStudioExploreView } from "./pages/DataStudioExploreView";
 import { DataStudioExploreEdit } from "./pages/DataStudioExploreEdit";
 import { DataStudioReports } from "./pages/DataStudioReports";
 import ReportBuilder from "./pages/ReportBuilder";
-import { EmailSender } from "./pages/EmailSender";
+import { EmailSender } from "./pages/EmailSenderSimple";
 import { EmailTemplatesDesigner } from "./pages/EmailTemplatesDesigner";
 import { PresentationView } from "./pages/PresentationView";
 import Users from "./pages/Users";

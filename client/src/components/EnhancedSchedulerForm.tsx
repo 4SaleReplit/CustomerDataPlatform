@@ -45,15 +45,18 @@ interface FormData {
 }
 
 interface EnhancedSchedulerFormProps {
-  formData: FormData;
-  setFormData: (data: FormData) => void;
-  presentations: any[];
-  presentationsLoading: boolean;
-  mailingLists: any[];
-  onSubmit: () => void;
-  onCancel: () => void;
-  isLoading: boolean;
-  updateEmailTemplate: (template: any) => void;
+  formData?: FormData;
+  setFormData?: (data: FormData) => void;
+  presentations?: any[];
+  presentationsLoading?: boolean;
+  mailingLists?: any[];
+  onSubmit?: () => void;
+  onCancel?: () => void;
+  isLoading?: boolean;
+  updateEmailTemplate?: (template: any) => void;
+  onSuccess?: () => void;
+  hideOneTimeOption?: boolean;
+  defaultSendOption?: 'now' | 'schedule';
 }
 
 

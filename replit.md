@@ -111,6 +111,18 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 18, 2025**: Email Sender Interface Restructure with Two-Tab Design
+  - Replaced "Scheduler" navigation item with "Email Sender" for clearer user experience
+  - Created comprehensive two-tab interface: "Scheduler" for recurring reports and "One-Time Email" for instant sends
+  - Scheduler tab displays only scheduled reports with cron expressions and active/paused status badges
+  - One-Time Email tab shows only immediate sends with "Sent" status badges instead of schedule information
+  - Removed schedule display ("No Schedule") from one-time email cards as requested
+  - Enhanced card design with relevant icons: Calendar for scheduled reports, Send for one-time emails
+  - Implemented simplified form with conditional fields based on active tab
+  - Added proper status badges: "Active/Paused" for scheduled reports, "Sent" for one-time emails
+  - Updated navigation structure from /reports/scheduler to /reports/email-sender
+  - Created streamlined user experience separating scheduled vs immediate email functionality
+
 - **June 18, 2025**: Complete "Send Now" Email Functionality Debug and Anti-Spam Resolution
   - Fixed core issue where form was sending empty email subject and content fields
   - Added comprehensive form validation for "Send Now" mode requiring email subject and content

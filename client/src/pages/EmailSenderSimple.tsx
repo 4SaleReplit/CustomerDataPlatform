@@ -7,8 +7,11 @@ import { Calendar, Clock, Mail, Send, MoreHorizontal, Copy, Pause, Play, Edit, T
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { EnhancedSchedulerForm } from "@/components/EnhancedSchedulerForm";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 
 interface ScheduledReport {
@@ -26,14 +29,43 @@ interface ScheduledReport {
   emailSubject: string;
 }
 
+interface EmailFormData {
+  name: string;
+  description: string;
+  presentationId: string;
+  subject: string;
+  content: string;
+  recipients: string;
+  cronExpression: string;
+  timezone: string;
+  sendOption: 'now' | 'schedule';
+}
+
 export function EmailSender() {
   const [activeTab, setActiveTab] = useState<"scheduler" | "one-time">("scheduler");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [formData, setFormData] = useState<EmailFormData>({
+    name: '',
+    description: '',
+    presentationId: '',
+    subject: '',
+    content: '',
+    recipients: '',
+    cronExpression: '0 9 * * 1',
+    timezone: 'Africa/Cairo',
+    sendOption: 'schedule'
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['/api/scheduled-reports'],
     queryFn: () => apiRequest('/api/scheduled-reports')
+  });
+
+  const { data: presentations = [] } = useQuery({
+    queryKey: ['/api/presentations'],
+    queryFn: () => apiRequest('/api/presentations')
   });
 
   // Separate scheduled reports from one-time emails
@@ -74,6 +106,70 @@ export function EmailSender() {
       toast({ title: "Report deleted successfully" });
     }
   });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const recipientList = formData.recipients.split(',').map(email => email.trim()).filter(email => email);
+      
+      const requestData = {
+        name: formData.name,
+        description: formData.description,
+        presentationId: formData.presentationId,
+        cronExpression: formData.sendOption === 'now' ? null : formData.cronExpression,
+        timezone: formData.timezone,
+        recipientList,
+        ccList: [],
+        bccList: [],
+        isActive: formData.sendOption === 'schedule',
+        sendOption: formData.sendOption,
+        emailTemplate: {
+          subject: formData.subject,
+          customContent: formData.content,
+          templateId: 'professional'
+        },
+        formatSettings: {
+          format: 'pdf',
+          includeCharts: true
+        },
+        customVariables: []
+      };
+
+      await apiRequest('/api/scheduled-reports', {
+        method: 'POST',
+        body: JSON.stringify(requestData)
+      });
+
+      toast({ 
+        title: formData.sendOption === 'now' ? "Email sent successfully" : "Report scheduled successfully" 
+      });
+      
+      setIsCreateDialogOpen(false);
+      setFormData({
+        name: '',
+        description: '',
+        presentationId: '',
+        subject: '',
+        content: '',
+        recipients: '',
+        cronExpression: '0 9 * * 1',
+        timezone: 'Africa/Cairo',
+        sendOption: activeTab === 'one-time' ? 'now' : 'schedule'
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/scheduled-reports'] });
+    } catch (error) {
+      toast({ 
+        title: "Error", 
+        description: formData.sendOption === 'now' ? "Failed to send email" : "Failed to schedule report",
+        variant: "destructive" 
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const formatNextExecution = (nextExecution: string | null) => {
     if (!nextExecution) return "No schedule";
@@ -167,6 +263,146 @@ export function EmailSender() {
     </Card>
   );
 
+  const EmailForm = () => (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Report Name</Label>
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="Enter report name"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="presentation">Presentation</Label>
+          <Select 
+            value={formData.presentationId} 
+            onValueChange={(value) => setFormData({ ...formData, presentationId: value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select presentation" />
+            </SelectTrigger>
+            <SelectContent>
+              {presentations.map((presentation: any) => (
+                <SelectItem key={presentation.id} value={presentation.id}>
+                  {presentation.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Description</Label>
+        <Input
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          placeholder="Enter description"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="subject">Email Subject</Label>
+        <Input
+          id="subject"
+          value={formData.subject}
+          onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+          placeholder="Enter email subject"
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="content">Email Content</Label>
+        <Textarea
+          id="content"
+          value={formData.content}
+          onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+          placeholder="Enter email content"
+          rows={4}
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="recipients">Recipients</Label>
+        <Textarea
+          id="recipients"
+          value={formData.recipients}
+          onChange={(e) => setFormData({ ...formData, recipients: e.target.value })}
+          placeholder="Enter email addresses separated by commas"
+          rows={2}
+          required
+        />
+      </div>
+
+      {activeTab === 'scheduler' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="schedule">Schedule</Label>
+            <Select 
+              value={formData.cronExpression} 
+              onValueChange={(value) => setFormData({ ...formData, cronExpression: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0 9 * * 1">Weekly (Monday 9 AM)</SelectItem>
+                <SelectItem value="0 9 * * *">Daily (9 AM)</SelectItem>
+                <SelectItem value="0 9 1 * *">Monthly (1st day, 9 AM)</SelectItem>
+                <SelectItem value="0 9 * * 0">Weekly (Sunday 9 AM)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="timezone">Timezone</Label>
+            <Select 
+              value={formData.timezone} 
+              onValueChange={(value) => setFormData({ ...formData, timezone: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Africa/Cairo">Africa/Cairo</SelectItem>
+                <SelectItem value="UTC">UTC</SelectItem>
+                <SelectItem value="America/New_York">America/New_York</SelectItem>
+                <SelectItem value="Europe/London">Europe/London</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-end gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setIsCreateDialogOpen(false)}
+        >
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Processing..." : activeTab === 'one-time' ? "Send Now" : "Schedule Report"}
+        </Button>
+      </div>
+    </form>
+  );
+
+  // Update sendOption when tab changes
+  React.useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      sendOption: activeTab === 'one-time' ? 'now' : 'schedule'
+    }));
+  }, [activeTab]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -181,14 +417,19 @@ export function EmailSender() {
               New Email
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Create New Email</DialogTitle>
+              <DialogTitle>
+                {activeTab === 'one-time' ? 'Send One-Time Email' : 'Schedule Report'}
+              </DialogTitle>
               <DialogDescription>
-                Configure your email settings and template
+                {activeTab === 'one-time' 
+                  ? 'Send an immediate email report'
+                  : 'Configure your scheduled email report'
+                }
               </DialogDescription>
             </DialogHeader>
-            <EnhancedSchedulerForm />
+            <EmailForm />
           </DialogContent>
         </Dialog>
       </div>
