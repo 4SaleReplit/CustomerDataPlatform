@@ -1019,7 +1019,7 @@ export default function AdminNew() {
               </Button>
               <Button 
                 onClick={handleStartMigration} 
-                disabled={isMigrating || !selectedSourceEnv || !selectedTargetEnv}
+                disabled={isMigrating || !selectedMigrationType || !selectedSourceEnv || !selectedTargetEnv}
               >
                 {isMigrating ? (
                   <>
@@ -1038,24 +1038,15 @@ export default function AdminNew() {
         </DialogContent>
       </Dialog>
 
-      {/* Real-time Migration Progress Modal */}
-      <Dialog open={showProgressModal} onOpenChange={() => {}}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Database Migration Progress</DialogTitle>
-            <DialogDescription>
-              Real-time migration status with detailed progress tracking
-            </DialogDescription>
-          </DialogHeader>
-          {migrationSessionId && (
-            <MigrationProgress
-              sessionId={migrationSessionId}
-              onComplete={handleMigrationComplete}
-              onError={handleMigrationError}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Console Log Modal */}
+      {showConsoleModal && migrationSessionId && (
+        <ConsoleLogModal
+          isOpen={showConsoleModal}
+          onClose={() => setShowConsoleModal(false)}
+          sessionId={migrationSessionId}
+          migrationData={null} // Will be populated by polling
+        />
+      )}
     </div>
   );
 }

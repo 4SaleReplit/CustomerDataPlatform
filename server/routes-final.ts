@@ -1898,6 +1898,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // Get migration progress by session ID
+  app.get("/api/migration-progress/:sessionId", async (req: Request, res: Response) => {
+    try {
+      const { sessionId } = req.params;
+      const progress = migrationSessions.get(sessionId);
+      
+      if (!progress) {
+        return res.status(404).json({ error: "Migration session not found" });
+      }
+      
+      res.json(progress);
+    } catch (error) {
+      console.error("Error fetching migration progress:", error);
+      res.status(500).json({ error: "Failed to get migration progress" });
+    }
+  });
+
+  // Get migration logs by session ID
+  app.get("/api/migration-logs/:sessionId", async (req: Request, res: Response) => {
+    try {
+      const { sessionId } = req.params;
+      const logs = migrationLogs.get(sessionId);
+      
+      if (!logs) {
+        return res.status(404).json({ error: "Migration logs not found" });
+      }
+      
+      res.json({ logs });
+    } catch (error) {
+      console.error("Error fetching migration logs:", error);
+      res.status(500).json({ error: "Failed to get migration logs" });
+    }
+  });
+
   // Segments API Endpoints
   app.get("/api/segments", async (req: Request, res: Response) => {
     try {
