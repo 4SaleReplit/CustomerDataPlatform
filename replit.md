@@ -111,6 +111,23 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 18, 2025**: Fixed Integration Cards Metadata Display and Database Environment Configuration
+  - Resolved integration cards showing "0 tables" despite having correct database sizes
+  - Fixed frontend/backend metadata field mismatch - frontend now checks both metadata.tables and metadata.userTables
+  - Updated environment configurations to properly use current Replit PostgreSQL as Development environment
+  - Fixed PostgreSQL integration metadata collection to show accurate table counts, database sizes, and versions
+  - Migration system now uses actual integration credentials instead of localhost connections
+  - Enhanced test connection functionality to collect and store comprehensive database metadata
+  - Integration cards now display authentic data: Development (23 tables, 11 MB), Staging/Production (23 tables, 12 MB)
+
+- **June 18, 2025**: Complete Database Schema and Integration Restoration
+  - Restored all missing database tables after migration system testing (integrations, team, roles, dashboard_tile_instances)
+  - Fixed Drizzle schema to match actual database table structure (removed description field, updated column names)
+  - Recreated all PostgreSQL integrations with proper credentials and environment mappings
+  - Current Replit PostgreSQL database correctly configured as Development environment
+  - Environment configuration persistence now works properly - dropdowns save and load selections from database
+  - Migration system handles JSON data correctly with parameterized queries to prevent syntax errors
+
 - **June 16, 2025**: Complete Thumbnail Generation System for Report Card Previews
   - Implemented automatic thumbnail generation from first slide images for report card previews
   - Added preview_image_url database field to presentations table for thumbnail storage

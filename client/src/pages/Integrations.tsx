@@ -243,7 +243,7 @@ const IntegrationCard = ({ integration, onConfigure, onTest, onPause, onDelete, 
         return (
           <div className="grid grid-cols-2 gap-3 mt-3 p-3 bg-green-50 rounded-lg border border-green-100">
             <div className="text-center">
-              <div className="text-lg font-semibold text-green-900">{metadata.userTables || 0}</div>
+              <div className="text-lg font-semibold text-green-900">{metadata.tables || metadata.userTables || 0}</div>
               <div className="text-xs text-green-600">Tables</div>
             </div>
             <div className="text-center">
@@ -1145,8 +1145,8 @@ export default function Integrations() {
                           <div className="space-y-4">
                             <div className="grid grid-cols-3 gap-4">
                               <div className="text-center p-3 bg-green-100 rounded-lg">
-                                <div className="text-2xl font-bold text-green-900">{metadata.userTables || 0}</div>
-                                <div className="text-sm text-green-600">User Tables</div>
+                                <div className="text-2xl font-bold text-green-900">{metadata.tables || metadata.userTables || 0}</div>
+                                <div className="text-sm text-green-600">Tables</div>
                               </div>
                               <div className="text-center p-3 bg-green-100 rounded-lg">
                                 <div className="text-2xl font-bold text-green-900">{metadata.views || 0}</div>
