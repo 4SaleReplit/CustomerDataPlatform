@@ -61,9 +61,29 @@ function Users() {
       });
       return response;
     },
-    enabled: searchMode === 'ids' && searchTerm.trim().length > 0,
+    enabled: false, // Disable automatic execution
     staleTime: 1000 * 60 * 5, // 5 minutes for ID searches
   });
+
+  // Handle Enter key press for ID search
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchMode === 'ids' && searchTerm.trim()) {
+      e.preventDefault();
+      refetchIdSearch();
+      analytics.buttonClicked('Search User IDs Enter', 'Users', { 
+        searchTerm,
+        userIdCount: searchTerm.split(',').length 
+      });
+    }
+  };
+
+  // Handle search mode changes
+  const handleSearchModeChange = (mode: 'all' | 'ids') => {
+    setSearchMode(mode);
+    setSearchTerm('');
+    setCurrentPage(1);
+    analytics.buttonClicked(`Switch to ${mode === 'all' ? 'All Users' : 'ID Search'}`, 'Users');
+  };
 
   // Determine which data to use
   const usersData = searchMode === 'ids' ? idSearchData : allUsersData;
@@ -225,17 +245,14 @@ function Users() {
               <Button
                 variant={searchMode === 'all' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => {
-                  setSearchMode('all');
-                  setSearchTerm('');
-                }}
+                onClick={() => handleSearchModeChange('all')}
               >
                 All Users (Cached)
               </Button>
               <Button
                 variant={searchMode === 'ids' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setSearchMode('ids')}
+                onClick={() => handleSearchModeChange('ids')}
               >
                 <Hash className="h-4 w-4 mr-1" />
                 Search by User IDs
@@ -255,21 +272,46 @@ function Users() {
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder={searchMode === 'ids' 
-                    ? "Enter user IDs separated by commas (e.g., 12345, 67890, 54321)..." 
-                    : "Search by email, name, or user ID..."
-                  }
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+              <div className="relative flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder={searchMode === 'ids' 
+                      ? "Enter user IDs separated by commas (e.g., 12345, 67890, 54321)..." 
+                      : "Search by email, name, or user ID..."
+                    }
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    className="pl-10"
+                  />
+                </div>
+                {searchMode === 'ids' && (
+                  <Button
+                    variant="default"
+                    onClick={() => {
+                      if (searchTerm.trim()) {
+                        refetchIdSearch();
+                        analytics.buttonClicked('Search User IDs Button', 'Users', { 
+                          searchTerm,
+                          userIdCount: searchTerm.split(',').length 
+                        });
+                      }
+                    }}
+                    disabled={!searchTerm.trim() || idSearchLoading}
+                  >
+                    {idSearchLoading ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                    Search
+                  </Button>
+                )}
               </div>
               {searchMode === 'ids' && (
                 <p className="text-xs text-gray-500 mt-1">
-                  Enter specific user IDs separated by commas to search for exact matches
+                  Enter specific user IDs separated by commas and press Enter or click Search
                 </p>
               )}
             </div>
@@ -319,7 +361,23 @@ function Users() {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>Users ({filteredUsers.length} total)</CardTitle>
+            <div className="flex items-center gap-3">
+              <CardTitle>
+                {searchMode === 'ids' && searchTerm ? 'Search Results' : 'Users'} 
+                ({filteredUsers.length} total)
+              </CardTitle>
+              {searchMode === 'ids' && idSearchLoading && (
+                <Badge variant="secondary" className="animate-pulse">
+                  <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                  Searching...
+                </Badge>
+              )}
+              {searchMode === 'ids' && !idSearchLoading && searchTerm && (
+                <Badge variant="default">
+                  {filteredUsers.length} found
+                </Badge>
+              )}
+            </div>
             <div className="text-sm text-gray-500">
               Showing {currentUsers.length} of {filteredUsers.length} users
             </div>
