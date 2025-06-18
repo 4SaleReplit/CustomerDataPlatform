@@ -82,6 +82,10 @@ function Users() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
+      // Reset to normal view and clear search state
+      setSearchExecuted(false);
+      setUserIdSearch('');
+      setCurrentPage(1);
       // Clear cache and refetch all users
       await apiRequest('/api/users/clear-cache', { method: 'POST' });
       await refetchAllUsers();
