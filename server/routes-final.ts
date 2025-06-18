@@ -2257,11 +2257,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/environment-configurations", async (req: Request, res: Response) => {
     try {
       const { environmentConfigurations } = await import('../shared/schema');
-      const { eq, and } = await import('drizzle-orm');
+      const { eq } = await import('drizzle-orm');
       
       // Fetch all environment configurations from database
       const configs = await db.select().from(environmentConfigurations)
         .where(eq(environmentConfigurations.isActive, true));
+      
+      console.log('Raw configs from database:', configs);
       
       // Group by environment for easy frontend consumption
       const groupedConfigs = {
@@ -2271,11 +2273,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       configs.forEach(config => {
-        if (!groupedConfigs[config.environmentId as keyof typeof groupedConfigs]) {
-          groupedConfigs[config.environmentId as keyof typeof groupedConfigs] = {};
+        const envId = config.environmentId as keyof typeof groupedConfigs;
+        if (groupedConfigs[envId]) {
+          groupedConfigs[envId][config.integrationType] = config.integrationId;
         }
-        groupedConfigs[config.environmentId as keyof typeof groupedConfigs][config.integrationType] = config.integrationId;
       });
+      
+      console.log('Grouped configs for frontend:', groupedConfigs);
       
       res.json(groupedConfigs);
     } catch (error) {

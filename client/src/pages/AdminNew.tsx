@@ -93,6 +93,23 @@ export default function AdminNew() {
     production: {}
   });
 
+  // Load existing environment configurations on component mount
+  useEffect(() => {
+    const loadEnvironmentConfigurations = async () => {
+      try {
+        const response = await fetch('/api/environment-configurations');
+        if (response.ok) {
+          const configs = await response.json();
+          setEnvironmentDatabases(configs);
+        }
+      } catch (error) {
+        console.error('Failed to load environment configurations:', error);
+      }
+    };
+
+    loadEnvironmentConfigurations();
+  }, []);
+
   // Environment data
   const environments = [
     { id: 'development', name: 'Development', status: 'active', databases: environmentDatabases.development },
