@@ -188,14 +188,9 @@ export function ReportsScheduler() {
   // Create scheduled report mutation
   const createReportMutation = useMutation({
     mutationFn: (data: any) => {
-      // Auto-generate Airflow configuration based on form data
-      const airflowConfig = generateAirflowConfiguration(data);
       return apiRequest("/api/scheduled-reports", {
         method: "POST",
-        body: JSON.stringify({
-          ...data,
-          airflowConfiguration: airflowConfig
-        })
+        body: JSON.stringify(data)
       });
     },
     onSuccess: () => {
@@ -283,21 +278,15 @@ export function ReportsScheduler() {
       presentationId: report.presentationId,
       cronExpression: report.cronExpression,
       timezone: report.timezone,
-      emailSubject: report.emailSubject,
-      emailBody: report.emailBody,
       recipientList: report.recipientList,
       ccList: report.ccList,
       bccList: report.bccList,
       isActive: report.isActive,
-      airflowDagId: report.airflowDagId || "",
-      airflowTaskId: report.airflowTaskId || "send_report",
-      airflowConfiguration: (report.airflowConfiguration as any) || {
-        dag_id: "",
-        schedule_interval: null,
-        start_date: new Date().toISOString(),
-        catchup: false,
-        max_active_runs: 1,
-        tasks: []
+      emailTemplate: report.emailTemplate || {
+        templateId: "",
+        subject: "",
+        customContent: "",
+        templateVariables: {}
       },
       pdfDeliveryUrl: report.pdfDeliveryUrl || "",
       placeholderConfig: report.placeholderConfig,
@@ -331,43 +320,10 @@ export function ReportsScheduler() {
     });
   };
 
-  const generateAirflowConfiguration = (data: any) => {
-    return {
-      dag_id: data.airflowDagId || `report_${data.name?.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`,
-      schedule_interval: data.cronExpression || null,
-      start_date: new Date().toISOString(),
-      catchup: false,
-      max_active_runs: 1,
-      timezone: data.timezone || "Africa/Cairo",
-      tasks: [{
-        task_id: "generate_report",
-        operator: "PythonOperator",
-        python_callable: "generate_pdf_report",
-        op_kwargs: {
-          presentation_id: data.presentationId,
-          format: data.formatSettings?.format || "pdf",
-          include_charts: data.formatSettings?.includeCharts || true
-        }
-      }, {
-        task_id: data.airflowTaskId || "send_report",
-        operator: "EmailOperator",
-        to: data.recipientList || [],
-        cc: data.ccList || [],
-        bcc: data.bccList || [],
-        subject: data.emailSubject || "",
-        html_content: data.emailBody || "",
-        files: [{
-          file_path: data.pdfDeliveryUrl || "/tmp/report.pdf",
-          file_name: `${data.name || 'report'}.pdf`
-        }]
-      }]
-    };
-  };
-
-  const insertPlaceholder = (placeholder: string, field: "emailSubject" | "emailBody") => {
+  const updateEmailTemplate = (emailTemplate: any) => {
     setFormData(prev => ({
       ...prev,
-      [field]: prev[field] + placeholder
+      emailTemplate
     }));
   };
 
@@ -565,7 +521,7 @@ interface SchedulerFormProps {
   onSubmit: () => void;
   onCancel: () => void;
   isLoading: boolean;
-  insertPlaceholder: (placeholder: string, field: "emailSubject" | "emailBody") => void;
+  updateEmailTemplate: (emailTemplate: any) => void;
 }
 
 function SchedulerForm({
@@ -577,7 +533,7 @@ function SchedulerForm({
   onSubmit,
   onCancel,
   isLoading,
-  insertPlaceholder
+  updateEmailTemplate
 }: SchedulerFormProps) {
   const [frequency, setFrequency] = useState("weekly");
   const [time, setTime] = useState("09:00");
