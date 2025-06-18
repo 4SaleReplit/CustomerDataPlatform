@@ -71,6 +71,7 @@ export function EnhancedSchedulerForm({
 }: EnhancedSchedulerFormProps) {
   const [customVariables, setCustomVariables] = useState<CustomVariable[]>(formData.customVariables || []);
   const [previewHtml, setPreviewHtml] = useState('');
+  const [emailInputValue, setEmailInputValue] = useState<string>(formData.recipientList.join(', '));
 
   // Helper function to generate cron expression from user-friendly inputs
   const generateCronExpression = (frequency: string, dayOfWeek: string, time: string): string => {
@@ -535,10 +536,24 @@ export function EnhancedSchedulerForm({
                 <Input
                   id="recipients"
                   placeholder="Enter email addresses separated by commas"
-                  value={formData.recipientList.join(', ')}
+                  value={emailInputValue}
                   onChange={(e) => {
+                    // Allow natural typing with commas
+                    setEmailInputValue(e.target.value);
+                  }}
+                  onBlur={(e) => {
+                    // Process emails when user finishes typing
                     const emails = e.target.value.split(',').map(email => email.trim()).filter(email => email);
                     setFormData({ ...formData, recipientList: emails });
+                    setEmailInputValue(emails.join(', '));
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      // Process emails when Enter is pressed
+                      const emails = e.currentTarget.value.split(',').map(email => email.trim()).filter(email => email);
+                      setFormData({ ...formData, recipientList: emails });
+                      setEmailInputValue(emails.join(', '));
+                    }
                   }}
                 />
                 <p className="text-xs text-muted-foreground">
