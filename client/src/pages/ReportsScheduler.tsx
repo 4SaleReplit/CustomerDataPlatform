@@ -173,6 +173,13 @@ export function ReportsScheduler() {
   // Fetch scheduled reports
   const { data: scheduledReports = [], isLoading: reportsLoading } = useQuery({
     queryKey: ["/api/scheduled-reports"],
+    queryFn: async () => {
+      const response = await fetch('/api/scheduled-reports');
+      if (!response.ok) {
+        throw new Error('Failed to fetch scheduled reports');
+      }
+      return response.json();
+    }
   });
 
   // Fetch presentations for dropdown
