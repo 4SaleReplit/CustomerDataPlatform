@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, MoreVertical, Clock, Users, Database, Send, Pause, CheckCircle, XCircle, Clock3, Copy, Edit, Trash2, Play } from "lucide-react";
+import { Search, MoreVertical, Clock, Users, Database, Send, Pause, CheckCircle, XCircle, Clock3, Copy, Edit, Trash2, Play, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useMemo } from "react";
 
 interface EmailListViewProps {
   reports: any[];
@@ -43,6 +44,66 @@ export function EmailListView({
   onToggleActive,
   isOneTime = false
 }: EmailListViewProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Filtered and paginated data
+  const filteredAndPaginatedData = useMemo(() => {
+    let filtered = reports;
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(report => 
+        report.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        report.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply status filter
+    if (statusFilter && statusFilter !== 'all') {
+      if (isOneTime) {
+        filtered = filtered.filter(report => {
+          if (statusFilter === 'sent') return report.sendingStatus === 'sent' || report.sentImmediately || report.sentAt;
+          if (statusFilter === 'failed') return report.sendingStatus === 'failed' || report.lastError;
+          if (statusFilter === 'draft') return report.sendingStatus === 'draft' || (!report.sentImmediately && !report.sentAt && !report.lastError);
+          return true;
+        });
+      } else {
+        filtered = filtered.filter(report => {
+          if (statusFilter === 'active') return report.isActive;
+          if (statusFilter === 'paused') return !report.isActive;
+          return true;
+        });
+      }
+    }
+
+    const totalItems = filtered.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedItems = filtered.slice(startIndex, endIndex);
+
+    return {
+      items: paginatedItems,
+      totalItems,
+      totalPages,
+      currentPage,
+      hasNextPage: currentPage < totalPages,
+      hasPrevPage: currentPage > 1
+    };
+  }, [reports, searchTerm, statusFilter, currentPage, isOneTime]);
+
+  // Reset to first page when filters change
+  const handleSearchChange = (value: string) => {
+    setCurrentPage(1);
+    onSearchChange(value);
+  };
+
+  const handleStatusFilterChange = (value: string) => {
+    setCurrentPage(1);
+    onStatusFilterChange(value);
+  };
+
   const getStatusBadge = (report: any) => {
     if (isOneTime) {
       // One-time email status - use sendingStatus field from database
@@ -86,13 +147,13 @@ export function EmailListView({
             <Input
               placeholder="Search emails by name, description, or report..."
               value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-10"
             />
           </div>
         </div>
         <div className="flex gap-2">
-          <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+          <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
             <SelectTrigger className="w-32">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -134,7 +195,7 @@ export function EmailListView({
         <div className="flex items-center justify-center h-32">
           <div className="text-muted-foreground">Loading emails...</div>
         </div>
-      ) : reports.length === 0 ? (
+      ) : filteredAndPaginatedData.totalItems === 0 ? (
         <div className="border border-dashed border-muted rounded-lg p-12 text-center">
           <Send className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
           <p className="text-muted-foreground font-medium">{emptyMessage}</p>
