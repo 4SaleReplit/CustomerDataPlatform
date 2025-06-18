@@ -30,11 +30,11 @@ function Users() {
 
   const usersPerPage = 10;
 
-  // Fetch all users with server-side caching
+  // Fetch all users with server-side caching and pagination
   const { data: allUsersData, isLoading: allUsersLoading, refetch: refetchAllUsers } = useQuery({
-    queryKey: ['users', 'all'],
+    queryKey: ['users', 'all', currentPage],
     queryFn: async () => {
-      const response = await apiRequest('/api/users/all');
+      const response = await apiRequest(`/api/users/all?page=${currentPage}&limit=100`);
       return response;
     },
     staleTime: 1000 * 60 * 30, // 30 minutes
@@ -114,7 +114,7 @@ function Users() {
         // Clear cache and refetch all users
         await apiRequest('/api/users/clear-cache', { method: 'POST' });
         await refetchAllUsers();
-        analytics.buttonClicked('Refresh All Users', 'Users', { cached: true });
+        analytics.buttonClicked('Refresh All Users', 'Users', { cached: true, page: currentPage });
       } else {
         await refetchIdSearch();
         analytics.buttonClicked('Refresh ID Search', 'Users', { searchTerm });
@@ -163,11 +163,20 @@ function Users() {
     return matchesSearch && matchesType;
   });
 
-  // Pagination
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
-  const startIndex = (currentPage - 1) * usersPerPage;
-  const endIndex = startIndex + usersPerPage;
-  const currentUsers = filteredUsers.slice(startIndex, endIndex);
+  // Pagination - handle server-side pagination for all users mode
+  let totalPages, currentUsers;
+  
+  if (searchMode === 'all' && usersData?.pagination) {
+    // Use server-side pagination
+    totalPages = usersData.pagination.totalPages;
+    currentUsers = processedUsers; // Already paginated from server
+  } else {
+    // Use client-side pagination for ID search
+    totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+    const startIndex = (currentPage - 1) * usersPerPage;
+    const endIndex = startIndex + usersPerPage;
+    currentUsers = filteredUsers.slice(startIndex, endIndex);
+  }
 
   const goToPage = (page: number) => {
     setCurrentPage(Math.max(1, Math.min(page, totalPages)));
@@ -277,9 +286,16 @@ function Users() {
               </Button>
             </div>
             {usersData?.cached && (
-              <Badge variant="secondary" className="ml-auto">
-                Cached Data
-              </Badge>
+              <div className="flex items-center gap-2 ml-auto">
+                <Badge variant="secondary">
+                  Cached Data
+                </Badge>
+                {usersData?.pagination && (
+                  <Badge variant="outline" className="text-xs">
+                    {usersData.pagination.total.toLocaleString()} total users
+                  </Badge>
+                )}
+              </div>
             )}
           </div>
         </CardContent>

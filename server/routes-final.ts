@@ -646,12 +646,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User cache for storing all users
+  // Memory-efficient user cache with pagination
   let userCache: any = null;
   let userCacheTimestamp: number = 0;
   const CACHE_DURATION = 1000 * 60 * 30; // 30 minutes
+  const PAGE_SIZE = 50000; // Fetch 50k users at a time to avoid memory issues
 
-  // Get all users with server-side caching
+  // Get users with server-side caching and pagination
   app.get("/api/users/all", async (req: Request, res: Response) => {
     try {
       const { getDynamicSnowflakeService } = await import('./services/snowflake');
@@ -661,17 +662,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Snowflake integration not configured" });
       }
 
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10000; // Default 10k per page for UI
+
       // Check if cache is valid
       const now = Date.now();
       if (userCache && (now - userCacheTimestamp) < CACHE_DURATION) {
         console.log('Serving users from cache');
-        return res.json(userCache);
+        
+        // Return paginated results from cache
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+        const paginatedRows = userCache.rows.slice(startIndex, endIndex);
+        
+        return res.json({
+          columns: userCache.columns,
+          rows: paginatedRows,
+          success: true,
+          cached: true,
+          cacheTimestamp: userCache.cacheTimestamp,
+          pagination: {
+            page,
+            limit,
+            total: userCache.totalCount,
+            totalPages: Math.ceil(userCache.totalCount / limit),
+            hasNext: endIndex < userCache.totalCount,
+            hasPrev: page > 1
+          }
+        });
       }
 
-      // Fetch large dataset from Snowflake with optimized query
-      console.log('Fetching all users from Snowflake and caching...');
+      // Fetch users efficiently with memory management
+      console.log('Fetching users from Snowflake with memory-efficient approach...');
       
-      // First get total count
+      // Get total count first
       const countQuery = 'SELECT COUNT(*) as total FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4';
       const countResult = await snowflakeService.executeQuery(countQuery);
       
@@ -682,9 +706,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalUsers = countResult.rows[0][0];
       console.log(`Total users in database: ${totalUsers}`);
       
-      // Fetch all users efficiently
-      const query = `SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4`;
-      console.log(`Fetching all ${totalUsers} users from Snowflake...`);
+      // For large datasets, fetch a reasonable sample that fits in memory
+      const sampleSize = Math.min(50000, totalUsers); // Max 50k for stable memory usage
+      const query = `SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 ORDER BY USER_ID LIMIT ${sampleSize}`;
+      console.log(`Fetching ${sampleSize} users for memory-efficient caching...`);
       
       const result = await snowflakeService.executeQuery(query);
       
@@ -695,11 +720,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           success: true,
           cached: true,
           cacheTimestamp: now,
-          totalCount: totalUsers
+          totalCount: totalUsers,
+          cachedCount: result.rows?.length || 0
         };
         userCacheTimestamp = now;
         console.log(`Cached ${result.rows?.length || 0} of ${totalUsers} users`);
-        res.json(userCache);
+        
+        // Return paginated results
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+        const paginatedRows = result.rows.slice(startIndex, endIndex);
+        
+        res.json({
+          columns: result.columns,
+          rows: paginatedRows,
+          success: true,
+          cached: true,
+          cacheTimestamp: now,
+          pagination: {
+            page,
+            limit,
+            total: totalUsers,
+            totalPages: Math.ceil(totalUsers / limit),
+            hasNext: endIndex < totalUsers,
+            hasPrev: page > 1,
+            cachedUpTo: result.rows?.length || 0
+          }
+        });
       } else {
         res.status(500).json({ error: result.error });
       }
