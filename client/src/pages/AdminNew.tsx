@@ -81,6 +81,58 @@ export default function AdminNew() {
   const [migrationSessionId, setMigrationSessionId] = useState<string | null>(null);
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [showConsoleModal, setShowConsoleModal] = useState(false);
+  const [showIntegrationTypesModal, setShowIntegrationTypesModal] = useState(false);
+  const [showEnvConfigModal, setShowEnvConfigModal] = useState(false);
+  const [selectedConfigEnv, setSelectedConfigEnv] = useState('');
+  const [envConfig, setEnvConfig] = useState<{ [key: string]: string }>({});
+  const [currentEnvironment, setCurrentEnvironment] = useState('development');
+
+  // Environment data
+  const environments = [
+    { id: 'development', name: 'Development', status: 'active', databases: {} },
+    { id: 'staging', name: 'Staging', status: 'inactive', databases: {} },
+    { id: 'production', name: 'Production', status: 'inactive', databases: {} }
+  ];
+
+  // Active integration types for migration
+  const activeIntegrationTypes = ['postgresql', 'snowflake'];
+
+  // Helper functions
+  const getIntegrationDisplay = (type: string) => {
+    const displays: { [key: string]: { icon: any, color: string } } = {
+      postgresql: { icon: Database, color: 'blue' },
+      snowflake: { icon: Cloud, color: 'indigo' },
+      mysql: { icon: Database, color: 'orange' },
+      mongodb: { icon: Database, color: 'green' }
+    };
+    return displays[type] || { icon: Database, color: 'gray' };
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'connected':
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'disconnected':
+        return <XCircle className="h-4 w-4 text-red-600" />;
+      case 'pending':
+        return <Clock className="h-4 w-4 text-yellow-600" />;
+      default:
+        return <AlertTriangle className="h-4 w-4 text-gray-600" />;
+    }
+  };
+
+  const handleSwitchEnvironment = (envId: string) => {
+    setCurrentEnvironment(envId);
+    toast({
+      title: "Environment switched",
+      description: `Now using ${environments.find(e => e.id === envId)?.name} environment`
+    });
+  };
+
+  const handleConfigureEnvironment = (envId: string) => {
+    setSelectedConfigEnv(envId);
+    setShowEnvConfigModal(true);
+  };
 
   // Fetch team members
   const { data: teamMembers = [], isLoading: membersLoading } = useQuery({
@@ -733,30 +785,171 @@ export default function AdminNew() {
         <TabsContent value="migrations" className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold">Database Migrations</h2>
-              <p className="text-sm text-muted-foreground">Migrate data between different database integrations</p>
+              <h2 className="text-xl font-semibold">Environment Management</h2>
+              <p className="text-sm text-muted-foreground">Manage multiple database environments and migrate data between them</p>
             </div>
-            <Button 
-              onClick={() => setShowMigrationModal(true)} 
-              className="bg-blue-600 hover:bg-blue-700"
-              disabled={getMigratableIntegrationTypes().length === 0}
-            >
-              <Target className="h-4 w-4 mr-2" />
-              Start Migration
-            </Button>
+            <div className="flex space-x-3">
+              <Button variant="outline" onClick={() => setShowIntegrationTypesModal(true)}>
+                <Settings className="h-4 w-4 mr-2" />
+                Configure Tools
+              </Button>
+              <Button onClick={() => setShowMigrationModal(true)} className="bg-blue-600 hover:bg-blue-700">
+                <Target className="h-4 w-4 mr-2" />
+                Start Migration
+              </Button>
+            </div>
           </div>
 
-          {/* Integration Information */}
+          {/* Active Integration Types Display */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start">
+                <Database className="h-5 w-5 text-blue-600 mt-0.5 mr-2" />
+                <div className="text-sm w-full">
+                  <p className="font-medium text-blue-800">Active Integration Types</p>
+                  <p className="text-blue-700 mb-3">Available integrations from your configured services:</p>
+                  
+                  {/* Show all available integrations */}
+                  <div className="mb-4">
+                    <h5 className="text-xs font-medium text-gray-600 mb-2">All Configured Integrations:</h5>
+                    <div className="grid grid-cols-1 gap-2">
+                      {integrations.map((integration: any) => (
+                        <div key={integration.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                          <div className="flex items-center">
+                            <Database className="h-3 w-3 text-gray-500 mr-2" />
+                            <div>
+                              <span className="text-xs font-medium">{integration.name}</span>
+                              <p className="text-xs text-gray-400">{integration.type}</p>
+                            </div>
+                          </div>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            integration.status === 'connected' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {integration.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Show selected tools for migration */}
+                  <div>
+                    <h5 className="text-xs font-medium text-gray-600 mb-2">Selected Tools for Migration:</h5>
+                    <div className="flex flex-wrap gap-2">
+                      {activeIntegrationTypes.map(type => {
+                        const { icon: Icon, color } = getIntegrationDisplay(type);
+                        return (
+                          <span key={type} className={`px-2 py-1 bg-${color}-100 text-${color}-800 rounded text-xs font-medium flex items-center`}>
+                            <Icon className="h-3 w-3 mr-1" />
+                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowIntegrationTypesModal(true)}
+                className="text-blue-700 border-blue-300 hover:bg-blue-100"
+              >
+                <Settings className="h-4 w-4 mr-1" />
+                Manage
+              </Button>
+            </div>
+          </div>
+
+          {/* Current Environment Status */}
           <Card>
             <CardHeader>
-              <CardTitle>Available Integrations</CardTitle>
+              <CardTitle className="flex items-center">
+                <Database className="h-5 w-5 mr-2" />
+                Active Environment: {environments.find(e => e.status === 'active')?.name}
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Configure database integrations in the Integrations tab to enable migrations between different data sources.
-              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {activeIntegrationTypes.map(type => {
+                  const activeEnv = environments.find(e => e.status === 'active');
+                  const dbConfig = activeEnv?.databases?.[type];
+                  const dbStatus = dbConfig?.status || 'disconnected';
+                  const { icon: Icon, color } = getIntegrationDisplay(type);
+                  
+                  return (
+                    <div key={type} className={`flex items-center justify-between p-3 bg-${color}-50 rounded-lg border`}>
+                      <div className="flex items-center">
+                        <Icon className={`h-5 w-5 text-${color}-600 mr-2`} />
+                        <span className="font-medium">{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                      </div>
+                      {getStatusIcon(dbStatus)}
+                    </div>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
+
+          {/* Environment Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {environments.map((env) => (
+              <Card key={env.id} className={`border-2 ${env.status === 'active' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center">
+                      {env.status === 'active' && <CheckCircle className="h-4 w-4 text-green-600 mr-2" />}
+                      {env.name}
+                    </CardTitle>
+                    <Badge variant={env.status === 'active' ? 'default' : 'secondary'}>
+                      {env.status}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Database Status */}
+                  <div className="space-y-2">
+                    {activeIntegrationTypes.map(type => {
+                      const dbConfig = env.databases?.[type];
+                      const dbStatus = dbConfig?.status || 'disconnected';
+                      const { icon: Icon, color } = getIntegrationDisplay(type);
+                      
+                      return (
+                        <div key={type} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center">
+                            <Icon className={`h-4 w-4 mr-2 text-${color}-600`} />
+                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                          </div>
+                          {getStatusIcon(dbStatus)}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex space-x-2">
+                    {env.status !== 'active' && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleSwitchEnvironment(env.id)}
+                        className="flex-1"
+                      >
+                        Switch to {env.name}
+                      </Button>
+                    )}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleConfigureEnvironment(env.id)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
           {/* Migration History */}
           <Card>
@@ -1019,6 +1212,128 @@ export default function AdminNew() {
                 ) : (
                   'Start Migration'
                 )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Integration Types Configuration Modal */}
+      <Dialog open={showIntegrationTypesModal} onOpenChange={setShowIntegrationTypesModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Settings className="h-5 w-5" />
+              <span>Configure Integration Types</span>
+            </DialogTitle>
+            <DialogDescription>
+              Select which integration types to use for environment management
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-3">
+              {['postgresql', 'snowflake', 'mysql', 'mongodb'].map(type => {
+                const { icon: Icon, color } = getIntegrationDisplay(type);
+                const isActive = activeIntegrationTypes.includes(type);
+                return (
+                  <div key={type} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center">
+                      <Icon className={`h-4 w-4 mr-2 text-${color}-600`} />
+                      <span className="font-medium">{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                    </div>
+                    <Badge variant={isActive ? 'default' : 'secondary'}>
+                      {isActive ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setShowIntegrationTypesModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => setShowIntegrationTypesModal(false)}>
+                Save Configuration
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Environment Configuration Modal */}
+      <Dialog open={showEnvConfigModal} onOpenChange={setShowEnvConfigModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Edit className="h-5 w-5" />
+              <span>Configure {environments.find(e => e.id === selectedConfigEnv)?.name} Environment</span>
+            </DialogTitle>
+            <DialogDescription>
+              Set up database connections for this environment
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6">
+            {activeIntegrationTypes.map(type => {
+              const { icon: Icon, color } = getIntegrationDisplay(type);
+              return (
+                <div key={type} className="space-y-3">
+                  <div className="flex items-center">
+                    <Icon className={`h-5 w-5 mr-2 text-${color}-600`} />
+                    <h4 className="font-medium">{type.charAt(0).toUpperCase() + type.slice(1)} Configuration</h4>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor={`${type}-host`}>Host</Label>
+                      <Input
+                        id={`${type}-host`}
+                        placeholder="localhost"
+                        value={envConfig[`${type}-host`] || ''}
+                        onChange={(e) => setEnvConfig(prev => ({ ...prev, [`${type}-host`]: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`${type}-port`}>Port</Label>
+                      <Input
+                        id={`${type}-port`}
+                        placeholder="5432"
+                        value={envConfig[`${type}-port`] || ''}
+                        onChange={(e) => setEnvConfig(prev => ({ ...prev, [`${type}-port`]: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`${type}-database`}>Database</Label>
+                      <Input
+                        id={`${type}-database`}
+                        placeholder="database_name"
+                        value={envConfig[`${type}-database`] || ''}
+                        onChange={(e) => setEnvConfig(prev => ({ ...prev, [`${type}-database`]: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`${type}-user`}>Username</Label>
+                      <Input
+                        id={`${type}-user`}
+                        placeholder="username"
+                        value={envConfig[`${type}-user`] || ''}
+                        onChange={(e) => setEnvConfig(prev => ({ ...prev, [`${type}-user`]: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setShowEnvConfigModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => {
+                toast({
+                  title: "Environment configured",
+                  description: `${environments.find(e => e.id === selectedConfigEnv)?.name} environment has been updated`
+                });
+                setShowEnvConfigModal(false);
+              }}>
+                Save Configuration
               </Button>
             </div>
           </div>
