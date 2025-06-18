@@ -212,10 +212,14 @@ export function EnhancedSchedulerForm({
     const templateKey = formData.emailTemplate.templateId || 'professional';
     let html = templates[templateKey as keyof typeof templates] || templates.professional;
     
+    // Process email content to handle line breaks properly
+    const processedEmailContent = (formData.emailTemplate.customContent || 'Your custom email content will appear here.')
+      .replace(/\n/g, '<br>'); // Convert single line breaks to HTML breaks
+
     // Replace built-in template variables
     const builtInVars = {
       report_title: formData.emailTemplate.subject || 'Weekly Analytics Report',
-      email_content: formData.emailTemplate.customContent || 'Your custom email content will appear here.',
+      email_content: processedEmailContent,
       report_name: formData.name || 'Analytics Report',
       report_period: 'Last 7 days',
       generation_date: new Date().toLocaleDateString(),
@@ -226,7 +230,7 @@ export function EnhancedSchedulerForm({
     // Replace built-in variables
     Object.entries(builtInVars).forEach(([key, value]) => {
       const regex = new RegExp(`{${key}}`, 'g');
-      html = html.replace(regex, value);
+      html = html.replace(regex, String(value));
     });
 
     // Replace custom variables
@@ -257,10 +261,14 @@ export function EnhancedSchedulerForm({
     return html;
   };
 
-  // Update preview when form data changes
+  // Update preview when form data changes (with debouncing)
   useEffect(() => {
-    const preview = generateEmailPreview();
-    setPreviewHtml(preview);
+    const timeoutId = setTimeout(() => {
+      const preview = generateEmailPreview();
+      setPreviewHtml(preview);
+    }, 300); // 300ms delay to avoid constant re-rendering
+
+    return () => clearTimeout(timeoutId);
   }, [formData.emailTemplate, customVariables]);
 
   return (
