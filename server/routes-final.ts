@@ -1625,17 +1625,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   if (dataResult.rows.length > 0) {
                     const columnNames = Object.keys(dataResult.rows[0]).map(col => `"${col}"`).join(', ');
                     
-                    // Process each row individually to handle JSON data properly
+                    // Get schema info for proper type handling
+                    const schemaResult = await sourceClient.query(`
+                      SELECT 
+                        column_name, 
+                        data_type,
+                        udt_name,
+                        CASE 
+                          WHEN data_type = 'ARRAY' THEN 
+                            CASE 
+                              WHEN udt_name = '_text' THEN 'text[]'
+                              WHEN udt_name = '_varchar' THEN 'varchar[]'
+                              WHEN udt_name = '_int4' THEN 'integer[]'
+                              WHEN udt_name = '_uuid' THEN 'uuid[]'
+                              WHEN udt_name = '_jsonb' THEN 'jsonb[]'
+                              ELSE udt_name
+                            END
+                          ELSE data_type
+                        END as proper_data_type
+                      FROM information_schema.columns 
+                      WHERE table_name = $1 AND table_schema = 'public'
+                      ORDER BY ordinal_position
+                    `, [table]);
+
+                    // Create column type map for proper data type handling
+                    const columnTypes = {};
+                    schemaResult.rows.forEach(col => {
+                      columnTypes[col.column_name] = {
+                        dataType: col.data_type,
+                        udtName: col.udt_name,
+                        properDataType: col.proper_data_type
+                      };
+                    });
+
+                    // Process each row individually with proper array/data type handling
                     for (const row of dataResult.rows) {
-                      const values: any[] = Object.values(row).map((val: any) => {
-                        if (val === null) {
-                          return null;
-                        } else if (typeof val === 'object') {
-                          // Serialize objects to JSON strings
-                          return JSON.stringify(val);
-                        } else {
+                      const values: any[] = Object.keys(row).map((colName: string) => {
+                        const val = row[colName];
+                        const colType = columnTypes[colName];
+                        
+                        if (val === null) return null;
+                        
+                        // Handle Date objects first (timestamps and dates)
+                        if (val instanceof Date) {
+                          return val.toISOString();
+                        }
+                        
+                        // Handle PostgreSQL arrays (but not JSONB arrays)
+                        if (Array.isArray(val) && colType && colType.dataType === 'ARRAY') {
+                          // For parameterized queries, PostgreSQL expects arrays as native arrays
                           return val;
                         }
+                        
+                        // Handle PostgreSQL array strings (format: {uuid1,uuid2,uuid3})
+                        if (typeof val === 'string' && colType && colType.dataType === 'ARRAY' && val.startsWith('{') && val.endsWith('}')) {
+                          const elements = val.slice(1, -1).split(',').filter(s => s.trim());
+                          return elements.map(item => item.trim());
+                        }
+                        
+                        // Handle JSONB columns specifically (for non-Date objects)
+                        if (colType && (colType.dataType === 'jsonb' || colType.properDataType === 'jsonb')) {
+                          return typeof val === 'object' ? JSON.stringify(val) : val;
+                        }
+                        
+                        // Handle other JSON objects as JSONB (but only if not already handled)
+                        if (typeof val === 'object') {
+                          return JSON.stringify(val);
+                        }
+                        
+                        return val;
                       });
                       
                       const placeholders = values.map((_, idx) => `$${idx + 1}`).join(', ');
