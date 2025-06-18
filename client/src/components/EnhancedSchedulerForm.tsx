@@ -771,56 +771,7 @@ export function EnhancedSchedulerForm({
           </Card>
         )}
 
-        {/* Send Options */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Delivery Options</CardTitle>
-            <CardDescription>Choose when to send the report</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="send-now"
-                  name="sendOption"
-                  value="now"
-                  checked={formData.sendOption === 'now'}
-                  onChange={(e) => setFormData({ ...formData, sendOption: e.target.value as 'now' | 'schedule' })}
-                />
-                <Label htmlFor="send-now" className="flex items-center gap-2">
-                  <Send className="h-4 w-4" />
-                  Send Now (One-time)
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="schedule-later"
-                  name="sendOption"
-                  value="schedule"
-                  checked={formData.sendOption === 'schedule'}
-                  onChange={(e) => setFormData({ ...formData, sendOption: e.target.value as 'now' | 'schedule' })}
-                />
-                <Label htmlFor="schedule-later" className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Schedule for Later
-                </Label>
-              </div>
-            </div>
-            
-            {formData.sendOption === 'now' && (
-              <div className="bg-blue-50 p-3 rounded-lg">
-                <p className="text-sm text-blue-800 font-medium mb-2">
-                  ⚡ Send Now Mode - Email will be sent immediately
-                </p>
-                <p className="text-xs text-blue-700">
-                  Make sure to fill in the Email Subject and Content fields below before sending.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+
 
         {/* Action Buttons */}
         <div className="flex justify-end gap-2">
@@ -829,8 +780,8 @@ export function EnhancedSchedulerForm({
           </Button>
           <Button onClick={onSubmit} disabled={isLoading}>
             {isLoading 
-              ? (formData.sendOption === 'now' ? "Sending..." : "Creating...") 
-              : (formData.sendOption === 'now' ? "Send Now" : "Create Report")
+              ? (mode === 'one-time' ? "Sending..." : "Creating...") 
+              : (mode === 'one-time' ? "Send Now" : "Schedule")
             }
           </Button>
         </div>

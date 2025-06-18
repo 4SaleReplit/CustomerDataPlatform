@@ -71,6 +71,9 @@ export function EmailSender() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [customVariables, setCustomVariables] = useState<CustomVariable[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -341,13 +344,35 @@ export function EmailSender() {
     }));
   };
 
-  // Filter reports based on active tab
+  // Filter reports based on active tab and search/filter criteria
   const filteredReports = (scheduledReports as ScheduledReport[] || []).filter(report => {
-    if (activeTab === "one-time") {
-      return report.sentImmediately === true || report.cronExpression === null;
-    } else {
-      return report.cronExpression !== null && !report.sentImmediately;
-    }
+    // Tab filtering
+    const matchesTab = activeTab === "one-time" 
+      ? (report.sentImmediately === true || report.cronExpression === null)
+      : (report.cronExpression !== null && !report.sentImmediately);
+    
+    if (!matchesTab) return false;
+    
+    // Search filtering
+    const matchesSearch = searchTerm === "" || 
+      report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      report.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (presentations?.find(p => p.id === report.presentationId)?.title || "").toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Status filtering
+    const matchesStatus = statusFilter === "all" || 
+      (statusFilter === "active" && report.isActive) ||
+      (statusFilter === "paused" && !report.isActive) ||
+      (statusFilter === "sent" && report.sentImmediately) ||
+      (statusFilter === "error" && report.lastError);
+    
+    // Type filtering for scheduled reports
+    const matchesType = typeFilter === "all" || activeTab === "one-time" ||
+      (typeFilter === "daily" && report.cronExpression?.includes("* * *")) ||
+      (typeFilter === "weekly" && report.cronExpression?.includes("* * 1")) ||
+      (typeFilter === "monthly" && report.cronExpression?.includes("1 * *"));
+    
+    return matchesSearch && matchesStatus && matchesType;
   });
 
   return (
