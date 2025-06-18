@@ -282,8 +282,7 @@ export function EnhancedSchedulerForm({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-7xl mx-auto">
-      {/* Configuration Panel */}
+    <div className="max-w-7xl mx-auto">
       <div className="space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information */}
@@ -648,71 +647,6 @@ export function EnhancedSchedulerForm({
         </form>
       </div>
 
-      {/* Live Preview Panel */}
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Eye className="w-5 h-5" />
-              Live Email Preview
-            </CardTitle>
-            <CardDescription>
-              See how your email will appear to recipients
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="border rounded-lg p-4 bg-gray-50 min-h-96">
-              <div className="bg-white border rounded p-4 space-y-3">
-                <div className="border-b pb-3">
-                  <div className="text-sm text-gray-600">
-                    <strong>From:</strong> ahmed.hawary@4sale.tech<br />
-                    <strong>To:</strong> {formData.recipientList.join(', ') || 'No recipients'}<br />
-                    {formData.ccList.length > 0 && (
-                      <>
-                        <strong>CC:</strong> {formData.ccList.join(', ')}<br />
-                      </>
-                    )}
-                    <strong>Subject:</strong> {formData.emailTemplate.subject || 'No subject'}
-                  </div>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="text-sm text-gray-600">
-                    <strong>4SALE TECHNOLOGIES</strong><br />
-                    Business Analytics & Intelligence Platform
-                  </div>
-                  
-                  <div>
-                    <strong>Analytics Report:</strong> {formData.name || 'Untitled Report'}
-                  </div>
-                  
-                  <div>
-                    Dear Valued Client,
-                  </div>
-                  
-                  <div style={{ whiteSpace: 'pre-wrap' }}>
-                    {generateEmailPreview() || 'Your report content will appear here.'}
-                  </div>
-                  
-                  <div className="text-sm text-gray-600 mt-4">
-                    <strong>REPORT INFORMATION:</strong><br />
-                    Report ID: RPT-{new Date().getFullYear()}{(new Date().getMonth()+1).toString().padStart(2,'0')}{new Date().getDate().toString().padStart(2,'0')}-{Math.random().toString(36).substr(2,6).toUpperCase()}<br />
-                    Generated: {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} at {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}<br />
-                    Report Type: Business Intelligence Dashboard
-                  </div>
-                  
-                  <div className="text-sm text-gray-500 mt-4">
-                    ---<br />
-                    4Sale Technologies<br />
-                    Advanced Business Intelligence & Analytics Solutions<br />
-                    © {new Date().getFullYear()} 4Sale Technologies. All rights reserved.
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Schedule Summary - Only show for schedule mode */}
         {mode === 'schedule' && (
           <Card>
@@ -748,7 +682,6 @@ export function EnhancedSchedulerForm({
             </CardContent>
           </Card>
         )}
-      </div>
     </div>
   );
 }
