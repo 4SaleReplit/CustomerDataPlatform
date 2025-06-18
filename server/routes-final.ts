@@ -1560,18 +1560,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 completedItems: i
               });
 
-              // Get table schema
+              // Get table schema with proper array type handling
               const schemaResult = await sourceClient.query(`
-                SELECT column_name, data_type, is_nullable, column_default
+                SELECT 
+                  column_name, 
+                  data_type,
+                  udt_name,
+                  is_nullable, 
+                  column_default,
+                  CASE 
+                    WHEN data_type = 'ARRAY' THEN 
+                      CASE 
+                        WHEN udt_name = '_text' THEN 'text[]'
+                        WHEN udt_name = '_varchar' THEN 'varchar[]'
+                        WHEN udt_name = '_int4' THEN 'integer[]'
+                        WHEN udt_name = '_uuid' THEN 'uuid[]'
+                        WHEN udt_name = '_jsonb' THEN 'jsonb[]'
+                        ELSE udt_name
+                      END
+                    ELSE data_type
+                  END as proper_data_type
                 FROM information_schema.columns 
                 WHERE table_name = $1 AND table_schema = 'public'
                 ORDER BY ordinal_position
               `, [table]);
 
               const columns = schemaResult.rows.map(col => {
-                let def = `"${col.column_name}" ${col.data_type}`;
+                let def = `"${col.column_name}" ${col.proper_data_type}`;
                 if (col.is_nullable === 'NO') def += ' NOT NULL';
-                if (col.column_default) def += ` DEFAULT ${col.column_default}`;
+                
+                // Handle default values more carefully
+                if (col.column_default) {
+                  if (col.column_default === 'gen_random_uuid()') {
+                    def += ' DEFAULT gen_random_uuid()';
+                  } else if (col.column_default === 'now()') {
+                    def += ' DEFAULT now()';
+                  } else if (col.column_default.includes('::')) {
+                    // Handle typed defaults like 'draft'::text
+                    def += ` DEFAULT ${col.column_default}`;
+                  } else {
+                    def += ` DEFAULT '${col.column_default}'`;
+                  }
+                }
+                
                 return def;
               }).join(', ');
 
@@ -1984,6 +2015,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const batchSize = options.batchSize || 1000;
           let offset = 0;
           
+          // Create column type map for proper data type handling
+          const columnTypes = {};
+          schemaResult.rows.forEach(col => {
+            columnTypes[col.column_name] = {
+              dataType: col.data_type,
+              udtName: col.udt_name,
+              properDataType: col.proper_data_type
+            };
+          });
+          
           while (offset < totalRows) {
             const dataResult = await sourceClient.query(`SELECT * FROM "${table}" LIMIT $1 OFFSET $2`, [batchSize, offset]);
             
@@ -1992,18 +2033,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               // Use batch insert with proper PostgreSQL array/JSON handling
               const values = dataResult.rows.map(row => {
-                return '(' + Object.values(row).map(val => {
+                return '(' + Object.keys(row).map(colName => {
+                  const val = row[colName];
+                  const colType = columnTypes[colName];
+                  
                   if (val === null) return 'NULL';
-                  if (Array.isArray(val)) {
-                    // Handle PostgreSQL arrays - convert to proper format
+                  
+                  // Handle JSONB columns specifically
+                  if (colType && (colType.dataType === 'jsonb' || colType.properDataType === 'jsonb')) {
+                    return `'${JSON.stringify(val).replace(/'/g, "''")}'::jsonb`;
+                  }
+                  
+                  // Handle PostgreSQL arrays (but not JSONB arrays)
+                  if (Array.isArray(val) && colType && colType.dataType === 'ARRAY') {
                     if (val.length === 0) return 'ARRAY[]';
                     const arrayElements = val.map(item => `'${String(item).replace(/'/g, "''")}'`).join(',');
                     return `ARRAY[${arrayElements}]`;
                   }
+                  
+                  // Handle other JSON objects as JSONB
                   if (typeof val === 'object') {
-                    // Handle JSON objects
-                    return `'${JSON.stringify(val).replace(/'/g, "''")}'`;
+                    return `'${JSON.stringify(val).replace(/'/g, "''")}'::jsonb`;
                   }
+                  
                   return `'${String(val).replace(/'/g, "''")}'`;
                 }).join(', ') + ')';
               }).join(', ');

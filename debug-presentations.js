@@ -5,7 +5,7 @@ dotenv.config();
 async function debugPresentationsTable() {
   // Supabase connection (Staging environment)
   const supabaseClient = new Client({
-    connectionString: "postgresql://postgres.hbzslzrgojuekzlszshw:SBStrongPassword456!@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
+    connectionString: "postgresql://postgres.oolcnbxrnuefxfdpvsfn:dsadasSDASdsaDASDASasdsadas3434@aws-0-eu-north-1.pooler.supabase.com:6543/postgres"
   });
 
   // Replit connection (Development environment)  
