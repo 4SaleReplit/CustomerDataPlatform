@@ -111,6 +111,18 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 18, 2025**: Complete Email Card UI Enhancement with Preview and Edit Functionality
+  - Enhanced one-time email cards to display "Sent At" instead of "Last Execution" for better context
+  - Removed success/error counts from one-time email cards to simplify interface as requested
+  - Added comprehensive preview functionality for all email types with professional 4Sale branding
+  - Implemented edit and preview buttons for scheduled reports accessible via dropdown menu
+  - Created EmailPreview component with realistic email template rendering and proper formatting
+  - Added Edit Report dialog with pre-populated form data for updating existing scheduled reports
+  - Enhanced ReportCard component with conditional rendering for scheduled vs one-time email features
+  - Preview dialog shows complete email structure including headers, content, and business footer
+  - Edit functionality supports updating name, description, subject, content, recipients, and schedule
+  - Duplicate functionality now available for both scheduled reports and one-time emails for quick resending
+
 - **June 18, 2025**: Email Sender Interface Restructure with Two-Tab Design
   - Replaced "Scheduler" navigation item with "Email Sender" for clearer user experience
   - Created comprehensive two-tab interface: "Scheduler" for recurring reports and "One-Time Email" for instant sends

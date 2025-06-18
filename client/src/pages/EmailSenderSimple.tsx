@@ -695,6 +695,32 @@ export function EmailSender() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Edit Report Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Report</DialogTitle>
+            <DialogDescription>
+              Update the report configuration and settings
+            </DialogDescription>
+          </DialogHeader>
+          <EmailForm isEdit={true} onSubmit={handleEditSubmit} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Report Dialog */}
+      <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Email Preview</DialogTitle>
+            <DialogDescription>
+              Preview how the email will appear to recipients
+            </DialogDescription>
+          </DialogHeader>
+          {selectedReport && <EmailPreview report={selectedReport} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
