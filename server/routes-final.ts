@@ -1666,11 +1666,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                         
                         if (val === null) return null;
                         
-                        // Debug logging for array columns
-                        if (colType && colType.dataType === 'ARRAY') {
-                          addLog(`DEBUG: Column ${colName} - Type: ${typeof val}, Value: ${JSON.stringify(val)}, Array: ${Array.isArray(val)}`);
-                        }
-                        
                         // Handle Date objects first (timestamps and dates)
                         if (val instanceof Date) {
                           return val.toISOString();
@@ -1678,18 +1673,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                         
                         // Handle PostgreSQL arrays - all cases
                         if (colType && colType.dataType === 'ARRAY') {
-                          // Case 1: JavaScript array from pg driver
+                          // Case 1: JavaScript array from pg driver (most common)
                           if (Array.isArray(val)) {
-                            addLog(`DEBUG: Using native array for ${colName}: ${JSON.stringify(val)}`);
                             return val;
                           }
                           
                           // Case 2: PostgreSQL array string format {uuid1,uuid2}
                           if (typeof val === 'string' && val.startsWith('{') && val.endsWith('}')) {
                             const elements = val.slice(1, -1).split(',').filter(s => s.trim());
-                            const cleanArray = elements.map(item => item.trim());
-                            addLog(`DEBUG: Converted PostgreSQL array string for ${colName}: ${JSON.stringify(cleanArray)}`);
-                            return cleanArray;
+                            return elements.map(item => item.trim());
                           }
                           
                           // Case 3: JSON string array format ["uuid1","uuid2"]
@@ -1697,22 +1689,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
                             try {
                               const parsed = JSON.parse(val);
                               if (Array.isArray(parsed)) {
-                                addLog(`DEBUG: Converted JSON array string for ${colName}: ${JSON.stringify(parsed)}`);
                                 return parsed;
                               }
                             } catch (e) {
-                              addLog(`DEBUG: Failed to parse JSON array for ${colName}: ${val}`);
+                              // Fall through to next case
                             }
                           }
                           
                           // Case 4: Single value that should be an array
                           if (typeof val === 'string' && !val.startsWith('{') && !val.startsWith('[')) {
-                            addLog(`DEBUG: Converting single value to array for ${colName}: [${val}]`);
                             return [val];
                           }
                           
-                          // Case 5: Fallback - return as is and let PostgreSQL handle it
-                          addLog(`DEBUG: Fallback for ${colName} - returning as is: ${JSON.stringify(val)}`);
+                          // Case 5: Fallback - return as is
                           return val;
                         }
                         
