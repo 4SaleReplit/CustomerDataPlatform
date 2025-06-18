@@ -301,39 +301,7 @@ export function EmailSender() {
     deleteReportMutation.mutate(id);
   };
 
-  const getStatusBadge = (report: ScheduledReport) => {
-    if (report.sentImmediately) {
-      return <Badge variant="secondary" className="bg-blue-100 text-blue-800"><Send className="h-3 w-3 mr-1" />Sent</Badge>;
-    }
-    
-    if (!report.isActive) {
-      return <Badge variant="secondary"><Pause className="h-3 w-3 mr-1" />Paused</Badge>;
-    }
-    
-    if (report.lastError) {
-      return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Error</Badge>;
-    }
-    
-    if (report.lastExecuted) {
-      return <Badge variant="default" className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Active</Badge>;
-    }
-    
-    return <Badge variant="outline"><Clock3 className="h-3 w-3 mr-1" />Pending</Badge>;
-  };
 
-  const formatScheduleDescription = (cronExpression: string | null, timezone: string) => {
-    if (!cronExpression) return "One-time email";
-    
-    // Simple cron description mapping
-    const cronDescriptions: Record<string, string> = {
-      "0 9 * * 1": "Weekly on Monday at 9:00 AM",
-      "0 9 1 * *": "Monthly on 1st at 9:00 AM",
-      "0 9 * * *": "Daily at 9:00 AM",
-      "0 */6 * * *": "Every 6 hours"
-    };
-    
-    return cronDescriptions[cronExpression] || `Custom schedule (${timezone})`;
-  };
 
   const updateEmailTemplate = (template: any) => {
     setFormData(prev => ({
@@ -487,110 +455,24 @@ export function EmailSender() {
             </Dialog>
           </div>
 
-          <div className="grid gap-4">
-            {reportsLoading ? (
-              <div className="flex items-center justify-center h-32">
-                <div className="text-muted-foreground">Loading scheduled reports...</div>
-              </div>
-            ) : filteredReports.length === 0 ? (
-              <Card>
-                <CardContent className="flex items-center justify-center h-32">
-                  <div className="text-center">
-                    <Calendar className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-muted-foreground">No scheduled reports yet</p>
-                    <p className="text-sm text-muted-foreground">Create your first automated report</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredReports.map((report: ScheduledReport) => (
-                <Card key={report.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <CardTitle className="text-lg">{report.name}</CardTitle>
-                          {getStatusBadge(report)}
-                        </div>
-                        <CardDescription>{report.description}</CardDescription>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Database className="h-3 w-3" />
-                            {presentations?.find((p: Presentation) => p.id === report.presentationId)?.title || "Unknown Report"}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {formatScheduleDescription(report.cronExpression, report.timezone)}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            {report.recipientList.length} recipients
-                          </div>
-                        </div>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleDuplicateReport(report)}>
-                            <Copy className="h-4 w-4 mr-2" />
-                            Clone
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Eye className="h-4 w-4 mr-2" />
-                            Preview
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleToggleActive(report.id, report.isActive)}>
-                            {report.isActive ? (
-                              <>
-                                <Pause className="h-4 w-4 mr-2" />
-                                Pause
-                              </>
-                            ) : (
-                              <>
-                                <Play className="h-4 w-4 mr-2" />
-                                Resume
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openEditDialog(report)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Scheduled Report</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete "{report.name}"? This action cannot be undone and will stop all future scheduled deliveries.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDeleteReport(report.id)}>
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))
-            )}
-          </div>
+          <EmailListView
+            reports={filteredReports}
+            presentations={presentations}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            typeFilter={typeFilter}
+            onTypeFilterChange={setTypeFilter}
+            isLoading={reportsLoading}
+            emptyMessage="No scheduled reports yet"
+            emptyDescription="Create your first automated report"
+            onDuplicate={handleDuplicateReport}
+            onEdit={openEditDialog}
+            onDelete={handleDeleteReport}
+            onToggleActive={(report) => handleToggleActive(report.id, report.isActive)}
+            isOneTime={false}
+          />
         </TabsContent>
       </Tabs>
 
