@@ -45,14 +45,14 @@ export function EmailListView({
 }: EmailListViewProps) {
   const getStatusBadge = (report: any) => {
     if (isOneTime) {
-      // One-time email status - show status based on actual state
-      if (report.lastError) {
+      // One-time email status - use sendingStatus field from database
+      if (report.sendingStatus === 'failed' || report.lastError) {
         return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Failed</Badge>;
       }
-      if (report.sentImmediately || report.sentAt) {
+      if (report.sendingStatus === 'sent' || report.sentImmediately || report.sentAt) {
         return <Badge variant="default" className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Sent</Badge>;
       }
-      // For one-time emails that haven't been sent yet, show as pending for clarity
+      // For one-time emails that haven't been sent yet (draft status)
       return <Badge variant="outline" className="bg-gray-50 text-gray-600"><Clock3 className="h-3 w-3 mr-1" />Draft</Badge>;
     } else {
       // Scheduled email status - cohort style (Active/Paused only)
@@ -184,7 +184,8 @@ export function EmailListView({
                       <Clock className="h-3 w-3 text-muted-foreground" />
                       {isOneTime 
                         ? (report.sentAt ? new Date(report.sentAt).toLocaleString() : 
-                           report.sentImmediately ? 'Recently sent' : 
+                           report.sendingStatus === 'sent' ? 'Recently sent' : 
+                           report.sendingStatus === 'failed' ? 'Send failed' :
                            '-')
                         : formatScheduleDescription(report.cronExpression, report.timezone)
                       }

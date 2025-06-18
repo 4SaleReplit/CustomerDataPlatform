@@ -498,7 +498,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
           
           console.log('Email sent successfully to:', emailData.to);
           
-          // Create a one-time report record for tracking
+          // Create a one-time report record for tracking with success status
           const reportInsertData = {
             name: reportData.name,
             description: reportData.description || null,
@@ -523,7 +523,10 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
             lastExecuted: new Date(),
             lastError: null,
             createdBy: (req as any).session?.user?.id || null,
-            emailTemplate: reportData.emailTemplate
+            emailTemplate: reportData.emailTemplate,
+            sentImmediately: true,
+            sentAt: new Date(),
+            sendingStatus: 'sent'
           };
 
           const scheduledReport = await storage.createScheduledReport(reportInsertData);
@@ -536,6 +539,44 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
           
         } catch (emailError) {
           console.error('Failed to send immediate email:', emailError);
+          
+          // Create a failed one-time report record for tracking
+          const failedReportData = {
+            name: reportData.name,
+            description: reportData.description || null,
+            presentationId: reportData.presentationId,
+            cronExpression: null as any,
+            timezone: reportData.timezone || 'Africa/Cairo',
+            emailSubject: reportData.emailTemplate?.subject || `Report: ${reportData.name}`,
+            emailBody: emailHtml,
+            recipientList: reportData.recipientList,
+            ccList: reportData.ccList || [],
+            bccList: reportData.bccList || [],
+            isActive: false,
+            formatSettings: reportData.formatSettings || {},
+            airflowConfiguration: null,
+            airflowDagId: null,
+            airflowTaskId: null,
+            pdfDeliveryUrl: null,
+            nextExecution: null,
+            executionCount: 1,
+            errorCount: 1,
+            successCount: 0,
+            lastExecuted: new Date(),
+            lastError: (emailError as Error).message,
+            createdBy: (req as any).session?.user?.id || null,
+            emailTemplate: reportData.emailTemplate,
+            sentImmediately: false,
+            sentAt: null,
+            sendingStatus: 'failed'
+          };
+          
+          try {
+            await storage.createScheduledReport(failedReportData);
+          } catch (dbError) {
+            console.error('Failed to save failed email record:', dbError);
+          }
+          
           return res.status(500).json({ 
             error: "Failed to send email: " + (emailError as Error).message 
           });

@@ -440,6 +440,9 @@ export const scheduledReports = pgTable("scheduled_reports", {
   placeholderConfig: jsonb("placeholder_config").default('{}'), // Available placeholders and their sources
   formatSettings: jsonb("format_settings").default('{}'), // PDF/Excel export settings
   emailTemplate: jsonb("email_template").default('{}'), // Email template configuration
+  sentImmediately: boolean("sent_immediately").default(false), // True for one-time emails that were sent
+  sentAt: timestamp("sent_at", { withTimezone: true }), // When the one-time email was sent
+  sendingStatus: varchar("sending_status", { length: 20 }).default('draft'), // 'draft', 'sent', 'failed'
   createdBy: uuid("created_by").references(() => team.id, { onDelete: 'set null' }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
