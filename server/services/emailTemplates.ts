@@ -239,3 +239,44 @@ export function processEmailTemplate(templateHtml: string, variables: Record<str
   
   return processedHtml;
 }
+
+export function generateEmailFromTemplate(templateId: string, customContent: string, customVariables: any[] = []): string {
+  // For immediate sends, use a simplified approach with proper HTML
+  const htmlTemplate = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Analytics Report</title>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .header { background: #1a365d; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+        .content { padding: 20px; }
+        .footer { background: #f8f9fa; padding: 15px; text-align: center; font-size: 12px; color: #666; }
+        .button { display: inline-block; padding: 12px 24px; background: #3182ce; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>4Sale Analytics Report</h1>
+        </div>
+        <div class="content">
+          <p>Hello,</p>
+          <p>${customContent}</p>
+          <p>This report was generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}.</p>
+          <a href="${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://analytics.4sale.tech'}" class="button">View Dashboard</a>
+        </div>
+        <div class="footer">
+          <p>Powered by 4Sale Analytics Platform</p>
+          <p>© 2025 4Sale. This report was generated automatically.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  return htmlTemplate;
+}

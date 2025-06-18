@@ -287,7 +287,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Generate HTML email content using template
-        const emailHtml = processEmailTemplate(reportData.emailTemplate?.customContent || 'Your report is ready.', reportData);
+        let emailHtml;
+        
+        if (reportData.emailTemplate?.templateId) {
+          // Use the Email Template Builder templates
+          const emailTemplates = await import('./services/emailTemplates');
+          emailHtml = emailTemplates.generateEmailFromTemplate(
+            reportData.emailTemplate.templateId,
+            reportData.emailTemplate.customContent || 'Your report is ready.',
+            reportData.customVariables || []
+          );
+        } else {
+          // Fallback to simple text processing
+          emailHtml = processEmailTemplate(reportData.emailTemplate?.customContent || 'Your report is ready.', reportData);
+        }
+        
+        console.log('Generated email HTML length:', emailHtml.length);
         
         // Send email immediately using Gmail SMTP
         const emailData = {
