@@ -2503,5 +2503,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Environment Switching API
+  app.post("/api/switch-environment", async (req: Request, res: Response) => {
+    try {
+      const { environment, integrationId } = req.body;
+      
+      if (!environment || !integrationId) {
+        return res.status(400).json({ error: "Environment and integration ID are required" });
+      }
+      
+      // Get integration credentials
+      const integration = await storage.getIntegration(integrationId);
+      if (!integration) {
+        return res.status(404).json({ error: "Integration not found" });
+      }
+      
+      if (integration.type !== 'postgresql') {
+        return res.status(400).json({ error: "Only PostgreSQL integrations can be used for environment switching" });
+      }
+      
+      // Extract connection string from credentials
+      const connectionString = (integration.credentials as any).connectionString;
+      if (!connectionString) {
+        return res.status(400).json({ error: "Integration missing connection string" });
+      }
+      
+      // Import and use the switchEnvironment function from db.ts
+      const { switchEnvironment, getCurrentEnvironment } = await import('./db.js');
+      
+      // Switch to the new environment
+      await switchEnvironment(environment, connectionString);
+      
+      console.log(`🔄 Platform switched to ${environment} environment`);
+      console.log(`📊 Database: ${integration.name}`);
+      
+      res.json({
+        success: true,
+        message: `Successfully switched to ${environment} environment`,
+        currentEnvironment: environment,
+        integration: {
+          id: integration.id,
+          name: integration.name,
+          type: integration.type
+        }
+      });
+      
+    } catch (error: any) {
+      console.error("Environment switch error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to switch environment" 
+      });
+    }
+  });
+
+  // Get Current Environment API
+  app.get("/api/current-environment", async (req: Request, res: Response) => {
+    try {
+      const { getCurrentEnvironment } = await import('./db.js');
+      const currentEnv = getCurrentEnvironment();
+      
+      res.json({
+        currentEnvironment: currentEnv
+      });
+    } catch (error: any) {
+      console.error("Get current environment error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get current environment" 
+      });
+    }
+  });
+
   return server;
 }

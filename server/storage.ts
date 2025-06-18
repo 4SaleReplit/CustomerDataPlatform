@@ -492,6 +492,10 @@ export class DatabaseStorage implements IStorage {
     return integration || undefined;
   }
 
+  async getIntegrationById(id: string): Promise<Integration | undefined> {
+    return this.getIntegration(id);
+  }
+
   async getIntegrationsByType(type: string): Promise<Integration[]> {
     return await db.select().from(integrations).where(eq(integrations.type, type));
   }
