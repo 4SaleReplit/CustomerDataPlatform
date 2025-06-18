@@ -349,14 +349,14 @@ export function EmailTemplatesDesigner() {
                 Select a template to preview and edit
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-3 p-4">
               {templates.map((template) => (
                 <div
                   key={template.id}
-                  className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
+                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all hover:shadow-md ${
                     selectedTemplate?.id === template.id
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200'
+                      ? 'border-blue-500 bg-blue-50 shadow-sm'
+                      : 'border-transparent bg-gray-50'
                   }`}
                   onClick={() => setSelectedTemplate(template)}
                 >
