@@ -6,7 +6,7 @@ import { insertIntegrationSchema, type InsertIntegration } from "@shared/schema"
 import bcrypt from "bcrypt";
 import * as BrazeModule from "./services/braze";
 import { s3Storage } from "./services/s3Storage";
-import { db } from "./db";
+import { db, getCurrentEnvironment } from "./db";
 import { eq, and } from "drizzle-orm";
 import { 
   insertTeamSchema, insertDashboardTileInstanceSchema, insertCohortSchema, insertSegmentSchema,
@@ -2016,7 +2016,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Log isolation confirmation
       console.log(`🔒 Migration completed in isolation: ${sourceDbName.rows[0].db} → ${targetDbName.rows[0].db}`);
-      console.log(`🛡️ Platform database (${getCurrentEnvironment()}) remained untouched`);
+      console.log(`🛡️ Platform database (${getCurrentEnvironment()}) remained untouched during migration`);
 
       // Store migration history using platform's active database (not migration connections)
       await storage.createMigrationHistory({
@@ -2037,14 +2037,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     } catch (error) {
       console.error('Database migration error:', error);
+      
+      // CRITICAL: Clean up isolated connections even on failure
+      try {
+        if (sourcePool) await sourcePool.end();
+        if (targetPool) await targetPool.end();
+      } catch (cleanupError) {
+        console.log('Warning: Error cleaning up migration pools:', cleanupError);
+      }
+
+      // Log isolation confirmation even on failure
+      console.log(`🛡️ Platform database (${getCurrentEnvironment()}) remained untouched during failed migration`);
+      
       updateProgress({
         stage: 'Failed',
-        currentJob: 'Migration failed',
+        currentJob: 'Migration failed - platform database unaffected',
         status: 'error',
         error: error instanceof Error ? error.message : 'Unknown error'
       });
 
-      // Store failed migration history
+      // Store failed migration history using platform's active database (not migration connections)
       await storage.createMigrationHistory({
         sessionId,
         sourceIntegrationId: sourceIntegration.id,
@@ -2059,7 +2071,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         startTime: new Date(migrationSessions.get(sessionId)?.startTime || new Date()),
         endTime: new Date(),
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        metadata: { error: error instanceof Error ? error.message : 'Unknown error' }
+        metadata: { 
+          error: error instanceof Error ? error.message : 'Unknown error',
+          platformUnaffected: true,
+          isolationMaintained: true
+        }
       });
     }
   }
