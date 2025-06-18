@@ -1122,7 +1122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   async function sendReportEmail(emailData: any) {
-    const { emailService } = await import('../services/emailService');
+    const { emailService } = await import('./services/emailService');
     
     try {
       const success = await emailService.sendReportEmail({
@@ -1159,7 +1159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Email testing endpoint
   app.post("/api/test-email", async (req: Request, res: Response) => {
     try {
-      const { emailService } = await import('./services/emailService');
+      const { emailService } = await import('../services/emailService');
       const { to, subject, message } = req.body;
       
       if (!to || !subject) {
@@ -1191,7 +1191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Email connection test endpoint
   app.get("/api/email/test-connection", async (req: Request, res: Response) => {
     try {
-      const { emailService } = await import('./services/emailService');
+      const { emailService } = await import('../services/emailService');
       const connected = await emailService.testConnection();
       
       res.json({ 
