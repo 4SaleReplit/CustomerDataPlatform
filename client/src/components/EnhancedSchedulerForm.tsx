@@ -107,30 +107,110 @@ export function EnhancedSchedulerForm({
   const generateEmailPreview = () => {
     if (!formData.emailTemplate.templateId) return '';
 
-    // Professional template HTML
-    const professionalTemplate = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #e5e7eb; border-radius: 8px;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
-          <h1 style="margin: 0; font-size: 28px; font-weight: bold;">4Sale Analytics</h1>
-          <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">Your Report is Ready</p>
-        </div>
-        <div style="padding: 40px 30px;">
-          <h2 style="color: #1f2937; margin: 0 0 20px 0;">{report_title}</h2>
-          <p style="color: #6b7280; line-height: 1.6; margin: 0 0 30px 0;">{email_content}</p>
-          <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="margin: 0 0 10px 0;">Report Details</h3>
-            <p style="margin: 5px 0;"><strong>Report:</strong> {report_name}</p>
-            <p style="margin: 5px 0;"><strong>Period:</strong> {report_period}</p>
-            <p style="margin: 5px 0;"><strong>Generated:</strong> {generation_date}</p>
+    // Template designs based on selection
+    const templates = {
+      professional: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #e5e7eb; border-radius: 8px;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="margin: 0; font-size: 28px; font-weight: bold;">4Sale Analytics</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">Your Report is Ready</p>
+          </div>
+          <div style="padding: 40px 30px;">
+            <h2 style="color: #1f2937; margin: 0 0 20px 0;">{report_title}</h2>
+            <p style="color: #6b7280; line-height: 1.6; margin: 0 0 30px 0;">{email_content}</p>
+            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin: 0 0 10px 0;">Report Details</h3>
+              <p style="margin: 5px 0;"><strong>Report:</strong> {report_name}</p>
+              <p style="margin: 5px 0;"><strong>Period:</strong> {report_period}</p>
+              <p style="margin: 5px 0;"><strong>Generated:</strong> {generation_date}</p>
+            </div>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="#" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600;">View Attached Report</a>
+            </div>
+          </div>
+          <div style="background: #f9fafb; padding: 20px 30px; border-top: 1px solid #e5e7eb;">
+            <p style="margin: 0; font-size: 12px; color: #6b7280;">Powered by 4Sale Analytics Platform</p>
           </div>
         </div>
-        <div style="background: #f9fafb; padding: 20px 30px; border-top: 1px solid #e5e7eb;">
-          <p style="margin: 0; font-size: 12px; color: #6b7280;">Powered by 4Sale Analytics Platform</p>
+      `,
+      minimal: `
+        <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #e5e7eb;">
+          <div style="padding: 40px 30px; border-bottom: 1px solid #e5e7eb;">
+            <h1 style="margin: 0; font-size: 24px; font-weight: 300; color: #1f2937;">{report_title}</h1>
+            <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 14px;">4Sale Analytics Report</p>
+          </div>
+          <div style="padding: 40px 30px;">
+            <p style="color: #374151; line-height: 1.6; margin: 0 0 24px 0; font-size: 16px;">{email_content}</p>
+            <div style="border-left: 4px solid #3b82f6; padding-left: 16px; margin: 24px 0;">
+              <p style="margin: 0; color: #1f2937; font-weight: 500;">Report: {report_name}</p>
+              <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 14px;">Generated on {generation_date}</p>
+            </div>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="#" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 14px;">View Attached Report</a>
+            </div>
+          </div>
+          <div style="padding: 20px 30px; border-top: 1px solid #e5e7eb; text-align: center;">
+            <p style="margin: 0; font-size: 12px; color: #9ca3af;">4Sale Analytics Platform</p>
+          </div>
         </div>
-      </div>
-    `;
+      `,
+      dashboard: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
+          <div style="background: linear-gradient(135deg, #1e40af 0%, #3730a3 100%); color: white; padding: 30px; text-align: center;">
+            <h1 style="margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.025em;">4Sale Analytics</h1>
+            <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 16px;">Dashboard Report • {generation_date}</p>
+          </div>
+          
+          <div style="display: flex; justify-content: space-between; padding: 0 30px; margin-top: -20px;">
+            <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex: 1; margin: 0 5px;">
+              <p style="font-size: 24px; font-weight: 700; color: #1f2937; margin: 0;">1,247</p>
+              <p style="font-size: 12px; color: #6b7280; margin: 5px 0 0 0; text-transform: uppercase; letter-spacing: 0.5px;">Total Users</p>
+            </div>
+            <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex: 1; margin: 0 5px;">
+              <p style="font-size: 24px; font-weight: 700; color: #1f2937; margin: 0;">$12.4K</p>
+              <p style="font-size: 12px; color: #6b7280; margin: 5px 0 0 0; text-transform: uppercase; letter-spacing: 0.5px;">Revenue</p>
+            </div>
+            <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex: 1; margin: 0 5px;">
+              <p style="font-size: 24px; font-weight: 700; color: #1f2937; margin: 0;">23%</p>
+              <p style="font-size: 12px; color: #6b7280; margin: 5px 0 0 0; text-transform: uppercase; letter-spacing: 0.5px;">Growth</p>
+            </div>
+          </div>
+          
+          <div style="padding: 40px 30px 30px;">
+            <h2 style="color: #1f2937; margin: 0 0 16px 0; font-size: 20px;">{report_title}</h2>
+            <p style="color: #4b5563; line-height: 1.6; margin-bottom: 16px;">{email_content}</p>
+            
+            <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 25px 0;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span style="color: #6b7280; font-weight: 500;">Report Name</span>
+                <span style="color: #1f2937; font-weight: 600;">{report_name}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span style="color: #6b7280; font-weight: 500;">Period</span>
+                <span style="color: #1f2937; font-weight: 600;">{report_period}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: #6b7280; font-weight: 500;">Generated</span>
+                <span style="color: #1f2937; font-weight: 600;">{generation_date}</span>
+              </div>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="#" style="display: inline-block; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600;">View Attached Report</a>
+            </div>
+          </div>
+          
+          <div style="background: #f9fafb; padding: 25px 30px; text-align: center;">
+            <p style="margin: 0; color: #6b7280; font-size: 14px;">Powered by 4Sale Analytics Platform</p>
+            <p style="margin: 4px 0 0 0; color: #9ca3af; font-size: 12px;">© 2025 4Sale. This report was generated automatically.</p>
+          </div>
+        </div>
+      `
+    };
 
-    let html = professionalTemplate;
+    // Get the selected template or default to professional
+    const templateKey = formData.emailTemplate.templateId || 'professional';
+    let html = templates[templateKey as keyof typeof templates] || templates.professional;
     
     // Replace built-in template variables
     const builtInVars = {
