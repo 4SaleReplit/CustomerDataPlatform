@@ -241,42 +241,97 @@ export function processEmailTemplate(templateHtml: string, variables: Record<str
 }
 
 export function generateEmailFromTemplate(templateId: string, customContent: string, customVariables: any[] = []): string {
-  // For immediate sends, use a simplified approach with proper HTML
-  const htmlTemplate = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Analytics Report</title>
-      <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: #f4f4f4; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
-        .header { background: #1a365d; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
-        .content { padding: 20px; }
-        .footer { background: #f8f9fa; padding: 15px; text-align: center; font-size: 12px; color: #666; }
-        .button { display: inline-block; padding: 12px 24px; background: #3182ce; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1>4Sale Analytics Report</h1>
-        </div>
-        <div class="content">
-          <p>Hello,</p>
-          <p>${customContent}</p>
-          <p>This report was generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}.</p>
-          <a href="${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://analytics.4sale.tech'}" class="button">View Dashboard</a>
-        </div>
-        <div class="footer">
-          <p>Powered by 4Sale Analytics Platform</p>
-          <p>© 2025 4Sale. This report was generated automatically.</p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+  // Find the template by ID from the emailTemplates array
+  const template = emailTemplates.find(t => t.id === templateId);
   
-  return htmlTemplate;
+  if (!template) {
+    console.log(`Template ${templateId} not found, using professional template`);
+    // Fallback to professional template
+    const professionalTemplate = emailTemplates.find(t => t.id === 'professional');
+    if (professionalTemplate) {
+      return generateEmailFromTemplate('professional', customContent, customVariables);
+    }
+  }
+
+  // Prepare variables for replacement
+  const variables: Record<string, string> = {
+    email_content: customContent,
+    report_title: 'Analytics Report',
+    recipient_name: 'Team',
+    report_name: 'Weekly Report',
+    report_period: 'Last 7 days',
+    generation_date: new Date().toLocaleDateString(),
+    generation_time: new Date().toLocaleTimeString(),
+    next_execution: 'Next week',
+    dashboard_url: process.env.REPLIT_DEV_DOMAIN ? 
+      `https://${process.env.REPLIT_DEV_DOMAIN}` : 
+      'https://analytics.4sale.tech',
+    metric_1_value: '1,234',
+    metric_1_label: 'Total Users',
+    metric_2_value: '567',
+    metric_2_label: 'Active Sessions', 
+    metric_3_value: '89%',
+    metric_3_label: 'Conversion Rate'
+  };
+
+  // Add custom variables
+  customVariables.forEach(variable => {
+    if (variable.type === 'static') {
+      variables[variable.name] = variable.value;
+    } else if (variable.type === 'timestamp') {
+      variables[variable.name] = new Date().toLocaleString();
+    }
+  });
+
+  console.log('Processing template:', templateId, 'with variables:', Object.keys(variables));
+
+  // Process the template HTML with variables using the correct template
+  if (!template) {
+    console.error('No template found, returning fallback');
+    return `<html><body><h1>Report Ready</h1><p>${customContent}</p></body></html>`;
+  }
+  
+  const processedHtml = processEmailTemplate(template.html, variables);
+  
+  console.log('Generated HTML length:', processedHtml.length);
+  
+  return processedHtml;
+}
+
+export function generateEmailFromTemplateWithVariables(
+  templateId: string, 
+  customContent: string, 
+  templateVariables: Record<string, string> = {},
+  customVariables: any[] = []
+): string {
+  const template = emailTemplates.find(t => t.id === templateId);
+  
+  if (!template) {
+    console.log(`Template ${templateId} not found, using fallback`);
+    return `<html><body><h1>Analytics Report</h1><p>${customContent}</p></body></html>`;
+  }
+
+  // Start with template variables from UI, then add defaults
+  const variables: Record<string, string> = {
+    ...templateVariables,
+    email_content: customContent,
+    generation_date: new Date().toLocaleDateString(),
+    generation_time: new Date().toLocaleTimeString(),
+    dashboard_url: process.env.REPLIT_DEV_DOMAIN ? 
+      `https://${process.env.REPLIT_DEV_DOMAIN}` : 
+      'https://analytics.4sale.tech'
+  };
+
+  // Add custom variables
+  customVariables.forEach(variable => {
+    if (variable.type === 'static') {
+      variables[variable.name] = variable.value;
+    } else if (variable.type === 'timestamp') {
+      variables[variable.name] = new Date().toLocaleString();
+    }
+  });
+
+  console.log('Processing template with merged variables:', Object.keys(variables));
+
+  return processEmailTemplate(template.html, variables);
 }

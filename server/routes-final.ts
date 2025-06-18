@@ -290,13 +290,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let emailHtml;
         
         if (reportData.emailTemplate?.templateId) {
-          // Use the Email Template Builder templates
+          // Use the Email Template Builder templates with template variables from UI
           const emailTemplates = await import('./services/emailTemplates');
-          emailHtml = emailTemplates.generateEmailFromTemplate(
-            reportData.emailTemplate.templateId,
-            reportData.emailTemplate.customContent || 'Your report is ready.',
-            reportData.customVariables || []
-          );
+          
+          // Merge template variables from UI with custom variables
+          const templateVariables = reportData.emailTemplate.templateVariables || {};
+          const customVars = reportData.customVariables || [];
+          
+          console.log('Template variables from UI:', templateVariables);
+          console.log('Custom variables from UI:', customVars);
+          
+          // Use the enhanced template generation with UI variables
+          try {
+            emailHtml = emailTemplates.generateEmailFromTemplateWithVariables(
+              reportData.emailTemplate.templateId,
+              reportData.emailTemplate.customContent || 'Your report is ready.',
+              templateVariables,
+              customVars
+            );
+          } catch (error) {
+            console.error('Template generation error:', error);
+            // Fallback to original function
+            emailHtml = emailTemplates.generateEmailFromTemplate(
+              reportData.emailTemplate.templateId,
+              reportData.emailTemplate.customContent || 'Your report is ready.',
+              customVars
+            );
+          }
         } else {
           // Fallback to simple text processing
           emailHtml = processEmailTemplate(reportData.emailTemplate?.customContent || 'Your report is ready.', reportData);
