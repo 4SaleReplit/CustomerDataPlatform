@@ -373,7 +373,7 @@ export function ReportsScheduler() {
               onSubmit={handleCreateReport}
               onCancel={() => setIsCreateDialogOpen(false)}
               isLoading={createReportMutation.isPending}
-              insertPlaceholder={insertPlaceholder}
+              updateEmailTemplate={updateEmailTemplate}
             />
           </DialogContent>
         </Dialog>
@@ -504,7 +504,7 @@ export function ReportsScheduler() {
             onSubmit={handleUpdateReport}
             onCancel={() => setIsEditDialogOpen(false)}
             isLoading={updateReportMutation.isPending}
-            insertPlaceholder={insertPlaceholder}
+            updateEmailTemplate={updateEmailTemplate}
           />
         </DialogContent>
       </Dialog>
@@ -759,122 +759,85 @@ function SchedulerForm({
         </CardContent>
       </Card>
 
-      {/* Email Configuration */}
+      {/* Email Template Builder */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Mail className="h-5 w-5" />
-            Email Configuration
+            Email Template Configuration
+          </CardTitle>
+          <CardDescription>
+            Choose and customize professional email templates for your scheduled reports
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <EmailTemplateBuilder
+            value={formData.emailTemplate}
+            onChange={updateEmailTemplate}
+            presentations={presentations}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Recipients */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Recipients
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="emailSubject">Email Subject</Label>
-              <div className="flex gap-1">
-                {AVAILABLE_PLACEHOLDERS.slice(0, 4).map((placeholder) => (
-                  <Button
-                    key={placeholder.key}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => insertPlaceholder(placeholder.key, "emailSubject")}
-                    className="text-xs"
-                  >
-                    {placeholder.key}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <Input
-              id="emailSubject"
-              value={formData.emailSubject}
-              onChange={(e) => setFormData((prev: any) => ({ ...prev, emailSubject: e.target.value }))}
-              placeholder="Weekly Sales Report - {date}"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="emailBody">Email Body</Label>
-              <div className="flex gap-1 flex-wrap">
-                {AVAILABLE_PLACEHOLDERS.map((placeholder) => (
-                  <Button
-                    key={placeholder.key}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => insertPlaceholder(placeholder.key, "emailBody")}
-                    className="text-xs"
-                    title={placeholder.description}
-                  >
-                    {placeholder.key}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <Textarea
-              id="emailBody"
-              value={formData.emailBody}
-              onChange={(e) => setFormData((prev: any) => ({ ...prev, emailBody: e.target.value }))}
-              placeholder="Dear Team,&#10;&#10;Please find attached the {report_name} for the week ending {date}.&#10;&#10;Best regards"
-              rows={6}
-            />
-          </div>
-
-          {/* Recipients */}
-          <div className="space-y-4">
-            <Label>Recipients</Label>
-            
-            {/* Mailing Lists */}
-            {mailingLists.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-sm">Add from Mailing Lists</Label>
-                <div className="flex gap-2 flex-wrap">
-                  {mailingLists.map((list: MailingList) => (
-                    <Button
-                      key={list.id}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addMailingList(list)}
-                      disabled={!list.isActive}
-                    >
-                      <Users className="h-3 w-3 mr-1" />
-                      {list.name} ({list.subscriberCount})
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Manual Email Entry */}
+          {/* Mailing Lists */}
+          {mailingLists.length > 0 && (
             <div className="space-y-2">
-              <Label className="text-sm">Add Emails Manually</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={emailsInput}
-                  onChange={(e) => setEmailsInput(e.target.value)}
-                  placeholder="email1@example.com, email2@example.com"
-                  onKeyPress={(e) => e.key === 'Enter' && addEmailsFromInput()}
-                />
-                <Button onClick={addEmailsFromInput} size="sm">
-                  Add
-                </Button>
+              <Label className="text-sm">Add from Mailing Lists</Label>
+              <div className="flex gap-2 flex-wrap">
+                {mailingLists.map((list: MailingList) => (
+                  <Button
+                    key={list.id}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addMailingList(list)}
+                    disabled={!list.isActive}
+                  >
+                    <Users className="h-3 w-3 mr-1" />
+                    {list.name} ({list.subscriberCount})
+                  </Button>
+                ))}
               </div>
             </div>
+          )}
 
-            {/* Current Recipients */}
-            {formData.recipientList.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-sm">Current Recipients ({formData.recipientList.length})</Label>
-                <div className="flex gap-1 flex-wrap max-h-32 overflow-y-auto">
-                  {formData.recipientList.map((email: string, index: number) => (
-                    <Badge key={index} variant="secondary" className="cursor-pointer" onClick={() => removeEmail(index)}>
-                      {email} ×
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
+          {/* Manual Email Entry */}
+          <div className="space-y-2">
+            <Label className="text-sm">Add Emails Manually</Label>
+            <div className="flex gap-2">
+              <Input
+                value={emailsInput}
+                onChange={(e) => setEmailsInput(e.target.value)}
+                placeholder="email1@example.com, email2@example.com"
+                onKeyPress={(e) => e.key === 'Enter' && addEmailsFromInput()}
+              />
+              <Button onClick={addEmailsFromInput} size="sm">
+                Add
+              </Button>
+            </div>
           </div>
+
+          {/* Current Recipients */}
+          {formData.recipientList.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm">Current Recipients ({formData.recipientList.length})</Label>
+              <div className="flex gap-1 flex-wrap max-h-32 overflow-y-auto">
+                {formData.recipientList.map((email: string, index: number) => (
+                  <Badge key={index} variant="secondary" className="cursor-pointer" onClick={() => removeEmail(index)}>
+                    {email} ×
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
