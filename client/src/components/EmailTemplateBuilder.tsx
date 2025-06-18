@@ -62,66 +62,44 @@ const emailTemplates: EmailTemplate[] = [
 ];
 
 export function EmailTemplateBuilder({ value, onChange, presentations = [] }: EmailTemplateBuilderProps) {
-  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(
-    value?.templateId ? emailTemplates.find(t => t.id === value.templateId) || null : null
-  );
+  const [selectedTemplateId, setSelectedTemplateId] = useState(value?.templateId || 'professional');
   const [subject, setSubject] = useState(value?.subject || '');
   const [customContent, setCustomContent] = useState(value?.customContent || '');
   const [templateVariables, setTemplateVariables] = useState<Record<string, string>>(
     value?.templateVariables || {}
   );
-  const [previewHtml, setPreviewHtml] = useState('');
+
+  const selectedTemplate = emailTemplates.find(t => t.id === selectedTemplateId) || emailTemplates[0];
 
   useEffect(() => {
-    if (selectedTemplate && onChange) {
+    if (onChange) {
       onChange({
-        templateId: selectedTemplate.id,
+        templateId: selectedTemplateId,
         subject,
         customContent,
         templateVariables
       });
     }
-  }, [selectedTemplate, subject, customContent, templateVariables, onChange]);
-
-  useEffect(() => {
-    if (selectedTemplate) {
-      // Generate preview HTML with current variables
-      let html = selectedTemplate.html || getTemplatePreview(selectedTemplate.id);
-      
-      // Replace variables with current values or placeholders
-      selectedTemplate.variables.forEach(variable => {
-        const value = templateVariables[variable] || `[${variable.replace(/_/g, ' ').toUpperCase()}]`;
-        html = html.replace(new RegExp(`{{${variable}}}`, 'g'), value);
-      });
-      
-      // Replace email_content with custom content
-      html = html.replace(/{{email_content}}/g, customContent || 'Your custom email content will appear here...');
-      
-      setPreviewHtml(html);
-    }
-  }, [selectedTemplate, templateVariables, customContent]);
+  }, [selectedTemplateId, subject, customContent, templateVariables, onChange]);
 
   const handleTemplateSelect = (templateId: string) => {
-    const template = emailTemplates.find(t => t.id === templateId);
-    if (template) {
-      setSelectedTemplate(template);
-      
-      // Initialize template variables with defaults
-      const defaultVariables: Record<string, string> = {
-        report_title: 'Weekly Analytics Report',
-        recipient_name: 'Valued Customer',
-        report_name: 'Analytics Dashboard Report',
-        report_period: 'Last 7 days',
-        metric_1_value: '12.5K',
-        metric_1_label: 'Total Users',
-        metric_2_value: '85%',
-        metric_2_label: 'Engagement',
-        metric_3_value: '$45.2K',
-        metric_3_label: 'Revenue'
-      };
-      
-      setTemplateVariables(defaultVariables);
-    }
+    setSelectedTemplateId(templateId);
+    
+    // Initialize template variables with defaults
+    const defaultVariables: Record<string, string> = {
+      report_title: subject || 'Weekly Analytics Report',
+      recipient_name: 'Valued Customer',
+      report_name: 'Analytics Dashboard Report',
+      report_period: 'Last 7 days',
+      metric_1_value: '12.5K',
+      metric_1_label: 'Total Users',
+      metric_2_value: '85%',
+      metric_2_label: 'Engagement',
+      metric_3_value: '$45.2K',
+      metric_3_label: 'Revenue'
+    };
+    
+    setTemplateVariables(defaultVariables);
   };
 
   const updateVariable = (variable: string, value: string) => {
