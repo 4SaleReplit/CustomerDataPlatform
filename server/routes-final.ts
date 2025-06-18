@@ -668,9 +668,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(userCache);
       }
 
-      // Fetch all users from Snowflake
+      // Fetch all users from Snowflake with proper limit
       console.log('Fetching all users from Snowflake and caching...');
-      const query = 'SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE CURRENT_CREDITS_IN_WALLET != 0 AND TOTAL_CREDITS_SPENT != 0 AND PHONE IS NOT NULL AND PHONE != \'\'';
+      
+      // First get total count
+      const countQuery = 'SELECT COUNT(*) as total FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4';
+      const countResult = await snowflakeService.executeQuery(countQuery);
+      
+      if (!countResult.success) {
+        return res.status(500).json({ error: countResult.error });
+      }
+      
+      const totalUsers = countResult.rows[0][0];
+      console.log(`Total users in database: ${totalUsers}`);
+      
+      // Fetch all users with explicit limit
+      const query = `SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 LIMIT ${totalUsers}`;
       const result = await snowflakeService.executeQuery(query);
       
       if (result.success) {
@@ -679,10 +692,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           rows: result.rows,
           success: true,
           cached: true,
-          cacheTimestamp: now
+          cacheTimestamp: now,
+          totalCount: totalUsers
         };
         userCacheTimestamp = now;
-        console.log(`Cached ${result.rows?.length || 0} users`);
+        console.log(`Cached ${result.rows?.length || 0} of ${totalUsers} users`);
         res.json(userCache);
       } else {
         res.status(500).json({ error: result.error });

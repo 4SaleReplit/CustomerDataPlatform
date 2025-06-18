@@ -70,6 +70,8 @@ export class SnowflakeService {
 
           connection.execute({
             sqlText: query,
+            fetchAsString: ['Number', 'Date'],
+            streamResult: false,
             complete: (queryErr: any, stmt: any, rows: any) => {
               // Clean up connection
               connection.destroy((destroyErr: any) => {
