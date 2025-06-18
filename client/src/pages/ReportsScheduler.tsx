@@ -6,6 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Calendar, Clock, Mail, Send, Settings, Play, Pause, Trash2, Plus, Users, Database, CalendarDays, TestTube, MoreVertical, Copy, Edit } from "lucide-react";
@@ -334,6 +336,33 @@ export function ReportsScheduler() {
     toggleActiveMutation.mutate({ id, isActive: !currentStatus });
   };
 
+  const handleDuplicateReport = (report: ScheduledReport) => {
+    setFormData({
+      name: `${report.name} (Copy)`,
+      description: report.description || "",
+      presentationId: report.presentationId,
+      cronExpression: report.cronExpression,
+      timezone: report.timezone,
+      recipientList: report.recipientList,
+      ccList: report.ccList,
+      bccList: report.bccList,
+      isActive: false, // Start duplicates as inactive
+      sendOption: 'schedule',
+      emailTemplate: report.emailTemplate || {
+        templateId: "",
+        subject: "",
+        customContent: "",
+        templateVariables: {}
+      },
+      pdfDeliveryUrl: report.pdfDeliveryUrl || "",
+      placeholderConfig: report.placeholderConfig,
+      formatSettings: (report.formatSettings as any) || { format: "pdf", includeCharts: true },
+      customVariables: (report as any).customVariables || []
+    });
+    setCustomVariables((report as any).customVariables || []);
+    setIsCreateDialogOpen(true);
+  };
+
   const openEditDialog = (report: ScheduledReport) => {
     setSelectedReport(report);
     setFormData({
@@ -529,12 +558,12 @@ export function ReportsScheduler() {
 
   const getStatusBadge = (report: ScheduledReport) => {
     if (!report.isActive) {
-      return <Badge variant="secondary">Paused</Badge>;
+      return <Badge variant="destructive" className="bg-red-100 text-red-800 hover:bg-red-200">Paused</Badge>;
     }
     if (report.errorCount > 0) {
       return <Badge variant="destructive">Error</Badge>;
     }
-    return <Badge variant="default">Active</Badge>;
+    return <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-200">Active</Badge>;
   };
 
   return (
@@ -615,41 +644,62 @@ export function ReportsScheduler() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleToggleActive(report.id, report.isActive)}
-                    >
-                      {report.isActive ? (
-                        <>
-                          <Pause className="h-3 w-3 mr-1" />
-                          Pause
-                        </>
-                      ) : (
-                        <>
-                          <Play className="h-3 w-3 mr-1" />
-                          Resume
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEditDialog(report)}
-                    >
-                      <Settings className="h-3 w-3 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteReport(report.id)}
-                    >
-                      <Trash2 className="h-3 w-3 mr-1" />
-                      Delete
-                    </Button>
-                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleDuplicateReport(report)}>
+                        <Copy className="h-4 w-4 mr-2" />
+                        Duplicate
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleToggleActive(report.id, report.isActive)}>
+                        {report.isActive ? (
+                          <>
+                            <Pause className="h-4 w-4 mr-2" />
+                            Pause
+                          </>
+                        ) : (
+                          <>
+                            <Play className="h-4 w-4 mr-2" />
+                            Resume
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openEditDialog(report)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Scheduled Report</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete "{report.name}"? This action cannot be undone and will stop all future scheduled deliveries.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleDeleteReport(report.id)}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Delete Report
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </CardHeader>
               <CardContent>

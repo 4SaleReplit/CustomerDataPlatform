@@ -605,7 +605,7 @@ export function EnhancedSchedulerForm({
                       size="sm"
                       onClick={() => {
                         const listEmails = list.emails.map(e => e.email);
-                        const newRecipients = [...new Set([...formData.recipientList, ...listEmails])];
+                        const newRecipients = Array.from(new Set([...formData.recipientList, ...listEmails]));
                         setFormData({ ...formData, recipientList: newRecipients });
                       }}
                     >
