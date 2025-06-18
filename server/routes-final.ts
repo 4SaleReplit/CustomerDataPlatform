@@ -956,9 +956,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const now = new Date();
       const next = new Date(now);
       
+      // Handle interval expressions like */2, */5, etc.
+      if (minute.startsWith('*/')) {
+        const interval = parseInt(minute.substring(2));
+        const currentMinute = now.getMinutes();
+        const nextMinute = Math.ceil((currentMinute + 1) / interval) * interval;
+        
+        if (nextMinute >= 60) {
+          next.setHours(next.getHours() + 1);
+          next.setMinutes(0, 0, 0);
+        } else {
+          next.setMinutes(nextMinute, 0, 0);
+        }
+        
+        return next;
+      }
+      
       // Handle basic patterns
-      if (minute !== '*') next.setMinutes(parseInt(minute), 0, 0);
-      if (hour !== '*') next.setHours(parseInt(hour));
+      if (minute !== '*') {
+        const targetMinute = parseInt(minute);
+        next.setMinutes(targetMinute, 0, 0);
+      }
+      
+      if (hour !== '*') {
+        const targetHour = parseInt(hour);
+        next.setHours(targetHour);
+      }
       
       // If time has passed today, move to next day/week
       if (next <= now) {
