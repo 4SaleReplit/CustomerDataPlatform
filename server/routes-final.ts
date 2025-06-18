@@ -62,17 +62,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Check regular users table
-      const user = await storage.getUserByUsername(username);
-      if (user && user.password === password) {
-        return res.json({
-          id: user.id.toString(),
-          username: user.username,
-          email: user.username + '@company.com',
-          role: user.username === 'admin' ? 'administrator' : 'user'
-        });
-      }
-
+      // Only authenticate team members - no mock users
       res.status(401).json({ error: "Invalid credentials" });
     } catch (error) {
       console.error("Login error:", error);
