@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { EnhancedSchedulerForm } from "@/components/EnhancedSchedulerForm";
+import { EmailListView } from "@/components/EmailListView";
 
 interface ScheduledReport {
   id: string;
@@ -432,70 +433,22 @@ export function EmailSender() {
             </Dialog>
           </div>
 
-          <div className="grid gap-4">
-            {reportsLoading ? (
-              <div className="flex items-center justify-center h-32">
-                <div className="text-muted-foreground">Loading one-time emails...</div>
-              </div>
-            ) : filteredReports.length === 0 ? (
-              <Card>
-                <CardContent className="flex items-center justify-center h-32">
-                  <div className="text-center">
-                    <Send className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-muted-foreground">No one-time emails sent yet</p>
-                    <p className="text-sm text-muted-foreground">Send your first email report</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredReports.map((report: ScheduledReport) => (
-                <Card key={report.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <CardTitle className="text-lg">{report.name}</CardTitle>
-                          {getStatusBadge(report)}
-                        </div>
-                        <CardDescription>{report.description}</CardDescription>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {report.sentAt ? new Date(report.sentAt).toLocaleString() : 'Pending'}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            {report.recipientList.length} recipients
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Database className="h-3 w-3" />
-                            {presentations?.find((p: Presentation) => p.id === report.presentationId)?.title || "Unknown Report"}
-                          </div>
-                        </div>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleDuplicateReport(report)}>
-                            <Copy className="h-4 w-4 mr-2" />
-                            Clone
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Eye className="h-4 w-4 mr-2" />
-                            Preview
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))
-            )}
-          </div>
+          <EmailListView
+            reports={filteredReports}
+            presentations={presentations}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            isLoading={reportsLoading}
+            emptyMessage="No one-time emails sent yet"
+            emptyDescription="Send your first email report"
+            onDuplicate={handleDuplicateReport}
+            onEdit={openEditDialog}
+            onDelete={handleDeleteReport}
+            onToggleActive={() => {}}
+            isOneTime={true}
+          />
         </TabsContent>
 
         <TabsContent value="scheduled" className="space-y-4">
