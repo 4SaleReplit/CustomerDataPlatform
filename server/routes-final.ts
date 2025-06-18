@@ -258,8 +258,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `${req.protocol}://${req.get('host')}`;
       const pdfDeliveryUrl = `${baseUrl}/api/reports/pdf/${reportData.presentationId}`;
       
-      const scheduledReport = await storage.createScheduledReport({
-        ...reportData,
+      // Create scheduled report data with proper field mapping
+      const reportInsertData = {
+        name: reportData.name,
+        description: reportData.description || null,
+        presentationId: reportData.presentationId,
+        cronExpression: reportData.cronExpression,
+        timezone: reportData.timezone || 'Africa/Cairo',
+        emailSubject: reportData.emailSettings?.subject || `Report: ${reportData.name}`,
+        emailBody: reportData.emailSettings?.template || 'Please find your scheduled report attached.',
+        recipientList: reportData.emailSettings?.recipients || [],
+        ccList: reportData.emailSettings?.cc || [],
+        bccList: reportData.emailSettings?.bcc || [],
+        isActive: reportData.isActive !== false,
+        formatSettings: reportData.formatSettings || {},
         pdfDeliveryUrl,
         nextExecution,
         executionCount: 0,
@@ -268,7 +280,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastExecutionAt: null,
         lastError: null,
         createdBy: (req as any).session?.user?.id || null
-      });
+      };
+
+      console.log('Creating scheduled report with data:', JSON.stringify(reportInsertData, null, 2));
+      
+      const scheduledReport = await storage.createScheduledReport(reportInsertData);
       
       // Schedule the actual cron job
       if (scheduledReport.isActive && scheduledReport.cronExpression) {
