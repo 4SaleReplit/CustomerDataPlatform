@@ -1917,19 +1917,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
           completedItems: i
         });
 
-        // Get table schema
+        // Get table schema with proper array type handling
         const schemaResult = await sourceClient.query(`
-          SELECT column_name, data_type, is_nullable, column_default
+          SELECT 
+            column_name, 
+            data_type,
+            udt_name,
+            is_nullable, 
+            column_default,
+            CASE 
+              WHEN data_type = 'ARRAY' THEN 
+                CASE 
+                  WHEN udt_name = '_text' THEN 'text[]'
+                  WHEN udt_name = '_varchar' THEN 'varchar[]'
+                  WHEN udt_name = '_int4' THEN 'integer[]'
+                  WHEN udt_name = '_uuid' THEN 'uuid[]'
+                  WHEN udt_name = '_jsonb' THEN 'jsonb[]'
+                  ELSE udt_name
+                END
+              ELSE data_type
+            END as proper_data_type
           FROM information_schema.columns 
           WHERE table_name = $1 AND table_schema = 'public'
           ORDER BY ordinal_position
         `, [table]);
 
-        // Create table
+        // Create table with proper array syntax
         const columns = schemaResult.rows.map(col => {
-          let def = `"${col.column_name}" ${col.data_type}`;
+          let def = `"${col.column_name}" ${col.proper_data_type}`;
           if (col.is_nullable === 'NO') def += ' NOT NULL';
-          if (col.column_default) def += ` DEFAULT ${col.column_default}`;
+          if (col.column_default && !col.column_default.includes('nextval')) {
+            def += ` DEFAULT ${col.column_default}`;
+          }
           return def;
         }).join(', ');
 
@@ -1948,11 +1967,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             if (dataResult.rows.length > 0) {
               const columnNames = Object.keys(dataResult.rows[0]).map(col => `"${col}"`).join(', ');
-              const values = dataResult.rows.map(row => 
-                '(' + Object.values(row).map(val => val === null ? 'NULL' : `'${String(val).replace(/'/g, "''")}'`).join(', ') + ')'
-              ).join(', ');
               
-              await targetClient.query(`INSERT INTO "${table}" (${columnNames}) VALUES ${values}`);
+              // Use parameterized queries to handle complex data types safely
+              for (const row of dataResult.rows) {
+                const values = Object.values(row);
+                const placeholders = values.map((_, index) => `$${index + 1}`).join(', ');
+                
+                await targetClient.query(
+                  `INSERT INTO "${table}" (${columnNames}) VALUES (${placeholders})`,
+                  values
+                );
+              }
             }
             
             offset += batchSize;
