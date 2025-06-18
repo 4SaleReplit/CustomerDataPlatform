@@ -436,7 +436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log('Generated email HTML length:', emailHtml.length);
         
-        // Create professional business email subject
+        // Create professional business email subject using existing variables
         const businessSubject = reportData.emailTemplate?.subject || `Business Analytics Report - ${reportData.name} [${reportId}]`;
         
         // Enhanced plain text version for better deliverability
