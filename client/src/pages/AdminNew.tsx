@@ -151,6 +151,31 @@ export default function AdminNew() {
     }
   });
 
+  // Update team member mutation
+  const updateTeamMemberMutation = useMutation({
+    mutationFn: (data: { id: string; updates: any }) => apiRequest(`/api/team/${data.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data.updates),
+      headers: { 'Content-Type': 'application/json' }
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team'] });
+      setShowEditModal(false);
+      setEditUserData(null);
+      toast({
+        title: "Team member updated",
+        description: "Team member details have been updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update team member",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Delete team member mutation
   const deleteTeamMemberMutation = useMutation({
     mutationFn: (id: string) => apiRequest(`/api/team/${id}`, { method: 'DELETE' }),
@@ -182,6 +207,29 @@ export default function AdminNew() {
       return;
     }
     createTeamMemberMutation.mutate(invitationData);
+  };
+
+  // Handle edit user
+  const handleEditUser = (user: TeamMember) => {
+    setEditUserData({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role
+    });
+    setSelectedUser(user);
+    setShowEditModal(true);
+  };
+
+  // Handle update user
+  const handleUpdateUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser || !editUserData) return;
+
+    updateTeamMemberMutation.mutate({
+      id: selectedUser.id,
+      updates: editUserData
+    });
   };
 
   // Handle password change
@@ -326,6 +374,92 @@ export default function AdminNew() {
         </Dialog>
       </div>
 
+      {/* Edit User Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5" />
+              Edit Team Member
+            </DialogTitle>
+            <DialogDescription>
+              Update team member information and role.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateUser} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="editFirstName">First Name</Label>
+                <Input
+                  id="editFirstName"
+                  value={editUserData?.firstName || ''}
+                  onChange={(e) => setEditUserData(prev => ({ ...prev, firstName: e.target.value }))}
+                  placeholder="John"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="editLastName">Last Name</Label>
+                <Input
+                  id="editLastName"
+                  value={editUserData?.lastName || ''}
+                  onChange={(e) => setEditUserData(prev => ({ ...prev, lastName: e.target.value }))}
+                  placeholder="Doe"
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="editEmail">Email Address</Label>
+              <Input
+                id="editEmail"
+                type="email"
+                value={editUserData?.email || ''}
+                onChange={(e) => setEditUserData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="john.doe@company.com"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="editRole">Role</Label>
+              <Select 
+                value={editUserData?.role || ''} 
+                onValueChange={(value) => setEditUserData(prev => ({ ...prev, role: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.name}>
+                      {role.displayName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => setShowEditModal(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={updateTeamMemberMutation.isPending}>
+                {updateTeamMemberMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Update User
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* Password Generated Modal */}
       <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
         <DialogContent className="sm:max-w-md">
@@ -428,6 +562,10 @@ export default function AdminNew() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditUser(member)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit User
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleChangePassword(member.id)}>
                               <Key className="h-4 w-4 mr-2" />
                               Change Password

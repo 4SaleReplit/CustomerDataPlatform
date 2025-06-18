@@ -138,6 +138,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update team member endpoint
+  app.patch("/api/team/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      
+      const updated = await storage.updateTeamMember(id, updateData);
+      if (!updated) {
+        return res.status(404).json({ error: "Team member not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Update team member error:", error);
+      res.status(500).json({ error: "Failed to update team member" });
+    }
+  });
+
+  // Delete team member endpoint
+  app.delete("/api/team/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      const success = await storage.deleteTeamMember(id);
+      if (!success) {
+        return res.status(404).json({ error: "Team member not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Delete team member error:", error);
+      res.status(500).json({ error: "Failed to delete team member" });
+    }
+  });
+
   // Change user password endpoint
   app.post("/api/team/:id/change-password", async (req: Request, res: Response) => {
     try {
