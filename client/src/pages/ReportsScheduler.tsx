@@ -128,10 +128,19 @@ const AVAILABLE_PLACEHOLDERS = [
   { key: "{quarter_end}", description: "End of current quarter" }
 ];
 
+interface CustomVariable {
+  name: string;
+  type: 'static' | 'query' | 'timestamp' | 'formula';
+  value: string;
+  description: string;
+}
+
 export function ReportsScheduler() {
   const [selectedReport, setSelectedReport] = useState<ScheduledReport | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [customVariables, setCustomVariables] = useState<CustomVariable[]>([]);
+  const [previewHtml, setPreviewHtml] = useState('');
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -150,7 +159,8 @@ export function ReportsScheduler() {
     },
     pdfDeliveryUrl: "",
     placeholderConfig: {},
-    formatSettings: { format: "pdf", includeCharts: true }
+    formatSettings: { format: "pdf", includeCharts: true },
+    customVariables: [] as CustomVariable[]
   });
 
   const { toast } = useToast();
@@ -290,8 +300,10 @@ export function ReportsScheduler() {
       },
       pdfDeliveryUrl: report.pdfDeliveryUrl || "",
       placeholderConfig: report.placeholderConfig,
-      formatSettings: (report.formatSettings as any) || { format: "pdf", includeCharts: true }
+      formatSettings: (report.formatSettings as any) || { format: "pdf", includeCharts: true },
+      customVariables: (report as any).customVariables || []
     });
+    setCustomVariables((report as any).customVariables || []);
     setIsEditDialogOpen(true);
   };
 
@@ -316,8 +328,10 @@ export function ReportsScheduler() {
       },
       pdfDeliveryUrl: "",
       placeholderConfig: {},
-      formatSettings: { format: "pdf", includeCharts: true }
+      formatSettings: { format: "pdf", includeCharts: true },
+      customVariables: []
     });
+    setCustomVariables([]);
   };
 
   const updateEmailTemplate = (emailTemplate: any) => {
@@ -326,6 +340,130 @@ export function ReportsScheduler() {
       emailTemplate
     }));
   };
+
+  // Add custom variable
+  const addCustomVariable = () => {
+    const newVariable: CustomVariable = {
+      name: '',
+      type: 'static',
+      value: '',
+      description: ''
+    };
+    setCustomVariables(prev => [...prev, newVariable]);
+    setFormData(prev => ({
+      ...prev,
+      customVariables: [...prev.customVariables, newVariable]
+    }));
+  };
+
+  // Update custom variable
+  const updateCustomVariable = (index: number, field: keyof CustomVariable, value: string) => {
+    const updatedVariables = [...customVariables];
+    updatedVariables[index] = { ...updatedVariables[index], [field]: value };
+    setCustomVariables(updatedVariables);
+    setFormData(prev => ({
+      ...prev,
+      customVariables: updatedVariables
+    }));
+  };
+
+  // Remove custom variable
+  const removeCustomVariable = (index: number) => {
+    const updatedVariables = customVariables.filter((_, i) => i !== index);
+    setCustomVariables(updatedVariables);
+    setFormData(prev => ({
+      ...prev,
+      customVariables: updatedVariables
+    }));
+  };
+
+  // Generate email preview
+  const generateEmailPreview = () => {
+    if (!formData.emailTemplate.templateId) return '';
+
+    // Get selected template HTML
+    const emailTemplates = [
+      {
+        id: 'professional',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #e5e7eb; border-radius: 8px;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
+              <h1 style="margin: 0; font-size: 28px; font-weight: bold;">4Sale Analytics</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">Your Report is Ready</p>
+            </div>
+            <div style="padding: 40px 30px;">
+              <h2 style="color: #1f2937; margin: 0 0 20px 0;">{report_title}</h2>
+              <p style="color: #6b7280; line-height: 1.6; margin: 0 0 30px 0;">{email_content}</p>
+              <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="margin: 0 0 10px 0;">Report Details</h3>
+                <p style="margin: 5px 0;"><strong>Report:</strong> {report_name}</p>
+                <p style="margin: 5px 0;"><strong>Period:</strong> {report_period}</p>
+                <p style="margin: 5px 0;"><strong>Generated:</strong> {generation_date}</p>
+              </div>
+            </div>
+            <div style="background: #f9fafb; padding: 20px 30px; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">Powered by 4Sale Analytics Platform</p>
+            </div>
+          </div>
+        `
+      }
+    ];
+
+    const template = emailTemplates.find(t => t.id === formData.emailTemplate.templateId);
+    if (!template) return '';
+
+    let html = template.html;
+    
+    // Replace built-in template variables
+    const builtInVars = {
+      report_title: formData.emailTemplate.subject || 'Weekly Analytics Report',
+      email_content: formData.emailTemplate.customContent || 'Your custom email content will appear here.',
+      report_name: formData.name || 'Analytics Report',
+      report_period: 'Last 7 days',
+      generation_date: new Date().toLocaleDateString(),
+      generation_time: new Date().toLocaleTimeString(),
+      ...formData.emailTemplate.templateVariables
+    };
+
+    // Replace built-in variables
+    Object.entries(builtInVars).forEach(([key, value]) => {
+      const regex = new RegExp(`{${key}}`, 'g');
+      html = html.replace(regex, value);
+    });
+
+    // Replace custom variables
+    customVariables.forEach(variable => {
+      if (variable.name && variable.value) {
+        const regex = new RegExp(`{${variable.name}}`, 'g');
+        let processedValue = variable.value;
+        
+        // Process different variable types
+        switch (variable.type) {
+          case 'timestamp':
+            processedValue = new Date().toLocaleString();
+            break;
+          case 'query':
+            processedValue = `[Query Result: ${variable.value}]`;
+            break;
+          case 'formula':
+            processedValue = `[Calculated: ${variable.value}]`;
+            break;
+          default:
+            processedValue = variable.value;
+        }
+        
+        html = html.replace(regex, processedValue);
+      }
+    });
+
+    return html;
+  };
+
+  // Update preview when form data changes
+  useEffect(() => {
+    const preview = generateEmailPreview();
+    setPreviewHtml(preview);
+  }, [formData.emailTemplate, customVariables]);
 
   const formatNextExecution = (nextExecution: string | null) => {
     if (!nextExecution) return "Not scheduled";
