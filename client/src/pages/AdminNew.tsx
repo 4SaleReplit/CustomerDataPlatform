@@ -873,7 +873,7 @@ export default function AdminNew() {
         </TabsContent>
       </Tabs>
 
-      {/* Migration Modal */}
+      {/* Migration Modal - Original Checkpoint Version */}
       <Dialog open={showMigrationModal} onOpenChange={setShowMigrationModal}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -908,7 +908,9 @@ export default function AdminNew() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground mt-1">Choose the type of integration to migrate between</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Only types with 2+ integrations are available for migration
+              </p>
             </div>
 
             {/* Source and Destination Selection - Only show when type is selected */}
@@ -970,46 +972,49 @@ export default function AdminNew() {
               </div>
             )}
 
-            {/* Migration Options */}
-            {selectedMigrationType && selectedSourceEnv && selectedTargetEnv && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <AlertTriangle className="h-5 w-5 text-blue-600 mt-0.5" />
-                  <div>
-                    <h4 className="text-sm font-medium text-blue-900">Migration Details</h4>
-                    <p className="text-sm text-blue-700 mt-1">
-                      This will migrate all data and schema from the source to the destination integration.
-                      The destination will be completely overwritten.
-                    </p>
-                    <ul className="text-sm text-blue-700 mt-2 space-y-1">
-                      <li>• Schema recreation with CASCADE drop</li>
-                      <li>• Batch data migration (1000 rows per batch)</li>
-                      <li>• Sequence reset for auto-increment fields</li>
-                      <li>• Real-time console logging</li>
-                    </ul>
-                  </div>
+            <div className="space-y-3">
+              <Label>Migration Options</Label>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="schema" defaultChecked />
+                  <Label htmlFor="schema">Create Schema</Label>
+                  <p className="text-xs text-muted-foreground ml-6">Create tables, indexes, and constraints in destination database</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="data" defaultChecked />
+                  <Label htmlFor="data">Migrate Data</Label>
+                  <p className="text-xs text-muted-foreground ml-6">Copy all table data from source to destination</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="sequences" defaultChecked />
+                  <Label htmlFor="sequences">Reset Sequences</Label>
+                  <p className="text-xs text-muted-foreground ml-6">Update auto-increment sequences to match data</p>
                 </div>
               </div>
-            )}
-            
-            <div className="flex justify-end space-x-2">
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 mr-2" />
+                <div className="text-sm">
+                  <p className="font-medium text-yellow-800">Migration Warning</p>
+                  <p className="text-yellow-700">This will overwrite data in the target environment. Make sure you have backups.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3">
               <Button variant="outline" onClick={() => setShowMigrationModal(false)}>
                 Cancel
               </Button>
-              <Button 
-                onClick={handleStartMigration} 
-                disabled={isMigrating || !selectedMigrationType || !selectedSourceEnv || !selectedTargetEnv}
-              >
+              <Button onClick={handleStartMigration} disabled={isMigrating || !selectedMigrationType || !selectedSourceEnv || !selectedTargetEnv}>
                 {isMigrating ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Starting Migration...
+                    Migrating...
                   </>
                 ) : (
-                  <>
-                    <Database className="h-4 w-4 mr-2" />
-                    Start Migration
-                  </>
+                  'Start Migration'
                 )}
               </Button>
             </div>
