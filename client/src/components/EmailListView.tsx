@@ -45,21 +45,19 @@ export function EmailListView({
 }: EmailListViewProps) {
   const getStatusBadge = (report: any) => {
     if (isOneTime) {
-      // One-time email status
+      // One-time email status - only Sent or Failed
       if (report.sentImmediately || report.sentAt) {
         return <Badge variant="default" className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Sent</Badge>;
       }
       if (report.lastError) {
         return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Failed</Badge>;
       }
-      return <Badge variant="outline"><Clock3 className="h-3 w-3 mr-1" />Pending</Badge>;
+      // No pending status - return null for reports without sent/failed status
+      return null;
     } else {
-      // Scheduled email status - cohort style
+      // Scheduled email status - cohort style (Active/Paused only)
       if (!report.isActive) {
         return <Badge variant="secondary" className="bg-orange-100 text-orange-800"><Pause className="h-3 w-3 mr-1" />Paused</Badge>;
-      }
-      if (report.lastError) {
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Failed</Badge>;
       }
       return <Badge variant="default" className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Active</Badge>;
     }
@@ -161,9 +159,14 @@ export function EmailListView({
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{report.name}</span>
-                        {getStatusBadge(report)}
+                        {getStatusBadge(report) && getStatusBadge(report)}
                       </div>
                       <p className="text-sm text-muted-foreground">{report.description}</p>
+                      {isOneTime && (report.sentAt || report.sentImmediately) && (
+                        <p className="text-xs text-muted-foreground">
+                          Sent: {report.sentAt ? new Date(report.sentAt).toLocaleString() : 'Recently'}
+                        </p>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -201,21 +204,6 @@ export function EmailListView({
                           <Copy className="h-4 w-4 mr-2" />
                           Duplicate
                         </DropdownMenuItem>
-                        {!isOneTime && (
-                          <DropdownMenuItem onClick={() => onToggleActive(report)}>
-                            {report.isActive ? (
-                              <>
-                                <Pause className="h-4 w-4 mr-2" />
-                                Pause
-                              </>
-                            ) : (
-                              <>
-                                <Play className="h-4 w-4 mr-2" />
-                                Resume
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                        )}
                         <DropdownMenuItem onClick={() => onEdit(report)}>
                           <Edit className="h-4 w-4 mr-2" />
                           Edit

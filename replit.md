@@ -111,6 +111,16 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 18, 2025**: Final Email Sender UI/UX Enhancements and Status Management
+  - Updated status tags for One-Time Emails: removed "Pending", kept only "Sent" (green) and "Failed" (red)
+  - Updated status tags for Scheduled Emails: cohort-style "Active" (green) and "Paused" (orange)
+  - Added timestamp display for sent one-time emails under status badges
+  - Removed "Pause" option from three-dots dropdown menu for scheduled emails
+  - Added Status Management dropdown in Edit Scheduled Report form for pause/activate control
+  - Renamed "Schedule" button to "Save" in scheduled report forms
+  - Maintained list view layout for both tabs with comprehensive search and filter functionality
+  - Enhanced status filtering to match new terminology (Sent/Failed for one-time, Active/Paused for scheduled)
+
 - **June 18, 2025**: Complete "Send Now" Email Functionality Debug and Anti-Spam Resolution
   - Fixed core issue where form was sending empty email subject and content fields
   - Added comprehensive form validation for "Send Now" mode requiring email subject and content

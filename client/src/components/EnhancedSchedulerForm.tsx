@@ -826,8 +826,8 @@ export function EnhancedSchedulerForm({
           </Button>
           <Button onClick={onSubmit} disabled={isLoading}>
             {isLoading 
-              ? (mode === 'one-time' ? "Sending..." : "Creating...") 
-              : (mode === 'one-time' ? "Send Now" : "Schedule")
+              ? (mode === 'one-time' ? "Sending..." : "Saving...") 
+              : (mode === 'one-time' ? "Send Now" : "Save")
             }
           </Button>
         </div>
