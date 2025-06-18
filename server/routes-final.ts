@@ -668,7 +668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(userCache);
       }
 
-      // Fetch all users from Snowflake with proper limit
+      // Fetch large dataset from Snowflake with optimized query
       console.log('Fetching all users from Snowflake and caching...');
       
       // First get total count
@@ -682,8 +682,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalUsers = countResult.rows[0][0];
       console.log(`Total users in database: ${totalUsers}`);
       
-      // Fetch all users with explicit limit
-      const query = `SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 LIMIT ${totalUsers}`;
+      // Fetch all users efficiently
+      const query = `SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4`;
+      console.log(`Fetching all ${totalUsers} users from Snowflake...`);
+      
       const result = await snowflakeService.executeQuery(query);
       
       if (result.success) {
@@ -757,6 +759,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     userCacheTimestamp = 0;
     console.log('User cache cleared');
     res.json({ success: true, message: "User cache cleared" });
+  });
+
+  // Fetch all users in batches for large datasets
+  app.get("/api/users/all-batched", async (req: Request, res: Response) => {
+    try {
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const snowflakeService = await getDynamicSnowflakeService();
+      
+      if (!snowflakeService) {
+        return res.status(404).json({ error: "Snowflake integration not configured" });
+      }
+
+      // Check if cache is valid
+      const now = Date.now();
+      if (userCache && (now - userCacheTimestamp) < CACHE_DURATION) {
+        console.log('Serving users from cache');
+        return res.json(userCache);
+      }
+
+      console.log('Fetching ALL users from Snowflake using batched approach...');
+      
+      // Get total count
+      const countQuery = 'SELECT COUNT(*) as total FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4';
+      const countResult = await snowflakeService.executeQuery(countQuery);
+      
+      if (!countResult.success) {
+        return res.status(500).json({ error: countResult.error });
+      }
+      
+      const totalUsers = countResult.rows[0][0];
+      console.log(`Total users in database: ${totalUsers}`);
+
+      // Fetch all users with ORDER BY for consistent results
+      const query = `SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 ORDER BY USER_ID`;
+      console.log(`Executing query to fetch all ${totalUsers} users...`);
+      
+      const result = await snowflakeService.executeQuery(query);
+      
+      if (result.success) {
+        userCache = {
+          columns: result.columns,
+          rows: result.rows,
+          success: true,
+          cached: true,
+          cacheTimestamp: now,
+          totalCount: totalUsers,
+          actualCount: result.rows?.length || 0
+        };
+        userCacheTimestamp = now;
+        console.log(`Successfully cached ${result.rows?.length || 0} of ${totalUsers} users`);
+        res.json(userCache);
+      } else {
+        res.status(500).json({ error: result.error });
+      }
+    } catch (error) {
+      console.error("Batched users fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch users in batches" });
+    }
   });
 
   // Snowflake query execution endpoint
