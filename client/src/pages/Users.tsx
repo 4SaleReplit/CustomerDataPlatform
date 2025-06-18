@@ -87,36 +87,27 @@ function Users() {
 
   // Handle Enter key press for ID search
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && searchMode === 'ids' && searchTerm.trim()) {
+    if (e.key === 'Enter' && searchTerm.trim()) {
       e.preventDefault();
       executeUserIdSearch();
     }
   };
 
-  // Handle search mode changes
-  const handleSearchModeChange = (mode: 'all' | 'ids') => {
-    setSearchMode(mode);
-    setSearchTerm('');
-    setSearchExecuted(false);
-    setCurrentPage(1);
-    analytics.buttonClicked(`Switch to ${mode === 'all' ? 'All Users' : 'ID Search'}`, 'Users');
-  };
-
   // Determine which data to use
-  const usersData = searchMode === 'ids' ? idSearchData : allUsersData;
-  const usersLoading = searchMode === 'ids' ? idSearchLoading : allUsersLoading;
+  const usersData = searchExecuted ? idSearchData : allUsersData;
+  const usersLoading = searchExecuted ? idSearchLoading : allUsersLoading;
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      if (searchMode === 'all') {
-        // Clear cache and refetch all users
-        await apiRequest('/api/users/clear-cache', { method: 'POST' });
-        await refetchAllUsers();
-        analytics.buttonClicked('Refresh All Users', 'Users', { cached: true, page: currentPage });
-      } else {
+      if (searchExecuted) {
         await refetchIdSearch();
         analytics.buttonClicked('Refresh ID Search', 'Users', { searchTerm });
+      } else {
+        // Clear cache and refetch all users
+        await apiRequest('/api/users/clear-cache', { method: 'POST' });
+        queryClient.invalidateQueries({ queryKey: ['users', 'all'] });
+        analytics.buttonClicked('Refresh All Users', 'Users', { cached: true, page: currentPage });
       }
     } finally {
       setIsRefreshing(false);
@@ -140,41 +131,25 @@ function Users() {
     }) : [];
 
   const filteredUsers = processedUsers.filter((user: any) => {
-    // Skip text search if we're in ID search mode
-    if (searchMode === 'ids') {
-      return true; // Show all results from ID search
-    }
-    
-    const searchableFields = [
-      user.USER_ID,
-      user.EMAIL,
-      user.PHONE_NUMBER,
-      user.USER_TYPE
-    ].filter(Boolean).map(field => String(field).toLowerCase());
-    
-    const matchesSearch = !searchTerm || searchableFields.some(field => 
-      field.includes(searchTerm.toLowerCase())
-    );
-    
     const matchesType = userTypeFilter === 'all' || 
       (user.USER_TYPE && user.USER_TYPE.toLowerCase() === userTypeFilter);
     
-    return matchesSearch && matchesType;
+    return matchesType;
   });
 
   // Pagination - simplified for 100 user display and ID search
   let totalPages, currentUsers;
   
-  if (searchMode === 'all') {
-    // For all users mode, show all 100 fetched users without pagination
-    totalPages = 1;
-    currentUsers = processedUsers;
-  } else {
+  if (searchExecuted) {
     // Use client-side pagination for ID search results
     totalPages = Math.ceil(filteredUsers.length / usersPerPage);
     const startIndex = (currentPage - 1) * usersPerPage;
     const endIndex = startIndex + usersPerPage;
     currentUsers = filteredUsers.slice(startIndex, endIndex);
+  } else {
+    // For all users mode, show all 100 fetched users without pagination
+    totalPages = 1;
+    currentUsers = processedUsers;
   }
 
   const goToPage = (page: number) => {
@@ -262,30 +237,12 @@ function Users() {
         </div>
       </div>
 
-      {/* Search Mode Toggle */}
+      {/* Data Info */}
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium">Search Mode:</span>
-            <div className="flex gap-2">
-              <Button
-                variant={searchMode === 'all' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handleSearchModeChange('all')}
-              >
-                All Users (Cached)
-              </Button>
-              <Button
-                variant={searchMode === 'ids' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handleSearchModeChange('ids')}
-              >
-                <Hash className="h-4 w-4 mr-1" />
-                Search by User IDs
-              </Button>
-            </div>
-            {usersData?.cached && (
-              <div className="flex items-center gap-2 ml-auto">
+            {!searchExecuted && usersData?.cached && (
+              <div className="flex items-center gap-2">
                 <Badge variant="secondary">
                   Cached Data
                 </Badge>
@@ -294,6 +251,16 @@ function Users() {
                     Sample of {usersData.totalCount.toLocaleString()} users
                   </Badge>
                 )}
+              </div>
+            )}
+            {searchExecuted && idSearchData && (
+              <div className="flex items-center gap-2">
+                <Badge variant="default">
+                  Search Results
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  {idSearchData.rows.length} users found
+                </Badge>
               </div>
             )}
           </div>
@@ -381,26 +348,26 @@ function Users() {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
               <CardTitle>
-                {searchMode === 'ids' && searchTerm ? 'Search Results' : 'Users'} 
-                ({searchMode === 'all' && usersData?.totalCount ? 
+                {searchExecuted && searchTerm ? 'Search Results' : 'Users'} 
+                ({!searchExecuted && usersData?.totalCount ? 
                   `${usersData.displayedCount} of ${usersData.totalCount.toLocaleString()} total` : 
                   `${filteredUsers.length} total`
                 })
               </CardTitle>
-              {searchMode === 'ids' && isSearchingIds && (
+              {isSearchingIds && (
                 <Badge variant="secondary" className="animate-pulse">
                   <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
                   Searching...
                 </Badge>
               )}
-              {searchMode === 'ids' && !isSearchingIds && searchExecuted && (
+              {!isSearchingIds && searchExecuted && (
                 <Badge variant="default">
                   {filteredUsers.length} found
                 </Badge>
               )}
-              {searchMode === 'ids' && !searchExecuted && searchTerm && (
+              {!searchExecuted && searchTerm && (
                 <Badge variant="outline">
-                  Click "Search Users" to execute
+                  Click "Search" to execute
                 </Badge>
               )}
             </div>
