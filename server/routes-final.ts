@@ -1942,12 +1942,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ORDER BY ordinal_position
         `, [table]);
 
-        // Create table with proper array syntax and debugging
+        // Create table with proper array syntax and improved default handling
         const columns = schemaResult.rows.map(col => {
           let def = `"${col.column_name}" ${col.proper_data_type}`;
           if (col.is_nullable === 'NO') def += ' NOT NULL';
-          if (col.column_default && !col.column_default.includes('nextval') && !col.column_default.includes('now()')) {
-            def += ` DEFAULT ${col.column_default}`;
+          
+          // Handle default values more carefully
+          if (col.column_default) {
+            const defaultVal = col.column_default.toString().trim();
+            if (defaultVal && 
+                !defaultVal.includes('nextval') && 
+                !defaultVal.includes('now()') &&
+                !defaultVal.includes('gen_random_uuid()')) {
+              def += ` DEFAULT ${defaultVal}`;
+            } else if (defaultVal.includes('gen_random_uuid()')) {
+              def += ' DEFAULT gen_random_uuid()';
+            } else if (defaultVal.includes('now()')) {
+              def += ' DEFAULT now()';
+            }
           }
           return def;
         }).join(', ');
@@ -1959,6 +1971,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await targetClient.query(createTableSQL);
         } catch (error) {
           console.error(`Failed to create table ${table}:`, error);
+          console.error('Generated SQL:', createTableSQL);
           console.error('Columns data:', schemaResult.rows);
           throw error;
         }
@@ -1977,12 +1990,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (dataResult.rows.length > 0) {
               const columnNames = Object.keys(dataResult.rows[0]).map(col => `"${col}"`).join(', ');
               
-              // Use batch insert with proper JSON/array handling
+              // Use batch insert with proper PostgreSQL array/JSON handling
               const values = dataResult.rows.map(row => {
                 return '(' + Object.values(row).map(val => {
                   if (val === null) return 'NULL';
+                  if (Array.isArray(val)) {
+                    // Handle PostgreSQL arrays - convert to proper format
+                    if (val.length === 0) return 'ARRAY[]';
+                    const arrayElements = val.map(item => `'${String(item).replace(/'/g, "''")}'`).join(',');
+                    return `ARRAY[${arrayElements}]`;
+                  }
                   if (typeof val === 'object') {
-                    // Handle arrays and JSON objects
+                    // Handle JSON objects
                     return `'${JSON.stringify(val).replace(/'/g, "''")}'`;
                   }
                   return `'${String(val).replace(/'/g, "''")}'`;
