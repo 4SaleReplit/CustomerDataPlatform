@@ -1942,17 +1942,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ORDER BY ordinal_position
         `, [table]);
 
-        // Create table with proper array syntax
+        // Create table with proper array syntax and debugging
         const columns = schemaResult.rows.map(col => {
           let def = `"${col.column_name}" ${col.proper_data_type}`;
           if (col.is_nullable === 'NO') def += ' NOT NULL';
-          if (col.column_default && !col.column_default.includes('nextval')) {
+          if (col.column_default && !col.column_default.includes('nextval') && !col.column_default.includes('now()')) {
             def += ` DEFAULT ${col.column_default}`;
           }
           return def;
         }).join(', ');
 
-        await targetClient.query(`CREATE TABLE "${table}" (${columns})`);
+        const createTableSQL = `CREATE TABLE "${table}" (${columns})`;
+        console.log(`Creating table ${table} with SQL:`, createTableSQL);
+        
+        try {
+          await targetClient.query(createTableSQL);
+        } catch (error) {
+          console.error(`Failed to create table ${table}:`, error);
+          console.error('Columns data:', schemaResult.rows);
+          throw error;
+        }
 
         // Copy data in batches
         const countResult = await sourceClient.query(`SELECT COUNT(*) FROM "${table}"`);
@@ -1968,16 +1977,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (dataResult.rows.length > 0) {
               const columnNames = Object.keys(dataResult.rows[0]).map(col => `"${col}"`).join(', ');
               
-              // Use parameterized queries to handle complex data types safely
-              for (const row of dataResult.rows) {
-                const values = Object.values(row);
-                const placeholders = values.map((_, index) => `$${index + 1}`).join(', ');
-                
-                await targetClient.query(
-                  `INSERT INTO "${table}" (${columnNames}) VALUES (${placeholders})`,
-                  values
-                );
-              }
+              // Use batch insert with proper JSON/array handling
+              const values = dataResult.rows.map(row => {
+                return '(' + Object.values(row).map(val => {
+                  if (val === null) return 'NULL';
+                  if (typeof val === 'object') {
+                    // Handle arrays and JSON objects
+                    return `'${JSON.stringify(val).replace(/'/g, "''")}'`;
+                  }
+                  return `'${String(val).replace(/'/g, "''")}'`;
+                }).join(', ') + ')';
+              }).join(', ');
+              
+              await targetClient.query(`INSERT INTO "${table}" (${columnNames}) VALUES ${values}`);
             }
             
             offset += batchSize;
