@@ -259,14 +259,31 @@ export function ReportsScheduler() {
         body: JSON.stringify(data)
       });
     },
-    onSuccess: () => {
+    onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/scheduled-reports"] });
+      
+      if (formData.sendOption === 'now') {
+        toast({ 
+          title: "Email sent successfully!", 
+          description: `Report sent to ${formData.recipientList.length} recipient(s)`
+        });
+      } else {
+        toast({ title: "Scheduled report created successfully" });
+      }
+      
       setIsCreateDialogOpen(false);
       resetForm();
-      toast({ title: "Scheduled report created successfully" });
     },
     onError: (error: any) => {
-      toast({ title: "Error creating scheduled report", description: error.message, variant: "destructive" });
+      if (formData.sendOption === 'now') {
+        toast({ 
+          title: "Failed to send email", 
+          description: error.message, 
+          variant: "destructive" 
+        });
+      } else {
+        toast({ title: "Error creating scheduled report", description: error.message, variant: "destructive" });
+      }
     }
   });
 
@@ -317,19 +334,57 @@ export function ReportsScheduler() {
   });
 
   const handleCreateReport = () => {
+    // Validate required fields
+    if (!formData.name.trim()) {
+      toast({ title: "Report name is required", variant: "destructive" });
+      return;
+    }
+    
+    if (!formData.presentationId) {
+      toast({ title: "Please select a presentation", variant: "destructive" });
+      return;
+    }
+    
+    if (formData.recipientList.length === 0) {
+      toast({ title: "Please add at least one recipient", variant: "destructive" });
+      return;
+    }
+
     // Check if this is a "Send Now" request
     if (formData.sendOption === 'now') {
+      // Validate email content for Send Now
+      if (!formData.emailTemplate.subject?.trim()) {
+        toast({ title: "Email subject is required for Send Now", variant: "destructive" });
+        return;
+      }
+      
+      if (!formData.emailTemplate.customContent?.trim()) {
+        toast({ title: "Email content is required for Send Now", variant: "destructive" });
+        return;
+      }
+
       // For "Send Now", we need to prepare the data differently
       const sendNowData = {
         ...formData,
         cronExpression: null, // Null for one-time sends
         isActive: false, // One-time sends are not active schedules
-        sendOption: 'now'
+        sendOption: 'now',
+        // Ensure email template has proper data
+        emailTemplate: {
+          ...formData.emailTemplate,
+          subject: formData.emailTemplate.subject || formData.name,
+          customContent: formData.emailTemplate.customContent || 'Your analytics report is ready.',
+          templateId: formData.emailTemplate.templateId || 'professional'
+        }
       };
-      console.log('Sending immediate email with data:', sendNowData);
+      console.log('Sending immediate email with validated data:', sendNowData);
       createReportMutation.mutate(sendNowData);
     } else {
-      // Regular scheduled report
+      // Regular scheduled report - validate schedule
+      if (!formData.cronExpression) {
+        toast({ title: "Please configure schedule settings", variant: "destructive" });
+        return;
+      }
       createReportMutation.mutate(formData);
     }
   };

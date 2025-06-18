@@ -807,8 +807,11 @@ export function EnhancedSchedulerForm({
             
             {formData.sendOption === 'now' && (
               <div className="bg-blue-50 p-3 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  The report will be sent immediately to all recipients when you click "Send Now".
+                <p className="text-sm text-blue-800 font-medium mb-2">
+                  ⚡ Send Now Mode - Email will be sent immediately
+                </p>
+                <p className="text-xs text-blue-700">
+                  Make sure to fill in the Email Subject and Content fields below before sending.
                 </p>
               </div>
             )}
