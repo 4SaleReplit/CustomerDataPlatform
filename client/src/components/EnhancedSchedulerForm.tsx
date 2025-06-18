@@ -267,14 +267,10 @@ export function EnhancedSchedulerForm({
     setPreviewHtml(preview);
   }, []);
 
-  // Update preview when form data changes (with debouncing)
+  // Update preview when form data changes (real-time, no debouncing)
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      const preview = generateEmailPreview();
-      setPreviewHtml(preview);
-    }, 300); // 300ms delay to avoid constant re-rendering
-
-    return () => clearTimeout(timeoutId);
+    const preview = generateEmailPreview();
+    setPreviewHtml(preview);
   }, [formData.emailTemplate, customVariables]);
 
   return (
@@ -530,17 +526,20 @@ export function EnhancedSchedulerForm({
               </div>
             </div>
             
-            {/* Email content */}
-            <div className="bg-gray-50">
-              <iframe
-                srcDoc={previewHtml}
-                className="border-0 w-full"
+            {/* Email content - Live WYSIWYG Preview */}
+            <div className="bg-gray-50 p-2">
+              <div 
+                className="mx-auto email-preview-container"
                 style={{
-                  height: '600px',
-                  transform: 'scale(0.95)',
-                  transformOrigin: 'top center'
+                  transform: 'scale(0.85)',
+                  transformOrigin: 'top center',
+                  maxHeight: '600px',
+                  overflowY: 'auto',
+                  isolation: 'isolate',
+                  containIntrinsicSize: '600px 800px',
+                  contain: 'layout style'
                 }}
-                title="Email Content Preview"
+                dangerouslySetInnerHTML={{ __html: previewHtml }}
               />
             </div>
             
