@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { Link } from 'wouter';
 import { Search, Filter, Download, Eye, Hash, UserCheck, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -17,7 +16,6 @@ function Users() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSearchingIds, setIsSearchingIds] = useState(false);
   const [searchExecuted, setSearchExecuted] = useState(false);
   const queryClient = useQueryClient();
@@ -47,13 +45,7 @@ function Users() {
     queryFn: async () => {
       if (!searchTerm.trim()) return null;
       
-      // Parse comma-separated user IDs
-      const userIds = searchTerm.split(',')
-        .map(id => id.trim())
-        .filter(id => id.length > 0);
-      
-      if (userIds.length === 0) return null;
-
+      const userIds = searchTerm.split(',').map(id => id.trim()).filter(id => id);
       const response = await apiRequest('/api/users/by-ids', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -61,29 +53,28 @@ function Users() {
       });
       return response;
     },
-    enabled: false, // Disable automatic execution
-    staleTime: 1000 * 60 * 5, // 5 minutes for ID searches
+    enabled: false // Only run when manually triggered
   });
 
   // Execute user ID search
-  const executeUserIdSearch = async () => {
+  const executeUserIdSearch = useCallback(async () => {
     if (!searchTerm.trim()) return;
     
     setIsSearchingIds(true);
-    setSearchExecuted(true);
-    
     try {
-      await refetchIdSearch();
-      analytics.buttonClicked('Search User IDs', 'Users', { 
+      const result = await refetchIdSearch();
+      setSearchExecuted(true);
+      setCurrentPage(1);
+      analytics.buttonClicked('Search Users by IDs', 'Users', {
         searchTerm,
-        userIdCount: searchTerm.split(',').length 
+        resultCount: result.data?.rows?.length || 0
       });
     } catch (error) {
       console.error('Search error:', error);
     } finally {
       setIsSearchingIds(false);
     }
-  };
+  }, [searchTerm, refetchIdSearch]);
 
   // Handle Enter key press for ID search
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -97,35 +88,15 @@ function Users() {
   const usersData = searchExecuted ? idSearchData : allUsersData;
   const usersLoading = searchExecuted ? idSearchLoading : allUsersLoading;
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      if (searchExecuted) {
-        await refetchIdSearch();
-        analytics.buttonClicked('Refresh ID Search', 'Users', { searchTerm });
-      } else {
-        // Clear cache and refetch all users
-        await apiRequest('/api/users/clear-cache', { method: 'POST' });
-        queryClient.invalidateQueries({ queryKey: ['users', 'all'] });
-        analytics.buttonClicked('Refresh All Users', 'Users', { cached: true, page: currentPage });
-      }
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  // Process and filter users data
-  const processedUsers = usersData?.success && usersData?.rows ? 
-    usersData.rows.map((row: any[], index: number) => {
-      const columns = usersData.columns || [];
+  // Convert user data to consistent format
+  const processedUsers = usersData?.rows ? 
+    usersData.rows.map((row: any[]) => {
       const userObject: any = {};
-      
-      columns.forEach((col: any, colIndex: number) => {
-        userObject[col.name] = row[colIndex];
+      usersData.columns.forEach((col: any, index: number) => {
+        userObject[col.name] = row[index];
       });
-      
       return {
-        id: index + 1,
+        id: userObject.USER_ID,
         ...userObject
       };
     }) : [];
@@ -156,83 +127,60 @@ function Users() {
     setCurrentPage(Math.max(1, Math.min(page, totalPages)));
   };
 
-  const getUserTypeBadge = (type: string) => {
-    if (!type) return <Badge variant="outline">Unknown</Badge>;
+  const exportUsers = useCallback(() => {
+    if (!currentUsers.length) return;
     
-    const normalizedType = type.toLowerCase();
-    switch (normalizedType) {
-      case 'premium':
-      case 'vip':
-        return <Badge className="bg-blue-100 text-blue-800">Premium</Badge>;
-      case 'regular':
-      case 'standard':
-        return <Badge variant="outline">Regular</Badge>;
-      case 'lister':
-        return <Badge className="bg-purple-100 text-purple-800">Lister</Badge>;
-      case 'browser':
-        return <Badge className="bg-green-100 text-green-800">Browser</Badge>;
-      default:
-        return <Badge variant="outline">{type}</Badge>;
-    }
-  };
+    // Create CSV content
+    const headers = ['User ID', 'Phone', 'Type', 'Paid Listings', 'Free Listings', 'Total Listings', 'Office Listings'];
+    const csvContent = [
+      headers.join(','),
+      ...currentUsers.map((user: any) => [
+        user.USER_ID || '',
+        user.PHONE || '',
+        user.USER_TYPE || '',
+        user.PAID_LISTINGS_COUNT || 0,
+        user.FREE_LISTINGS_COUNT || 0,
+        user.TOTAL_LISTINGS_COUNT || 0,
+        user.OFFICE_LISTINGS_COUNT || 0
+      ].join(','))
+    ].join('\n');
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'N/A';
-    try {
-      return new Date(dateString).toLocaleDateString();
-    } catch {
-      return dateString;
-    }
-  };
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    analytics.buttonClicked('Export Users CSV', 'Users', { count: currentUsers.length });
+  }, [currentUsers]);
 
-  const formatNumber = (num: any) => {
-    if (num === null || num === undefined) return 'N/A';
-    if (typeof num === 'number') return num.toLocaleString();
-    return String(num);
-  };
-
-  if (usersLoading || isRefreshing) {
+  if (usersLoading) {
     return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="flex items-center gap-2 text-gray-500">
-          <RefreshCw className="w-5 h-5 animate-spin" />
-          Loading users from Snowflake...
+      <div className="space-y-6 p-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Users</h1>
         </div>
-      </div>
-    );
-  }
-
-  if (!usersData?.success) {
-    return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="text-center">
-          <div className="text-red-500 mb-2">Failed to load users</div>
-          <div className="text-sm text-gray-500">{usersData?.error || 'Unknown error'}</div>
-          <Button onClick={handleRefresh} className="mt-4">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Retry
-          </Button>
+        <div className="flex items-center justify-center py-8">
+          <RefreshCw className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading users...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">User Explorer</h1>
+        <h1 className="text-3xl font-bold">Users</h1>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-          >
-            <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh Data
-          </Button>
-          <Button>
-            <Download className="mr-2 h-4 w-4" />
-            Export Users
+          <Button variant="outline" onClick={exportUsers} disabled={!currentUsers.length}>
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
           </Button>
         </div>
       </div>
@@ -309,40 +257,14 @@ function Users() {
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="premium">Premium</SelectItem>
                 <SelectItem value="regular">Regular</SelectItem>
+                <SelectItem value="normal">Normal</SelectItem>
               </SelectContent>
             </Select>
-
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="User Role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="lister">Lister</SelectItem>
-                <SelectItem value="buyer">Buyer</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Button variant="outline">
-              <Filter className="mr-2 h-4 w-4" />
-              More Filters
-            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Results */}
+      {/* Users Table */}
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -388,74 +310,45 @@ function Users() {
                   <th className="text-left py-3 px-4 font-medium">Free Listings</th>
                   <th className="text-left py-3 px-4 font-medium">Total Listings</th>
                   <th className="text-left py-3 px-4 font-medium">Office Listings</th>
-                  <th className="text-left py-3 px-4 font-medium">Total Credits Spent</th>
-                  <th className="text-left py-3 px-4 font-medium">Premium Credits Spent</th>
-                  <th className="text-left py-3 px-4 font-medium">Free Credits Spent</th>
                   <th className="text-left py-3 px-4 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {currentUsers.map((user: any) => (
-                  <tr key={user.id} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4">
-                      <div className="flex items-center text-sm font-mono">
-                        <Hash className="mr-1 h-3 w-3 text-gray-400" />
-                        {user.USER_ID || 'N/A'}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-sm">{user.PHONE || user.PHONE_NUMBER}</div>
-                    </td>
-                    <td className="py-3 px-4">
-                      {getUserTypeBadge(user.USER_TYPE)}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-center">
-                        <div className="text-lg font-semibold text-blue-600">{formatNumber(user.PAID_LISTINGS_COUNT)}</div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-center">
-                        <div className="text-lg font-semibold text-green-600">{formatNumber(user.FREE_LISTINGS_COUNT)}</div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-center">
-                        <div className="text-lg font-semibold">{formatNumber(user.TOTAL_LISTINGS_COUNT)}</div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-center">
-                        <div className="text-lg font-semibold text-purple-600">{formatNumber(user.OFFICE_LISTINGS_COUNT)}</div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-center">
-                        <div className="text-lg font-semibold">{formatNumber(user.TOTAL_CREDITS_SPENT)} KWD</div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-center">
-                        <div className="text-lg font-semibold text-orange-600">{formatNumber(user.TOTAL_PREMIUM_CREDITS_SPENT)} KWD</div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-center">
-                        <div className="text-lg font-semibold text-gray-600">{formatNumber(user.TOTAL_FREE_CREDITS_SPENT)} KWD</div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <Link 
-                        to={`/users/${user.USER_ID || user.id}`}
-                        onClick={() => analytics.userProfileViewed(String(user.USER_ID || user.id), 'Overview', 'Users')}
-                      >
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </Link>
+                {currentUsers.length > 0 ? (
+                  currentUsers.map((user: any) => (
+                    <tr key={user.id} className="border-b hover:bg-gray-50">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center">
+                          <Hash className="h-4 w-4 text-gray-400 mr-2" />
+                          <span className="font-mono text-sm">{user.USER_ID}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">{user.PHONE || 'N/A'}</td>
+                      <td className="py-3 px-4">
+                        <Badge variant={user.USER_TYPE === 'premium' ? 'default' : 'secondary'}>
+                          {user.USER_TYPE || 'Normal'}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4">{user.PAID_LISTINGS_COUNT || 0}</td>
+                      <td className="py-3 px-4">{user.FREE_LISTINGS_COUNT || 0}</td>
+                      <td className="py-3 px-4">{user.TOTAL_LISTINGS_COUNT || 0}</td>
+                      <td className="py-3 px-4">{user.OFFICE_LISTINGS_COUNT || 0}</td>
+                      <td className="py-3 px-4">
+                        <Link href={`/users/${user.id}`}>
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={8} className="text-center py-8 text-gray-500">
+                      {searchExecuted ? 'No users found matching your search criteria.' : 'No users available.'}
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -476,32 +369,6 @@ function Users() {
                   <ChevronLeft className="h-4 w-4" />
                   Previous
                 </Button>
-                
-                {/* Page numbers */}
-                <div className="flex gap-1">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const pageNum = currentPage <= 3 
-                      ? i + 1 
-                      : currentPage >= totalPages - 2 
-                        ? totalPages - 4 + i 
-                        : currentPage - 2 + i;
-                    
-                    if (pageNum < 1 || pageNum > totalPages) return null;
-                    
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={currentPage === pageNum ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => goToPage(pageNum)}
-                        className="w-9"
-                      >
-                        {pageNum}
-                      </Button>
-                    );
-                  })}
-                </div>
-                
                 <Button
                   variant="outline"
                   size="sm"
@@ -520,5 +387,4 @@ function Users() {
   );
 }
 
-// Memoize Users component to prevent unnecessary re-renders during navigation
-export default React.memo(Users);
+export default Users;
