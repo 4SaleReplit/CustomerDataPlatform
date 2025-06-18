@@ -2246,22 +2246,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Snowflake schema endpoint for segments page
   // Environment Configuration Management
   app.get("/api/environment-configurations", async (req: Request, res: Response) => {
-    console.log('=== Environment Configurations API Called ===');
     try {
-      // Query directly using pool to bypass potential ORM issues
       const { Pool } = await import('pg');
       const dbPool = new Pool({ connectionString: process.env.DATABASE_URL });
       
-      console.log('Querying environment configurations...');
       const result = await dbPool.query(`
         SELECT * FROM environment_configurations 
         WHERE is_active = true
       `);
       
       await dbPool.end();
-      
-      console.log('Found configurations:', result.rows.length);
-      console.log('Raw configurations:', JSON.stringify(result.rows, null, 2));
       
       // Group by environment for frontend consumption
       const groupedConfigs = {
@@ -2283,12 +2277,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
-      console.log('Final grouped configurations:', JSON.stringify(groupedConfigs, null, 2));
-      
       res.json(groupedConfigs);
     } catch (error: any) {
       console.error("Error fetching environment configurations:", error);
-      res.status(500).json({ error: "Failed to fetch environment configurations", details: error.message });
+      res.status(500).json({ error: "Failed to fetch environment configurations" });
     }
   });
 
