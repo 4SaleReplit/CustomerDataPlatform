@@ -111,6 +111,17 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 18, 2025**: Enhanced Report Scheduler with Configurable Template Variables and Live Email Preview
+  - Created comprehensive EnhancedSchedulerForm component with custom variable configuration system
+  - Added support for {variable_name} syntax allowing users to define custom variables in email templates
+  - Implemented four variable types: static values, SQL queries, timestamps, and formulas
+  - Built live email preview panel showing real-time visual preview of emails with variable substitution
+  - Enhanced scheduler dialog to use two-column layout: configuration on left, live preview on right
+  - Added variable management interface with add/remove functionality and type-specific input fields
+  - Integrated custom variables with existing email template system for complete template customization
+  - Live preview updates automatically when template content or variables change
+  - Enhanced dialog width to max-w-7xl to accommodate two-column layout with preview panel
+
 - **June 18, 2025**: Fixed Email Templates Designer UI Layout and Mobile View Issues  
   - Resolved responsive design problems causing desktop view to collapse to mobile layout
   - Replaced CSS Grid with Flexbox layout for better responsive behavior and desktop display

@@ -13,6 +13,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { EmailTemplateBuilder } from "@/components/EmailTemplateBuilder";
+import { EnhancedSchedulerForm } from "@/components/EnhancedSchedulerForm";
 
 interface ScheduledReport {
   id: string;
@@ -495,14 +496,14 @@ export function ReportsScheduler() {
               Schedule New Report
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Schedule New Report</DialogTitle>
               <DialogDescription>
-                Configure automated report delivery with custom schedules and email templates
+                Configure automated report delivery with custom variables and live email preview
               </DialogDescription>
             </DialogHeader>
-            <SchedulerForm
+            <EnhancedSchedulerForm
               formData={formData}
               setFormData={setFormData}
               presentations={presentations}
