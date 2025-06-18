@@ -901,7 +901,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             executionCount: (scheduledReport.executionCount || 0) + 1,
             successCount: (scheduledReport.successCount || 0) + 1,
             lastExecutionAt: new Date(),
-            nextExecution: calculateNextExecution(scheduledReport.cronExpression, scheduledReport.timezone)
+            nextExecution: await calculateNextExecution(scheduledReport.cronExpression, scheduledReport.timezone)
           });
         } catch (error) {
           console.error(`Error executing scheduled report ${scheduledReport.name}:`, error);
@@ -912,7 +912,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             errorCount: (scheduledReport.errorCount || 0) + 1,
             lastExecutionAt: new Date(),
             lastError: error instanceof Error ? error.message : 'Unknown error',
-            nextExecution: calculateNextExecution(scheduledReport.cronExpression, scheduledReport.timezone)
+            nextExecution: await calculateNextExecution(scheduledReport.cronExpression, scheduledReport.timezone)
           });
         }
       }, {
@@ -929,8 +929,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   function calculateNextExecution(cronExpression: string, timezone: string = 'Africa/Cairo'): Date {
-    const cronParser = require('cron-parser');
     try {
+      const cronParser = eval('require')('cron-parser');
       const interval = cronParser.parseExpression(cronExpression, { tz: timezone });
       return interval.next().toDate();
     } catch (error) {
