@@ -44,23 +44,25 @@ export function EmailListView({
   isOneTime = false
 }: EmailListViewProps) {
   const getStatusBadge = (report: any) => {
-    if (report.sentImmediately) {
-      return <Badge variant="secondary" className="bg-blue-100 text-blue-800"><Send className="h-3 w-3 mr-1" />Sent</Badge>;
-    }
-    
-    if (!report.isActive) {
-      return <Badge variant="secondary"><Pause className="h-3 w-3 mr-1" />Paused</Badge>;
-    }
-    
-    if (report.lastError) {
-      return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Error</Badge>;
-    }
-    
-    if (report.lastExecuted) {
+    if (isOneTime) {
+      // One-time email status
+      if (report.sentImmediately || report.sentAt) {
+        return <Badge variant="default" className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Sent</Badge>;
+      }
+      if (report.lastError) {
+        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Failed</Badge>;
+      }
+      return <Badge variant="outline"><Clock3 className="h-3 w-3 mr-1" />Pending</Badge>;
+    } else {
+      // Scheduled email status - cohort style
+      if (!report.isActive) {
+        return <Badge variant="secondary" className="bg-orange-100 text-orange-800"><Pause className="h-3 w-3 mr-1" />Paused</Badge>;
+      }
+      if (report.lastError) {
+        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Failed</Badge>;
+      }
       return <Badge variant="default" className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Active</Badge>;
     }
-    
-    return <Badge variant="outline"><Clock3 className="h-3 w-3 mr-1" />Pending</Badge>;
   };
 
   const formatScheduleDescription = (cronExpression: string | null, timezone: string) => {
@@ -101,13 +103,13 @@ export function EmailListView({
               {isOneTime ? (
                 <>
                   <SelectItem value="sent">Sent</SelectItem>
-                  <SelectItem value="error">Error</SelectItem>
+                  <SelectItem value="error">Failed</SelectItem>
                 </>
               ) : (
                 <>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="paused">Paused</SelectItem>
-                  <SelectItem value="error">Error</SelectItem>
+                  <SelectItem value="error">Failed</SelectItem>
                 </>
               )}
             </SelectContent>

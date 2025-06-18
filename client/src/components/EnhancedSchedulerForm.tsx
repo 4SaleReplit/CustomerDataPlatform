@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Clock, Mail, Send, Settings, Play, Pause, Trash2, Plus, Users, Database, CalendarDays, TestTube, Eye, Type, Code } from "lucide-react";
+import { Calendar, Clock, Mail, Send, Settings, Play, Pause, Trash2, Plus, Users, Database, CalendarDays, TestTube, Eye, Type, Code, CheckCircle } from "lucide-react";
 import { EmailTemplateBuilder } from "@/components/EmailTemplateBuilder";
 
 interface CustomVariable {
@@ -403,6 +403,52 @@ export function EnhancedSchedulerForm({
             </div>
           </CardContent>
         </Card>
+
+        {/* Status Management - Only for scheduled reports in edit mode */}
+        {mode === 'scheduled' && formData.name && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Status Management
+              </CardTitle>
+              <CardDescription>Control the active state of this scheduled report</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Label htmlFor="report-status">Report Status</Label>
+                <Select
+                  value={formData.isActive ? "active" : "paused"}
+                  onValueChange={(value) => setFormData({ ...formData, isActive: value === "active" })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        Active - Report will be sent automatically
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="paused">
+                      <div className="flex items-center gap-2">
+                        <Pause className="h-4 w-4 text-orange-600" />
+                        Paused - Report delivery suspended
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  {formData.isActive 
+                    ? "This report is currently active and will be sent according to the schedule below."
+                    : "This report is paused and will not be sent until reactivated."
+                  }
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Email Template */}
         <Card>
