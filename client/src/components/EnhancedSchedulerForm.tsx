@@ -24,6 +24,9 @@ interface FormData {
   presentationId: string;
   cronExpression: string;
   timezone: string;
+  frequency?: string;
+  time?: string;
+  dayOfWeek?: string;
   recipientList: string[];
   ccList: string[];
   bccList: string[];
@@ -52,6 +55,8 @@ interface EnhancedSchedulerFormProps {
   updateEmailTemplate: (template: any) => void;
 }
 
+
+
 export function EnhancedSchedulerForm({
   formData,
   setFormData,
@@ -65,6 +70,74 @@ export function EnhancedSchedulerForm({
 }: EnhancedSchedulerFormProps) {
   const [customVariables, setCustomVariables] = useState<CustomVariable[]>(formData.customVariables || []);
   const [previewHtml, setPreviewHtml] = useState('');
+
+  // Helper function to generate cron expression from user-friendly inputs
+  const generateCronExpression = (frequency: string, dayOfWeek: string, time: string): string => {
+    const [hour, minute] = time.split(':').map(Number);
+    
+    switch (frequency) {
+      case 'daily':
+        return `${minute} ${hour} * * *`;
+      case 'weekly':
+        const dayMap: Record<string, number> = {
+          sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+          thursday: 4, friday: 5, saturday: 6
+        };
+        return `${minute} ${hour} * * ${dayMap[dayOfWeek] || 1}`;
+      case 'monthly':
+        if (dayOfWeek === 'last') {
+          return `${minute} ${hour} L * *`; // Last day of month
+        } else {
+          return `${minute} ${hour} ${dayOfWeek} * *`;
+        }
+      case 'quarterly':
+        return `${minute} ${hour} 1 */3 *`; // First day of every 3rd month
+      default:
+        return `${minute} ${hour} * * 1`; // Default to weekly Monday
+    }
+  };
+
+  // Helper function to generate human-readable schedule summary
+  const getScheduleSummary = (formData: FormData): string => {
+    const frequency = formData.frequency || 'weekly';
+    const time = formData.time || '09:00';
+    const dayOfWeek = formData.dayOfWeek || 'monday';
+    const timezone = formData.timezone || 'Africa/Cairo';
+    
+    const timeFormatted = new Date(`2000-01-01T${time}:00`).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+    
+    let scheduleText = '';
+    
+    switch (frequency) {
+      case 'daily':
+        scheduleText = `Daily at ${timeFormatted}`;
+        break;
+      case 'weekly':
+        const dayCapitalized = dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1);
+        scheduleText = `Every ${dayCapitalized} at ${timeFormatted}`;
+        break;
+      case 'monthly':
+        if (dayOfWeek === 'last') {
+          scheduleText = `Last day of every month at ${timeFormatted}`;
+        } else if (dayOfWeek === '1') {
+          scheduleText = `1st of every month at ${timeFormatted}`;
+        } else if (dayOfWeek === '15') {
+          scheduleText = `15th of every month at ${timeFormatted}`;
+        }
+        break;
+      case 'quarterly':
+        scheduleText = `Every quarter (1st day) at ${timeFormatted}`;
+        break;
+      default:
+        scheduleText = `Weekly on Monday at ${timeFormatted}`;
+    }
+    
+    return `${scheduleText} (${timezone.split('/')[1]} timezone)`;
+  };
 
   // Add custom variable
   const addCustomVariable = () => {
@@ -454,31 +527,126 @@ export function EnhancedSchedulerForm({
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="cron">Cron Expression</Label>
-                <Input
-                  id="cron"
-                  value={formData.cronExpression}
-                  onChange={(e) => setFormData({ ...formData, cronExpression: e.target.value })}
-                  placeholder="0 9 * * 1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="timezone">Timezone</Label>
+                <Label htmlFor="frequency">Frequency</Label>
                 <Select
-                  value={formData.timezone}
-                  onValueChange={(value) => setFormData({ ...formData, timezone: value })}
+                  value={formData.frequency || 'weekly'}
+                  onValueChange={(value) => {
+                    setFormData({ 
+                      ...formData, 
+                      frequency: value,
+                      cronExpression: generateCronExpression(value, formData.dayOfWeek || 'monday', formData.time || '09:00')
+                    });
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Africa/Cairo">Africa/Cairo</SelectItem>
-                    <SelectItem value="UTC">UTC</SelectItem>
-                    <SelectItem value="America/New_York">America/New_York</SelectItem>
-                    <SelectItem value="Europe/London">Europe/London</SelectItem>
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <Label htmlFor="time">Time</Label>
+                <Select
+                  value={formData.time || '09:00'}
+                  onValueChange={(value) => {
+                    setFormData({ 
+                      ...formData, 
+                      time: value,
+                      cronExpression: generateCronExpression(formData.frequency || 'weekly', formData.dayOfWeek || 'monday', value)
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="08:00">8:00 AM</SelectItem>
+                    <SelectItem value="09:00">9:00 AM</SelectItem>
+                    <SelectItem value="10:00">10:00 AM</SelectItem>
+                    <SelectItem value="11:00">11:00 AM</SelectItem>
+                    <SelectItem value="12:00">12:00 PM</SelectItem>
+                    <SelectItem value="13:00">1:00 PM</SelectItem>
+                    <SelectItem value="14:00">2:00 PM</SelectItem>
+                    <SelectItem value="15:00">3:00 PM</SelectItem>
+                    <SelectItem value="16:00">4:00 PM</SelectItem>
+                    <SelectItem value="17:00">5:00 PM</SelectItem>
+                    <SelectItem value="18:00">6:00 PM</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {(formData.frequency === 'weekly' || formData.frequency === 'monthly') && (
+              <div>
+                <Label htmlFor="dayOfWeek">
+                  {formData.frequency === 'weekly' ? 'Day of Week' : 'Day of Month'}
+                </Label>
+                <Select
+                  value={formData.dayOfWeek || 'monday'}
+                  onValueChange={(value) => {
+                    setFormData({ 
+                      ...formData, 
+                      dayOfWeek: value,
+                      cronExpression: generateCronExpression(formData.frequency || 'weekly', value, formData.time || '09:00')
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {formData.frequency === 'weekly' ? (
+                      <>
+                        <SelectItem value="monday">Monday</SelectItem>
+                        <SelectItem value="tuesday">Tuesday</SelectItem>
+                        <SelectItem value="wednesday">Wednesday</SelectItem>
+                        <SelectItem value="thursday">Thursday</SelectItem>
+                        <SelectItem value="friday">Friday</SelectItem>
+                        <SelectItem value="saturday">Saturday</SelectItem>
+                        <SelectItem value="sunday">Sunday</SelectItem>
+                      </>
+                    ) : (
+                      <>
+                        <SelectItem value="1">1st of the month</SelectItem>
+                        <SelectItem value="15">15th of the month</SelectItem>
+                        <SelectItem value="last">Last day of the month</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div>
+              <Label htmlFor="timezone">Timezone</Label>
+              <Select
+                value={formData.timezone}
+                onValueChange={(value) => setFormData({ ...formData, timezone: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Africa/Cairo">Africa/Cairo (GMT+2)</SelectItem>
+                  <SelectItem value="UTC">UTC (GMT+0)</SelectItem>
+                  <SelectItem value="America/New_York">New York (GMT-5)</SelectItem>
+                  <SelectItem value="Europe/London">London (GMT+0)</SelectItem>
+                  <SelectItem value="Asia/Dubai">Dubai (GMT+4)</SelectItem>
+                  <SelectItem value="Asia/Riyadh">Riyadh (GMT+3)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Schedule Summary */}
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Schedule Summary:</strong> {getScheduleSummary(formData)}
+              </p>
             </div>
           </CardContent>
         </Card>
