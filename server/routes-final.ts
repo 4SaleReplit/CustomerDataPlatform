@@ -1564,15 +1564,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Store migration history
       await storage.createMigrationHistory({
+        sessionId,
         sourceIntegrationId: sourceIntegration.id,
         targetIntegrationId: targetIntegration.id,
         sourceIntegrationName: sourceIntegration.name,
         targetIntegrationName: targetIntegration.name,
+        migrationType: 'database',
         status: 'completed',
-        startTime: new Date().toISOString(),
-        endTime: new Date().toISOString(),
-        rowCount: migrationSessions.get(sessionId)?.migrationMetadata?.totalRowsMigrated || 0,
-        metadata: JSON.stringify(migrationSessions.get(sessionId)?.migrationMetadata || {})
+        progress: 100,
+        totalItems: tables.length,
+        completedItems: tables.length,
+        startTime: new Date(migrationSessions.get(sessionId)?.startTime || new Date()),
+        endTime: new Date(),
+        metadata: migrationSessions.get(sessionId)?.migrationMetadata || {}
       });
 
       sourceClient.release();
@@ -1591,15 +1595,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Store failed migration history
       await storage.createMigrationHistory({
+        sessionId,
         sourceIntegrationId: sourceIntegration.id,
         targetIntegrationId: targetIntegration.id,
         sourceIntegrationName: sourceIntegration.name,
         targetIntegrationName: targetIntegration.name,
-        status: 'failed',
-        startTime: new Date().toISOString(),
-        endTime: new Date().toISOString(),
-        rowCount: 0,
-        metadata: JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' })
+        migrationType: 'database',
+        status: 'error',
+        progress: migrationSessions.get(sessionId)?.progress || 0,
+        totalItems: migrationSessions.get(sessionId)?.totalItems || 0,
+        completedItems: migrationSessions.get(sessionId)?.completedItems || 0,
+        startTime: new Date(migrationSessions.get(sessionId)?.startTime || new Date()),
+        endTime: new Date(),
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        metadata: { error: error instanceof Error ? error.message : 'Unknown error' }
       });
     }
   }
