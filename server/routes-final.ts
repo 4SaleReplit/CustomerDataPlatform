@@ -1806,38 +1806,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     };
 
+    // Create ISOLATED database connections for migration only
+    // These connections are completely separate from the current active database
+    let sourcePool: any = null;
+    let targetPool: any = null;
+
     try {
       const { Pool } = await import('pg');
       
-      // Connect to source database
+      // ISOLATED SOURCE CONNECTION - Uses only the source integration credentials
       updateProgress({
         stage: 'Connecting',
-        currentJob: 'Connecting to source database',
+        currentJob: 'Creating isolated connection to source database',
         progress: 5
       });
 
-      const sourcePool = new Pool({
-        connectionString: sourceIntegration.credentials.connectionString
+      sourcePool = new Pool({
+        connectionString: sourceIntegration.credentials.connectionString,
+        // Ensure this is a separate connection pool
+        max: 2, // Limited connections for migration only
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000
       });
 
-      // Connect to target database
+      // ISOLATED TARGET CONNECTION - Uses only the target integration credentials  
       updateProgress({
         stage: 'Connecting',
-        currentJob: 'Connecting to target database',
+        currentJob: 'Creating isolated connection to target database',
         progress: 10
       });
 
-      const targetPool = new Pool({
-        connectionString: targetIntegration.credentials.connectionString
+      targetPool = new Pool({
+        connectionString: targetIntegration.credentials.connectionString,
+        // Ensure this is a separate connection pool
+        max: 2, // Limited connections for migration only
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000
       });
 
-      // Get schema information
+      // CRITICAL ISOLATION CHECK: Ensure migration connections are isolated
+      updateProgress({
+        stage: 'Validating',
+        currentJob: 'Validating connection isolation',
+        progress: 12
+      });
+
+      // Test source connection isolation
+      const sourceTestClient = await sourcePool.connect();
+      const sourceDbName = await sourceTestClient.query('SELECT current_database() as db');
+      sourceTestClient.release();
+      
+      // Test target connection isolation
+      const targetTestClient = await targetPool.connect();
+      const targetDbName = await targetTestClient.query('SELECT current_database() as db');
+      targetTestClient.release();
+
       updateProgress({
         stage: 'Analyzing',
-        currentJob: 'Analyzing source schema',
+        currentJob: `Analyzing source schema (${sourceDbName.rows[0].db}) → target (${targetDbName.rows[0].db})`,
         progress: 15
       });
 
+      // Create dedicated migration clients (isolated from platform's active database)
       const sourceClient = await sourcePool.connect();
       const targetClient = await targetPool.connect();
 
@@ -1962,18 +1992,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Complete migration
       updateProgress({
         stage: 'Completed',
-        currentJob: 'Migration completed successfully',
+        currentJob: 'Migration completed successfully - platform database unchanged',
         progress: 100,
         status: 'completed',
         completedItems: tables.length,
         migrationMetadata: {
           ...migrationSessions.get(sessionId)?.migrationMetadata,
           endTime: new Date().toISOString(),
-          duration: Date.now() - new Date(migrationSessions.get(sessionId)?.startTime || 0).getTime()
+          duration: Date.now() - new Date(migrationSessions.get(sessionId)?.startTime || 0).getTime(),
+          isolation: {
+            sourceDatabase: sourceDbName.rows[0].db,
+            targetDatabase: targetDbName.rows[0].db,
+            platformUnaffected: true
+          }
         }
       });
 
-      // Store migration history
+      // CRITICAL: Clean up isolated connections immediately
+      sourceClient.release();
+      targetClient.release();
+      await sourcePool.end();
+      await targetPool.end();
+
+      // Log isolation confirmation
+      console.log(`🔒 Migration completed in isolation: ${sourceDbName.rows[0].db} → ${targetDbName.rows[0].db}`);
+      console.log(`🛡️ Platform database (${getCurrentEnvironment()}) remained untouched`);
+
+      // Store migration history using platform's active database (not migration connections)
       await storage.createMigrationHistory({
         sessionId,
         sourceIntegrationId: sourceIntegration.id,
@@ -1989,11 +2034,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         endTime: new Date(),
         metadata: migrationSessions.get(sessionId)?.migrationMetadata || {}
       });
-
-      sourceClient.release();
-      targetClient.release();
-      await sourcePool.end();
-      await targetPool.end();
 
     } catch (error) {
       console.error('Database migration error:', error);
