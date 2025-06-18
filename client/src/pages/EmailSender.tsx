@@ -207,12 +207,37 @@ export function EmailSender() {
   };
 
   const handleCreateReport = (data: any) => {
-    const reportData = {
-      ...data,
+    // Clean the data to ensure it's JSON serializable
+    const sanitizedData = {
+      name: data.name || '',
+      description: data.description || '',
+      presentationId: data.presentationId || '',
+      cronExpression: data.cronExpression || '',
+      timezone: data.timezone || 'Africa/Cairo',
+      recipientList: Array.isArray(data.recipientList) ? data.recipientList : [],
+      ccList: Array.isArray(data.ccList) ? data.ccList : [],
+      bccList: Array.isArray(data.bccList) ? data.bccList : [],
+      isActive: Boolean(data.isActive),
       sendOption: activeTab === "one-time" ? 'now' : 'schedule',
-      customVariables
+      emailTemplate: {
+        templateId: data.emailTemplate?.templateId || '',
+        subject: data.emailTemplate?.subject || '',
+        customContent: data.emailTemplate?.customContent || '',
+        templateVariables: data.emailTemplate?.templateVariables || {}
+      },
+      pdfDeliveryUrl: data.pdfDeliveryUrl || '',
+      placeholderConfig: data.placeholderConfig || {},
+      formatSettings: data.formatSettings || { format: "pdf", includeCharts: true },
+      customVariables: Array.isArray(customVariables) ? customVariables.map(cv => ({
+        name: cv.name || '',
+        type: cv.type || 'static',
+        value: cv.value || '',
+        description: cv.description || ''
+      })) : []
     };
-    createReportMutation.mutate(reportData);
+    
+    console.log('Sanitized report data:', sanitizedData);
+    createReportMutation.mutate(sanitizedData);
   };
 
   const handleUpdateReport = (data: any) => {
