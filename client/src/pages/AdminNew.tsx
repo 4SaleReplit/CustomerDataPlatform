@@ -829,9 +829,9 @@ export default function AdminNew() {
                             </div>
                           </div>
                           <span className={`text-xs px-2 py-1 rounded ${
-                            integration.status === 'connected' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                            integration.status === 'connected' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
                           }`}>
-                            {integration.status}
+                            {integration.status === 'connected' ? 'connected' : 'disconnected'}
                           </span>
                         </div>
                       ))}
@@ -867,28 +867,33 @@ export default function AdminNew() {
             </div>
           </div>
 
-          {/* Current Environment Status */}
+          {/* Available Integration Types Status */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Database className="h-5 w-5 mr-2" />
-                Active Environment: {environments.find(e => e.status === 'active')?.name}
+                Integration Types Status
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {activeIntegrationTypes.map(type => {
-                  const activeEnv = environments.find(e => e.status === 'active');
-                  const selectedIntegrationId = activeEnv?.databases?.[type];
                   const typeIntegrations = integrations.filter((i: any) => i.type === type);
                   
-                  // Only show connected if a specific integration is assigned to this environment
+                  // Show best status among all integrations of this type
                   let dbStatus = 'disconnected';
-                  if (selectedIntegrationId) {
-                    const selectedIntegration = integrations.find((i: any) => i.id === selectedIntegrationId);
-                    dbStatus = selectedIntegration?.status || 'disconnected';
+                  let statusText = 'No integrations';
+                  
+                  if (typeIntegrations.length > 0) {
+                    const connectedCount = typeIntegrations.filter((i: any) => i.status === 'connected').length;
+                    if (connectedCount > 0) {
+                      dbStatus = 'connected';
+                      statusText = `${connectedCount}/${typeIntegrations.length} connected`;
+                    } else {
+                      dbStatus = 'disconnected';
+                      statusText = `${typeIntegrations.length} disconnected`;
+                    }
                   }
-                  // If no integration is assigned to this environment, always show disconnected
                   
                   const { icon: Icon, color } = getIntegrationDisplay(type);
                   
@@ -896,7 +901,10 @@ export default function AdminNew() {
                     <div key={type} className={`flex items-center justify-between p-3 bg-${color}-50 rounded-lg border`}>
                       <div className="flex items-center">
                         <Icon className={`h-5 w-5 text-${color}-600 mr-2`} />
-                        <span className="font-medium">{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                        <div>
+                          <span className="font-medium">{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                          <p className="text-xs text-gray-600">{statusText}</p>
+                        </div>
                       </div>
                       {getStatusIcon(dbStatus)}
                     </div>
