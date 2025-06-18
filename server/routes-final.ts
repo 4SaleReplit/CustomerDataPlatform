@@ -1294,6 +1294,316 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Migration progress storage
+  const migrationSessions = new Map<string, any>();
+  
+  // Database Migration with Real-time Progress
+  app.post("/api/migrate/database", async (req: Request, res: Response) => {
+    try {
+      const { sourceIntegrationId, targetIntegrationId, options = {} } = req.body;
+      
+      if (!sourceIntegrationId || !targetIntegrationId) {
+        return res.status(400).json({ error: "Source and target integration IDs are required" });
+      }
+
+      // Get integrations
+      const sourceIntegration = await storage.getIntegration(sourceIntegrationId);
+      const targetIntegration = await storage.getIntegration(targetIntegrationId);
+      
+      if (!sourceIntegration || !targetIntegration) {
+        return res.status(404).json({ error: "Integration not found" });
+      }
+
+      if (sourceIntegration.type !== 'postgresql' || targetIntegration.type !== 'postgresql') {
+        return res.status(400).json({ error: "Only PostgreSQL migrations are supported" });
+      }
+
+      // Generate session ID
+      const sessionId = nanoid();
+      
+      // Initialize migration progress
+      migrationSessions.set(sessionId, {
+        sessionId,
+        type: 'database',
+        stage: 'Initializing',
+        currentJob: 'Starting migration',
+        progress: 0,
+        totalItems: 0,
+        completedItems: 0,
+        status: 'running',
+        startTime: new Date().toISOString(),
+        migrationMetadata: {
+          sourceDatabase: sourceIntegration.name,
+          targetDatabase: targetIntegration.name,
+          totalTables: 0,
+          totalSchemas: 0,
+          totalColumns: 0,
+          totalRowsMigrated: 0,
+          tablesCompleted: [],
+          startTime: new Date().toISOString()
+        }
+      });
+
+      // Return session ID immediately
+      res.json({ sessionId });
+
+      // Start migration process asynchronously
+      setImmediate(async () => {
+        try {
+          await performDatabaseMigration(sessionId, sourceIntegration, targetIntegration, options);
+        } catch (error) {
+          console.error('Migration error:', error);
+          const session = migrationSessions.get(sessionId);
+          if (session) {
+            session.status = 'error';
+            session.error = error instanceof Error ? error.message : 'Unknown error';
+            migrationSessions.set(sessionId, session);
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error("Migration start error:", error);
+      res.status(500).json({ error: "Failed to start migration" });
+    }
+  });
+
+  // Get migration progress
+  app.get("/api/migration-progress/:sessionId", async (req: Request, res: Response) => {
+    try {
+      const { sessionId } = req.params;
+      const progress = migrationSessions.get(sessionId);
+      
+      if (!progress) {
+        return res.status(404).json({ error: "Migration session not found" });
+      }
+      
+      res.json(progress);
+    } catch (error) {
+      console.error("Migration progress error:", error);
+      res.status(500).json({ error: "Failed to get migration progress" });
+    }
+  });
+
+  // Database migration function
+  async function performDatabaseMigration(sessionId: string, sourceIntegration: any, targetIntegration: any, options: any) {
+    const updateProgress = (updates: any) => {
+      const session = migrationSessions.get(sessionId);
+      if (session) {
+        Object.assign(session, updates);
+        migrationSessions.set(sessionId, session);
+      }
+    };
+
+    try {
+      const { Pool } = await import('pg');
+      
+      // Connect to source database
+      updateProgress({
+        stage: 'Connecting',
+        currentJob: 'Connecting to source database',
+        progress: 5
+      });
+
+      const sourcePool = new Pool({
+        connectionString: sourceIntegration.credentials.connectionString
+      });
+
+      // Connect to target database
+      updateProgress({
+        stage: 'Connecting',
+        currentJob: 'Connecting to target database',
+        progress: 10
+      });
+
+      const targetPool = new Pool({
+        connectionString: targetIntegration.credentials.connectionString
+      });
+
+      // Get schema information
+      updateProgress({
+        stage: 'Analyzing',
+        currentJob: 'Analyzing source schema',
+        progress: 15
+      });
+
+      const sourceClient = await sourcePool.connect();
+      const targetClient = await targetPool.connect();
+
+      // Get all tables
+      const tablesResult = await sourceClient.query(`
+        SELECT tablename FROM pg_tables 
+        WHERE schemaname = 'public' 
+        ORDER BY tablename
+      `);
+      
+      const tables = tablesResult.rows.map(row => row.tablename);
+      
+      updateProgress({
+        stage: 'Schema Analysis',
+        currentJob: `Found ${tables.length} tables to migrate`,
+        progress: 20,
+        totalItems: tables.length,
+        migrationMetadata: {
+          ...migrationSessions.get(sessionId)?.migrationMetadata,
+          totalTables: tables.length
+        }
+      });
+
+      // Create schema and migrate data
+      if (options.createSchema) {
+        updateProgress({
+          stage: 'Schema Creation',
+          currentJob: 'Dropping existing tables',
+          progress: 25
+        });
+
+        // Drop existing tables with CASCADE
+        for (const table of tables) {
+          await targetClient.query(`DROP TABLE IF EXISTS "${table}" CASCADE`);
+        }
+      }
+
+      // Migrate each table
+      for (let i = 0; i < tables.length; i++) {
+        const table = tables[i];
+        const progressPercent = 30 + (i / tables.length) * 60;
+        
+        updateProgress({
+          stage: 'Data Migration',
+          currentJob: `Migrating table: ${table}`,
+          progress: progressPercent,
+          completedItems: i
+        });
+
+        // Get table schema
+        const schemaResult = await sourceClient.query(`
+          SELECT column_name, data_type, is_nullable, column_default
+          FROM information_schema.columns 
+          WHERE table_name = $1 AND table_schema = 'public'
+          ORDER BY ordinal_position
+        `, [table]);
+
+        // Create table
+        const columns = schemaResult.rows.map(col => {
+          let def = `"${col.column_name}" ${col.data_type}`;
+          if (col.is_nullable === 'NO') def += ' NOT NULL';
+          if (col.column_default) def += ` DEFAULT ${col.column_default}`;
+          return def;
+        }).join(', ');
+
+        await targetClient.query(`CREATE TABLE "${table}" (${columns})`);
+
+        // Copy data in batches
+        const countResult = await sourceClient.query(`SELECT COUNT(*) FROM "${table}"`);
+        const totalRows = parseInt(countResult.rows[0].count);
+        
+        if (totalRows > 0) {
+          const batchSize = options.batchSize || 1000;
+          let offset = 0;
+          
+          while (offset < totalRows) {
+            const dataResult = await sourceClient.query(`SELECT * FROM "${table}" LIMIT $1 OFFSET $2`, [batchSize, offset]);
+            
+            if (dataResult.rows.length > 0) {
+              const columnNames = Object.keys(dataResult.rows[0]).map(col => `"${col}"`).join(', ');
+              const values = dataResult.rows.map(row => 
+                '(' + Object.values(row).map(val => val === null ? 'NULL' : `'${String(val).replace(/'/g, "''")}'`).join(', ') + ')'
+              ).join(', ');
+              
+              await targetClient.query(`INSERT INTO "${table}" (${columnNames}) VALUES ${values}`);
+            }
+            
+            offset += batchSize;
+          }
+        }
+
+        // Update completed tables
+        const session = migrationSessions.get(sessionId);
+        if (session?.migrationMetadata) {
+          session.migrationMetadata.tablesCompleted.push(table);
+          session.migrationMetadata.totalRowsMigrated += totalRows;
+          migrationSessions.set(sessionId, session);
+        }
+      }
+
+      // Reset sequences if requested
+      if (options.resetSequences) {
+        updateProgress({
+          stage: 'Finalizing',
+          currentJob: 'Resetting sequences',
+          progress: 95
+        });
+
+        const sequencesResult = await targetClient.query(`
+          SELECT schemaname, sequencename FROM pg_sequences WHERE schemaname = 'public'
+        `);
+
+        for (const seq of sequencesResult.rows) {
+          try {
+            await targetClient.query(`SELECT setval('${seq.sequencename}', COALESCE((SELECT MAX(id) FROM "${seq.sequencename.replace('_id_seq', '')}"), 1))`);
+          } catch (error) {
+            console.log(`Sequence reset failed for ${seq.sequencename}:`, error);
+          }
+        }
+      }
+
+      // Complete migration
+      updateProgress({
+        stage: 'Completed',
+        currentJob: 'Migration completed successfully',
+        progress: 100,
+        status: 'completed',
+        completedItems: tables.length,
+        migrationMetadata: {
+          ...migrationSessions.get(sessionId)?.migrationMetadata,
+          endTime: new Date().toISOString(),
+          duration: Date.now() - new Date(migrationSessions.get(sessionId)?.startTime || 0).getTime()
+        }
+      });
+
+      // Store migration history
+      await storage.createMigrationHistory({
+        sourceIntegrationId: sourceIntegration.id,
+        targetIntegrationId: targetIntegration.id,
+        sourceIntegrationName: sourceIntegration.name,
+        targetIntegrationName: targetIntegration.name,
+        status: 'completed',
+        startTime: new Date().toISOString(),
+        endTime: new Date().toISOString(),
+        rowCount: migrationSessions.get(sessionId)?.migrationMetadata?.totalRowsMigrated || 0,
+        metadata: JSON.stringify(migrationSessions.get(sessionId)?.migrationMetadata || {})
+      });
+
+      sourceClient.release();
+      targetClient.release();
+      await sourcePool.end();
+      await targetPool.end();
+
+    } catch (error) {
+      console.error('Database migration error:', error);
+      updateProgress({
+        stage: 'Failed',
+        currentJob: 'Migration failed',
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+
+      // Store failed migration history
+      await storage.createMigrationHistory({
+        sourceIntegrationId: sourceIntegration.id,
+        targetIntegrationId: targetIntegration.id,
+        sourceIntegrationName: sourceIntegration.name,
+        targetIntegrationName: targetIntegration.name,
+        status: 'failed',
+        startTime: new Date().toISOString(),
+        endTime: new Date().toISOString(),
+        rowCount: 0,
+        metadata: JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' })
+      });
+    }
+  }
+
   // Segments API Endpoints
   app.get("/api/segments", async (req: Request, res: Response) => {
     try {

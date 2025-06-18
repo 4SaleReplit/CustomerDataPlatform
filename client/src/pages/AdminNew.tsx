@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Eye, Edit, Trash2, UserPlus, Shield, Key, Copy, MoreHorizontal, Mail, Send, Crown, Users, Settings, Lock, Database, Server, Cloud, Target, CheckCircle, XCircle, Clock, AlertTriangle, Loader2, BarChart3 } from 'lucide-react';
+import { MigrationProgress } from '@/components/migration/MigrationProgress';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -75,6 +76,8 @@ export default function AdminNew() {
   const [selectedSourceEnv, setSelectedSourceEnv] = useState('');
   const [selectedTargetEnv, setSelectedTargetEnv] = useState('');
   const [isMigrating, setIsMigrating] = useState(false);
+  const [migrationSessionId, setMigrationSessionId] = useState<string | null>(null);
+  const [showProgressModal, setShowProgressModal] = useState(false);
 
   // Fetch team members
   const { data: teamMembers = [], isLoading: membersLoading } = useQuery({
@@ -286,19 +289,28 @@ export default function AdminNew() {
 
     setIsMigrating(true);
     try {
-      await apiRequest('/api/start-migration', {
+      const response = await apiRequest('/api/migrate/database', {
         method: 'POST',
         body: JSON.stringify({
           sourceIntegrationId: selectedSourceEnv,
-          targetIntegrationId: selectedTargetEnv
+          targetIntegrationId: selectedTargetEnv,
+          options: {
+            createSchema: true,
+            migrateData: true,
+            resetSequences: true,
+            batchSize: 1000
+          }
         })
       });
       
+      const { sessionId } = response as { sessionId: string };
+      setMigrationSessionId(sessionId);
       setShowMigrationModal(false);
-      queryClient.invalidateQueries({ queryKey: ['/api/migration-history'] });
+      setShowProgressModal(true);
+      
       toast({
         title: "Migration started",
-        description: "The migration process has been initiated"
+        description: "Real-time progress tracking initiated"
       });
     } catch (error: any) {
       toast({
@@ -309,6 +321,26 @@ export default function AdminNew() {
     } finally {
       setIsMigrating(false);
     }
+  };
+
+  const handleMigrationComplete = () => {
+    setShowProgressModal(false);
+    setMigrationSessionId(null);
+    queryClient.invalidateQueries({ queryKey: ['/api/migration-history'] });
+    toast({
+      title: "Migration completed",
+      description: "Database migration finished successfully"
+    });
+  };
+
+  const handleMigrationError = (error: string) => {
+    setShowProgressModal(false);
+    setMigrationSessionId(null);
+    toast({
+      title: "Migration failed",
+      description: error,
+      variant: "destructive"
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -878,6 +910,25 @@ export default function AdminNew() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Real-time Migration Progress Modal */}
+      <Dialog open={showProgressModal} onOpenChange={() => {}}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Database Migration Progress</DialogTitle>
+            <DialogDescription>
+              Real-time migration status with detailed progress tracking
+            </DialogDescription>
+          </DialogHeader>
+          {migrationSessionId && (
+            <MigrationProgress
+              sessionId={migrationSessionId}
+              onComplete={handleMigrationComplete}
+              onError={handleMigrationError}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
