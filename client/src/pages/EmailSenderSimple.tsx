@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Mail, Send, MoreHorizontal, Copy, Pause, Play, Edit, Trash2 } from "lucide-react";
+import { Calendar, Clock, Mail, Send, MoreHorizontal, Copy, Pause, Play, Edit, Trash2, Eye } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -27,6 +27,12 @@ interface ScheduledReport {
   errorCount: number;
   sentImmediately?: boolean;
   emailSubject: string;
+  presentationId?: string;
+  emailTemplate?: {
+    subject: string;
+    customContent: string;
+    templateId: string;
+  };
 }
 
 interface EmailFormData {
@@ -44,6 +50,9 @@ interface EmailFormData {
 export function EmailSender() {
   const [activeTab, setActiveTab] = useState<"scheduler" | "one-time">("scheduler");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<ScheduledReport | null>(null);
   const [formData, setFormData] = useState<EmailFormData>({
     name: '',
     description: '',
@@ -90,8 +99,29 @@ export function EmailSender() {
   });
 
   const duplicateReport = useMutation({
-    mutationFn: (reportId: string) =>
-      apiRequest(`/api/scheduled-reports/${reportId}/duplicate`, { method: 'POST' }),
+    mutationFn: (report: ScheduledReport) =>
+      apiRequest('/api/scheduled-reports', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: `Copy of ${report.name}`,
+          description: report.description,
+          presentationId: report.presentationId || '',
+          cronExpression: report.sentImmediately ? null : report.cronExpression,
+          timezone: 'Africa/Cairo',
+          recipientList: report.recipientList,
+          ccList: [],
+          bccList: [],
+          isActive: !report.sentImmediately,
+          sendOption: report.sentImmediately ? 'now' : 'schedule',
+          emailTemplate: {
+            subject: report.emailSubject || 'Report',
+            customContent: 'Your duplicated report is ready.',
+            templateId: 'professional'
+          },
+          formatSettings: { format: 'pdf', includeCharts: true },
+          customVariables: []
+        })
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/scheduled-reports'] });
       toast({ title: "Report duplicated successfully" });
@@ -186,6 +216,76 @@ export function EmailSender() {
     return <Badge variant="secondary" className="bg-gray-100 text-gray-800">Paused</Badge>;
   };
 
+  const handleEditReport = (report: ScheduledReport) => {
+    setSelectedReport(report);
+    setFormData({
+      name: report.name,
+      description: report.description || '',
+      presentationId: report.presentationId || '',
+      subject: report.emailSubject || '',
+      content: report.emailTemplate?.customContent || 'Your report is ready.',
+      recipients: report.recipientList.join(', '),
+      cronExpression: report.cronExpression || '0 9 * * 1',
+      timezone: 'Africa/Cairo',
+      sendOption: report.sentImmediately ? 'now' : 'schedule'
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedReport) return;
+    setIsSubmitting(true);
+
+    try {
+      const recipientList = formData.recipients.split(',').map(email => email.trim()).filter(email => email);
+      
+      const requestData = {
+        name: formData.name,
+        description: formData.description,
+        presentationId: formData.presentationId,
+        cronExpression: formData.sendOption === 'now' ? null : formData.cronExpression,
+        timezone: formData.timezone,
+        recipientList,
+        ccList: [],
+        bccList: [],
+        isActive: formData.sendOption === 'schedule',
+        emailTemplate: {
+          subject: formData.subject,
+          customContent: formData.content,
+          templateId: 'professional'
+        },
+        formatSettings: {
+          format: 'pdf',
+          includeCharts: true
+        }
+      };
+
+      await apiRequest(`/api/scheduled-reports/${selectedReport.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(requestData)
+      });
+
+      toast({ title: "Report updated successfully" });
+      setIsEditDialogOpen(false);
+      setSelectedReport(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/scheduled-reports'] });
+    } catch (error) {
+      toast({ 
+        title: "Error", 
+        description: "Failed to update report",
+        variant: "destructive" 
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePreviewReport = (report: ScheduledReport) => {
+    setSelectedReport(report);
+    setIsPreviewDialogOpen(true);
+  };
+
   const ReportCard = ({ report, showSchedule = true }: { report: ScheduledReport; showSchedule?: boolean }) => (
     <Card key={report.id} className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
@@ -208,15 +308,25 @@ export function EmailSender() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => duplicateReport.mutate(report.id)}>
+                <DropdownMenuItem onClick={() => handlePreviewReport(report)}>
+                  <Eye className="w-4 h-4 mr-2" />
+                  Preview
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => duplicateReport.mutate(report)}>
                   <Copy className="w-4 h-4 mr-2" />
                   Duplicate
                 </DropdownMenuItem>
                 {!report.sentImmediately && (
-                  <DropdownMenuItem onClick={() => toggleReportStatus.mutate({ id: report.id, isActive: !report.isActive })}>
-                    {report.isActive ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
-                    {report.isActive ? 'Pause' : 'Resume'}
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem onClick={() => handleEditReport(report)}>
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => toggleReportStatus.mutate({ id: report.id, isActive: !report.isActive })}>
+                      {report.isActive ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
+                      {report.isActive ? 'Pause' : 'Resume'}
+                    </DropdownMenuItem>
+                  </>
                 )}
                 <DropdownMenuItem onClick={() => deleteReport.mutate(report.id)} className="text-red-600">
                   <Trash2 className="w-4 h-4 mr-2" />
@@ -244,15 +354,17 @@ export function EmailSender() {
           
           {report.lastExecuted && (
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500">Last executed:</span>
+              <span className="text-gray-500">{report.sentImmediately ? 'Sent At:' : 'Last executed:'}</span>
               <span>{new Date(report.lastExecuted).toLocaleString()}</span>
             </div>
           )}
           
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">Success/Error:</span>
-            <span className="text-green-600">{report.successCount} / <span className="text-red-600">{report.errorCount}</span></span>
-          </div>
+          {!report.sentImmediately && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500">Success/Error:</span>
+              <span className="text-green-600">{report.successCount} / <span className="text-red-600">{report.errorCount}</span></span>
+            </div>
+          )}
           
           <div className="text-sm">
             <span className="text-gray-500">Subject:</span>
@@ -263,8 +375,8 @@ export function EmailSender() {
     </Card>
   );
 
-  const EmailForm = () => (
-    <form onSubmit={handleSubmit} className="space-y-6">
+  const EmailForm = ({ isEdit = false, onSubmit }: { isEdit?: boolean; onSubmit?: (e: React.FormEvent) => void }) => (
+    <form onSubmit={onSubmit || handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="name">Report Name</Label>
@@ -341,7 +453,7 @@ export function EmailSender() {
         />
       </div>
 
-      {activeTab === 'scheduler' && (
+      {(activeTab === 'scheduler' || isEdit) && !formData.sendOption.includes('now') && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="schedule">Schedule</Label>
@@ -384,15 +496,68 @@ export function EmailSender() {
         <Button
           type="button"
           variant="outline"
-          onClick={() => setIsCreateDialogOpen(false)}
+          onClick={() => {
+            if (isEdit) {
+              setIsEditDialogOpen(false);
+              setSelectedReport(null);
+            } else {
+              setIsCreateDialogOpen(false);
+            }
+          }}
         >
           Cancel
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Processing..." : activeTab === 'one-time' ? "Send Now" : "Schedule Report"}
+          {isSubmitting ? "Processing..." : isEdit ? "Update Report" : activeTab === 'one-time' ? "Send Now" : "Schedule Report"}
         </Button>
       </div>
     </form>
+  );
+
+  const EmailPreview = ({ report }: { report: ScheduledReport }) => (
+    <div className="space-y-4">
+      <div className="border rounded-lg p-4 bg-gray-50">
+        <h3 className="font-semibold mb-2">Email Preview</h3>
+        <div className="bg-white border rounded p-4 max-h-96 overflow-y-auto">
+          <div className="space-y-3">
+            <div>
+              <span className="font-medium">Subject:</span> {report.emailSubject}
+            </div>
+            <div>
+              <span className="font-medium">To:</span> {report.recipientList.join(', ')}
+            </div>
+            <hr />
+            <div className="space-y-2">
+              <div className="text-sm text-gray-600">
+                <strong>4SALE TECHNOLOGIES</strong><br />
+                Business Analytics & Intelligence Platform
+              </div>
+              <div>
+                <strong>Analytics Report:</strong> {report.name}
+              </div>
+              <div>
+                Dear Valued Client,
+              </div>
+              <div>
+                {report.emailTemplate?.customContent || 'Your report is ready.'}
+              </div>
+              <div className="text-sm text-gray-600 mt-4">
+                <strong>REPORT INFORMATION:</strong><br />
+                Report ID: RPT-{new Date().getFullYear()}{(new Date().getMonth()+1).toString().padStart(2,'0')}{new Date().getDate().toString().padStart(2,'0')}-{Math.random().toString(36).substr(2,6).toUpperCase()}<br />
+                Generated: {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} at {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}<br />
+                Report Type: Business Intelligence Dashboard
+              </div>
+              <div className="text-sm text-gray-500 mt-4">
+                ---<br />
+                4Sale Technologies<br />
+                Advanced Business Intelligence & Analytics Solutions<br />
+                © {new Date().getFullYear()} 4Sale Technologies. All rights reserved.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 
   // Update sendOption when tab changes
