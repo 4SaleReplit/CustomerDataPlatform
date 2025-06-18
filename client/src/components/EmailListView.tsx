@@ -215,7 +215,7 @@ export function EmailListView({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {reports.map((report) => (
+              {filteredAndPaginatedData.items.map((report) => (
                 <TableRow key={report.id} className="hover:bg-muted/50">
                   <TableCell>
                     <div className="space-y-1">
@@ -282,6 +282,38 @@ export function EmailListView({
               ))}
             </TableBody>
           </Table>
+          
+          {/* Pagination Controls */}
+          {filteredAndPaginatedData.totalPages > 1 && (
+            <div className="flex items-center justify-between border-t px-4 py-3">
+              <div className="text-sm text-muted-foreground">
+                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredAndPaginatedData.totalItems)} of {filteredAndPaginatedData.totalItems} emails
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={!filteredAndPaginatedData.hasPrevPage}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <div className="text-sm text-muted-foreground">
+                  Page {currentPage} of {filteredAndPaginatedData.totalPages}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={!filteredAndPaginatedData.hasNextPage}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
