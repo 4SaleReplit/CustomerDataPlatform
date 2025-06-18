@@ -791,6 +791,95 @@ export default function AdminNew() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Migration Modal */}
+      <Dialog open={showMigrationModal} onOpenChange={setShowMigrationModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Database Migration</DialogTitle>
+            <DialogDescription>
+              Migrate data and schema between integrations
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Source Integration</Label>
+                <Select value={selectedSourceEnv} onValueChange={setSelectedSourceEnv}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select source database" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(integrations as any[]).filter((i: any) => i.type === 'postgresql').map((integration: any) => (
+                      <SelectItem key={integration.id} value={integration.id}>
+                        {integration.name} ({integration.status})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Target Integration</Label>
+                <Select value={selectedTargetEnv} onValueChange={setSelectedTargetEnv}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select target database" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(integrations as any[]).filter((i: any) => i.type === 'postgresql' && i.id !== selectedSourceEnv).map((integration: any) => (
+                      <SelectItem key={integration.id} value={integration.id}>
+                        {integration.name} ({integration.status})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <Label>Migration Options</Label>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="schema" defaultChecked />
+                  <Label htmlFor="schema">Create Schema</Label>
+                  <p className="text-xs text-muted-foreground ml-6">Create tables, indexes, and constraints in destination database</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="data" defaultChecked />
+                  <Label htmlFor="data">Migrate Data</Label>
+                  <p className="text-xs text-muted-foreground ml-6">Copy all table data from source to destination</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="sequences" defaultChecked />
+                  <Label htmlFor="sequences">Reset Sequences</Label>
+                  <p className="text-xs text-muted-foreground ml-6">Update auto-increment sequences to match data</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setShowMigrationModal(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleStartMigration} 
+                disabled={isMigrating || !selectedSourceEnv || !selectedTargetEnv}
+              >
+                {isMigrating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Starting Migration...
+                  </>
+                ) : (
+                  <>
+                    <Database className="h-4 w-4 mr-2" />
+                    Start Migration
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
