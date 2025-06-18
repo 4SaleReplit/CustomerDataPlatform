@@ -325,7 +325,7 @@ export function EmailTemplatesDesigner() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="w-full max-w-none p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Email Templates Designer</h1>
@@ -339,9 +339,9 @@ export function EmailTemplatesDesigner() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Template List */}
-        <div className="lg:col-span-1">
+        <div className="w-full lg:w-80 flex-shrink-0">
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Templates</CardTitle>
@@ -360,7 +360,7 @@ export function EmailTemplatesDesigner() {
                   }`}
                   onClick={() => setSelectedTemplate(template)}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="space-y-2">
                     <div>
                       <h3 className="font-medium">{template.name}</h3>
                       <p className="text-sm text-muted-foreground">
@@ -414,7 +414,7 @@ export function EmailTemplatesDesigner() {
         </div>
 
         {/* Preview and Variables */}
-        <div className="lg:col-span-3">
+        <div className="flex-1 min-w-0">
           {selectedTemplate && (
             <div className="space-y-6">
               {/* Preview Variables */}
@@ -429,7 +429,7 @@ export function EmailTemplatesDesigner() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                     {selectedTemplate.variables.slice(0, 6).map((variable) => (
                       <div key={variable}>
                         <Label htmlFor={variable} className="text-sm">
