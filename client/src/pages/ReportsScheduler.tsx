@@ -841,76 +841,7 @@ function SchedulerForm({
         </CardContent>
       </Card>
 
-      {/* Airflow DAG Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Airflow DAG Configuration
-          </CardTitle>
-          <CardDescription>
-            Configure Airflow workflow for automated report generation and delivery
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="airflowDagId">DAG ID</Label>
-              <Input
-                id="airflowDagId"
-                value={formData.airflowDagId}
-                onChange={(e) => setFormData((prev: any) => ({ ...prev, airflowDagId: e.target.value }))}
-                placeholder="report_scheduler_weekly_sales"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="airflowTaskId">Task ID</Label>
-              <Input
-                id="airflowTaskId"
-                value={formData.airflowTaskId}
-                onChange={(e) => setFormData((prev: any) => ({ ...prev, airflowTaskId: e.target.value }))}
-                placeholder="send_report"
-              />
-            </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="pdfDeliveryUrl">PDF Delivery URL</Label>
-            <div className="p-3 bg-muted rounded-md">
-              <p className="text-sm text-muted-foreground">
-                PDF delivery URL will be automatically generated based on selected report
-              </p>
-              {formData.presentationId && (
-                <p className="text-sm font-mono mt-1">
-                  {window.location.origin}/api/reports/pdf/{formData.presentationId}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="airflowConfiguration">Airflow DAG Configuration (JSON)</Label>
-            <Textarea
-              id="airflowConfiguration"
-              value={JSON.stringify(formData.airflowConfiguration, null, 2)}
-              onChange={(e) => {
-                try {
-                  const config = JSON.parse(e.target.value);
-                  setFormData((prev: any) => ({ ...prev, airflowConfiguration: config }));
-                } catch (error) {
-                  // Invalid JSON, don't update
-                }
-              }}
-              rows={8}
-              className="font-mono text-sm"
-              placeholder="Enter Airflow DAG configuration as JSON"
-            />
-            <p className="text-sm text-muted-foreground">
-              Complete Airflow DAG configuration including tasks, operators, and dependencies
-            </p>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Actions */}
       <div className="flex items-center justify-between pt-4">
