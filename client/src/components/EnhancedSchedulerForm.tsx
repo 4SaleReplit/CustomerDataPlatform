@@ -425,14 +425,15 @@ export function EnhancedSchedulerForm({
               
               <TabsContent value="visual" className="mt-4">
                 <div className="border rounded-lg p-2 bg-gray-50 max-h-96 overflow-y-auto">
-                  <div 
-                    dangerouslySetInnerHTML={{ __html: previewHtml }}
+                  <iframe
+                    srcDoc={previewHtml}
+                    className="border-0 w-full"
                     style={{
+                      height: '400px',
                       transform: 'scale(0.75)',
-                      transformOrigin: 'top left',
-                      width: '133%',
-                      height: 'auto'
+                      transformOrigin: 'top left'
                     }}
+                    title="Email Preview"
                   />
                 </div>
               </TabsContent>
