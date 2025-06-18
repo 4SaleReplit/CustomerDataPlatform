@@ -319,8 +319,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: (req as any).session?.user?.id || null
       };
 
-      console.log('Creating scheduled report with data:', JSON.stringify(reportInsertData, null, 2));
       console.log('Airflow configuration being stored:', JSON.stringify(airflowConfiguration, null, 2));
+      console.log('Creating scheduled report with data:', JSON.stringify(reportInsertData, null, 2));
       
       const scheduledReport = await storage.createScheduledReport(reportInsertData);
       
