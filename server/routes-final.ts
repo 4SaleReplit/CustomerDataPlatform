@@ -267,7 +267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         successCount: 0,
         lastExecutionAt: null,
         lastError: null,
-        createdBy: (req as any).session?.user?.id || 'system'
+        createdBy: (req as any).session?.user?.id || null
       });
       
       // Schedule the actual cron job
@@ -901,7 +901,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             executionCount: (scheduledReport.executionCount || 0) + 1,
             successCount: (scheduledReport.successCount || 0) + 1,
             lastExecutionAt: new Date(),
-            nextExecution: await calculateNextExecution(scheduledReport.cronExpression, scheduledReport.timezone)
+            nextExecution: calculateNextExecution(scheduledReport.cronExpression, scheduledReport.timezone)
           });
         } catch (error) {
           console.error(`Error executing scheduled report ${scheduledReport.name}:`, error);
@@ -912,7 +912,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             errorCount: (scheduledReport.errorCount || 0) + 1,
             lastExecutionAt: new Date(),
             lastError: error instanceof Error ? error.message : 'Unknown error',
-            nextExecution: await calculateNextExecution(scheduledReport.cronExpression, scheduledReport.timezone)
+            nextExecution: calculateNextExecution(scheduledReport.cronExpression, scheduledReport.timezone)
           });
         }
       }, {
@@ -930,12 +930,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   function calculateNextExecution(cronExpression: string, timezone: string = 'Africa/Cairo'): Date {
     try {
-      const cronParser = eval('require')('cron-parser');
-      const interval = cronParser.parseExpression(cronExpression, { tz: timezone });
-      return interval.next().toDate();
+      // Parse cron expression manually for common patterns
+      const parts = cronExpression.trim().split(/\s+/);
+      if (parts.length !== 5) {
+        throw new Error('Invalid cron expression format');
+      }
+      
+      const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
+      const now = new Date();
+      const next = new Date(now);
+      
+      // Handle basic patterns
+      if (minute !== '*') next.setMinutes(parseInt(minute), 0, 0);
+      if (hour !== '*') next.setHours(parseInt(hour));
+      
+      // If time has passed today, move to next day/week
+      if (next <= now) {
+        if (dayOfWeek !== '*') {
+          // Weekly schedule
+          const targetDay = parseInt(dayOfWeek);
+          const currentDay = now.getDay();
+          const daysUntilTarget = (targetDay - currentDay + 7) % 7 || 7;
+          next.setDate(now.getDate() + daysUntilTarget);
+        } else {
+          // Daily schedule
+          next.setDate(now.getDate() + 1);
+        }
+      }
+      
+      return next;
     } catch (error) {
       console.error('Error parsing cron expression:', error);
-      return new Date(Date.now() + 24 * 60 * 60 * 1000); // Default to 24 hours from now
+      // Return next hour as fallback
+      const nextHour = new Date();
+      nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
+      return nextHour;
     }
   }
 
