@@ -1221,19 +1221,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const testResult = await snowflakeService.executeQuery("SELECT 1 as test");
         
         if (testResult.success) {
+          // Collect database metadata
+          let metadata: any = {
+            lastTested: new Date().toISOString(),
+            lastTestResult: {
+              success: true,
+              testedAt: new Date().toISOString(),
+              database: credentials.database,
+              warehouse: credentials.warehouse,
+              account: credentials.account
+            }
+          };
+
+          try {
+            // Get table and view counts
+            const tablesQuery = `
+              SELECT 
+                'TABLES' as object_type,
+                COUNT(*) as count
+              FROM ${credentials.database}.INFORMATION_SCHEMA.TABLES
+              WHERE TABLE_SCHEMA = '${credentials.schema}'
+              UNION ALL
+              SELECT 
+                'VIEWS' as object_type,
+                COUNT(*) as count
+              FROM ${credentials.database}.INFORMATION_SCHEMA.VIEWS
+              WHERE TABLE_SCHEMA = '${credentials.schema}'
+            `;
+            
+            console.log('Executing Snowflake metadata query:', tablesQuery);
+            const metadataResult = await snowflakeService.executeQuery(tablesQuery);
+            console.log('Metadata query result:', { success: metadataResult.success, rows: metadataResult.rows });
+            
+            if (metadataResult.success) {
+              let tables = 0, views = 0;
+              metadataResult.rows.forEach(row => {
+                console.log('Processing metadata row:', row);
+                if (row[0] === 'TABLES') tables = row[1];
+                if (row[0] === 'VIEWS') views = row[1];
+              });
+              
+              metadata.tables = tables;
+              metadata.views = views;
+              metadata.schemas = 1; // We're using a specific schema
+              metadata.totalObjects = tables + views;
+              console.log('Final metadata counts:', { tables, views, schemas: 1 });
+            } else {
+              console.error('Metadata query failed:', metadataResult.error);
+            }
+
+            // Get database size information if possible
+            try {
+              const sizeQuery = `
+                SELECT 
+                  SUM(BYTES) / (1024 * 1024) as size_mb
+                FROM ${credentials.database}.INFORMATION_SCHEMA.TABLE_STORAGE_METRICS 
+                WHERE SCHEMA_NAME = '${credentials.schema}'
+              `;
+              const sizeResult = await snowflakeService.executeQuery(sizeQuery);
+              if (sizeResult.success && sizeResult.rows.length > 0) {
+                metadata.sizeInMB = Math.round(sizeResult.rows[0][0] || 0);
+              }
+            } catch (e) {
+              // Size query might fail, that's okay
+            }
+          } catch (metaError) {
+            console.warn('Failed to collect Snowflake metadata:', metaError);
+          }
+
           // Update integration status to connected
           await storage.updateIntegration(id, { 
             status: 'connected',
-            metadata: {
-              lastTested: new Date().toISOString(),
-              lastTestResult: {
-                success: true,
-                testedAt: new Date().toISOString(),
-                database: credentials.database,
-                warehouse: credentials.warehouse,
-                account: credentials.account
-              }
-            }
+            metadata
           });
           
           res.json({ 
