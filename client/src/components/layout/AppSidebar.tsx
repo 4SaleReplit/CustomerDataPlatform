@@ -65,7 +65,7 @@ const navigation = [
     children: [
       { name: 'All Reports', href: '/reports', icon: FileText },
       { name: 'Design Studio', href: '/reports/designer', icon: Edit3 },
-      { name: 'Scheduler', href: '/reports/scheduler', icon: Calendar },
+      { name: 'Email Sender', href: '/reports/scheduler', icon: Calendar },
       { name: 'Email Templates', href: '/reports/email-templates', icon: Presentation }
     ]
   },
