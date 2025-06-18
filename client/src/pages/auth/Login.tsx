@@ -56,7 +56,9 @@ export default function Login() {
           title: "Login Successful",
           description: "Welcome back to the platform!",
         });
-        // Let the authentication flow handle the redirect
+        
+        // Redirect to dashboard after successful login
+        setLocation('/');
       } else {
         toast({
           title: "Login Failed",
