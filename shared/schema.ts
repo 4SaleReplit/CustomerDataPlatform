@@ -418,7 +418,7 @@ export const scheduledReports = pgTable("scheduled_reports", {
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   presentationId: uuid("presentation_id").references(() => presentations.id, { onDelete: 'cascade' }).notNull(),
-  cronExpression: varchar("cron_expression", { length: 100 }).notNull(), // "0 9 * * 1" for weekly Monday 9AM
+  cronExpression: varchar("cron_expression", { length: 100 }), // "0 9 * * 1" for weekly Monday 9AM, null for one-time sends
   timezone: varchar("timezone", { length: 50 }).default('UTC'),
   emailSubject: text("email_subject").notNull(),
   emailBody: text("email_body").notNull(), // Template with {placeholders}

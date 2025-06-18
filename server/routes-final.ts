@@ -249,8 +249,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/scheduled-reports", async (req: Request, res: Response) => {
     try {
       const reportData = req.body;
+      console.log('Received report data:', JSON.stringify(reportData, null, 2));
       
-      // Calculate next execution based on cron expression and timezone
+      // Check if this is a "Send Now" request
+      const isSendNow = reportData.sendOption === 'now' || !reportData.cronExpression;
+      
+      if (isSendNow) {
+        // Handle immediate send
+        console.log('Processing immediate send...');
+        
+        // Generate the report first
+        const presentation = await storage.getPresentationById(reportData.presentationId);
+        if (!presentation) {
+          return res.status(404).json({ error: "Presentation not found" });
+        }
+
+        // Process email template with variables
+        const emailHtml = await processEmailTemplate(reportData.emailTemplate?.customContent || 'Your report is ready.', reportData);
+        
+        // Send email immediately using Gmail SMTP
+        const emailData = {
+          to: reportData.recipientList,
+          cc: reportData.ccList || [],
+          bcc: reportData.bccList || [],
+          subject: reportData.emailTemplate?.subject || `Report: ${reportData.name}`,
+          html: emailHtml,
+          // TODO: Add PDF attachment generation
+        };
+
+        console.log('Sending immediate email to:', emailData.to);
+        
+        try {
+          await sendReportEmail(emailData);
+          
+          // Create a one-time report record for tracking
+          const reportInsertData = {
+            name: reportData.name,
+            description: reportData.description || null,
+            presentationId: reportData.presentationId,
+            cronExpression: null as any, // No schedule for one-time sends
+            timezone: reportData.timezone || 'Africa/Cairo',
+            emailSubject: emailData.subject,
+            emailBody: emailHtml,
+            recipientList: reportData.recipientList,
+            ccList: reportData.ccList || [],
+            bccList: reportData.bccList || [],
+            isActive: false, // One-time sends are not active schedules
+            formatSettings: reportData.formatSettings || {},
+            airflowConfiguration: null,
+            airflowDagId: null,
+            airflowTaskId: null,
+            pdfDeliveryUrl: null,
+            nextExecution: null,
+            executionCount: 1,
+            errorCount: 0,
+            successCount: 1,
+            lastExecutionAt: new Date(),
+            lastError: null,
+            createdBy: (req as any).session?.user?.id || null,
+            emailTemplate: reportData.emailTemplate
+          };
+
+          const scheduledReport = await storage.createScheduledReport(reportInsertData);
+          
+          return res.status(201).json({
+            ...scheduledReport,
+            sentImmediately: true,
+            sentAt: new Date().toISOString()
+          });
+          
+        } catch (emailError) {
+          console.error('Failed to send immediate email:', emailError);
+          return res.status(500).json({ 
+            error: "Failed to send email: " + (emailError as Error).message 
+          });
+        }
+      }
+      
+      // Handle scheduled reports
       const nextExecution = calculateNextExecution(reportData.cronExpression, reportData.timezone);
       console.log(`Calculated next execution for "${reportData.cronExpression}":`, nextExecution);
       
@@ -281,11 +357,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }, {
           task_id: reportData.airflowTaskId || "send_report",
           operator: "EmailOperator",
-          to: reportData.emailSettings?.recipients || [],
-          cc: reportData.emailSettings?.cc || [],
-          bcc: reportData.emailSettings?.bcc || [],
-          subject: reportData.emailSettings?.subject || `Report: ${reportData.name}`,
-          html_content: reportData.emailSettings?.template || 'Please find your scheduled report attached.',
+          to: reportData.recipientList || [],
+          cc: reportData.ccList || [],
+          bcc: reportData.bccList || [],
+          subject: reportData.emailTemplate?.subject || `Report: ${reportData.name}`,
+          html_content: reportData.emailTemplate?.customContent || 'Please find your scheduled report attached.',
           files: [{
             file_path: pdfDeliveryUrl,
             file_name: `${reportData.name || 'report'}.pdf`
@@ -300,11 +376,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         presentationId: reportData.presentationId,
         cronExpression: reportData.cronExpression,
         timezone: reportData.timezone || 'Africa/Cairo',
-        emailSubject: reportData.emailSettings?.subject || `Report: ${reportData.name}`,
-        emailBody: reportData.emailSettings?.template || 'Please find your scheduled report attached.',
-        recipientList: reportData.emailSettings?.recipients || [],
-        ccList: reportData.emailSettings?.cc || [],
-        bccList: reportData.emailSettings?.bcc || [],
+        emailSubject: reportData.emailTemplate?.subject || `Report: ${reportData.name}`,
+        emailBody: reportData.emailTemplate?.customContent || 'Please find your scheduled report attached.',
+        recipientList: reportData.recipientList || [],
+        ccList: reportData.ccList || [],
+        bccList: reportData.bccList || [],
         isActive: reportData.isActive !== false,
         formatSettings: reportData.formatSettings || {},
         airflowConfiguration,
@@ -317,10 +393,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         successCount: 0,
         lastExecutionAt: null,
         lastError: null,
-        createdBy: (req as any).session?.user?.id || null
+        createdBy: (req as any).session?.user?.id || null,
+        emailTemplate: reportData.emailTemplate
       };
 
-      console.log('Airflow configuration being stored:', JSON.stringify(airflowConfiguration, null, 2));
       console.log('Creating scheduled report with data:', JSON.stringify(reportInsertData, null, 2));
       
       const scheduledReport = await storage.createScheduledReport(reportInsertData);

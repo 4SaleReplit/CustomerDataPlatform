@@ -703,22 +703,43 @@ export function ReportsScheduler() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">NEXT EXECUTION</Label>
-                    <p className="font-medium">{formatNextExecution(report.nextExecution)}</p>
+                {report.cronExpression ? (
+                  // Scheduled report display
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">NEXT EXECUTION</Label>
+                      <p className="font-medium">{formatNextExecution(report.nextExecution)}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">EXECUTIONS</Label>
+                      <p className="font-medium">{report.executionCount} sent</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">LAST SENT</Label>
+                      <p className="font-medium">
+                        {report.lastExecuted ? new Date(report.lastExecuted).toLocaleDateString() : "Never"}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">EXECUTIONS</Label>
-                    <p className="font-medium">{report.executionCount} sent</p>
+                ) : (
+                  // One-time send display
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">SCHEDULE</Label>
+                      <p className="font-medium text-muted-foreground">No schedule</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">SENT AT</Label>
+                      <p className="font-medium">
+                        {report.lastExecutionAt ? new Date(report.lastExecutionAt).toLocaleString() : "Processing..."}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">RECIPIENTS</Label>
+                      <p className="font-medium">{report.recipientList?.length || 0} recipients</p>
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">LAST SENT</Label>
-                    <p className="font-medium">
-                      {report.lastExecuted ? new Date(report.lastExecuted).toLocaleDateString() : "Never"}
-                    </p>
-                  </div>
-                </div>
+                )}
                 {report.lastError && (
                   <div className="mt-3 p-2 bg-destructive/10 border border-destructive/20 rounded text-sm text-destructive">
                     <strong>Last Error:</strong> {report.lastError}
