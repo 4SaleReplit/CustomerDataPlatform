@@ -2039,30 +2039,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   
                   if (val === null) return 'NULL';
                   
-                  // Handle JSONB columns specifically
-                  if (colType && (colType.dataType === 'jsonb' || colType.properDataType === 'jsonb')) {
-                    return `'${JSON.stringify(val).replace(/'/g, "''")}'::jsonb`;
+                  // Handle Date objects first (timestamps and dates)
+                  if (val instanceof Date) {
+                    return `'${val.toISOString()}'`;
                   }
                   
                   // Handle PostgreSQL arrays (but not JSONB arrays)
                   if (Array.isArray(val) && colType && colType.dataType === 'ARRAY') {
                     if (val.length === 0) return 'ARRAY[]';
                     const arrayElements = val.map(item => `'${String(item).replace(/'/g, "''")}'`).join(',');
+                    // Cast array to proper type based on column type
+                    if (colType.udtName === '_uuid') {
+                      return `ARRAY[${arrayElements}]::uuid[]`;
+                    } else if (colType.udtName === '_text') {
+                      return `ARRAY[${arrayElements}]::text[]`;
+                    } else if (colType.udtName === '_int4') {
+                      return `ARRAY[${arrayElements}]::integer[]`;
+                    }
                     return `ARRAY[${arrayElements}]`;
                   }
                   
-                  // Handle timestamp columns
-                  if (colType && (colType.dataType === 'timestamp with time zone' || colType.dataType === 'timestamp without time zone')) {
-                    return val instanceof Date ? `'${val.toISOString()}'` : `'${String(val)}'`;
+                  // Handle JSONB columns specifically (for non-Date objects)
+                  if (colType && (colType.dataType === 'jsonb' || colType.properDataType === 'jsonb')) {
+                    return `'${JSON.stringify(val).replace(/'/g, "''")}'::jsonb`;
                   }
                   
-                  // Handle date columns
-                  if (colType && colType.dataType === 'date') {
-                    return val instanceof Date ? `'${val.toISOString().split('T')[0]}'` : `'${String(val)}'`;
-                  }
-                  
-                  // Handle other JSON objects as JSONB (but only if not a date/timestamp)
-                  if (typeof val === 'object' && !(val instanceof Date)) {
+                  // Handle other JSON objects as JSONB (but only if not already handled)
+                  if (typeof val === 'object') {
                     return `'${JSON.stringify(val).replace(/'/g, "''")}'::jsonb`;
                   }
                   
