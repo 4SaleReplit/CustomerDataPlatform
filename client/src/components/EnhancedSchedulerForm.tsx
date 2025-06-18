@@ -405,66 +405,64 @@ export function EnhancedSchedulerForm({
       </div>
 
       {/* Right Column - Live Email Preview */}
-      <div className="w-full lg:w-96 flex-shrink-0">
+      <div className="w-full lg:w-[500px] flex-shrink-0">
         <Card className="sticky top-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Eye className="h-5 w-5" />
-              Email Preview
+              <Mail className="h-5 w-5" />
+              Gmail Preview
             </CardTitle>
             <CardDescription>
-              Live preview of how your email will look to recipients
+              How your email will appear in Gmail inbox
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="visual" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="visual">Visual</TabsTrigger>
-                <TabsTrigger value="subject">Subject</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="visual" className="mt-4">
-                <div className="border rounded-lg p-2 bg-gray-50 max-h-96 overflow-y-auto">
-                  <iframe
-                    srcDoc={previewHtml}
-                    className="border-0 w-full"
-                    style={{
-                      height: '400px',
-                      transform: 'scale(0.75)',
-                      transformOrigin: 'top left'
-                    }}
-                    title="Email Preview"
-                  />
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="subject" className="mt-4">
-                <div className="space-y-3">
-                  <div className="border rounded p-3 bg-gray-50">
-                    <Label className="text-sm font-medium">Subject Line:</Label>
-                    <p className="text-sm mt-1">
-                      {formData.emailTemplate.subject || 'No subject set'}
-                    </p>
+          <CardContent className="p-0">
+            {/* Gmail-style header */}
+            <div className="bg-white border-b p-4 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
+                    4S
                   </div>
-                  
-                  <div className="border rounded p-3 bg-gray-50">
-                    <Label className="text-sm font-medium">Custom Variables Used:</Label>
-                    <div className="mt-2 space-y-1">
-                      {customVariables.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">No custom variables defined</p>
-                      ) : (
-                        customVariables.map((variable, index) => (
-                          <div key={index} className="text-xs">
-                            <Badge variant="outline">{"{" + variable.name + "}"}</Badge>
-                            <span className="ml-2 text-muted-foreground">{variable.description || variable.type}</span>
-                          </div>
-                        ))
-                      )}
-                    </div>
+                  <div>
+                    <div className="font-medium">4Sale Analytics</div>
+                    <div className="text-gray-500 text-xs">ahmed.hawary@4sale.tech</div>
                   </div>
                 </div>
-              </TabsContent>
-            </Tabs>
+                <div className="text-xs text-gray-500">now</div>
+              </div>
+              <div className="text-sm font-medium">
+                {formData.emailTemplate.subject || 'Weekly Analytics Report'}
+              </div>
+            </div>
+            
+            {/* Email content */}
+            <div className="bg-gray-50">
+              <iframe
+                srcDoc={previewHtml}
+                className="border-0 w-full"
+                style={{
+                  height: '600px',
+                  transform: 'scale(0.95)',
+                  transformOrigin: 'top center'
+                }}
+                title="Email Content Preview"
+              />
+            </div>
+            
+            {/* Custom Variables Info */}
+            {customVariables.length > 0 && (
+              <div className="p-4 border-t bg-gray-50">
+                <Label className="text-sm font-medium">Custom Variables:</Label>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {customVariables.map((variable, index) => (
+                    <Badge key={index} variant="outline" className="text-xs">
+                      {"{" + variable.name + "}"}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
