@@ -25,12 +25,56 @@ export function ConsoleLogModal({
   isOpen, 
   onClose, 
   sessionId, 
-  migrationData 
+  migrationData: initialMigrationData 
 }: ConsoleLogModalProps) {
   const [logs, setLogs] = useState<string[]>([]);
+  const [migrationData, setMigrationData] = useState(initialMigrationData);
   const [isAutoScroll, setIsAutoScroll] = useState(true);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Real-time polling for migration progress and logs
+  useEffect(() => {
+    if (!sessionId || !isOpen) return;
+
+    const pollMigrationData = async () => {
+      try {
+        // Fetch migration progress
+        const progressResponse = await apiRequest(`/api/migration-progress/${sessionId}`);
+        setMigrationData(progressResponse);
+
+        // Fetch migration logs
+        const logsResponse = await apiRequest(`/api/migration-logs/${sessionId}`);
+        if (logsResponse.logs) {
+          setLogs(logsResponse.logs);
+        }
+
+        // Stop polling if migration is completed or failed
+        if (progressResponse.status === 'completed' || progressResponse.status === 'error') {
+          if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+          }
+        }
+      } catch (error) {
+        console.error('Error polling migration data:', error);
+      }
+    };
+
+    // Initial fetch
+    pollMigrationData();
+
+    // Set up polling interval (every 2 seconds)
+    pollingRef.current = setInterval(pollMigrationData, 2000);
+
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [sessionId, isOpen]);
 
   // Update logs when migration data changes
   useEffect(() => {
