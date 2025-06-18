@@ -360,21 +360,15 @@ function Users() {
                 )}
                 Refresh
               </Button>
-            </div>
 
-            {/* User ID Search Button */}
-            <div className="border-t pt-4">
               <Button
-                variant="outline"
+                variant="secondary"
+                size="sm"
                 onClick={() => setIsUserIdPanelOpen(true)}
-                className="w-full"
               >
-                <Hash className="h-4 w-4 mr-2" />
-                Search with User ID(s)
+                <Hash className="h-4 w-4 mr-1" />
+                Search with ID
               </Button>
-              <p className="text-xs text-gray-500 mt-1 text-center">
-                Search for specific users by their IDs from Snowflake
-              </p>
             </div>
           </div>
         </CardContent>
