@@ -8,11 +8,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { EnhancedSchedulerForm } from "@/components/EnhancedSchedulerForm";
 
 interface ScheduledReport {
   id: string;
@@ -35,36 +32,12 @@ interface ScheduledReport {
   };
 }
 
-interface EmailFormData {
-  name: string;
-  description: string;
-  presentationId: string;
-  subject: string;
-  content: string;
-  recipients: string;
-  cronExpression: string;
-  timezone: string;
-  sendOption: 'now' | 'schedule';
-}
-
 export function EmailSender() {
   const [activeTab, setActiveTab] = useState<"scheduler" | "one-time">("scheduler");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<ScheduledReport | null>(null);
-  const [formData, setFormData] = useState<EmailFormData>({
-    name: '',
-    description: '',
-    presentationId: '',
-    subject: '',
-    content: '',
-    recipients: '',
-    cronExpression: '0 9 * * 1',
-    timezone: 'Africa/Cairo',
-    sendOption: 'schedule'
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: reports = [], isLoading } = useQuery({
@@ -79,47 +52,22 @@ export function EmailSender() {
 
   // Separate scheduled reports from one-time emails
   const scheduledReports = reports.filter((report: ScheduledReport) => 
-    report.cronExpression && !report.sentImmediately
+    !report.sentImmediately && report.cronExpression
   );
   
   const oneTimeEmails = reports.filter((report: ScheduledReport) => 
-    !report.cronExpression || report.sentImmediately
+    report.sentImmediately || !report.cronExpression
   );
-
-  const toggleReportStatus = useMutation({
-    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      apiRequest(`/api/scheduled-reports/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ isActive })
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/scheduled-reports'] });
-      toast({ title: "Report status updated successfully" });
-    }
-  });
 
   const duplicateReport = useMutation({
     mutationFn: (report: ScheduledReport) =>
       apiRequest('/api/scheduled-reports', {
         method: 'POST',
         body: JSON.stringify({
-          name: `Copy of ${report.name}`,
-          description: report.description,
-          presentationId: report.presentationId || '',
-          cronExpression: report.sentImmediately ? null : report.cronExpression,
-          timezone: 'Africa/Cairo',
-          recipientList: report.recipientList,
-          ccList: [],
-          bccList: [],
-          isActive: !report.sentImmediately,
-          sendOption: report.sentImmediately ? 'now' : 'schedule',
-          emailTemplate: {
-            subject: report.emailSubject || 'Report',
-            customContent: 'Your duplicated report is ready.',
-            templateId: 'professional'
-          },
-          formatSettings: { format: 'pdf', includeCharts: true },
-          customVariables: []
+          ...report,
+          id: undefined,
+          name: `${report.name} (Copy)`,
+          isActive: false
         })
       }),
     onSuccess: () => {
@@ -137,69 +85,17 @@ export function EmailSender() {
     }
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      const recipientList = formData.recipients.split(',').map(email => email.trim()).filter(email => email);
-      
-      const requestData = {
-        name: formData.name,
-        description: formData.description,
-        presentationId: formData.presentationId,
-        cronExpression: formData.sendOption === 'now' ? null : formData.cronExpression,
-        timezone: formData.timezone,
-        recipientList,
-        ccList: [],
-        bccList: [],
-        isActive: formData.sendOption === 'schedule',
-        sendOption: formData.sendOption,
-        emailTemplate: {
-          subject: formData.subject,
-          customContent: formData.content,
-          templateId: 'professional'
-        },
-        formatSettings: {
-          format: 'pdf',
-          includeCharts: true
-        },
-        customVariables: []
-      };
-
-      await apiRequest('/api/scheduled-reports', {
-        method: 'POST',
-        body: JSON.stringify(requestData)
-      });
-
-      toast({ 
-        title: formData.sendOption === 'now' ? "Email sent successfully" : "Report scheduled successfully" 
-      });
-      
-      setIsCreateDialogOpen(false);
-      setFormData({
-        name: '',
-        description: '',
-        presentationId: '',
-        subject: '',
-        content: '',
-        recipients: '',
-        cronExpression: '0 9 * * 1',
-        timezone: 'Africa/Cairo',
-        sendOption: activeTab === 'one-time' ? 'now' : 'schedule'
-      });
-      
+  const toggleReportStatus = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      apiRequest(`/api/scheduled-reports/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ isActive })
+      }),
+    onSuccess: () => {
+      toast({ title: "Report status updated successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/scheduled-reports'] });
-    } catch (error) {
-      toast({ 
-        title: "Error", 
-        description: formData.sendOption === 'now' ? "Failed to send email" : "Failed to schedule report",
-        variant: "destructive" 
-      });
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  });
 
   const formatNextExecution = (nextExecution: string | null) => {
     if (!nextExecution) return "No schedule";
@@ -218,72 +114,23 @@ export function EmailSender() {
 
   const handleEditReport = (report: ScheduledReport) => {
     setSelectedReport(report);
-    setFormData({
-      name: report.name,
-      description: report.description || '',
-      presentationId: report.presentationId || '',
-      subject: report.emailSubject || '',
-      content: report.emailTemplate?.customContent || 'Your report is ready.',
-      recipients: report.recipientList.join(', '),
-      cronExpression: report.cronExpression || '0 9 * * 1',
-      timezone: 'Africa/Cairo',
-      sendOption: report.sentImmediately ? 'now' : 'schedule'
-    });
     setIsEditDialogOpen(true);
-  };
-
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedReport) return;
-    setIsSubmitting(true);
-
-    try {
-      const recipientList = formData.recipients.split(',').map(email => email.trim()).filter(email => email);
-      
-      const requestData = {
-        name: formData.name,
-        description: formData.description,
-        presentationId: formData.presentationId,
-        cronExpression: formData.sendOption === 'now' ? null : formData.cronExpression,
-        timezone: formData.timezone,
-        recipientList,
-        ccList: [],
-        bccList: [],
-        isActive: formData.sendOption === 'schedule',
-        emailTemplate: {
-          subject: formData.subject,
-          customContent: formData.content,
-          templateId: 'professional'
-        },
-        formatSettings: {
-          format: 'pdf',
-          includeCharts: true
-        }
-      };
-
-      await apiRequest(`/api/scheduled-reports/${selectedReport.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(requestData)
-      });
-
-      toast({ title: "Report updated successfully" });
-      setIsEditDialogOpen(false);
-      setSelectedReport(null);
-      queryClient.invalidateQueries({ queryKey: ['/api/scheduled-reports'] });
-    } catch (error) {
-      toast({ 
-        title: "Error", 
-        description: "Failed to update report",
-        variant: "destructive" 
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   const handlePreviewReport = (report: ScheduledReport) => {
     setSelectedReport(report);
     setIsPreviewDialogOpen(true);
+  };
+
+  const handleFormSubmit = (data: any) => {
+    setIsCreateDialogOpen(false);
+    queryClient.invalidateQueries({ queryKey: ['/api/scheduled-reports'] });
+  };
+
+  const handleEditSubmit = (data: any) => {
+    setIsEditDialogOpen(false);
+    setSelectedReport(null);
+    queryClient.invalidateQueries({ queryKey: ['/api/scheduled-reports'] });
   };
 
   const ReportCard = ({ report, showSchedule = true }: { report: ScheduledReport; showSchedule?: boolean }) => (
@@ -375,145 +222,6 @@ export function EmailSender() {
     </Card>
   );
 
-  const EmailForm = ({ isEdit = false, onSubmit }: { isEdit?: boolean; onSubmit?: (e: React.FormEvent) => void }) => (
-    <form onSubmit={onSubmit || handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Report Name</Label>
-          <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="Enter report name"
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="presentation">Presentation</Label>
-          <Select 
-            value={formData.presentationId} 
-            onValueChange={(value) => setFormData({ ...formData, presentationId: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select presentation" />
-            </SelectTrigger>
-            <SelectContent>
-              {presentations.map((presentation: any) => (
-                <SelectItem key={presentation.id} value={presentation.id}>
-                  {presentation.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Input
-          id="description"
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder="Enter description"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="subject">Email Subject</Label>
-        <Input
-          id="subject"
-          value={formData.subject}
-          onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-          placeholder="Enter email subject"
-          required
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="content">Email Content</Label>
-        <Textarea
-          id="content"
-          value={formData.content}
-          onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-          placeholder="Enter email content"
-          rows={4}
-          required
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="recipients">Recipients</Label>
-        <Textarea
-          id="recipients"
-          value={formData.recipients}
-          onChange={(e) => setFormData({ ...formData, recipients: e.target.value })}
-          placeholder="Enter email addresses separated by commas"
-          rows={2}
-          required
-        />
-      </div>
-
-      {(activeTab === 'scheduler' || isEdit) && !formData.sendOption.includes('now') && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="schedule">Schedule</Label>
-            <Select 
-              value={formData.cronExpression} 
-              onValueChange={(value) => setFormData({ ...formData, cronExpression: value })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0 9 * * 1">Weekly (Monday 9 AM)</SelectItem>
-                <SelectItem value="0 9 * * *">Daily (9 AM)</SelectItem>
-                <SelectItem value="0 9 1 * *">Monthly (1st day, 9 AM)</SelectItem>
-                <SelectItem value="0 9 * * 0">Weekly (Sunday 9 AM)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="timezone">Timezone</Label>
-            <Select 
-              value={formData.timezone} 
-              onValueChange={(value) => setFormData({ ...formData, timezone: value })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Africa/Cairo">Africa/Cairo</SelectItem>
-                <SelectItem value="UTC">UTC</SelectItem>
-                <SelectItem value="America/New_York">America/New_York</SelectItem>
-                <SelectItem value="Europe/London">Europe/London</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      )}
-
-      <div className="flex justify-end gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => {
-            if (isEdit) {
-              setIsEditDialogOpen(false);
-              setSelectedReport(null);
-            } else {
-              setIsCreateDialogOpen(false);
-            }
-          }}
-        >
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Processing..." : isEdit ? "Update Report" : activeTab === 'one-time' ? "Send Now" : "Schedule Report"}
-        </Button>
-      </div>
-    </form>
-  );
-
   const EmailPreview = ({ report }: { report: ScheduledReport }) => (
     <div className="space-y-4">
       <div className="border rounded-lg p-4 bg-gray-50">
@@ -560,20 +268,14 @@ export function EmailSender() {
     </div>
   );
 
-  // Update sendOption when tab changes
-  React.useEffect(() => {
-    setFormData(prev => ({
-      ...prev,
-      sendOption: activeTab === 'one-time' ? 'now' : 'schedule'
-    }));
-  }, [activeTab]);
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Email Sender</h1>
-          <p className="text-gray-600 mt-1">Send scheduled reports and one-time emails</p>
+          <h1 className="text-2xl font-bold tracking-tight">Email Sender</h1>
+          <p className="text-muted-foreground">
+            Schedule automated reports and send one-time emails
+          </p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -582,7 +284,7 @@ export function EmailSender() {
               New Email
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {activeTab === 'one-time' ? 'Send One-Time Email' : 'Schedule Report'}
@@ -594,7 +296,11 @@ export function EmailSender() {
                 }
               </DialogDescription>
             </DialogHeader>
-            <EmailForm />
+            <EnhancedSchedulerForm
+              mode={activeTab === 'one-time' ? 'one-time' : 'schedule'}
+              onSubmit={handleFormSubmit}
+              onCancel={() => setIsCreateDialogOpen(false)}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -661,7 +367,7 @@ export function EmailSender() {
                 One-Time Emails
               </CardTitle>
               <CardDescription>
-                Instant email reports sent immediately without scheduling
+                Emails sent immediately without scheduling
               </CardDescription>
             </CardHeader>
           </Card>
@@ -698,14 +404,24 @@ export function EmailSender() {
 
       {/* Edit Report Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Report</DialogTitle>
             <DialogDescription>
               Update the report configuration and settings
             </DialogDescription>
           </DialogHeader>
-          <EmailForm isEdit={true} onSubmit={handleEditSubmit} />
+          {selectedReport && (
+            <EnhancedSchedulerForm
+              mode="schedule"
+              initialData={selectedReport}
+              onSubmit={handleEditSubmit}
+              onCancel={() => {
+                setIsEditDialogOpen(false);
+                setSelectedReport(null);
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
