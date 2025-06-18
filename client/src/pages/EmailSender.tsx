@@ -161,10 +161,11 @@ export function EmailSender() {
 
   const toggleActiveMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => 
-      apiRequest(`/api/scheduled-reports/${id}`, { 
-        method: 'PATCH', 
-        body: { isActive: !isActive }
-      }),
+      fetch(`/api/scheduled-reports/${id}`, { 
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !isActive })
+      }).then(res => res.json()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/scheduled-reports'] });
       toast({

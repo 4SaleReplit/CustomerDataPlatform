@@ -379,11 +379,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                                             <tr>
                                                 <td style="padding: 5px 0; font-size: 14px; color: #6b7280;"><strong>Report ID:</strong></td>
-                                                <td style="padding: 5px 0; font-size: 14px; color: #374151;">${reportId}</td>
+                                                <td style="padding: 5px 0; font-size: 14px; color: #374151;">${reportData.id}</td>
                                             </tr>
                                             <tr>
                                                 <td style="padding: 5px 0; font-size: 14px; color: #6b7280;"><strong>Generated:</strong></td>
-                                                <td style="padding: 5px 0; font-size: 14px; color: #374151;">${currentDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} at ${currentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}</td>
+                                                <td style="padding: 5px 0; font-size: 14px; color: #374151;">${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} at ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}</td>
                                             </tr>
                                             <tr>
                                                 <td style="padding: 5px 0; font-size: 14px; color: #6b7280;"><strong>Report Type:</strong></td>
