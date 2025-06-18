@@ -2256,26 +2256,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Environment Configuration Management
   app.get("/api/environment-configurations", async (req: Request, res: Response) => {
     try {
-      const { environmentConfigurations } = await import('../shared/schema');
-      const { eq } = await import('drizzle-orm');
+      // Query directly using pool to bypass potential ORM issues
+      const { Pool } = await import('pg');
+      const dbPool = new Pool({ connectionString: process.env.DATABASE_URL });
       
-      // Fetch active environment configurations from database
-      const activeConfigs = await db.select().from(environmentConfigurations)
-        .where(eq(environmentConfigurations.isActive, true));
+      const result = await dbPool.query(`
+        SELECT * FROM environment_configurations 
+        WHERE is_active = true
+      `);
       
-      // Group by environment for easy frontend consumption
+      await dbPool.end();
+      
+      console.log('Found configurations:', result.rows.length);
+      
+      // Group by environment for frontend consumption
       const groupedConfigs = {
         development: {},
         staging: {},
         production: {}
       };
       
-      activeConfigs.forEach(config => {
-        const envId = config.environmentId as keyof typeof groupedConfigs;
-        if (groupedConfigs[envId]) {
-          groupedConfigs[envId][config.integrationType] = config.integrationId;
+      result.rows.forEach(config => {
+        // Handle different environment ID formats
+        let envId = config.environment_id;
+        if (envId === 'dev') envId = 'development';
+        if (envId === 'prod') envId = 'production';
+        if (envId === 'stage') envId = 'staging';
+        
+        const targetEnv = envId as keyof typeof groupedConfigs;
+        if (groupedConfigs[targetEnv]) {
+          groupedConfigs[targetEnv][config.integration_type] = config.integration_id;
         }
       });
+      
+      console.log('Grouped configurations:', groupedConfigs);
       
       res.json(groupedConfigs);
     } catch (error: any) {
