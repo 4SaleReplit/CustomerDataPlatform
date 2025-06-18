@@ -92,12 +92,12 @@ export function AppSidebar() {
   const [expandedItems, setExpandedItems] = useState<string[]>(['Home', 'Product Analytics', 'Marketing Analytics']);
   
   // Safely get user context
-  let user = null;
-  let logout = null;
+  let user: any = null;
+  let logout: (() => void) | null = null;
   try {
     const userContext = useUser();
-    user = userContext?.user;
-    logout = userContext?.logout;
+    user = userContext?.user || null;
+    logout = userContext?.logout || null;
   } catch (error) {
     // User context not available, continue without user info
     console.warn('User context not available in sidebar');

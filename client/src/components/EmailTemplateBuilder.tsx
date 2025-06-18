@@ -109,213 +109,78 @@ export function EmailTemplateBuilder({ value, onChange, presentations = [] }: Em
     }));
   };
 
-  const getTemplatePreview = (templateId: string): string => {
-    // Return sample HTML for preview
-    switch (templateId) {
-      case 'professional':
-        return `
-          <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', sans-serif;">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center;">
-              <h1 style="margin: 0; font-size: 28px;">{{report_title}}</h1>
-              <p style="margin: 10px 0 0 0;">Generated on {{generation_date}}</p>
-            </div>
-            <div style="padding: 40px 30px;">
-              <h2>Dear {{recipient_name}},</h2>
-              <p>{{email_content}}</p>
-              <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <h3>Report Details</h3>
-                <p><strong>Report:</strong> {{report_name}}</p>
-                <p><strong>Period:</strong> {{report_period}}</p>
-              </div>
-            </div>
-          </div>
-        `;
-      case 'minimal':
-        return `
-          <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
-            <div style="border-bottom: 2px solid #f0f0f0; padding-bottom: 20px; margin-bottom: 30px;">
-              <h1 style="margin: 0; font-size: 24px;">{{report_title}}</h1>
-              <p style="margin: 5px 0 0 0; color: #7f8c8d;">{{generation_date}}</p>
-            </div>
-            <div>
-              <p>Hello {{recipient_name}},</p>
-              <p>{{email_content}}</p>
-              <div style="background: #f8f9fa; padding: 15px; border-left: 4px solid #3498db; margin: 20px 0;">
-                <strong>{{report_name}}</strong><br>
-                Period: {{report_period}}
-              </div>
-            </div>
-          </div>
-        `;
-      case 'dashboard':
-        return `
-          <div style="max-width: 600px; margin: 0 auto; font-family: Inter, sans-serif; background: white; border-radius: 12px; overflow: hidden;">
-            <div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 30px;">
-              <h1 style="margin: 0; font-size: 26px;">{{report_title}}</h1>
-              <p style="margin: 8px 0 0 0;">Analytics Report • {{generation_date}}</p>
-            </div>
-            <div style="display: flex; padding: 0 30px; margin-top: -20px;">
-              <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; flex: 1; margin: 0 5px;">
-                <p style="font-size: 24px; font-weight: 700; margin: 0;">{{metric_1_value}}</p>
-                <p style="font-size: 12px; color: #6b7280; margin: 5px 0 0 0;">{{metric_1_label}}</p>
-              </div>
-            </div>
-            <div style="padding: 40px 30px;">
-              <p>Hi {{recipient_name}},</p>
-              <p>{{email_content}}</p>
-            </div>
-          </div>
-        `;
-      default:
-        return '<p>Select a template to see preview</p>';
-    }
-  };
+
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Template Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5" />
-            Choose Email Template
-          </CardTitle>
-          <CardDescription>
-            Select a pre-designed template for your scheduled report emails
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="space-y-2">
+        <Label htmlFor="template-select">Email Template</Label>
+        <Select value={selectedTemplateId} onValueChange={handleTemplateSelect}>
+          <SelectTrigger>
+            <SelectValue placeholder="Choose an email template" />
+          </SelectTrigger>
+          <SelectContent>
             {emailTemplates.map((template) => (
-              <Card 
-                key={template.id}
-                className={`cursor-pointer transition-all hover:shadow-md ${
-                  selectedTemplate?.id === template.id ? 'ring-2 ring-blue-500' : ''
-                }`}
-                onClick={() => handleTemplateSelect(template.id)}
-              >
-                <CardContent className="p-4">
-                  <h3 className="font-semibold mb-2">{template.name}</h3>
-                  <p className="text-sm text-muted-foreground mb-3">{template.description}</p>
-                  <div className="flex flex-wrap gap-1">
-                    {template.variables.slice(0, 3).map(variable => (
-                      <Badge key={variable} variant="outline" className="text-xs">
-                        {variable.replace(/_/g, ' ')}
-                      </Badge>
-                    ))}
-                    {template.variables.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{template.variables.length - 3} more
-                      </Badge>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+              <SelectItem key={template.id} value={template.id}>
+                <div className="flex flex-col">
+                  <span className="font-medium">{template.name}</span>
+                  <span className="text-xs text-muted-foreground">{template.description}</span>
+                </div>
+              </SelectItem>
             ))}
-          </div>
-        </CardContent>
-      </Card>
+          </SelectContent>
+        </Select>
+      </div>
 
-      {selectedTemplate && (
-        <>
-          {/* Email Configuration */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Mail className="h-5 w-5" />
-                Email Configuration
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="subject">Email Subject</Label>
-                <Input
-                  id="subject"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  placeholder="Enter email subject..."
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="content">Email Content</Label>
-                <Textarea
-                  id="content"
-                  value={customContent}
-                  onChange={(e) => setCustomContent(e.target.value)}
-                  placeholder="Enter your custom email message..."
-                  rows={4}
-                />
-              </div>
-            </CardContent>
-          </Card>
+      {/* Email Configuration */}
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="subject">Email Subject</Label>
+          <Input
+            id="subject"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder="Enter email subject..."
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="content">Email Content</Label>
+          <Textarea
+            id="content"
+            value={customContent}
+            onChange={(e) => setCustomContent(e.target.value)}
+            placeholder="Enter your custom email message..."
+            rows={4}
+          />
+        </div>
+      </div>
 
-          {/* Template Variables */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Type className="h-5 w-5" />
-                Template Variables
-              </CardTitle>
-              <CardDescription>
-                Customize the dynamic content in your email template
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {selectedTemplate.variables
-                  .filter(variable => !['generation_date', 'generation_time', 'dashboard_url'].includes(variable))
-                  .map((variable) => (
-                  <div key={variable}>
-                    <Label htmlFor={variable}>
-                      {variable.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </Label>
-                    <Input
-                      id={variable}
-                      value={templateVariables[variable] || ''}
-                      onChange={(e) => updateVariable(variable, e.target.value)}
-                      placeholder={`Enter ${variable.replace(/_/g, ' ')}...`}
-                    />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Preview */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Eye className="h-5 w-5" />
-                Email Preview
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="preview" className="w-full">
-                <TabsList>
-                  <TabsTrigger value="preview">Visual Preview</TabsTrigger>
-                  <TabsTrigger value="html">HTML Code</TabsTrigger>
-                </TabsList>
-                <TabsContent value="preview" className="mt-4">
-                  <div className="border rounded-lg p-4 bg-gray-50 max-h-96 overflow-y-auto">
-                    <div 
-                      dangerouslySetInnerHTML={{ __html: previewHtml }}
-                      className="email-preview"
-                    />
-                  </div>
-                </TabsContent>
-                <TabsContent value="html" className="mt-4">
-                  <div className="border rounded-lg p-4 bg-gray-50">
-                    <pre className="text-sm overflow-x-auto">
-                      <code>{previewHtml}</code>
-                    </pre>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </>
-      )}
+      {/* Key Template Variables */}
+      <div className="space-y-2">
+        <Label>Template Variables</Label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {['report_title', 'recipient_name', 'report_period'].map((variable) => (
+            <div key={variable}>
+              <Label htmlFor={variable} className="text-sm">
+                {variable.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </Label>
+              <Input
+                id={variable}
+                value={templateVariables[variable] || ''}
+                onChange={(e) => updateVariable(variable, e.target.value)}
+                placeholder={`Enter ${variable.replace(/_/g, ' ')}...`}
+                className="text-sm"
+              />
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Additional variables will be populated automatically from report data.{' '}
+          <span className="underline cursor-pointer">View all templates</span> for advanced customization.
+        </p>
+      </div>
     </div>
   );
 }
