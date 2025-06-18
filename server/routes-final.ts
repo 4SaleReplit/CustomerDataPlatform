@@ -1265,13 +1265,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (credentials.connectionString) {
           poolConfig.connectionString = credentials.connectionString;
+          poolConfig.ssl = { rejectUnauthorized: false }; // Handle SSL for cloud databases
         } else {
           poolConfig = {
             host: credentials.host,
             port: credentials.port || 5432,
             database: credentials.database,
             user: credentials.user || credentials.username,
-            password: credentials.password
+            password: credentials.password,
+            ssl: { rejectUnauthorized: false } // Handle SSL for cloud databases like Neon
           };
         }
         

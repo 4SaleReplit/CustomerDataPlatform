@@ -882,15 +882,13 @@ export default function AdminNew() {
                   const selectedIntegrationId = activeEnv?.databases?.[type];
                   const typeIntegrations = integrations.filter((i: any) => i.type === type);
                   
-                  // If no specific integration is assigned to this environment, show status of first connected integration of this type
+                  // Only show connected if a specific integration is assigned to this environment
                   let dbStatus = 'disconnected';
                   if (selectedIntegrationId) {
                     const selectedIntegration = integrations.find((i: any) => i.id === selectedIntegrationId);
                     dbStatus = selectedIntegration?.status || 'disconnected';
-                  } else if (typeIntegrations.length > 0) {
-                    // Show connected if any integration of this type is connected
-                    dbStatus = typeIntegrations.some((i: any) => i.status === 'connected') ? 'connected' : 'disconnected';
                   }
+                  // If no integration is assigned to this environment, always show disconnected
                   
                   const { icon: Icon, color } = getIntegrationDisplay(type);
                   
@@ -930,14 +928,13 @@ export default function AdminNew() {
                       const selectedIntegrationId = env.databases?.[type];
                       const typeIntegrations = integrations.filter((i: any) => i.type === type);
                       
-                      // Same logic as Current Environment Status
+                      // Only show connected if a specific integration is assigned to this environment
                       let dbStatus = 'disconnected';
                       if (selectedIntegrationId) {
                         const selectedIntegration = integrations.find((i: any) => i.id === selectedIntegrationId);
                         dbStatus = selectedIntegration?.status || 'disconnected';
-                      } else if (typeIntegrations.length > 0) {
-                        dbStatus = typeIntegrations.some((i: any) => i.status === 'connected') ? 'connected' : 'disconnected';
                       }
+                      // If no integration is assigned to this environment, always show disconnected
                       
                       const { icon: Icon, color } = getIntegrationDisplay(type);
                       
