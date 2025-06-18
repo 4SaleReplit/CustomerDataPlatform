@@ -74,6 +74,52 @@ export function EnhancedSchedulerForm({
   const [customVariables, setCustomVariables] = useState<CustomVariable[]>(formData.customVariables || []);
   const [previewHtml, setPreviewHtml] = useState('');
   const [emailInputValue, setEmailInputValue] = useState<string>(formData.recipientList.join(', '));
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // Form validation and submission handler
+  const handleSubmit = () => {
+    const errors: string[] = [];
+    
+    // Required field validation
+    if (!formData.name.trim()) {
+      errors.push("Report name is required");
+    }
+    
+    if (!formData.presentationId) {
+      errors.push("Please select a report");
+    }
+    
+    if (!formData.recipientList || formData.recipientList.length === 0) {
+      errors.push("At least one recipient is required");
+    }
+    
+    // For one-time emails, validate email subject and content
+    if (mode === 'one-time') {
+      if (!formData.emailTemplate.subject.trim()) {
+        errors.push("Email subject is required for one-time emails");
+      }
+      
+      if (!formData.emailTemplate.customContent.trim()) {
+        errors.push("Email content is required for one-time emails");
+      }
+    }
+    
+    // For scheduled emails, validate cron expression
+    if (mode === 'scheduled' && !formData.cronExpression) {
+      errors.push("Schedule configuration is required for scheduled emails");
+    }
+    
+    setValidationErrors(errors);
+    
+    if (errors.length === 0) {
+      // Update formData with custom variables before submission
+      const updatedFormData = {
+        ...formData,
+        customVariables: customVariables
+      };
+      onSubmit(updatedFormData);
+    }
+  };
 
   // Helper function to generate cron expression from user-friendly inputs
   const generateCronExpression = (frequency: string, dayOfWeek: string, time: string): string => {
@@ -819,12 +865,24 @@ export function EnhancedSchedulerForm({
 
 
 
+        {/* Validation Errors */}
+        {validationErrors.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <h4 className="text-red-800 font-medium mb-2">Please fix the following errors:</h4>
+            <ul className="list-disc list-inside text-red-700 text-sm space-y-1">
+              {validationErrors.map((error, index) => (
+                <li key={index}>{error}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button onClick={onSubmit} disabled={isLoading}>
+          <Button onClick={() => handleSubmit()} disabled={isLoading}>
             {isLoading 
               ? (mode === 'one-time' ? "Sending..." : "Saving...") 
               : (mode === 'one-time' ? "Send Now" : "Save")
