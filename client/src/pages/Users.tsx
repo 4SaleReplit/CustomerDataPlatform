@@ -320,29 +320,37 @@ function Users() {
                     className="pl-10"
                   />
                 </div>
-                <Button
-                  variant="default"
-                  onClick={() => {
-                    if (searchMode === 'ids') {
-                      executeUserIdSearch();
-                    } else {
-                      // For all users mode, refresh the data
-                      handleRefresh();
-                    }
-                  }}
-                  disabled={searchMode === 'ids' ? (!searchTerm.trim() || isSearchingIds) : isRefreshing}
-                >
-                  {(searchMode === 'ids' && isSearchingIds) || (searchMode === 'all' && isRefreshing) ? (
-                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <Search className="h-4 w-4 mr-2" />
-                  )}
-                  {searchMode === 'ids' ? 'Fetch Users' : 'Refresh'}
-                </Button>
+                {searchMode === 'ids' ? (
+                  <Button
+                    variant="default"
+                    onClick={executeUserIdSearch}
+                    disabled={!searchTerm.trim() || isSearchingIds}
+                  >
+                    {isSearchingIds ? (
+                      <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Search className="h-4 w-4 mr-2" />
+                    )}
+                    Search
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                  >
+                    {isRefreshing ? (
+                      <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                    )}
+                    Refresh
+                  </Button>
+                )}
               </div>
               {searchMode === 'ids' && (
                 <p className="text-xs text-gray-500 mt-1">
-                  Enter specific user IDs separated by commas and press Enter or click Search
+                  Enter specific user IDs separated by commas (e.g., 12345, 67890) and click Search to query Snowflake
                 </p>
               )}
             </div>
