@@ -66,46 +66,10 @@ export function EnhancedSchedulerForm({
   const [customVariables, setCustomVariables] = useState<CustomVariable[]>(formData.customVariables || []);
   const [previewHtml, setPreviewHtml] = useState('');
 
-  // Add custom variable
-  const addCustomVariable = () => {
-    const newVariable: CustomVariable = {
-      name: '',
-      type: 'static',
-      value: '',
-      description: ''
-    };
-    const updatedVariables = [...customVariables, newVariable];
-    setCustomVariables(updatedVariables);
-    setFormData({
-      ...formData,
-      customVariables: updatedVariables
-    });
-  };
-
-  // Update custom variable
-  const updateCustomVariable = (index: number, field: keyof CustomVariable, value: string) => {
-    const updatedVariables = [...customVariables];
-    updatedVariables[index] = { ...updatedVariables[index], [field]: value };
-    setCustomVariables(updatedVariables);
-    setFormData({
-      ...formData,
-      customVariables: updatedVariables
-    });
-  };
-
-  // Remove custom variable
-  const removeCustomVariable = (index: number) => {
-    const updatedVariables = customVariables.filter((_, i) => i !== index);
-    setCustomVariables(updatedVariables);
-    setFormData({
-      ...formData,
-      customVariables: updatedVariables
-    });
-  };
-
   // Generate email preview
   const generateEmailPreview = () => {
-    if (!formData.emailTemplate.templateId) return '';
+    // Use default template if no templateId is set (for editing existing reports)
+    const templateId = formData.emailTemplate.templateId || 'professional';
 
     // Template designs based on selection
     const templates = {
@@ -209,8 +173,7 @@ export function EnhancedSchedulerForm({
     };
 
     // Get the selected template or default to professional
-    const templateKey = formData.emailTemplate.templateId || 'professional';
-    let html = templates[templateKey as keyof typeof templates] || templates.professional;
+    let html = templates[templateId as keyof typeof templates] || templates.professional;
     
     // Process email content to handle line breaks properly
     const processedEmailContent = (formData.emailTemplate.customContent || 'Your custom email content will appear here.')
@@ -260,6 +223,12 @@ export function EnhancedSchedulerForm({
 
     return html;
   };
+
+  // Initialize preview on component mount
+  useEffect(() => {
+    const preview = generateEmailPreview();
+    setPreviewHtml(preview);
+  }, []);
 
   // Update preview when form data changes (with debouncing)
   useEffect(() => {
