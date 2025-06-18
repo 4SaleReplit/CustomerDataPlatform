@@ -200,14 +200,14 @@ export const campaignJobs = pgTable("campaign_jobs", {
 export const integrations = pgTable("integrations", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
-  type: varchar("type", { length: 100 }).notNull(), // braze, amplitude, facebook, google, etc
-  description: text("description").notNull(),
-  status: text("status").notNull().default("disconnected"), // connected, disconnected, testing, error
-  credentials: jsonb("credentials").notNull().default('{}'),
+  type: varchar("type", { length: 50 }).notNull(), // braze, amplitude, facebook, google, etc
+  credentials: jsonb("credentials").notNull(),
+  active: boolean("active").default(true),
+  status: varchar("status", { length: 20 }).default("connected"), // connected, disconnected, testing, error
   metadata: jsonb("metadata").default('{}'), // account info, data available, etc
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  lastTestedAt: timestamp("last_tested_at", { withTimezone: true })
 });
 
 // Uploaded images for presentations
