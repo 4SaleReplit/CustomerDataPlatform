@@ -985,21 +985,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   function calculateNextExecution(cronExpression: string, timezone: string = 'Africa/Cairo'): Date {
     try {
-      // Parse cron expression manually for common patterns
       const parts = cronExpression.trim().split(/\s+/);
       if (parts.length !== 5) {
         throw new Error('Invalid cron expression format');
       }
       
       const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
-      const now = new Date();
-      const next = new Date(now);
       
-      // Handle interval expressions like */2, */5, etc.
+      // Get current time in the specified timezone
+      const now = new Date();
+      const timeZoneOffset = getTimezoneOffset(timezone);
+      const localNow = new Date(now.getTime() + timeZoneOffset);
+      
+      let next = new Date(localNow);
+      
+      // Handle interval expressions like */2, */5, etc. (for minutes)
       if (minute.startsWith('*/')) {
         const interval = parseInt(minute.substring(2));
-        const currentMinute = now.getMinutes();
-        const nextMinute = Math.ceil((currentMinute + 1) / interval) * interval;
+        const currentMinute = localNow.getMinutes();
+        let nextMinute = Math.ceil((currentMinute + 1) / interval) * interval;
         
         if (nextMinute >= 60) {
           next.setHours(next.getHours() + 1);
@@ -1008,42 +1012,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
           next.setMinutes(nextMinute, 0, 0);
         }
         
-        return next;
+        return new Date(next.getTime() - timeZoneOffset);
       }
       
-      // Handle basic patterns
-      if (minute !== '*') {
-        const targetMinute = parseInt(minute);
-        next.setMinutes(targetMinute, 0, 0);
-      }
+      // Parse target hour and minute
+      const targetMinute = minute === '*' ? 0 : parseInt(minute);
+      const targetHour = hour === '*' ? 0 : parseInt(hour);
       
-      if (hour !== '*') {
-        const targetHour = parseInt(hour);
-        next.setHours(targetHour);
-      }
+      // Set target time
+      next.setHours(targetHour, targetMinute, 0, 0);
       
-      // If time has passed today, move to next day/week
-      if (next <= now) {
-        if (dayOfWeek !== '*') {
-          // Weekly schedule
-          const targetDay = parseInt(dayOfWeek);
-          const currentDay = now.getDay();
-          const daysUntilTarget = (targetDay - currentDay + 7) % 7 || 7;
-          next.setDate(now.getDate() + daysUntilTarget);
-        } else {
-          // Daily schedule
-          next.setDate(now.getDate() + 1);
+      // Handle daily schedule (no specific day restrictions)
+      if (dayOfWeek === '*' && dayOfMonth === '*') {
+        // If target time has passed today, schedule for tomorrow
+        if (next <= localNow) {
+          next.setDate(next.getDate() + 1);
         }
+        return new Date(next.getTime() - timeZoneOffset);
       }
       
-      return next;
+      // Handle weekly schedule
+      if (dayOfWeek !== '*' && dayOfMonth === '*') {
+        const targetDay = parseInt(dayOfWeek);
+        const currentDay = localNow.getDay();
+        
+        // Calculate days until target day
+        let daysUntilTarget = (targetDay - currentDay + 7) % 7;
+        
+        // If it's the same day but time has passed, schedule for next week
+        if (daysUntilTarget === 0 && next <= localNow) {
+          daysUntilTarget = 7;
+        }
+        
+        next.setDate(localNow.getDate() + daysUntilTarget);
+        return new Date(next.getTime() - timeZoneOffset);
+      }
+      
+      // Handle monthly schedule
+      if (dayOfMonth !== '*' && dayOfWeek === '*') {
+        const targetDay = parseInt(dayOfMonth);
+        const currentDay = localNow.getDate();
+        
+        // If target day hasn't occurred this month or time has passed today
+        if (targetDay > currentDay || (targetDay === currentDay && next <= localNow)) {
+          // Schedule for this month if day hasn't passed, or next month if it has
+          if (targetDay > currentDay) {
+            next.setDate(targetDay);
+          } else {
+            // Move to next month
+            next.setMonth(next.getMonth() + 1);
+            next.setDate(targetDay);
+          }
+        } else {
+          // Target day has passed this month, schedule for next month
+          next.setMonth(next.getMonth() + 1);
+          next.setDate(targetDay);
+        }
+        
+        return new Date(next.getTime() - timeZoneOffset);
+      }
+      
+      // Default: if no specific pattern matches, schedule for next hour
+      next.setHours(next.getHours() + 1);
+      next.setMinutes(0, 0, 0);
+      return new Date(next.getTime() - timeZoneOffset);
+      
     } catch (error) {
-      console.error('Error parsing cron expression:', error);
+      console.error('Error calculating next execution:', error);
       // Return next hour as fallback
       const nextHour = new Date();
       nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
       return nextHour;
     }
+  }
+
+  // Helper function to get timezone offset in milliseconds
+  function getTimezoneOffset(timezone: string): number {
+    const offsetMap: Record<string, number> = {
+      'Africa/Cairo': 2 * 60 * 60 * 1000,     // UTC+2
+      'UTC': 0,
+      'America/New_York': -5 * 60 * 60 * 1000, // UTC-5
+      'Europe/London': 0,                        // UTC+0
+      'Asia/Dubai': 4 * 60 * 60 * 1000,        // UTC+4
+      'Asia/Riyadh': 3 * 60 * 60 * 1000        // UTC+3
+    };
+    return offsetMap[timezone] || 0;
   }
 
   async function executeScheduledReport(scheduledReport: any) {
