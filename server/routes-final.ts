@@ -259,6 +259,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `${req.protocol}://${req.get('host')}`;
       const pdfDeliveryUrl = `${baseUrl}/api/reports/pdf/${reportData.presentationId}`;
       
+      // Generate Airflow DAG configuration
+      const airflowConfiguration = {
+        dag_id: reportData.airflowDagId || `report_${reportData.name?.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`,
+        schedule_interval: reportData.cronExpression || null,
+        start_date: new Date().toISOString(),
+        catchup: false,
+        max_active_runs: 1,
+        timezone: reportData.timezone || "Africa/Cairo",
+        tasks: [{
+          task_id: "generate_report",
+          operator: "PythonOperator",
+          python_callable: "generate_pdf_report",
+          op_kwargs: {
+            presentation_id: reportData.presentationId,
+            format: reportData.formatSettings?.format || "pdf",
+            include_charts: reportData.formatSettings?.includeCharts || true,
+            orientation: reportData.formatSettings?.orientation || "portrait"
+          }
+        }, {
+          task_id: reportData.airflowTaskId || "send_report",
+          operator: "EmailOperator",
+          to: reportData.emailSettings?.recipients || [],
+          cc: reportData.emailSettings?.cc || [],
+          bcc: reportData.emailSettings?.bcc || [],
+          subject: reportData.emailSettings?.subject || `Report: ${reportData.name}`,
+          html_content: reportData.emailSettings?.template || 'Please find your scheduled report attached.',
+          files: [{
+            file_path: pdfDeliveryUrl,
+            file_name: `${reportData.name || 'report'}.pdf`
+          }]
+        }]
+      };
+
       // Create scheduled report data with proper field mapping
       const reportInsertData = {
         name: reportData.name,
@@ -273,6 +306,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         bccList: reportData.emailSettings?.bcc || [],
         isActive: reportData.isActive !== false,
         formatSettings: reportData.formatSettings || {},
+        airflowConfiguration,
+        airflowDagId: airflowConfiguration.dag_id,
+        airflowTaskId: reportData.airflowTaskId || "send_report",
         pdfDeliveryUrl,
         nextExecution,
         executionCount: 0,
@@ -284,6 +320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       console.log('Creating scheduled report with data:', JSON.stringify(reportInsertData, null, 2));
+      console.log('Airflow configuration being stored:', JSON.stringify(airflowConfiguration, null, 2));
       
       const scheduledReport = await storage.createScheduledReport(reportInsertData);
       
