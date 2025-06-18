@@ -2256,15 +2256,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Environment Configuration Management
   app.get("/api/environment-configurations", async (req: Request, res: Response) => {
     try {
+      const { Pool } = await import('pg');
       const { environmentConfigurations } = await import('../shared/schema');
       const { eq } = await import('drizzle-orm');
       
-      // Fetch all environment configurations from database
-      const configs = await db.select().from(environmentConfigurations)
-        .where(eq(environmentConfigurations.isActive, true));
+      // Check if table exists first using pool
+      const dbPool = new Pool({ connectionString: process.env.DATABASE_URL });
       
-      console.log('Raw configs from database:', configs);
-      console.log('Query executed successfully, found', configs.length, 'configurations');
+      const tableExists = await dbPool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'environment_configurations'
+        )
+      `);
+      console.log('Environment configurations table exists:', tableExists.rows[0].exists);
+      
+      if (!tableExists.rows[0].exists) {
+        console.log('Table does not exist, returning empty configuration');
+        await dbPool.end();
+        return res.json({
+          development: {},
+          staging: {},
+          production: {}
+        });
+      }
+      
+      // Query all configurations directly
+      const allConfigs = await dbPool.query(`SELECT * FROM environment_configurations`);
+      console.log('All environment configurations in database:', allConfigs.rows);
+      await dbPool.end();
+      
+      // Now try with ORM
+      const activeConfigs = await db.select().from(environmentConfigurations)
+        .where(eq(environmentConfigurations.isActive, true));
+      console.log('Active configs via ORM:', activeConfigs);
       
       // Group by environment for easy frontend consumption
       const groupedConfigs = {
@@ -2273,19 +2299,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         production: {}
       };
       
-      configs.forEach(config => {
+      activeConfigs.forEach(config => {
         const envId = config.environmentId as keyof typeof groupedConfigs;
         if (groupedConfigs[envId]) {
           groupedConfigs[envId][config.integrationType] = config.integrationId;
         }
       });
       
-      console.log('Grouped configs for frontend:', groupedConfigs);
+      console.log('Final grouped configs:', groupedConfigs);
       
       res.json(groupedConfigs);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching environment configurations:", error);
-      res.status(500).json({ error: "Failed to fetch environment configurations" });
+      res.status(500).json({ error: "Failed to fetch environment configurations", details: error.message });
     }
   });
 
