@@ -518,6 +518,106 @@ export function EnhancedSchedulerForm({
           </CardContent>
         </Card>
 
+        {/* Recipients Configuration */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Email Recipients
+            </CardTitle>
+            <CardDescription>Configure who will receive the scheduled reports</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="recipients">Primary Recipients</Label>
+              <div className="space-y-2">
+                <Input
+                  id="recipients"
+                  placeholder="Enter email addresses separated by commas"
+                  value={formData.recipientList.join(', ')}
+                  onChange={(e) => {
+                    const emails = e.target.value.split(',').map(email => email.trim()).filter(email => email);
+                    setFormData({ ...formData, recipientList: emails });
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Add multiple emails separated by commas (e.g., john@example.com, jane@example.com)
+                </p>
+              </div>
+              {formData.recipientList.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {formData.recipientList.map((email, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
+                      {email}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newRecipients = formData.recipientList.filter((_, i) => i !== index);
+                          setFormData({ ...formData, recipientList: newRecipients });
+                        }}
+                        className="ml-1 text-muted-foreground hover:text-foreground"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="cc">CC Recipients (Optional)</Label>
+                <Input
+                  id="cc"
+                  placeholder="CC emails"
+                  value={formData.ccList.join(', ')}
+                  onChange={(e) => {
+                    const emails = e.target.value.split(',').map(email => email.trim()).filter(email => email);
+                    setFormData({ ...formData, ccList: emails });
+                  }}
+                />
+              </div>
+              <div>
+                <Label htmlFor="bcc">BCC Recipients (Optional)</Label>
+                <Input
+                  id="bcc"
+                  placeholder="BCC emails"
+                  value={formData.bccList.join(', ')}
+                  onChange={(e) => {
+                    const emails = e.target.value.split(',').map(email => email.trim()).filter(email => email);
+                    setFormData({ ...formData, bccList: emails });
+                  }}
+                />
+              </div>
+            </div>
+
+            {mailingLists && mailingLists.length > 0 && (
+              <div>
+                <Label>Quick Add from Mailing Lists</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {mailingLists.map((list) => (
+                    <Button
+                      key={list.id}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const listEmails = list.emails.map(e => e.email);
+                        const newRecipients = [...new Set([...formData.recipientList, ...listEmails])];
+                        setFormData({ ...formData, recipientList: newRecipients });
+                      }}
+                    >
+                      <Mail className="h-3 w-3 mr-1" />
+                      {list.name} ({list.subscriberCount})
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Schedule Configuration */}
         <Card>
           <CardHeader>

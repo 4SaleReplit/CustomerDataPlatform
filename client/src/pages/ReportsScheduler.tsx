@@ -93,6 +93,8 @@ const MONTH_DAY_OPTIONS = Array.from({ length: 28 }, (_, i) => ({
   value: (i + 1).toString()
 }));
 
+
+
 // Function to generate cron expression from user-friendly inputs
 function generateCronExpression(frequency: string, time: string, weekday?: string, monthDay?: string): string {
   const [hour, minute] = time.split(':');
@@ -166,6 +168,56 @@ export function ReportsScheduler() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Function to format cron expression to user-friendly description
+  const formatScheduleDescription = (cronExpression: string, timezone: string = 'Africa/Cairo'): string => {
+    if (!cronExpression) return 'Not scheduled';
+    
+    try {
+      const parts = cronExpression.split(' ');
+      if (parts.length !== 5) return cronExpression;
+      
+      const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
+      
+      // Convert 24-hour to 12-hour format
+      const timeFormatted = new Date(`2000-01-01T${hour.padStart(2, '0')}:${minute.padStart(2, '0')}:00`).toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      
+      const timezoneShort = timezone.split('/')[1] || timezone;
+      
+      // Daily schedule
+      if (dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+        return `Daily at ${timeFormatted} (${timezoneShort})`;
+      }
+      
+      // Weekly schedule
+      if (dayOfMonth === '*' && month === '*' && dayOfWeek !== '*') {
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const dayName = dayNames[parseInt(dayOfWeek)] || 'Unknown';
+        return `Every ${dayName} at ${timeFormatted} (${timezoneShort})`;
+      }
+      
+      // Monthly schedule
+      if (dayOfMonth !== '*' && month === '*' && dayOfWeek === '*') {
+        const dayNum = parseInt(dayOfMonth);
+        const suffix = dayNum === 1 ? 'st' : dayNum === 2 ? 'nd' : dayNum === 3 ? 'rd' : 'th';
+        return `${dayNum}${suffix} of every month at ${timeFormatted} (${timezoneShort})`;
+      }
+      
+      // Quarterly schedule (every 3 months)
+      if (dayOfMonth === '1' && month === '*/3' && dayOfWeek === '*') {
+        return `Quarterly at ${timeFormatted} (${timezoneShort})`;
+      }
+      
+      // Default fallback to cron expression
+      return `${cronExpression} (${timezoneShort})`;
+    } catch (error) {
+      return cronExpression;
+    }
+  };
 
   // Fetch scheduled reports
   const { data: scheduledReports = [], isLoading: reportsLoading } = useQuery({
@@ -552,7 +604,7 @@ export function ReportsScheduler() {
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {report.cronExpression}
+                        {formatScheduleDescription(report.cronExpression, report.timezone)}
                       </div>
                       <div className="flex items-center gap-1">
                         <Users className="h-3 w-3" />
