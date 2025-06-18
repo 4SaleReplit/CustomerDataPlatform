@@ -86,16 +86,19 @@ export default function AdminNew() {
   const [selectedConfigEnv, setSelectedConfigEnv] = useState('');
   const [envConfig, setEnvConfig] = useState<{ [key: string]: string }>({});
   const [currentEnvironment, setCurrentEnvironment] = useState('development');
+  const [activeIntegrationTypes, setActiveIntegrationTypes] = useState(['postgresql', 'snowflake']);
+  const [environmentDatabases, setEnvironmentDatabases] = useState<{ [envId: string]: { [type: string]: string } }>({
+    development: {},
+    staging: {},
+    production: {}
+  });
 
   // Environment data
   const environments = [
-    { id: 'development', name: 'Development', status: 'active', databases: {} },
-    { id: 'staging', name: 'Staging', status: 'inactive', databases: {} },
-    { id: 'production', name: 'Production', status: 'inactive', databases: {} }
+    { id: 'development', name: 'Development', status: 'active', databases: environmentDatabases.development },
+    { id: 'staging', name: 'Staging', status: 'inactive', databases: environmentDatabases.staging },
+    { id: 'production', name: 'Production', status: 'inactive', databases: environmentDatabases.production }
   ];
-
-  // Active integration types for migration
-  const activeIntegrationTypes = ['postgresql', 'snowflake'];
 
   // Helper functions
   const getIntegrationDisplay = (type: string) => {
@@ -103,7 +106,10 @@ export default function AdminNew() {
       postgresql: { icon: Database, color: 'blue' },
       snowflake: { icon: Cloud, color: 'indigo' },
       mysql: { icon: Database, color: 'orange' },
-      mongodb: { icon: Database, color: 'green' }
+      mongodb: { icon: Database, color: 'green' },
+      s3: { icon: Cloud, color: 'purple' },
+      braze: { icon: Settings, color: 'red' },
+      amplitude: { icon: Settings, color: 'teal' }
     };
     return displays[type] || { icon: Database, color: 'gray' };
   };
@@ -873,8 +879,9 @@ export default function AdminNew() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {activeIntegrationTypes.map(type => {
                   const activeEnv = environments.find(e => e.status === 'active');
-                  const dbConfig = activeEnv?.databases?.[type];
-                  const dbStatus = dbConfig?.status || 'disconnected';
+                  const selectedIntegrationId = activeEnv?.databases?.[type];
+                  const selectedIntegration = integrations.find((i: any) => i.id === selectedIntegrationId);
+                  const dbStatus = selectedIntegration?.status || 'disconnected';
                   const { icon: Icon, color } = getIntegrationDisplay(type);
                   
                   return (
@@ -910,8 +917,9 @@ export default function AdminNew() {
                   {/* Database Status */}
                   <div className="space-y-2">
                     {activeIntegrationTypes.map(type => {
-                      const dbConfig = env.databases?.[type];
-                      const dbStatus = dbConfig?.status || 'disconnected';
+                      const selectedIntegrationId = env.databases?.[type];
+                      const selectedIntegration = integrations.find((i: any) => i.id === selectedIntegrationId);
+                      const dbStatus = selectedIntegration?.status || 'disconnected';
                       const { icon: Icon, color } = getIntegrationDisplay(type);
                       
                       return (
@@ -1227,32 +1235,63 @@ export default function AdminNew() {
               <span>Configure Integration Types</span>
             </DialogTitle>
             <DialogDescription>
-              Select which integration types to use for environment management
+              Select which integration types to use for multi-stage environment management (Dev, Staging, Production)
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-3">
-              {['postgresql', 'snowflake', 'mysql', 'mongodb'].map(type => {
+              {['postgresql', 'snowflake', 'mysql', 'mongodb', 's3', 'braze', 'amplitude'].map(type => {
                 const { icon: Icon, color } = getIntegrationDisplay(type);
                 const isActive = activeIntegrationTypes.includes(type);
+                const hasIntegrations = integrations.some((i: any) => i.type === type);
                 return (
-                  <div key={type} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center">
-                      <Icon className={`h-4 w-4 mr-2 text-${color}-600`} />
+                  <div key={type} className={`flex items-center justify-between p-3 border rounded-lg ${!hasIntegrations ? 'opacity-50' : ''}`}>
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        checked={isActive}
+                        disabled={!hasIntegrations}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setActiveIntegrationTypes(prev => [...prev, type]);
+                          } else {
+                            setActiveIntegrationTypes(prev => prev.filter(t => t !== type));
+                          }
+                        }}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      />
+                      <Icon className={`h-4 w-4 text-${color}-600`} />
                       <span className="font-medium">{type.charAt(0).toUpperCase() + type.slice(1)}</span>
                     </div>
-                    <Badge variant={isActive ? 'default' : 'secondary'}>
-                      {isActive ? 'Active' : 'Inactive'}
-                    </Badge>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-muted-foreground">
+                        {integrations.filter((i: any) => i.type === type).length} configured
+                      </span>
+                      <Badge variant={isActive ? 'default' : 'secondary'}>
+                        {isActive ? 'Selected' : 'Available'}
+                      </Badge>
+                    </div>
                   </div>
                 );
               })}
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-700">
+                <strong>Note:</strong> Selected integration types will support multi-stage environments (Development, Staging, Production). 
+                You can assign different integration instances to each environment stage.
+              </p>
             </div>
             <div className="flex justify-end space-x-2">
               <Button variant="outline" onClick={() => setShowIntegrationTypesModal(false)}>
                 Cancel
               </Button>
-              <Button onClick={() => setShowIntegrationTypesModal(false)}>
+              <Button onClick={() => {
+                setShowIntegrationTypesModal(false);
+                toast({
+                  title: "Integration types updated",
+                  description: `Selected ${activeIntegrationTypes.length} integration types for environment management`
+                });
+              }}>
                 Save Configuration
               </Button>
             </div>
@@ -1269,59 +1308,85 @@ export default function AdminNew() {
               <span>Configure {environments.find(e => e.id === selectedConfigEnv)?.name} Environment</span>
             </DialogTitle>
             <DialogDescription>
-              Set up database connections for this environment
+              Select integration instances for each integration type in this environment stage
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6">
             {activeIntegrationTypes.map(type => {
               const { icon: Icon, color } = getIntegrationDisplay(type);
+              const typeIntegrations = integrations.filter((i: any) => i.type === type);
+              const currentSelection = environmentDatabases[selectedConfigEnv]?.[type] || '';
+              
               return (
                 <div key={type} className="space-y-3">
-                  <div className="flex items-center">
-                    <Icon className={`h-5 w-5 mr-2 text-${color}-600`} />
-                    <h4 className="font-medium">{type.charAt(0).toUpperCase() + type.slice(1)} Configuration</h4>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Icon className={`h-5 w-5 mr-2 text-${color}-600`} />
+                      <h4 className="font-medium">{type.charAt(0).toUpperCase() + type.slice(1)} Integration</h4>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {typeIntegrations.length} available
+                    </Badge>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor={`${type}-host`}>Host</Label>
-                      <Input
-                        id={`${type}-host`}
-                        placeholder="localhost"
-                        value={envConfig[`${type}-host`] || ''}
-                        onChange={(e) => setEnvConfig(prev => ({ ...prev, [`${type}-host`]: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`${type}-port`}>Port</Label>
-                      <Input
-                        id={`${type}-port`}
-                        placeholder="5432"
-                        value={envConfig[`${type}-port`] || ''}
-                        onChange={(e) => setEnvConfig(prev => ({ ...prev, [`${type}-port`]: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`${type}-database`}>Database</Label>
-                      <Input
-                        id={`${type}-database`}
-                        placeholder="database_name"
-                        value={envConfig[`${type}-database`] || ''}
-                        onChange={(e) => setEnvConfig(prev => ({ ...prev, [`${type}-database`]: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`${type}-user`}>Username</Label>
-                      <Input
-                        id={`${type}-user`}
-                        placeholder="username"
-                        value={envConfig[`${type}-user`] || ''}
-                        onChange={(e) => setEnvConfig(prev => ({ ...prev, [`${type}-user`]: e.target.value }))}
-                      />
-                    </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor={`${type}-integration`}>Select Integration Instance</Label>
+                    <select
+                      id={`${type}-integration`}
+                      value={currentSelection}
+                      onChange={(e) => {
+                        setEnvironmentDatabases(prev => ({
+                          ...prev,
+                          [selectedConfigEnv]: {
+                            ...prev[selectedConfigEnv],
+                            [type]: e.target.value
+                          }
+                        }));
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">-- Select {type} integration --</option>
+                      {typeIntegrations.map((integration: any) => (
+                        <option key={integration.id} value={integration.id}>
+                          {integration.name} ({integration.status === 'connected' ? '✓ Connected' : '⚠ Disconnected'})
+                        </option>
+                      ))}
+                    </select>
+                    
+                    {currentSelection && (
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        {(() => {
+                          const selectedIntegration = integrations.find((i: any) => i.id === currentSelection);
+                          return selectedIntegration ? (
+                            <div className="text-sm">
+                              <p className="font-medium">{selectedIntegration.name}</p>
+                              <p className="text-gray-600">{selectedIntegration.type}</p>
+                              <span className={`inline-flex items-center px-2 py-1 rounded text-xs ${
+                                selectedIntegration.status === 'connected' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {selectedIntegration.status}
+                              </span>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-500">Integration not found</p>
+                          );
+                        })()}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
             })}
+            
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="text-xs text-amber-700">
+                <strong>Note:</strong> Each environment stage can use different integration instances. 
+                For example, Development can use a local PostgreSQL while Production uses a cloud instance.
+              </p>
+            </div>
+            
             <div className="flex justify-end space-x-2">
               <Button variant="outline" onClick={() => setShowEnvConfigModal(false)}>
                 Cancel
