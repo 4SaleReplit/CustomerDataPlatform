@@ -2059,6 +2059,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     return `ARRAY[${arrayElements}]`;
                   }
                   
+                  // Handle PostgreSQL array strings (format: {uuid1,uuid2,uuid3})
+                  if (typeof val === 'string' && colType && colType.dataType === 'ARRAY' && val.startsWith('{') && val.endsWith('}')) {
+                    const elements = val.slice(1, -1).split(',').filter(s => s.trim());
+                    if (elements.length === 0) return 'ARRAY[]';
+                    const arrayElements = elements.map(item => `'${item.trim().replace(/'/g, "''")}'`).join(',');
+                    // Cast array to proper type based on column type
+                    if (colType.udtName === '_uuid') {
+                      return `ARRAY[${arrayElements}]::uuid[]`;
+                    } else if (colType.udtName === '_text') {
+                      return `ARRAY[${arrayElements}]::text[]`;
+                    } else if (colType.udtName === '_int4') {
+                      return `ARRAY[${arrayElements}]::integer[]`;
+                    }
+                    return `ARRAY[${arrayElements}]`;
+                  }
+                  
                   // Handle JSONB columns specifically (for non-Date objects)
                   if (colType && (colType.dataType === 'jsonb' || colType.properDataType === 'jsonb')) {
                     return `'${JSON.stringify(val).replace(/'/g, "''")}'::jsonb`;
