@@ -646,6 +646,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User cache for storing all users
+  let userCache: any = null;
+  let userCacheTimestamp: number = 0;
+  const CACHE_DURATION = 1000 * 60 * 30; // 30 minutes
+
+  // Get all users with server-side caching
+  app.get("/api/users/all", async (req: Request, res: Response) => {
+    try {
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const snowflakeService = await getDynamicSnowflakeService();
+      
+      if (!snowflakeService) {
+        return res.status(404).json({ error: "Snowflake integration not configured" });
+      }
+
+      // Check if cache is valid
+      const now = Date.now();
+      if (userCache && (now - userCacheTimestamp) < CACHE_DURATION) {
+        console.log('Serving users from cache');
+        return res.json(userCache);
+      }
+
+      // Fetch all users from Snowflake
+      console.log('Fetching all users from Snowflake and caching...');
+      const query = 'SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE CURRENT_CREDITS_IN_WALLET != 0 AND TOTAL_CREDITS_SPENT != 0 AND PHONE IS NOT NULL AND PHONE != \'\'';
+      const result = await snowflakeService.executeQuery(query);
+      
+      if (result.success) {
+        userCache = {
+          columns: result.columns,
+          rows: result.rows,
+          success: true,
+          cached: true,
+          cacheTimestamp: now
+        };
+        userCacheTimestamp = now;
+        console.log(`Cached ${result.rows?.length || 0} users`);
+        res.json(userCache);
+      } else {
+        res.status(500).json({ error: result.error });
+      }
+    } catch (error) {
+      console.error("Users cache error:", error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  // Get users by specific IDs
+  app.post("/api/users/by-ids", async (req: Request, res: Response) => {
+    try {
+      const { getDynamicSnowflakeService } = await import('./services/snowflake');
+      const snowflakeService = await getDynamicSnowflakeService();
+      
+      if (!snowflakeService) {
+        return res.status(404).json({ error: "Snowflake integration not configured" });
+      }
+
+      const { userIds } = req.body;
+      if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+        return res.status(400).json({ error: "User IDs array is required" });
+      }
+
+      // Clean and format user IDs for SQL query
+      const cleanIds = userIds.map(id => String(id).trim()).filter(id => id.length > 0);
+      if (cleanIds.length === 0) {
+        return res.status(400).json({ error: "No valid user IDs provided" });
+      }
+
+      // Create SQL query with IN clause
+      const idList = cleanIds.map(id => `'${id}'`).join(',');
+      const query = `SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE USER_ID IN (${idList})`;
+      
+      console.log(`Fetching ${cleanIds.length} specific users from Snowflake`);
+      const result = await snowflakeService.executeQuery(query);
+      
+      if (result.success) {
+        res.json({
+          columns: result.columns,
+          rows: result.rows,
+          success: true,
+          query: query
+        });
+      } else {
+        res.status(500).json({ error: result.error });
+      }
+    } catch (error) {
+      console.error("Users by IDs error:", error);
+      res.status(500).json({ error: "Failed to fetch users by IDs" });
+    }
+  });
+
+  // Clear users cache endpoint
+  app.post("/api/users/clear-cache", async (req: Request, res: Response) => {
+    userCache = null;
+    userCacheTimestamp = 0;
+    console.log('User cache cleared');
+    res.json({ success: true, message: "User cache cleared" });
+  });
+
   // Snowflake query execution endpoint
   app.post("/api/snowflake/query", async (req: Request, res: Response) => {
     try {

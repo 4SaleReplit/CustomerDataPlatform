@@ -18,6 +18,8 @@ function Users() {
   const [roleFilter, setRoleFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSearchingIds, setIsSearchingIds] = useState(false);
+  const [searchMode, setSearchMode] = useState<'all' | 'ids'>('all');
   const queryClient = useQueryClient();
 
   // Track page visit on component mount
@@ -27,29 +29,58 @@ function Users() {
 
   const usersPerPage = 10;
 
-  // Fetch users from Snowflake with caching
-  const { data: usersData, isLoading: usersLoading, refetch: refetchUsers } = useQuery({
-    queryKey: ['users', 'snowflake'],
+  // Fetch all users with server-side caching
+  const { data: allUsersData, isLoading: allUsersLoading, refetch: refetchAllUsers } = useQuery({
+    queryKey: ['users', 'all'],
     queryFn: async () => {
-      const response = await apiRequest('/api/snowflake/query', {
+      const response = await apiRequest('/api/users/all');
+      return response;
+    },
+    staleTime: 1000 * 60 * 30, // 30 minutes
+    gcTime: 1000 * 60 * 60 * 24, // Cache for 24 hours
+    enabled: searchMode === 'all'
+  });
+
+  // Fetch users by specific IDs
+  const { data: idSearchData, isLoading: idSearchLoading, refetch: refetchIdSearch } = useQuery({
+    queryKey: ['users', 'by-ids', searchTerm],
+    queryFn: async () => {
+      if (!searchTerm.trim()) return null;
+      
+      // Parse comma-separated user IDs
+      const userIds = searchTerm.split(',')
+        .map(id => id.trim())
+        .filter(id => id.length > 0);
+      
+      if (userIds.length === 0) return null;
+
+      const response = await apiRequest('/api/users/by-ids', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          query: 'SELECT * FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4 WHERE CURRENT_CREDITS_IN_WALLET != 0 AND TOTAL_CREDITS_SPENT != 0 AND PHONE IS NOT NULL AND PHONE != \'\' LIMIT 100' 
-        })
+        body: JSON.stringify({ userIds })
       });
       return response;
     },
-    staleTime: Infinity, // Keep data until manually refreshed
-    gcTime: 1000 * 60 * 60 * 24, // Cache for 24 hours
+    enabled: searchMode === 'ids' && searchTerm.trim().length > 0,
+    staleTime: 1000 * 60 * 5, // 5 minutes for ID searches
   });
+
+  // Determine which data to use
+  const usersData = searchMode === 'ids' ? idSearchData : allUsersData;
+  const usersLoading = searchMode === 'ids' ? idSearchLoading : allUsersLoading;
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      analytics.buttonClicked('Refresh', 'Users', { userCount: filteredUsers.length });
-      await queryClient.invalidateQueries({ queryKey: ['users', 'snowflake'] });
-      await refetchUsers();
+      if (searchMode === 'all') {
+        // Clear cache and refetch all users
+        await apiRequest('/api/users/clear-cache', { method: 'POST' });
+        await refetchAllUsers();
+        analytics.buttonClicked('Refresh All Users', 'Users', { cached: true });
+      } else {
+        await refetchIdSearch();
+        analytics.buttonClicked('Refresh ID Search', 'Users', { searchTerm });
+      }
     } finally {
       setIsRefreshing(false);
     }
@@ -72,6 +103,11 @@ function Users() {
     }) : [];
 
   const filteredUsers = processedUsers.filter((user: any) => {
+    // Skip text search if we're in ID search mode
+    if (searchMode === 'ids') {
+      return true; // Show all results from ID search
+    }
+    
     const searchableFields = [
       user.USER_ID,
       user.EMAIL,
@@ -180,6 +216,40 @@ function Users() {
         </div>
       </div>
 
+      {/* Search Mode Toggle */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium">Search Mode:</span>
+            <div className="flex gap-2">
+              <Button
+                variant={searchMode === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => {
+                  setSearchMode('all');
+                  setSearchTerm('');
+                }}
+              >
+                All Users (Cached)
+              </Button>
+              <Button
+                variant={searchMode === 'ids' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSearchMode('ids')}
+              >
+                <Hash className="h-4 w-4 mr-1" />
+                Search by User IDs
+              </Button>
+            </div>
+            {usersData?.cached && (
+              <Badge variant="secondary" className="ml-auto">
+                Cached Data
+              </Badge>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Filters */}
       <Card>
         <CardContent className="p-6">
@@ -188,12 +258,20 @@ function Users() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Search by email, name, or user ID..."
+                  placeholder={searchMode === 'ids' 
+                    ? "Enter user IDs separated by commas (e.g., 12345, 67890, 54321)..." 
+                    : "Search by email, name, or user ID..."
+                  }
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
+              {searchMode === 'ids' && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter specific user IDs separated by commas to search for exact matches
+                </p>
+              )}
             </div>
             
             <Select value={userTypeFilter} onValueChange={setUserTypeFilter}>
