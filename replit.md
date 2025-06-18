@@ -186,15 +186,16 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
   - Validated complete integration creation flow from frontend to database persistence
   - Removed credential encryption temporarily to ensure stable integration creation process
 
-- **June 18, 2025**: Enhanced Users Page with Dynamic Search & Side Panel ID Search
+- **June 18, 2025**: Enhanced Users Page with Pagination & Smart Sorting
+  - Added pagination with 20 users per page for better data management (5 pages for 100-user sample)
+  - Implemented smart sorting by total credits spent (descending) then paid listings count (descending)
+  - Enhanced refresh functionality to properly restore normal view after user ID searches
+  - Fixed "Search with ID" button positioning beside refresh button with compact size
+  - User ID search queries Snowflake directly without full screen refresh
   - Restored original search and filters interface with dynamic real-time search functionality
   - Added User Type filter (All, Premium, Regular, Normal) and Status filter (All, Active, Blocked)  
   - Implemented left side panel for dedicated User ID search with clean interface
-  - User ID search panel opens on button click with proper form validation and feedback
-  - Main search updates table results dynamically while typing for instant filtering
   - Maintained 100-user display limit with accurate total count (1,186,432 users) from Snowflake
-  - User ID search queries Snowflake directly and updates only table view without page reload
-  - Enhanced search functionality separates general filtering from targeted ID-based queries
 
 - **June 18, 2025**: Complete User Management System with Password Generation & Edit Capabilities
   - Implemented comprehensive user creation with name, email, and auto-generated secure passwords

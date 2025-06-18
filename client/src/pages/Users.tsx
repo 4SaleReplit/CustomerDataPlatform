@@ -28,7 +28,7 @@ function Users() {
     analytics.screenViewed('Users');
   }, []);
 
-  const usersPerPage = 10;
+  const usersPerPage = 20;
 
   // Initial load of 100 users for display with total count
   const { data: allUsersData, isLoading: allUsersLoading, refetch: refetchAllUsers } = useQuery({
@@ -107,7 +107,7 @@ function Users() {
   const usersData = searchExecuted ? idSearchData : allUsersData;
   const usersLoading = searchExecuted ? idSearchLoading : allUsersLoading;
 
-  // Convert user data to consistent format
+  // Convert user data to consistent format and sort by paid amount and listings
   const processedUsers = usersData?.rows ? 
     usersData.rows.map((row: any[]) => {
       const userObject: any = {};
@@ -118,6 +118,16 @@ function Users() {
         id: userObject.USER_ID,
         ...userObject
       };
+    }).sort((a: any, b: any) => {
+      // Sort by total credits spent (descending), then by paid listings count (descending)
+      const aCredits = parseFloat(a.TOTAL_CREDITS_SPENT || 0);
+      const bCredits = parseFloat(b.TOTAL_CREDITS_SPENT || 0);
+      if (aCredits !== bCredits) {
+        return bCredits - aCredits;
+      }
+      const aPaidListings = parseInt(a.PAID_LISTINGS_COUNT || 0);
+      const bPaidListings = parseInt(b.PAID_LISTINGS_COUNT || 0);
+      return bPaidListings - aPaidListings;
     }) : [];
 
   const filteredUsers = processedUsers.filter((user: any) => {
@@ -141,7 +151,7 @@ function Users() {
     return matchesSearch && matchesType && matchesStatus;
   });
 
-  // Pagination - simplified for 100 user display and ID search
+  // Pagination - 20 users per page for both normal view and search results
   let totalPages, currentUsers;
   
   if (searchExecuted) {
@@ -151,9 +161,11 @@ function Users() {
     const endIndex = startIndex + usersPerPage;
     currentUsers = filteredUsers.slice(startIndex, endIndex);
   } else {
-    // For all users mode, show all 100 fetched users without pagination
-    totalPages = 1;
-    currentUsers = processedUsers;
+    // For all users mode, paginate the 100 fetched users (20 per page = 5 pages)
+    totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+    const startIndex = (currentPage - 1) * usersPerPage;
+    const endIndex = startIndex + usersPerPage;
+    currentUsers = filteredUsers.slice(startIndex, endIndex);
   }
 
   const goToPage = (page: number) => {
