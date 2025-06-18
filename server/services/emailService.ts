@@ -39,13 +39,21 @@ class EmailService {
       }
 
       const mailOptions = {
-        from: `"4Sale Analytics" <${process.env.GMAIL_USER}>`,
+        from: `"4Sale Analytics Platform" <${process.env.GMAIL_USER}>`,
         to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
         cc: options.cc ? (Array.isArray(options.cc) ? options.cc.join(', ') : options.cc) : undefined,
         bcc: options.bcc ? (Array.isArray(options.bcc) ? options.bcc.join(', ') : options.bcc) : undefined,
         subject: options.subject,
         html: options.html,
         text: options.text,
+        replyTo: process.env.GMAIL_USER,
+        headers: {
+          'X-Mailer': '4Sale Analytics Platform',
+          'X-Priority': '3',
+          'Importance': 'Normal',
+          'List-Unsubscribe': `<mailto:${process.env.GMAIL_USER}?subject=Unsubscribe>`,
+          'Return-Path': process.env.GMAIL_USER
+        },
         attachments: options.attachments?.map(att => ({
           filename: att.filename,
           content: att.content,
