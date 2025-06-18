@@ -111,6 +111,13 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 18, 2025**: Fixed Email Template Visual Preview Display Issues
+  - Resolved template preview width problems in Email Templates Designer page
+  - Added proper CSS scaling (transform: scale(0.8)) for optimal template display within preview container
+  - Templates now display centered with correct 600px width and responsive scaling
+  - Enhanced visual preview with proper transform-origin positioning for professional template presentation
+  - Email Templates Designer now provides accurate visual representation of templates before selection
+
 - **June 18, 2025**: Implemented Complete HTML/CSS Email Template Builder with Gmail SMTP Integration
   - Created comprehensive EmailTemplateBuilder component with three professional templates (Professional, Minimal, Dashboard)
   - Integrated visual template selection with live preview and variable customization
