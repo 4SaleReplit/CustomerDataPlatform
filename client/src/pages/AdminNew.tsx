@@ -739,9 +739,9 @@ export default function AdminNew() {
             <Button 
               onClick={() => setShowMigrationModal(true)} 
               className="bg-blue-600 hover:bg-blue-700"
-              disabled={(integrations as any[]).filter((i: any) => i.type === 'postgresql').length < 2}
+              disabled={getMigratableIntegrationTypes().length === 0}
             >
-              <Database className="h-4 w-4 mr-2" />
+              <Target className="h-4 w-4 mr-2" />
               Start Migration
             </Button>
           </div>
@@ -873,13 +873,16 @@ export default function AdminNew() {
         </TabsContent>
       </Tabs>
 
-      {/* Migration Modal - Original Checkpoint Version */}
+      {/* Migration Modal - Checkpoint System Restored */}
       <Dialog open={showMigrationModal} onOpenChange={setShowMigrationModal}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Integration Migration</DialogTitle>
+            <DialogTitle className="flex items-center space-x-2">
+              <Target className="h-5 w-5" />
+              <span>Integration Migration</span>
+            </DialogTitle>
             <DialogDescription>
-              Migrate data and schema between integrations of the same type
+              Migrate data and schema between integrations of the same type with real-time console logging
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6">
