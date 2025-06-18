@@ -731,7 +731,7 @@ export function ReportsScheduler() {
                     <div>
                       <Label className="text-xs text-muted-foreground">SENT AT</Label>
                       <p className="font-medium">
-                        {report.lastExecutionAt ? new Date(report.lastExecutionAt).toLocaleString() : "Processing..."}
+                        {report.lastExecuted ? new Date(report.lastExecuted).toLocaleString() : "Processing..."}
                       </p>
                     </div>
                     <div>

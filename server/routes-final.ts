@@ -264,8 +264,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(404).json({ error: "Presentation not found" });
         }
 
-        // Process email template with variables
-        const emailHtml = await processEmailTemplate(reportData.emailTemplate?.customContent || 'Your report is ready.', reportData);
+        // Process email template with variables using the existing email service
+        const { emailService } = await import('./services/emailService');
+        
+        // Generate HTML email content using template
+        const emailHtml = processEmailTemplate(reportData.emailTemplate?.customContent || 'Your report is ready.', reportData);
         
         // Send email immediately using Gmail SMTP
         const emailData = {
@@ -274,13 +277,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           bcc: reportData.bccList || [],
           subject: reportData.emailTemplate?.subject || `Report: ${reportData.name}`,
           html: emailHtml,
-          // TODO: Add PDF attachment generation
+          attachments: [] // TODO: Add PDF attachment generation
         };
 
         console.log('Sending immediate email to:', emailData.to);
         
         try {
-          await sendReportEmail(emailData);
+          const success = await emailService.sendReportEmail(emailData);
+          
+          if (!success) {
+            throw new Error('Email sending failed');
+          }
+          
+          console.log('Email sent successfully to:', emailData.to);
           
           // Create a one-time report record for tracking
           const reportInsertData = {
@@ -304,7 +313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             executionCount: 1,
             errorCount: 0,
             successCount: 1,
-            lastExecutionAt: new Date(),
+            lastExecuted: new Date(),
             lastError: null,
             createdBy: (req as any).session?.user?.id || null,
             emailTemplate: reportData.emailTemplate

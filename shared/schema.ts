@@ -439,6 +439,7 @@ export const scheduledReports = pgTable("scheduled_reports", {
   pdfDeliveryUrl: text("pdf_delivery_url"), // Public URL for PDF delivery
   placeholderConfig: jsonb("placeholder_config").default('{}'), // Available placeholders and their sources
   formatSettings: jsonb("format_settings").default('{}'), // PDF/Excel export settings
+  emailTemplate: jsonb("email_template").default('{}'), // Email template configuration
   createdBy: uuid("created_by").references(() => team.id, { onDelete: 'set null' }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
