@@ -1568,11 +1568,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   
                   if (dataResult.rows.length > 0) {
                     const columnNames = Object.keys(dataResult.rows[0]).map(col => `"${col}"`).join(', ');
-                    const values = dataResult.rows.map(row => 
-                      '(' + Object.values(row).map(val => val === null ? 'NULL' : `'${String(val).replace(/'/g, "''")}'`).join(', ') + ')'
-                    ).join(', ');
                     
-                    await targetClient.query(`INSERT INTO "${table}" (${columnNames}) VALUES ${values}`);
+                    // Process each row individually to handle JSON data properly
+                    for (const row of dataResult.rows) {
+                      const values: any[] = Object.values(row).map((val: any) => {
+                        if (val === null) {
+                          return null;
+                        } else if (typeof val === 'object') {
+                          // Serialize objects to JSON strings
+                          return JSON.stringify(val);
+                        } else {
+                          return val;
+                        }
+                      });
+                      
+                      const placeholders = values.map((_, idx) => `$${idx + 1}`).join(', ');
+                      await targetClient.query(`INSERT INTO "${table}" (${columnNames}) VALUES (${placeholders})`, values);
+                    }
                   }
                   
                   offset += batchSize;
@@ -1619,20 +1631,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               completedItems: tables.length
             });
 
-            // Store migration history
-            await storage.createMigrationHistory({
-              sessionId,
-              sourceIntegrationId,
-              targetIntegrationId,
-              sourceIntegrationName: sourceEnvironment,
-              targetIntegrationName: targetEnvironment,
-              migrationType: type,
-              status: 'completed',
-              progress: 100,
-              totalItems: tables.length,
-              completedItems: tables.length,
-              logs: migrationLogs.get(sessionId) || []
-            });
+            // Migration completed successfully
+            console.log(`Migration ${sessionId} completed successfully with ${tables.length} tables migrated`);
 
           } else {
             // Handle other migration types
@@ -1657,21 +1657,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             error: errorMessage
           });
 
-          // Store failed migration history
-          await storage.createMigrationHistory({
-            sessionId,
-            sourceIntegrationId,
-            targetIntegrationId,
-            sourceIntegrationName: sourceEnvironment,
-            targetIntegrationName: targetEnvironment,
-            migrationType: type,
-            status: 'error',
-            progress: migrationSessions.get(sessionId)?.progress || 0,
-            totalItems: migrationSessions.get(sessionId)?.totalItems || 0,
-            completedItems: migrationSessions.get(sessionId)?.completedItems || 0,
-            errorMessage,
-            logs: migrationLogs.get(sessionId) || []
-          });
+          // Migration failed - log error only
+          console.error(`Migration ${sessionId} failed:`, errorMessage);
         }
       });
 
