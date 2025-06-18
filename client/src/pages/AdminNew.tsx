@@ -144,12 +144,51 @@ export default function AdminNew() {
     }
   };
 
-  const handleSwitchEnvironment = (envId: string) => {
-    setCurrentEnvironment(envId);
-    toast({
-      title: "Environment switched",
-      description: `Now using ${environments.find(e => e.id === envId)?.name} environment`
-    });
+  const handleSwitchEnvironment = async (envId: string) => {
+    const environment = environments.find(e => e.id === envId);
+    if (!environment) return;
+
+    // Find the PostgreSQL integration for this environment
+    const postgresIntegrationId = environmentConfigs?.[environment.name.toLowerCase()]?.postgresql;
+    if (!postgresIntegrationId) {
+      toast({
+        title: "Configuration Missing",
+        description: `No PostgreSQL integration configured for ${environment.name} environment`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const response = await apiRequest('/api/switch-environment', {
+        method: 'POST',
+        body: JSON.stringify({
+          environment: environment.name.toLowerCase(),
+          integrationId: postgresIntegrationId
+        }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.success) {
+        // Update environments state to reflect the switch
+        setEnvironments(prev => prev.map(env => ({
+          ...env,
+          status: env.id === envId ? 'active' : 'inactive'
+        })));
+        setCurrentEnvironment(envId);
+        
+        toast({
+          title: "Environment Switched Successfully",
+          description: `Platform is now using ${environment.name} database for all operations`
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Environment Switch Failed",
+        description: error.message || "Failed to switch environment",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleConfigureEnvironment = (envId: string) => {
