@@ -1240,6 +1240,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const testResult = await snowflakeService.executeQuery("SELECT 1 as test");
         
         if (testResult.success) {
+          // Update integration status to connected
+          await storage.updateIntegration(id, { 
+            status: 'connected',
+            metadata: {
+              lastTested: new Date().toISOString(),
+              lastTestResult: {
+                success: true,
+                testedAt: new Date().toISOString(),
+                database: credentials.database,
+                warehouse: credentials.warehouse,
+                account: credentials.account
+              }
+            }
+          });
+          
           res.json({ 
             success: true, 
             message: "Snowflake connection successful",
@@ -1250,6 +1265,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           });
         } else {
+          // Update integration status to disconnected
+          await storage.updateIntegration(id, { 
+            status: 'disconnected',
+            metadata: {
+              lastTested: new Date().toISOString(),
+              lastTestResult: {
+                success: false,
+                testedAt: new Date().toISOString(),
+                error: testResult.error || "Unknown error"
+              }
+            }
+          });
+          
           res.json({ 
             success: false, 
             error: "Connection failed: " + (testResult.error || "Unknown error")
@@ -1291,6 +1319,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await pool.end();
           
           console.log('PostgreSQL connection successful');
+          
+          // Update integration status to connected
+          const currentMetadata = integration.metadata || {};
+          await storage.updateIntegration(id, { 
+            status: 'connected',
+            metadata: {
+              ...currentMetadata,
+              lastTested: new Date().toISOString(),
+              lastTestResult: {
+                success: true,
+                testedAt: new Date().toISOString(),
+                database: result.rows[0].database,
+                version: result.rows[0].version.split(' ')[0]
+              }
+            }
+          });
+          
           res.json({ 
             success: true, 
             message: "PostgreSQL connection successful",
@@ -1301,6 +1346,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         } catch (error) {
           console.error('PostgreSQL connection failed:', error);
+          
+          // Update integration status to disconnected
+          await storage.updateIntegration(id, { 
+            status: 'disconnected',
+            metadata: {
+              lastTested: new Date().toISOString(),
+              lastTestResult: {
+                success: false,
+                testedAt: new Date().toISOString(),
+                error: error instanceof Error ? error.message : "Unknown error"
+              }
+            }
+          });
+          
           res.json({ 
             success: false, 
             error: "PostgreSQL connection failed: " + (error instanceof Error ? error.message : "Unknown error")
