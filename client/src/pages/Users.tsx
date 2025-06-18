@@ -20,6 +20,7 @@ function Users() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSearchingIds, setIsSearchingIds] = useState(false);
   const [searchMode, setSearchMode] = useState<'all' | 'ids'>('all');
+  const [searchExecuted, setSearchExecuted] = useState(false);
   const queryClient = useQueryClient();
 
   // Track page visit on component mount
@@ -65,15 +66,31 @@ function Users() {
     staleTime: 1000 * 60 * 5, // 5 minutes for ID searches
   });
 
+  // Execute user ID search
+  const executeUserIdSearch = async () => {
+    if (!searchTerm.trim()) return;
+    
+    setIsSearchingIds(true);
+    setSearchExecuted(true);
+    
+    try {
+      await refetchIdSearch();
+      analytics.buttonClicked('Search User IDs', 'Users', { 
+        searchTerm,
+        userIdCount: searchTerm.split(',').length 
+      });
+    } catch (error) {
+      console.error('Search error:', error);
+    } finally {
+      setIsSearchingIds(false);
+    }
+  };
+
   // Handle Enter key press for ID search
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchMode === 'ids' && searchTerm.trim()) {
       e.preventDefault();
-      refetchIdSearch();
-      analytics.buttonClicked('Search User IDs Enter', 'Users', { 
-        searchTerm,
-        userIdCount: searchTerm.split(',').length 
-      });
+      executeUserIdSearch();
     }
   };
 
@@ -81,6 +98,7 @@ function Users() {
   const handleSearchModeChange = (mode: 'all' | 'ids') => {
     setSearchMode(mode);
     setSearchTerm('');
+    setSearchExecuted(false);
     setCurrentPage(1);
     analytics.buttonClicked(`Switch to ${mode === 'all' ? 'All Users' : 'ID Search'}`, 'Users');
   };
@@ -289,23 +307,15 @@ function Users() {
                 {searchMode === 'ids' && (
                   <Button
                     variant="default"
-                    onClick={() => {
-                      if (searchTerm.trim()) {
-                        refetchIdSearch();
-                        analytics.buttonClicked('Search User IDs Button', 'Users', { 
-                          searchTerm,
-                          userIdCount: searchTerm.split(',').length 
-                        });
-                      }
-                    }}
-                    disabled={!searchTerm.trim() || idSearchLoading}
+                    onClick={executeUserIdSearch}
+                    disabled={!searchTerm.trim() || isSearchingIds}
                   >
-                    {idSearchLoading ? (
-                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    {isSearchingIds ? (
+                      <RefreshCw className="h-4 w-4 animate-spin mr-2" />
                     ) : (
-                      <Search className="h-4 w-4" />
+                      <Search className="h-4 w-4 mr-2" />
                     )}
-                    Search
+                    Search Users
                   </Button>
                 )}
               </div>
@@ -366,15 +376,20 @@ function Users() {
                 {searchMode === 'ids' && searchTerm ? 'Search Results' : 'Users'} 
                 ({filteredUsers.length} total)
               </CardTitle>
-              {searchMode === 'ids' && idSearchLoading && (
+              {searchMode === 'ids' && isSearchingIds && (
                 <Badge variant="secondary" className="animate-pulse">
                   <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
                   Searching...
                 </Badge>
               )}
-              {searchMode === 'ids' && !idSearchLoading && searchTerm && (
+              {searchMode === 'ids' && !isSearchingIds && searchExecuted && (
                 <Badge variant="default">
                   {filteredUsers.length} found
+                </Badge>
+              )}
+              {searchMode === 'ids' && !searchExecuted && searchTerm && (
+                <Badge variant="outline">
+                  Click "Search Users" to execute
                 </Badge>
               )}
             </div>
