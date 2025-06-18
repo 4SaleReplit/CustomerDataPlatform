@@ -627,14 +627,14 @@ export function ReportsScheduler() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Scheduled Report</DialogTitle>
             <DialogDescription>
-              Update report schedule and email configuration
+              Update report schedule with custom variables and live email preview
             </DialogDescription>
           </DialogHeader>
-          <SchedulerForm
+          <EnhancedSchedulerForm
             formData={formData}
             setFormData={setFormData}
             presentations={presentations}
