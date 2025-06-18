@@ -251,6 +251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Calculate next execution based on cron expression and timezone
       const nextExecution = calculateNextExecution(reportData.cronExpression, reportData.timezone);
+      console.log(`Calculated next execution for "${reportData.cronExpression}":`, nextExecution);
       
       // Auto-generate PDF delivery URL based on report ID and domain
       const baseUrl = process.env.REPLIT_DEV_DOMAIN ? 
