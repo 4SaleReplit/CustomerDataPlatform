@@ -189,6 +189,13 @@ export interface IStorage {
   createReportExecution(execution: InsertReportExecution): Promise<ReportExecution>;
   updateReportExecution(id: string, updates: Partial<InsertReportExecution>): Promise<ReportExecution | undefined>;
   deleteReportExecution(id: string): Promise<boolean>;
+  
+  // Template management
+  getTemplates(): Promise<Template[]>;
+  getTemplate(id: string): Promise<Template | undefined>;
+  createTemplate(template: InsertTemplate): Promise<Template>;
+  updateTemplate(id: string, updates: Partial<InsertTemplate>): Promise<Template | undefined>;
+  deleteTemplate(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -893,6 +900,35 @@ export class DatabaseStorage implements IStorage {
 
   async deleteReportExecution(id: string): Promise<boolean> {
     const result = await db.delete(reportExecutions).where(eq(reportExecutions.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Template management methods
+  async getTemplates(): Promise<Template[]> {
+    return await db.select().from(templates).orderBy(desc(templates.createdAt));
+  }
+
+  async getTemplate(id: string): Promise<Template | undefined> {
+    const [template] = await db.select().from(templates).where(eq(templates.id, id));
+    return template || undefined;
+  }
+
+  async createTemplate(template: InsertTemplate): Promise<Template> {
+    const [newTemplate] = await db.insert(templates).values(template).returning();
+    return newTemplate;
+  }
+
+  async updateTemplate(id: string, updates: Partial<InsertTemplate>): Promise<Template | undefined> {
+    const [template] = await db
+      .update(templates)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(templates.id, id))
+      .returning();
+    return template || undefined;
+  }
+
+  async deleteTemplate(id: string): Promise<boolean> {
+    const result = await db.delete(templates).where(eq(templates.id, id));
     return result.rowCount !== null && result.rowCount > 0;
   }
 }

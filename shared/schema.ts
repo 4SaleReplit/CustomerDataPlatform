@@ -257,6 +257,9 @@ export const templates = pgTable("templates", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
+  content: text("content"), // JSON content with slides and configuration
+  category: varchar("category", { length: 100 }).default('presentation'),
+  tags: varchar("tags", { length: 255 }).array().default('{}'),
   slideIds: uuid("slide_ids").array(),
   previewImageUrl: text("preview_image_url"), // Thumbnail for template selection
   editableS3Key: text("editable_s3_key"), // S3 key for editable report format
