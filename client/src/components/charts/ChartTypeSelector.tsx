@@ -13,6 +13,7 @@ import {
 
 interface ChartTypeSelectorProps {
   onSelectChartType: (type: ChartType) => void;
+  selectedType?: ChartType;
   trigger?: React.ReactNode;
 }
 
@@ -234,7 +235,7 @@ const chartTypes: ChartTypeInfo[] = [
   }
 ];
 
-export function ChartTypeSelector({ onSelectChartType, trigger }: ChartTypeSelectorProps) {
+export function ChartTypeSelector({ onSelectChartType, selectedType, trigger }: ChartTypeSelectorProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isOpen, setIsOpen] = useState(false);
 
@@ -303,7 +304,9 @@ export function ChartTypeSelector({ onSelectChartType, trigger }: ChartTypeSelec
             {filteredCharts.map((chart) => (
               <Card 
                 key={chart.type} 
-                className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-primary"
+                className={`cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-primary ${
+                  selectedType === chart.type ? 'border-primary bg-primary/5' : ''
+                }`}
                 onClick={() => handleSelectChart(chart.type)}
               >
                 <CardHeader className="pb-3">

@@ -389,11 +389,16 @@ export function AddTileDialog({ isOpen, onClose, onSave, editTile }: AddTileDial
                     <div className="space-y-2">
                       <Label>Chart Type</Label>
                       <ChartTypeSelector
+                        selectedType={tileConfig.chartType}
                         onSelectChartType={(chartType) => setTileConfig({ ...tileConfig, chartType })}
                         trigger={
                           <Button variant="outline" className="w-full justify-start">
                             <BarChart className="h-4 w-4 mr-2" />
-                            {tileConfig.chartType.charAt(0).toUpperCase() + tileConfig.chartType.slice(1)} Chart
+                            {tileConfig.chartType ? (
+                              tileConfig.chartType.charAt(0).toUpperCase() + tileConfig.chartType.slice(1) + ' Chart'
+                            ) : (
+                              'Select Chart Type'
+                            )}
                           </Button>
                         }
                       />
