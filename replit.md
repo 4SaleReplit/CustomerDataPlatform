@@ -111,6 +111,17 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 19, 2025**: Complete Scheduled Report Creation & Template Execution Fix
+  - Fixed critical database constraint violations preventing scheduled report creation
+  - Resolved null value errors in email_subject, email_body, and presentation_id database columns
+  - Completely rewrote scheduled report creation logic with minimal data structure matching database schema exactly
+  - Updated both /api/scheduled-reports-new and /api/templates/:id/execute endpoints with proper data validation
+  - Fixed frontend ReportsScheduler component to use correct template execution endpoint
+  - Eliminated all extra database fields causing type mismatches and constraint violations
+  - Both scheduled report creation and "Create Now" functionality now work perfectly end-to-end
+  - Database schema aligned with application code - removed NOT NULL constraints where appropriate
+  - Comprehensive testing confirmed all report creation workflows function correctly
+
 - **June 19, 2025**: Dynamic Time Picker, Create Now Option & Smart Report Naming
   - Enhanced time picker with dynamic hour/minute selection (24-hour format with 15-minute intervals)
   - Added "Create Now" button to both Templates Manager and Reports Scheduler for immediate report generation

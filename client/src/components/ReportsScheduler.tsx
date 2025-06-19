@@ -175,9 +175,10 @@ export default function ReportsScheduler() {
 
   // Execute report mutation
   const executeReportMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/scheduled-reports-new/${id}/execute`, { method: 'POST' }),
+    mutationFn: (id: string) => apiRequest(`/api/templates/${id}/execute`, { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/scheduled-reports-new'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/presentations'] });
       toast({ title: "Report executed successfully" });
     },
     onError: () => {
