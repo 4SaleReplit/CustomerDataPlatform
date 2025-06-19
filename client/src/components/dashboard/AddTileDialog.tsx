@@ -40,6 +40,7 @@ export function AddTileDialog({ isOpen, onClose, onSave, editTile }: AddTileDial
   const [tileConfig, setTileConfig] = useState({
     title: editTile?.title || '',
     type: (editTile?.type || 'metric') as DashboardTile['type'],
+    chartType: (editTile?.chartType || 'line') as ChartType,
     query: editTile?.dataSource?.query || 'SELECT COUNT(*) as total_users FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4',
     width: editTile?.width || 4,
     height: editTile?.height || 2
@@ -56,6 +57,7 @@ export function AddTileDialog({ isOpen, onClose, onSave, editTile }: AddTileDial
       setTileConfig({
         title: editTile?.title || '',
         type: (editTile?.type || 'metric') as DashboardTile['type'],
+        chartType: (editTile?.chartType || 'line') as ChartType,
         query: editTile?.dataSource?.query || 'SELECT COUNT(*) as total_users FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4',
         width: editTile?.width || 4,
         height: editTile?.height || 2
@@ -238,62 +240,26 @@ export function AddTileDialog({ isOpen, onClose, onSave, editTile }: AddTileDial
         );
 
       case 'chart':
+      case 'bar':
+      case 'pie':
         const chartData = data.map((row, idx) => ({
           name: Object.values(row)[0]?.toString() || `Item ${idx + 1}`,
-          value: Number(Object.values(row)[1]) || 0
+          value: Number(Object.values(row)[1]) || 0,
+          x: Object.values(row)[0]?.toString() || `Item ${idx + 1}`,
+          y: Number(Object.values(row)[1]) || 0,
+          category: Object.values(row)[0]?.toString() || `Item ${idx + 1}`
         }));
-        return (
-          <ResponsiveContainer width="100%" height={300}>
-            <RechartsLineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Line type="monotone" dataKey="value" stroke="#8884d8" strokeWidth={2} />
-            </RechartsLineChart>
-          </ResponsiveContainer>
-        );
 
-      case 'bar':
-        const barData = data.map((row, idx) => ({
-          name: Object.values(row)[0]?.toString() || `Item ${idx + 1}`,
-          value: Number(Object.values(row)[1]) || 0
-        }));
         return (
-          <ResponsiveContainer width="100%" height={300}>
-            <RechartsBarChart data={barData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="value" fill="#8884d8" />
-            </RechartsBarChart>
-          </ResponsiveContainer>
-        );
-
-      case 'pie':
-        const pieData = data.slice(0, 6).map((row, idx) => ({
-          name: Object.values(row)[0]?.toString() || `Item ${idx + 1}`,
-          value: Number(Object.values(row)[1]) || 0
-        }));
-        return (
-          <ResponsiveContainer width="100%" height={300}>
-            <RechartsPieChart>
-              <Pie
-                data={pieData}
-                cx="50%"
-                cy="50%"
-                outerRadius={80}
-                dataKey="value"
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-              >
-                {pieData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </RechartsPieChart>
-          </ResponsiveContainer>
+          <div className="w-full h-[300px]">
+            <EChartsRenderer
+              type={tileConfig.chartType}
+              data={chartData}
+              width="100%"
+              height={300}
+              theme="light"
+            />
+          </div>
         );
 
       case 'table':
@@ -340,6 +306,7 @@ export function AddTileDialog({ isOpen, onClose, onSave, editTile }: AddTileDial
       y: editTile?.y || 0,
       width: tileConfig.width,
       height: tileConfig.height,
+      chartType: tileConfig.chartType,
       dataSource: {
         table: 'custom',
         query: tileConfig.query,
@@ -358,6 +325,7 @@ export function AddTileDialog({ isOpen, onClose, onSave, editTile }: AddTileDial
     setTileConfig({
       title: '',
       type: 'metric',
+      chartType: 'line',
       query: 'SELECT COUNT(*) as total_users FROM DBT_CORE_PROD_DATABASE.OPERATIONS.USER_SEGMENTATION_PROJECT_V4',
       width: 4,
       height: 2
@@ -420,6 +388,21 @@ export function AddTileDialog({ isOpen, onClose, onSave, editTile }: AddTileDial
                       </SelectContent>
                     </Select>
                   </div>
+                  
+                  {(tileConfig.type === 'chart' || tileConfig.type === 'bar' || tileConfig.type === 'pie') && (
+                    <div className="space-y-2">
+                      <Label>Chart Type</Label>
+                      <ChartTypeSelector
+                        onSelectChartType={(chartType) => setTileConfig({ ...tileConfig, chartType })}
+                        trigger={
+                          <Button variant="outline" className="w-full justify-start">
+                            <BarChart className="h-4 w-4 mr-2" />
+                            {tileConfig.chartType.charAt(0).toUpperCase() + tileConfig.chartType.slice(1)} Chart
+                          </Button>
+                        }
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
