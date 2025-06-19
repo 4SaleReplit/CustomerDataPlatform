@@ -55,8 +55,56 @@ export default function ReportsScheduler() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<ScheduledReport | null>(null);
+  const [scheduleForm, setScheduleForm] = useState({
+    frequency: 'weekly',
+    dayOfWeek: 'monday',
+    dayOfMonth: '1',
+    time: '09:00',
+    cronExpression: '0 9 * * 1'
+  });
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Helper function to generate cron expression
+  const generateCronExpression = (frequency: string, day: string, time: string) => {
+    const [hour, minute] = time.split(':');
+    
+    switch (frequency) {
+      case 'daily':
+        return `${minute} ${hour} * * *`;
+      case 'weekly':
+        const dayMap: Record<string, string> = {
+          'sunday': '0', 'monday': '1', 'tuesday': '2', 'wednesday': '3',
+          'thursday': '4', 'friday': '5', 'saturday': '6'
+        };
+        return `${minute} ${hour} * * ${dayMap[day]}`;
+      case 'monthly':
+        if (day === 'last') {
+          return `${minute} ${hour} L * *`;
+        }
+        return `${minute} ${hour} ${day} * *`;
+      default:
+        return '0 9 * * 1';
+    }
+  };
+
+  // Helper function to get schedule description
+  const getScheduleDescription = (form: typeof scheduleForm) => {
+    const timeFormat = form.time;
+    switch (form.frequency) {
+      case 'daily':
+        return `Every day at ${timeFormat}`;
+      case 'weekly':
+        return `Every ${form.dayOfWeek} at ${timeFormat}`;
+      case 'monthly':
+        if (form.dayOfMonth === 'last') {
+          return `Last day of every month at ${timeFormat}`;
+        }
+        return `${form.dayOfMonth === '1' ? '1st' : form.dayOfMonth === '15' ? '15th' : form.dayOfMonth} of every month at ${timeFormat}`;
+      default:
+        return 'Custom schedule';
+    }
+  };
 
   // Fetch templates for dropdown
   const { data: templates = [] } = useQuery({
