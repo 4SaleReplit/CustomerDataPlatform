@@ -111,6 +111,18 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 19, 2025**: Comprehensive Apache ECharts Integration & Snowflake Warehouse Fix
+  - Implemented complete Apache ECharts visualization system with 22 chart types (line, bar, pie, scatter, heatmap, radar, funnel, gauge, treemap, sunburst, network graphs, etc.)
+  - Created EChartsRenderer component supporting all major chart configurations with theme support
+  - Built ChartTypeSelector with categorized chart selection (Basic, Statistical, Advanced, Specialized)
+  - Integrated ECharts into dashboard tiles replacing Recharts for comprehensive visualization
+  - Added chart type selection to tile configuration interface
+  - Fixed critical Snowflake "No active warehouse selected" error affecting dashboard tile SQL execution
+  - Implemented automatic warehouse detection using SHOW WAREHOUSES command
+  - Enhanced Snowflake service with dynamic warehouse selection and fallback logic
+  - Updated integration status management to ensure proper credential retrieval
+  - Dashboard tiles now execute SQL queries successfully with proper warehouse activation
+
 - **June 18, 2025**: Final Email Sender UI/UX Enhancements and Status Management
   - Updated status tags for One-Time Emails: removed "Pending", kept only "Sent" (green) and "Failed" (red)
   - Updated status tags for Scheduled Emails: cohort-style "Active" (green) and "Paused" (orange)

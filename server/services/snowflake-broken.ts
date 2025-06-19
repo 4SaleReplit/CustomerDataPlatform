@@ -68,7 +68,7 @@ export class SnowflakeService {
 
           console.log('Snowflake connection successful');
 
-          // First, get available warehouses and use the first one
+          // First, check available warehouses and set one that exists
           connection.execute({
             sqlText: "SHOW WAREHOUSES",
             complete: (showWarehousesErr: any, warehouseStmt: any, warehouseRows: any) => {
@@ -77,14 +77,14 @@ export class SnowflakeService {
               if (!showWarehousesErr && warehouseRows && warehouseRows.length > 0) {
                 // Get first available warehouse name
                 const availableWarehouse = warehouseRows[0];
-                warehouseToUse = availableWarehouse['name'] || availableWarehouse[0] || 'COMPUTE_WH';
-                console.log('Available warehouses found, using:', warehouseToUse);
+                const warehouseName = availableWarehouse['name'] || availableWarehouse[0];
+                console.log('Available warehouses found, using:', warehouseName);
+                warehouseToUse = warehouseName;
               } else {
-                console.warn('Could not get warehouse list, trying COMPUTE_WH as fallback');
-                warehouseToUse = 'COMPUTE_WH';
+                console.warn('Could not get warehouse list, trying configured warehouse:', warehouseToUse);
               }
               
-              // Set the warehouse
+              // Now set the warehouse
               connection.execute({
                 sqlText: `USE WAREHOUSE ${warehouseToUse}`,
                 complete: (useWarehouseErr: any) => {
@@ -92,73 +92,73 @@ export class SnowflakeService {
                     console.warn('Warning setting warehouse:', useWarehouseErr.message);
                   }
                   
-                  // Execute the actual query
+                  // Now execute the actual query
                   connection.execute({
-                    sqlText: query,
-                    fetchAsString: ['Number', 'Date'],
-                    streamResult: false,
-                    complete: (queryErr: any, stmt: any, rows: any) => {
-                      // Clean up connection
-                      connection.destroy((destroyErr: any) => {
-                        if (destroyErr) {
-                          console.error('Error closing Snowflake connection:', destroyErr);
-                        }
-                      });
-
-                      if (queryErr) {
-                        console.error('Snowflake query error:', queryErr);
-                        
-                        if (queryErr.message && (queryErr.message.includes('Network policy') || queryErr.code === '390432')) {
-                          resolve({
-                            columns: [],
-                            rows: [],
-                            success: false,
-                            error: "Snowflake Network Policy Error: IP address needs to be whitelisted in your Snowflake network policy."
-                          });
-                          return;
-                        }
-                        
-                        resolve({
-                          columns: [],
-                          rows: [],
-                          success: false,
-                          error: queryErr.message || "Query execution failed"
-                        });
-                        return;
-                      }
-
-                      try {
-                        // Extract column metadata from statement
-                        const columns: ColumnMetadata[] = stmt.getColumns().map((col: any) => ({
-                          name: col.getName(),
-                          type: col.getType()
-                        }));
-
-                        // Convert rows to proper array format
-                        const rowData = rows.map((row: any) => {
-                          return columns.map((col: any) => row[col.name]);
-                        });
-
-                        console.log(`Snowflake query successful: ${rows.length} rows returned`);
-
-                        resolve({
-                          columns,
-                          rows: rowData,
-                          success: true
-                        });
-                      } catch (processError) {
-                        console.error('Error processing Snowflake results:', processError);
-                        resolve({
-                          columns: [],
-                          rows: [],
-                          success: false,
-                          error: "Error processing query results"
-                        });
-                      }
+                sqlText: query,
+                fetchAsString: ['Number', 'Date'],
+                streamResult: false,
+                complete: (queryErr: any, stmt: any, rows: any) => {
+                  // Clean up connection
+                  connection.destroy((destroyErr: any) => {
+                    if (destroyErr) {
+                      console.error('Error closing Snowflake connection:', destroyErr);
                     }
                   });
+
+                  if (queryErr) {
+                    console.error('Snowflake query error:', queryErr);
+                    
+                    if (queryErr.message && (queryErr.message.includes('Network policy') || queryErr.code === '390432')) {
+                      resolve({
+                        columns: [],
+                        rows: [],
+                        success: false,
+                        error: "Snowflake Network Policy Error: IP address needs to be whitelisted in your Snowflake network policy."
+                      });
+                      return;
+                    }
+                    
+                    resolve({
+                      columns: [],
+                      rows: [],
+                      success: false,
+                      error: queryErr.message || "Query execution failed"
+                    });
+                    return;
+                  }
+
+                  try {
+                    // Extract column metadata from statement
+                    const columns: ColumnMetadata[] = stmt.getColumns().map((col: any) => ({
+                      name: col.getName(),
+                      type: col.getType()
+                    }));
+
+                    // Convert rows to proper array format
+                    const rowData = rows.map((row: any) => {
+                      return columns.map((col: any) => row[col.name]);
+                    });
+
+                    console.log(`Snowflake query successful: ${rows.length} rows returned`);
+
+                    resolve({
+                      columns,
+                      rows: rowData,
+                      success: true
+                    });
+                  } catch (processError) {
+                    console.error('Error processing Snowflake results:', processError);
+                    resolve({
+                      columns: [],
+                      rows: [],
+                      success: false,
+                      error: "Error processing query results"
+                    });
+                  }
                 }
               });
+            }
+          });
             }
           });
         });
