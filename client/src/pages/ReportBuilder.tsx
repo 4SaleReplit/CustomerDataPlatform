@@ -3076,7 +3076,11 @@ export default function ReportBuilder() {
               disabled={!reportTitle.trim() || isSaving}
               className="bg-green-600 hover:bg-green-700"
             >
-              {isSaving ? 'Saving...' : (presentationId ? 'Update Report' : 'Save Report')}
+              {isSaving ? 'Saving...' : 
+                creationMode === 'template' 
+                  ? (templateId ? 'Update Template' : 'Save Template')
+                  : (presentationId ? 'Update Report' : 'Save Report')
+              }
             </Button>
           </DialogFooter>
         </DialogContent>
