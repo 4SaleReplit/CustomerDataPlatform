@@ -180,8 +180,8 @@ export class TemplateService {
     const [execution] = await db
       .insert(reportExecutions)
       .values({
-        scheduledReportId,
-        status: 'running',
+        templateId: scheduledReport.templateId,
+        executionStatus: 'running',
       })
       .returning();
 
@@ -200,7 +200,7 @@ export class TemplateService {
       await db
         .update(reportExecutions)
         .set({
-          status: 'completed',
+          executionStatus: 'completed',
           completedAt: new Date(),
           generatedPdfUrl: pdfUrl,
           generatedS3Key: s3Key,
@@ -223,7 +223,7 @@ export class TemplateService {
       await db
         .update(reportExecutions)
         .set({
-          status: 'failed',
+          executionStatus: 'failed',
           completedAt: new Date(),
           errorMessage: error instanceof Error ? error.message : 'Unknown error',
         })

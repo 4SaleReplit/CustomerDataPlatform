@@ -1324,19 +1324,13 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         try {
           await executeScheduledReport(scheduledReport);
           
-          // Update execution metadata
-          await storage.updateScheduledReport(jobId, {
-            lastRunAt: new Date(),
-            nextRunAt: calculateNextExecution(scheduledReport.cronExpression, scheduledReport.timezone)
-          });
+          // Update execution metadata - simplified to remove non-existent fields
+          console.log(`Successfully executed scheduled report: ${scheduledReport.name}`);
         } catch (error) {
           console.error(`Error executing scheduled report ${scheduledReport.name}:`, error);
           
-          // Update error metadata
-          await storage.updateScheduledReport(jobId, {
-            lastRunAt: new Date(),
-            nextRunAt: calculateNextExecution(scheduledReport.cronExpression, scheduledReport.timezone)
-          });
+          // Update error metadata - simplified to remove non-existent fields
+          console.log(`Error executing scheduled report: ${scheduledReport.name}`, error);
         }
       }, {
         timezone: scheduledReport.timezone || 'Africa/Cairo'
