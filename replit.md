@@ -111,6 +111,15 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 19, 2025**: Fixed S3 PDF Access Issues & Completed Download System Integration
+  - Resolved "Access Denied" error by implementing proper S3 signed URL generation for PDF downloads
+  - Updated PDF storage service to generate fresh 24-hour signed URLs instead of static public URLs
+  - Enhanced /api/reports/pdf/:id endpoint to create new signed URLs for existing PDFs automatically
+  - Fixed S3 bucket permissions issue by using AWS signature-based authentication for secure PDF access
+  - Completed end-to-end testing - PDF downloads now work perfectly with proper AWS authentication
+  - PDF download buttons in DataStudioReports now function correctly with secure S3 access
+  - System automatically handles PDF regeneration if S3 files become inaccessible
+
 - **June 19, 2025**: Complete S3 PDF Storage Integration & Report Generation Enhancement
   - Implemented comprehensive S3 PDF storage system for automated report generation and distribution
   - Created PDFStorageService with automatic S3 bucket integration using existing 4sale-cdp-assets bucket
