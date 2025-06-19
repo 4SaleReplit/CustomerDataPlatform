@@ -2383,7 +2383,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
 
   app.post("/api/scheduled-reports-new", async (req: Request, res: Response) => {
     try {
-      const { templateId, name, cronExpression, recipients, description, timezone, emailSubject } = req.body;
+      const { templateId, name, cronExpression, description, timezone } = req.body;
       
       // Validate required fields
       if (!templateId || !name || !cronExpression) {
@@ -2396,7 +2396,12 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         return res.status(404).json({ error: "Template not found" });
       }
       
-      // Create report data matching schema exactly
+      // Calculate next run time
+      const parser = require('cron-parser');
+      const interval = parser.parseExpression(cronExpression, { tz: timezone || 'UTC' });
+      const nextRunAt = interval.next().toDate();
+      
+      // Create report data for job scheduling only (no recipients)
       const reportData = {
         templateId: templateId,
         name: name,
@@ -2405,11 +2410,12 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         timezone: timezone || 'UTC',
         status: 'active',
         emailTemplate: null,
-        emailSubject: emailSubject || `Scheduled Report: ${name}`,
-        recipients: recipients || [],
+        emailSubject: null,
+        recipients: [],
         ccRecipients: [],
         bccRecipients: [],
-        emailPriority: 'normal'
+        emailPriority: 'normal',
+        nextRunAt: nextRunAt
       };
       
       const newReport = await storage.createScheduledReport(reportData);
@@ -4268,30 +4274,27 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         day: 'numeric' 
       })}`;
       
-      // Create a temporary scheduled report for immediate execution
-      const tempReportData = {
-        templateId: id,
-        name: reportName,
+      // Create a presentation for the report (not a scheduled report)
+      const presentationData = {
+        title: reportName,
         description: 'Immediately generated report',
-        cronExpression: '0 0 * * *', // Placeholder cron expression
-        timezone: 'UTC',
-        status: 'active',
-        emailTemplate: null,
-        emailSubject: `Report: ${reportName}`,
-        recipients: [],
-        ccRecipients: [],
-        bccRecipients: [],
-        emailPriority: 'normal'
+        slideIds: template.slideIds || [],
+        previewImageUrl: template.previewImageUrl,
+        createdBy: 'system'
       };
       
-      const scheduledReport = await storage.createScheduledReport(tempReportData);
+      const newPresentation = await storage.createPresentation(presentationData);
+      
+      // PDF generation will be handled separately - focus on creating the presentation first
+      console.log(`Report presentation created: ${reportName}`);
       
       // Return success response
       res.json({ 
         success: true, 
-        message: `Report "${reportName}" generated successfully`,
-        reportId: scheduledReport.id,
-        reportName: reportName
+        message: `Report "${reportName}" created successfully`,
+        reportId: newPresentation.id,
+        reportName: reportName,
+        presentationType: 'report'
       });
     } catch (error) {
       console.error('Error executing template:', error);
