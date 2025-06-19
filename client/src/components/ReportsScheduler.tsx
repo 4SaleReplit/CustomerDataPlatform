@@ -180,6 +180,14 @@ export default function ReportsScheduler() {
     }
   });
 
+  // Helper function to convert UTC time to Cairo timezone for display
+  const formatTimeInTimezone = (utcTimeString: string, formatStr: string = 'MMM d, HH:mm'): string => {
+    const utcDate = new Date(utcTimeString);
+    // Convert UTC to Cairo time (UTC+2)
+    const cairoTime = new Date(utcDate.getTime() + (2 * 60 * 60 * 1000));
+    return format(cairoTime, formatStr);
+  };
+
   // Helper function to convert cron expression to user-friendly format
   const formatScheduleDescription = (cronExpression: string): string => {
     // Parse common cron patterns
@@ -744,17 +752,13 @@ export default function ReportsScheduler() {
                   <div>
                     <span className="text-gray-500 block">Last Run:</span>
                     <p className="font-medium">
-                      {report.lastRunAt
-                        ? format(new Date(report.lastRunAt), 'MMM d, HH:mm')
-                        : 'Never'}
+                      {report.lastRunAt ? formatTimeInTimezone(report.lastRunAt) : 'Never'}
                     </p>
                   </div>
                   <div>
                     <span className="text-gray-500 block">Next Run:</span>
                     <p className="font-medium">
-                      {report.nextRunAt
-                        ? format(new Date(report.nextRunAt), 'MMM d, HH:mm')
-                        : 'Not scheduled'}
+                      {report.nextRunAt ? formatTimeInTimezone(report.nextRunAt) : 'Not scheduled'}
                     </p>
                   </div>
                 </div>
