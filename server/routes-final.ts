@@ -97,6 +97,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Slides API endpoints
+  app.post("/api/slides", async (req: Request, res: Response) => {
+    try {
+      const { insertSlideSchema } = await import('../shared/schema');
+      const validatedData = insertSlideSchema.parse(req.body);
+      const slide = await storage.createSlide(validatedData);
+      res.status(201).json(slide);
+    } catch (error) {
+      console.error("Create slide error:", error);
+      res.status(400).json({ 
+        error: error instanceof Error ? error.message : "Failed to create slide" 
+      });
+    }
+  });
+
+  app.get("/api/slides/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const slide = await storage.getSlide(id);
+      
+      if (!slide) {
+        return res.status(404).json({ error: "Slide not found" });
+      }
+      
+      res.json(slide);
+    } catch (error) {
+      console.error('Error fetching slide:', error);
+      res.status(500).json({ error: "Failed to fetch slide" });
+    }
+  });
+
+  // Presentations API endpoints
+  app.post("/api/presentations", async (req: Request, res: Response) => {
+    try {
+      const { insertPresentationSchema } = await import('../shared/schema');
+      const validatedData = insertPresentationSchema.parse(req.body);
+      const presentation = await storage.createPresentation(validatedData);
+      res.status(201).json(presentation);
+    } catch (error) {
+      console.error("Create presentation error:", error);
+      res.status(400).json({ 
+        error: error instanceof Error ? error.message : "Failed to create presentation" 
+      });
+    }
+  });
+
+  app.get("/api/presentations", async (req: Request, res: Response) => {
+    try {
+      const presentations = await storage.getPresentations();
+      res.json(presentations);
+    } catch (error) {
+      console.error('Error fetching presentations:', error);
+      res.status(500).json({ error: "Failed to fetch presentations" });
+    }
+  });
+
+  app.get("/api/presentations/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const presentation = await storage.getPresentation(id);
+      
+      if (!presentation) {
+        return res.status(404).json({ error: "Presentation not found" });
+      }
+      
+      res.json(presentation);
+    } catch (error) {
+      console.error('Error fetching presentation:', error);
+      res.status(500).json({ error: "Failed to fetch presentation" });
+    }
+  });
+
   // Authentication routes
   app.post("/api/auth/login", async (req: Request, res: Response) => {
     try {
