@@ -89,14 +89,21 @@ export function formatDateTime(date: Date | string | null, timezone?: string): s
   
   // If timezone is provided, format in that timezone
   if (timezone) {
-    return dateObj.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: timezone
-    });
+    try {
+      return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: timezone,
+        hour12: false
+      }).format(dateObj);
+    } catch (error) {
+      console.error('Timezone formatting error:', error);
+      // Fallback to manual timezone calculation
+      return formatWithManualTimezone(dateObj, timezone);
+    }
   }
   
   // Default formatting without timezone conversion
@@ -105,6 +112,28 @@ export function formatDateTime(date: Date | string | null, timezone?: string): s
     month: 'short', 
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    hour12: false
+  });
+}
+
+function formatWithManualTimezone(date: Date, timezone: string): string {
+  // Manual timezone calculation for Africa/Cairo (+2) and Asia/Kuwait (+3)
+  let offsetHours = 0;
+  if (timezone === 'Africa/Cairo') {
+    offsetHours = 2;
+  } else if (timezone === 'Asia/Kuwait') {
+    offsetHours = 3;
+  }
+  
+  const localTime = new Date(date.getTime() + (offsetHours * 60 * 60 * 1000));
+  return localTime.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric', 
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'UTC'
   });
 }

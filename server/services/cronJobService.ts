@@ -48,13 +48,18 @@ class CronJobService {
         return;
       }
       
-      // Create the cron task
+      // Create the cron task (initially stopped)
       const task = cron.schedule(scheduledReport.cronExpression, async () => {
         console.log(`🔄 Executing scheduled report: ${scheduledReport.name}`);
         await this.executeScheduledReport(scheduledReport.id);
       }, {
+        scheduled: false,
         timezone: scheduledReport.timezone || 'UTC'
       });
+      
+      // Start the task
+      task.start();
+      console.log(`▶️ Started cron task for: ${scheduledReport.name}`);
       
       // Store job in memory
       this.jobs.set(scheduledReport.id, {
