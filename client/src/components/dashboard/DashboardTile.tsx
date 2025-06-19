@@ -263,24 +263,15 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
           category: row[0] || `Item ${index + 1}`
         }));
 
-        // Map legacy tile types to ECharts types
+        // Map tile types to ECharts types
         let chartType: ChartType;
         if (tile.chartType) {
           chartType = tile.chartType as ChartType;
+        } else if (tile.type === 'chart') {
+          chartType = 'line'; // Default for generic chart type
         } else {
-          // Legacy tile type mapping
-          switch (tile.type) {
-            case 'bar':
-              chartType = 'bar';
-              break;
-            case 'pie':
-              chartType = 'pie';
-              break;
-            case 'chart':
-            default:
-              chartType = 'line';
-              break;
-          }
+          // Direct chart type mapping
+          chartType = tile.type as ChartType;
         }
 
         return (
