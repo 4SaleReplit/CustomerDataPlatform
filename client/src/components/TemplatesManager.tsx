@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Edit3, Trash2, Calendar, Download, MoreVertical, FileText, Clock, Presentation } from "lucide-react";
+import { Plus, Edit3, Trash2, Calendar, Download, MoreVertical, FileText, Clock, Presentation, Play } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -51,7 +51,9 @@ interface ScheduledReport {
 export function TemplatesManager() {
   const [activeTab, setActiveTab] = useState<'templates' | 'scheduled'>('templates');
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
+  const [isCreateNowDialogOpen, setIsCreateNowDialogOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [createNowForm, setCreateNowForm] = useState({ reportName: '' });
   const [scheduleForm, setScheduleForm] = useState({
     frequency: 'weekly',
     dayOfWeek: 'monday',
@@ -266,21 +268,18 @@ export function TemplatesManager() {
   };
 
   const handleCreateNow = async () => {
-    if (!selectedTemplate) return;
-    
-    // Get report name from form input
-    const form = document.querySelector('form[data-schedule-form]') as HTMLFormElement;
-    if (!form) return;
-    
-    const formData = new FormData(form);
-    const reportName = formData.get('name') as string;
-    
-    if (!reportName) {
+    if (!selectedTemplate || !createNowForm.reportName.trim()) {
       toast({ title: "Please enter a report name", variant: "destructive" });
       return;
     }
     
-    executeReportMutation.mutate({ id: selectedTemplate.id, reportName });
+    executeReportMutation.mutate({ 
+      id: selectedTemplate.id, 
+      reportName: createNowForm.reportName.trim() 
+    });
+    
+    setIsCreateNowDialogOpen(false);
+    setCreateNowForm({ reportName: '' });
   };
 
   const handleCreateScheduledReport = (event: React.FormEvent<HTMLFormElement>) => {
@@ -515,6 +514,18 @@ export function TemplatesManager() {
                         >
                           <Edit3 className="w-4 h-4 mr-1" />
                           Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedTemplate(template);
+                            setIsCreateNowDialogOpen(true);
+                          }}
+                          disabled={executeReportMutation.isPending}
+                        >
+                          <Play className="w-4 h-4 mr-1" />
+                          {executeReportMutation.isPending ? 'Creating...' : 'Create Now'}
                         </Button>
                         <Button
                           size="sm"
