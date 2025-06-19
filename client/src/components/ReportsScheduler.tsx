@@ -37,12 +37,6 @@ interface ScheduledReport {
   cronExpression: string;
   timezone: string;
   status: 'active' | 'paused';
-  emailTemplate?: string;
-  emailSubject?: string;
-  recipients: string[];
-  ccRecipients: string[];
-  bccRecipients: string[];
-  emailPriority: 'normal' | 'high' | 'low';
   lastRunAt?: string;
   nextRunAt?: string;
   lastGeneratedPdfUrl?: string;
@@ -186,6 +180,38 @@ export default function ReportsScheduler() {
     }
   });
 
+  // Helper function to convert cron expression to user-friendly format
+  const formatScheduleDescription = (cronExpression: string): string => {
+    // Parse common cron patterns
+    const parts = cronExpression.split(' ');
+    if (parts.length !== 5) return cronExpression;
+    
+    const [minute, hour, day, month, dayOfWeek] = parts;
+    
+    // Daily pattern: minute hour * * *
+    if (day === '*' && month === '*' && dayOfWeek === '*') {
+      const time = `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+      return `Daily at ${time}`;
+    }
+    
+    // Weekly pattern: minute hour * * dayOfWeek
+    if (day === '*' && month === '*' && dayOfWeek !== '*') {
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const dayName = days[parseInt(dayOfWeek)] || `Day ${dayOfWeek}`;
+      const time = `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+      return `Weekly on ${dayName} at ${time}`;
+    }
+    
+    // Monthly pattern: minute hour day * *
+    if (day !== '*' && month === '*' && dayOfWeek === '*') {
+      const ordinal = day === '1' ? '1st' : day === '2' ? '2nd' : day === '3' ? '3rd' : `${day}th`;
+      const time = `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+      return `Monthly on the ${ordinal} at ${time}`;
+    }
+    
+    return cronExpression; // Fallback for complex patterns
+  };
+
   const generateSmartReportName = (templateName: string, frequency: string): string => {
     const now = new Date();
     
@@ -267,10 +293,7 @@ export default function ReportsScheduler() {
       cronExpression: scheduleForm.cronExpression,
       timezone: formData.get('timezone') as string || 'Africa/Cairo',
       status: formData.get('status') as string || 'active',
-      recipients: [], // Empty array since we're creating PDF reports, not emails  
-      ccRecipients: [],
-      bccRecipients: [],
-      emailPriority: 'normal',
+
     });
   };
 
@@ -279,21 +302,6 @@ export default function ReportsScheduler() {
     if (!selectedReport) return;
     
     const formData = new FormData(event.currentTarget);
-    
-    const recipients = (formData.get('recipients') as string)
-      .split(',')
-      .map(email => email.trim())
-      .filter(email => email);
-      
-    const ccRecipients = (formData.get('ccRecipients') as string || '')
-      .split(',')
-      .map(email => email.trim())
-      .filter(email => email);
-      
-    const bccRecipients = (formData.get('bccRecipients') as string || '')
-      .split(',')
-      .map(email => email.trim())
-      .filter(email => email);
 
     updateReportMutation.mutate({
       id: selectedReport.id,
@@ -726,19 +734,14 @@ export default function ReportsScheduler() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
                     <span className="text-gray-500 block">Schedule:</span>
-                    <p className="font-medium">{report.cronExpression}</p>
+                    <p className="font-medium">{formatScheduleDescription(report.cronExpression)}</p>
                   </div>
                   <div>
-                    <span className="text-gray-500 block">Recipients:</span>
-                    <p className="font-medium flex items-center">
-                      <Mail className="w-3 h-3 mr-1" />
-                      {report.recipients.length} TO
-                      {report.ccRecipients?.length > 0 && `, ${report.ccRecipients.length} CC`}
-                      {report.bccRecipients?.length > 0 && `, ${report.bccRecipients.length} BCC`}
-                    </p>
+                    <span className="text-gray-500 block">Timezone:</span>
+                    <p className="font-medium">{report.timezone}</p>
                   </div>
                   <div>
                     <span className="text-gray-500 block">Timezone:</span>
