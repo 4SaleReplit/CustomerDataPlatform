@@ -244,6 +244,8 @@ export const presentations = pgTable("presentations", {
   slideIds: uuid("slide_ids").array(),
   previewImageId: uuid("preview_image_id").references(() => uploadedImages.id),
   previewImageUrl: text("preview_image_url"), // Direct URL for preview thumbnail
+  pdfUrl: text("pdf_url"), // S3 public URL for generated PDF
+  pdfS3Key: text("pdf_s3_key"), // S3 object key for PDF file
   lastRefreshed: timestamp("last_refreshed", { withTimezone: true }),
   createdBy: varchar("created_by", { length: 255 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
