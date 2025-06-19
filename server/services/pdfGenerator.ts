@@ -123,7 +123,9 @@ export class PDFGeneratorService {
   }
 
   private renderElement(doc: PDFKit.PDFDocument, element: SlideElement): void {
-    const { x, y, width, height } = element.position;
+    // Handle missing or invalid position data
+    const position = element.position || { x: 50, y: 100, width: 200, height: 100 };
+    const { x, y, width, height } = position;
     const adjustedY = y + 80; // Offset for header
 
     switch (element.type) {

@@ -62,7 +62,6 @@ export class PDFStorageService {
         Key: s3Key,
         Body: pdfBuffer,
         ContentType: 'application/pdf',
-        ACL: 'public-read', // Make PDF publicly accessible
         Metadata: {
           'presentation-id': presentationId,
           'generated-at': new Date().toISOString(),

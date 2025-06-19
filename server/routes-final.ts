@@ -1519,7 +1519,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     }
   }
 
-  function processEmailTemplate(template: string, scheduledReport: any): string {
+  function processEmailTemplate(template: string, data: any): string {
     const now = new Date();
     const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
     const weekEnd = new Date(now.setDate(now.getDate() - now.getDay() + 6));
@@ -1529,16 +1529,19 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     const replacements = {
       '{date}': new Date().toISOString().split('T')[0],
       '{time}': new Date().toTimeString().split(' ')[0],
-      '{report_name}': scheduledReport.name,
+      '{report_name}': data.name || 'Untitled Report',
       '{execution_date}': new Date().toLocaleDateString(),
       '{execution_time}': new Date().toLocaleTimeString(),
-      '{next_execution}': scheduledReport.nextExecution ? new Date(scheduledReport.nextExecution).toLocaleDateString() : 'TBD',
+      '{next_execution}': data.nextExecution ? new Date(data.nextExecution).toLocaleDateString() : 'TBD',
       '{week_start}': weekStart.toISOString().split('T')[0],
       '{week_end}': weekEnd.toISOString().split('T')[0],
       '{month_start}': monthStart.toISOString().split('T')[0],
       '{month_end}': monthEnd.toISOString().split('T')[0],
       '{year}': new Date().getFullYear().toString(),
-      '{quarter}': `Q${Math.floor((new Date().getMonth() + 3) / 3)}`
+      '{quarter}': `Q${Math.floor((new Date().getMonth() + 3) / 3)}`,
+      '{pdf_download_url}': data.pdf_download_url || '#',
+      '{report_url}': data.report_url || '#',
+      '{dashboard_url}': data.dashboard_url || '#'
     };
 
     let result = template;

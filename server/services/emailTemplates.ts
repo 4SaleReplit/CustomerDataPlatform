@@ -266,6 +266,8 @@ export function generateEmailFromTemplate(templateId: string, customContent: str
     dashboard_url: process.env.REPLIT_DEV_DOMAIN ? 
       `https://${process.env.REPLIT_DEV_DOMAIN}` : 
       'https://analytics.4sale.tech',
+    pdf_download_url: '#',
+    report_url: '#',
     metric_1_value: '1,234',
     metric_1_label: 'Total Users',
     metric_2_value: '567',
