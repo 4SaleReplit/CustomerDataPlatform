@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Edit3, Trash2, Calendar, Download, MoreVertical, FileText, Clock } from "lucide-react";
+import { Plus, Edit3, Trash2, Calendar, Download, MoreVertical, FileText, Clock, Presentation } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -50,6 +50,8 @@ export function TemplatesManager() {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+
 
   // Fetch templates
   const { data: templates = [], isLoading: templatesLoading } = useQuery({
@@ -227,14 +229,12 @@ export function TemplatesManager() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {templates.map((template: Template) => (
-                <Card key={template.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader>
+                <Card key={template.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg">{template.name}</CardTitle>
-                        <CardDescription className="mt-1">
-                          {template.description || 'No description'}
-                        </CardDescription>
+                      <div className="flex items-center gap-2">
+                        <Presentation className="h-5 w-5 text-blue-600" />
+                        <CardTitle className="text-base">{template.name}</CardTitle>
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -295,8 +295,33 @@ export function TemplatesManager() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
+                    {template.description && (
+                      <CardDescription className="text-sm">{template.description}</CardDescription>
+                    )}
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="pt-0">
+                    {/* Template Preview - same as report preview */}
+                    <div className="mb-3">
+                      {template.previewImageUrl ? (
+                        <div className="w-full aspect-video bg-white rounded border border-gray-200 overflow-hidden">
+                          <img 
+                            src={template.previewImageUrl.startsWith('/uploads/') 
+                              ? `${window.location.origin}${template.previewImageUrl}`
+                              : template.previewImageUrl
+                            } 
+                            alt="Template preview" 
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-full aspect-video bg-gray-50 rounded border border-gray-200 flex items-center justify-center">
+                          <div className="text-center">
+                            <Presentation className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500">Template Preview</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     <div className="flex items-center gap-4 text-sm text-gray-500">
                       <span>{template.slideIds?.length || 0} slides</span>
                       <span>Created {format(new Date(template.createdAt), 'MMM d, yyyy')}</span>
