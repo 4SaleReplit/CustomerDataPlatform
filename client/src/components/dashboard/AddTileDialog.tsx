@@ -26,8 +26,29 @@ interface AddTileDialogProps {
 
 const TILE_TYPES = [
   { value: 'metric', label: 'Metric Card', icon: Activity },
-  { value: 'chart', label: 'Chart (ECharts)', icon: LineChart },
-  { value: 'table', label: 'Data Table', icon: Table }
+  { value: 'table', label: 'Data Table', icon: Table },
+  { value: 'line', label: 'Line Chart', icon: LineChart },
+  { value: 'bar', label: 'Bar Chart', icon: BarChart },
+  { value: 'column', label: 'Column Chart', icon: BarChart },
+  { value: 'pie', label: 'Pie Chart', icon: PieChart },
+  { value: 'scatter', label: 'Scatter Plot', icon: Activity },
+  { value: 'area', label: 'Area Chart', icon: Activity },
+  { value: 'heatmap', label: 'Heatmap', icon: Activity },
+  { value: 'radar', label: 'Radar Chart', icon: Activity },
+  { value: 'funnel', label: 'Funnel Chart', icon: Activity },
+  { value: 'gauge', label: 'Gauge Chart', icon: Activity },
+  { value: 'treemap', label: 'Tree Map', icon: Activity },
+  { value: 'sunburst', label: 'Sunburst Chart', icon: Activity },
+  { value: 'sankey', label: 'Sankey Diagram', icon: Activity },
+  { value: 'graph', label: 'Network Graph', icon: Activity },
+  { value: 'candlestick', label: 'Candlestick Chart', icon: Activity },
+  { value: 'boxplot', label: 'Box Plot', icon: Activity },
+  { value: 'parallel', label: 'Parallel Coordinates', icon: Activity },
+  { value: 'tree', label: 'Tree Chart', icon: Activity },
+  { value: 'map', label: 'Map Chart', icon: Activity },
+  { value: 'pictorial', label: 'Pictorial Chart', icon: Activity },
+  { value: 'themeRiver', label: 'Theme River', icon: Activity },
+  { value: 'calendar', label: 'Calendar Heatmap', icon: Activity }
 ];
 
 const CHART_COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe'];
@@ -366,8 +387,20 @@ export function AddTileDialog({ isOpen, onClose, onSave, editTile }: AddTileDial
                   <div className="space-y-2">
                     <Label htmlFor="type">Visualization Type</Label>
                     <Select
-                      value={tileConfig.type}
-                      onValueChange={(value) => setTileConfig({ ...tileConfig, type: value as DashboardTile['type'] })}
+                      value={tileConfig.type === 'chart' ? tileConfig.chartType : tileConfig.type}
+                      onValueChange={(value) => {
+                        // If it's a chart type, set both type and chartType
+                        if (value === 'metric' || value === 'table') {
+                          setTileConfig({ ...tileConfig, type: value as DashboardTile['type'] });
+                        } else {
+                          // It's a chart type
+                          setTileConfig({ 
+                            ...tileConfig, 
+                            type: 'chart',
+                            chartType: value as ChartType
+                          });
+                        }
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -384,26 +417,6 @@ export function AddTileDialog({ isOpen, onClose, onSave, editTile }: AddTileDial
                       </SelectContent>
                     </Select>
                   </div>
-                  
-                  {tileConfig.type === 'chart' && (
-                    <div className="space-y-2">
-                      <Label>Chart Type</Label>
-                      <ChartTypeSelector
-                        selectedType={tileConfig.chartType}
-                        onSelectChartType={(chartType) => setTileConfig({ ...tileConfig, chartType })}
-                        trigger={
-                          <Button variant="outline" className="w-full justify-start">
-                            <BarChart className="h-4 w-4 mr-2" />
-                            {tileConfig.chartType ? (
-                              tileConfig.chartType.charAt(0).toUpperCase() + tileConfig.chartType.slice(1) + ' Chart'
-                            ) : (
-                              'Select Chart Type'
-                            )}
-                          </Button>
-                        }
-                      />
-                    </div>
-                  )}
                 </div>
 
                 <div className="space-y-2">

@@ -7,7 +7,7 @@ import { AddTileDialog } from './AddTileDialog';
 export interface DashboardTile {
   id: string;
   databaseId?: string; // Database ID for API calls
-  type: 'metric' | 'chart' | 'table' | 'bar' | 'pie';
+  type: 'metric' | 'chart' | 'table' | 'line' | 'bar' | 'column' | 'pie' | 'scatter' | 'area' | 'heatmap' | 'radar' | 'funnel' | 'gauge' | 'treemap' | 'sunburst' | 'sankey' | 'graph' | 'candlestick' | 'boxplot' | 'parallel' | 'tree' | 'map' | 'pictorial' | 'themeRiver' | 'calendar';
   title: string;
   x: number;
   y: number;

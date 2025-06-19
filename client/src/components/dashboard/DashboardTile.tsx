@@ -229,8 +229,28 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
         );
 
       case 'chart':
+      case 'line':
       case 'bar':
+      case 'column':
       case 'pie':
+      case 'scatter':
+      case 'area':
+      case 'heatmap':
+      case 'radar':
+      case 'funnel':
+      case 'gauge':
+      case 'treemap':
+      case 'sunburst':
+      case 'sankey':
+      case 'graph':
+      case 'candlestick':
+      case 'boxplot':
+      case 'parallel':
+      case 'tree':
+      case 'map':
+      case 'pictorial':
+      case 'themeRiver':
+      case 'calendar':
         if (!dataToRender.rows?.length) {
           return <div className="h-full flex items-center justify-center text-muted-foreground">No data available</div>;
         }
