@@ -111,6 +111,20 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 19, 2025**: Enhanced Reports Management with Design Studio Integration
+  - Updated all "New Report" and "Create Template" buttons to redirect to Design Studio for unified report creation
+  - Modified Templates Manager to redirect template creation and editing to Design Studio interface
+  - Enhanced "New Report" dialog in DataStudioReports to redirect to Design Studio instead of Report Builder
+  - Implemented comprehensive ReportsScheduler component with full CRUD operations replacing basic templates management
+  - Added advanced email settings including CC, BCC recipients and priority levels (normal, high, low)
+  - Enhanced database schema with CC, BCC fields and email priority for scheduled reports
+  - Built complete API endpoints for scheduled reports management with proper CRUD operations
+  - Added status management with active/paused dropdown controls and visual indicators
+  - Integrated confirmation dialogs for delete operations with clear impact warnings
+  - Added execute now functionality with proper timestamp tracking and status updates
+  - Created professional-grade Reports Scheduler with template selection, cron scheduling, and timezone support
+  - Fixed all TypeScript compilation errors and database schema integration issues
+
 - **June 19, 2025**: Complete PDF Generation Fix - No Content Regeneration System
   - Fixed PDF generation to use actual uploaded slide images instead of regenerating content
   - System now directly converts existing slide preview images to PDF format without any modification
