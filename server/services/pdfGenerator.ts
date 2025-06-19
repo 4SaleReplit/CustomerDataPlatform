@@ -46,11 +46,11 @@ export class PDFGeneratorService {
         // Title page
         this.createTitlePage(doc, presentation);
 
-        // Generate each slide using actual slide data
+        // Use existing preview images instead of generating new slides
         for (let i = 0; i < presentation.slides.length; i++) {
           const slide = presentation.slides[i];
           if (i > 0) doc.addPage();
-          await this.createSlidePageFromData(doc, slide, i + 1);
+          await this.addExistingSlideImage(doc, slide, i + 1);
         }
 
         doc.end();
@@ -489,6 +489,89 @@ export class PDFGeneratorService {
     doc.fillColor('#9ca3af')
        .fontSize(12)
        .text(`[${(element.type || 'ELEMENT').toUpperCase()}]`, x + 10, y + height/2 - 6, { width: width - 20 });
+  }
+
+  private async addExistingSlideImage(doc: PDFKit.PDFDocument, slide: any, slideNumber: number): Promise<void> {
+    try {
+      // Look for existing slide preview image in presentation
+      const presentationPreviewImage = await this.findSlidePreviewImage(slide.id);
+      
+      if (presentationPreviewImage) {
+        // Add slide header
+        doc.rect(0, 0, doc.page.width, 60)
+           .fillAndStroke('#f8fafc', '#e2e8f0');
+
+        doc.fillColor('#1e3a8a')
+           .fontSize(18)
+           .font('Helvetica-Bold')
+           .text(slide.title || `Slide ${slideNumber}`, 50, 20);
+
+        doc.fillColor('#6b7280')
+           .fontSize(12)
+           .text(`Slide ${slideNumber}`, doc.page.width - 100, 25);
+
+        // Add the actual slide preview image
+        const imageY = 80; // Below header
+        const imageHeight = doc.page.height - 140; // Leave space for header and footer
+        const imageWidth = doc.page.width - 100;
+        
+        doc.image(presentationPreviewImage, 50, imageY, { 
+          width: imageWidth, 
+          height: imageHeight,
+          fit: [imageWidth, imageHeight]
+        });
+        
+        console.log(`✅ Used existing slide preview image for slide ${slideNumber}`);
+      } else {
+        // Fallback to original slide creation if no preview image exists
+        await this.createSlidePageFromData(doc, slide, slideNumber);
+        console.log(`⚠️ No preview image found for slide ${slideNumber}, generated content instead`);
+      }
+    } catch (error) {
+      console.warn(`Failed to use preview image for slide ${slideNumber}:`, error);
+      // Fallback to original method
+      await this.createSlidePageFromData(doc, slide, slideNumber);
+    }
+  }
+
+  private async findSlidePreviewImage(slideId: string): Promise<string | null> {
+    try {
+      // Check if there's a preview image for this specific slide
+      // This would typically be stored when the slide is previewed in the browser
+      const previewImagePath = path.join(process.cwd(), 'uploads', 'slide-previews', `${slideId}.png`);
+      
+      if (fs.existsSync(previewImagePath)) {
+        return previewImagePath;
+      }
+
+      // Alternative: Look for uploaded images associated with this slide
+      const { storage } = await import('../storage');
+      const slide = await storage.getSlide(slideId);
+      
+      if (slide?.elements) {
+        // Find the first image element in the slide
+        for (const element of slide.elements) {
+          if (element.type === 'image' && element.content?.uploadedImageId) {
+            const uploadedImage = await storage.getUploadedImage(element.content.uploadedImageId);
+            if (uploadedImage) {
+              let imageUrl = uploadedImage.url;
+              if (imageUrl.startsWith('/uploads/')) {
+                const relativePath = imageUrl.split('/uploads/')[1];
+                const fullPath = path.join(process.cwd(), 'uploads', relativePath);
+                if (fs.existsSync(fullPath)) {
+                  return fullPath;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.warn('Error finding slide preview image:', error);
+      return null;
+    }
   }
 
   async generateAndStorePDF(presentation: Presentation): Promise<{ pdfUrl: string; s3Key: string }> {

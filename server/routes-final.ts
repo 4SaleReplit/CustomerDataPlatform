@@ -1601,27 +1601,14 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
 
   async function generateReportFile(presentation: any, formatSettings: any) {
     try {
-      // Import PDF services
-      const { pdfGeneratorService } = await import('./services/pdfGenerator');
+      // Import PDF services with image-focused approach
+      const { ImageBasedPDFGenerator } = await import('./services/imageBasedPDFGenerator');
+      const pdfGenerator = new ImageBasedPDFGenerator();
       
-      // Get presentation slides for PDF generation
-      const slides = presentation.slideIds ? 
-        await Promise.all(presentation.slideIds.map(async (slideId: string) => {
-          return await storage.getSlide(slideId);
-        })) : [];
+      // Generate PDF using uploaded slide images directly
+      const result = await pdfGenerator.generateFromUploadedImages(presentation);
       
-      // Create presentation object for PDF generation
-      const presentationData = {
-        id: presentation.id,
-        title: presentation.title,
-        description: presentation.description,
-        slides: slides.filter(slide => slide !== undefined)
-      };
-      
-      // Generate and store PDF in S3
-      const result = await pdfGeneratorService.generateAndStorePDF(presentationData);
-      
-      console.log(`✅ PDF generated and stored in S3: ${result.pdfUrl}`);
+      console.log(`✅ PDF generated from uploaded images and stored in S3: ${result.pdfUrl}`);
       
       return {
         filename: `${presentation.title.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
@@ -1630,7 +1617,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         s3Key: result.s3Key
       };
     } catch (error) {
-      console.error('Error generating PDF report:', error);
+      console.error('Error generating PDF from images:', error);
       // Fallback to simple content
       return {
         filename: `${presentation.title}_${new Date().toISOString().split('T')[0]}.pdf`,
