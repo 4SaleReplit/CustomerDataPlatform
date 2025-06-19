@@ -189,33 +189,28 @@ export default function ReportsScheduler() {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     
-    const recipients = (formData.get('recipients') as string)
-      .split(',')
-      .map(email => email.trim())
-      .filter(email => email);
-      
-    const ccRecipients = (formData.get('ccRecipients') as string || '')
-      .split(',')
-      .map(email => email.trim())
-      .filter(email => email);
-      
-    const bccRecipients = (formData.get('bccRecipients') as string || '')
-      .split(',')
-      .map(email => email.trim())
-      .filter(email => email);
+    // Find selected template for name generation
+    const templateId = formData.get('templateId') as string;
+    const selectedTemplate = templates.find(t => t.id === templateId);
+    
+    // Generate report name using template name and current date
+    const reportName = `${selectedTemplate?.name || 'Report'} - ${new Date().toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    })}`;
 
     createReportMutation.mutate({
-      templateId: formData.get('templateId') as string,
-      name: formData.get('name') as string,
+      templateId,
+      name: formData.get('name') as string || reportName,
       description: formData.get('description') as string || undefined,
       cronExpression: scheduleForm.cronExpression,
-      timezone: formData.get('timezone') as string || 'UTC',
+      timezone: formData.get('timezone') as string || 'Africa/Cairo',
       status: formData.get('status') as string || 'active',
-      emailSubject: formData.get('emailSubject') as string || undefined,
-      recipients,
-      ccRecipients,
-      bccRecipients,
-      emailPriority: formData.get('emailPriority') as string || 'normal',
+      recipients: [], // Empty array since we're creating PDF reports, not emails  
+      ccRecipients: [],
+      bccRecipients: [],
+      emailPriority: 'normal',
     });
   };
 
@@ -453,7 +448,15 @@ export default function ReportsScheduler() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="timezone">Timezone</Label>
-                  <Input name="timezone" id="timezone" defaultValue="UTC" />
+                  <Select name="timezone" defaultValue="Africa/Cairo">
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Africa/Cairo">Cairo (GMT+2)</SelectItem>
+                      <SelectItem value="Asia/Kuwait">Kuwait (GMT+3)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="status">Status</Label>
@@ -469,57 +472,12 @@ export default function ReportsScheduler() {
                 </div>
               </div>
 
-              {/* Email Settings */}
+              {/* PDF Report Settings */}
               <div className="space-y-4 border-t pt-4">
-                <h3 className="text-lg font-semibold">Email Settings</h3>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="emailSubject">Email Subject</Label>
-                    <Input name="emailSubject" id="emailSubject" />
-                  </div>
-                  <div>
-                    <Label htmlFor="emailPriority">Priority</Label>
-                    <Select name="emailPriority" defaultValue="normal">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="recipients">Recipients (TO)</Label>
-                  <Input
-                    name="recipients"
-                    id="recipients"
-                    placeholder="email1@example.com, email2@example.com"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="ccRecipients">CC Recipients</Label>
-                  <Input
-                    name="ccRecipients"
-                    id="ccRecipients"
-                    placeholder="cc1@example.com, cc2@example.com"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="bccRecipients">BCC Recipients</Label>
-                  <Input
-                    name="bccRecipients"
-                    id="bccRecipients"
-                    placeholder="bcc1@example.com, bcc2@example.com"
-                  />
-                </div>
+                <h3 className="text-lg font-semibold">PDF Report Settings</h3>
+                <p className="text-sm text-gray-600">
+                  Scheduled reports will be automatically generated as PDF files and stored in S3 with public URLs added to the Reports section.
+                </p>
               </div>
 
               <div className="flex justify-end gap-2 pt-4">

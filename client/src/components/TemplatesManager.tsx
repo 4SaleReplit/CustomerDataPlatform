@@ -202,20 +202,21 @@ export function TemplatesManager() {
   const handleCreateScheduledReport = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    
-    const recipients = (formData.get('recipients') as string)
-      .split(',')
-      .map(email => email.trim())
-      .filter(email => email);
+
+    // Generate report name using template name and current date
+    const reportName = `${selectedTemplate!.name} - ${new Date().toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    })}`;
 
     createScheduledReportMutation.mutate({
       templateId: selectedTemplate!.id,
-      name: formData.get('name') as string,
+      name: formData.get('name') as string || reportName,
       cronExpression: scheduleForm.cronExpression,
-      recipients,
+      recipients: [], // Empty array since we're creating PDF reports, not emails
       description: formData.get('description') as string || undefined,
-      timezone: formData.get('timezone') as string || 'UTC',
-      emailSubject: formData.get('emailSubject') as string || undefined,
+      timezone: formData.get('timezone') as string || 'Africa/Cairo',
     });
   };
 
@@ -720,21 +721,15 @@ export function TemplatesManager() {
             )}
             <div>
               <Label htmlFor="timezone">Timezone</Label>
-              <Input name="timezone" id="timezone" defaultValue="UTC" />
-            </div>
-            <div>
-              <Label htmlFor="emailSubject">Email Subject (Optional)</Label>
-              <Input name="emailSubject" id="emailSubject" />
-            </div>
-            <div>
-              <Label htmlFor="recipients">Recipients (Email Addresses)</Label>
-              <Input
-                name="recipients"
-                id="recipients"
-                placeholder="email1@example.com, email2@example.com"
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">Separate multiple emails with commas</p>
+              <Select name="timezone" defaultValue="Africa/Cairo">
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Africa/Cairo">Cairo (GMT+2)</SelectItem>
+                  <SelectItem value="Asia/Kuwait">Kuwait (GMT+3)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex gap-2 justify-end">
               <Button type="button" variant="outline" onClick={() => setIsScheduleDialogOpen(false)}>
