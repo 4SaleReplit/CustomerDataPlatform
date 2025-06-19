@@ -57,6 +57,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { TemplatesManager } from '@/components/TemplatesManager';
+import ReportsScheduler from '@/components/ReportsScheduler';
 
 interface Report {
   id: string;
@@ -1303,59 +1304,7 @@ export function DataStudioReports() {
           </TabsContent>
 
           <TabsContent value="scheduled" className="space-y-4 mt-4">
-            <div className="space-y-3">
-              {scheduledJobs.map((job) => (
-                <Card key={job.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-5 w-5 text-blue-600" />
-                          <div>
-                            <h4 className="font-medium">{job.reportName}</h4>
-                            <p className="text-sm text-muted-foreground">{job.schedule}</p>
-                          </div>
-                        </div>
-                        <Badge className={`text-xs ${getStatusColor(job.status)}`}>
-                          {job.status}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          {job.recipients} recipients
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          Next run: {job.nextRun}
-                        </span>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            <DropdownMenuItem>
-                              <Play className="h-4 w-4 mr-2" />
-                              Run Now
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Settings className="h-4 w-4 mr-2" />
-                              Edit Schedule
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Clock className="h-4 w-4 mr-2" />
-                              Pause
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <ReportsScheduler />
           </TabsContent>
 
           <TabsContent value="templates" className="space-y-4 mt-4">
