@@ -2393,16 +2393,29 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       
       const reportData = {
         templateId,
+        presentationId: templateId, // Use templateId as presentationId since templates are presentations
         name,
         description: description || null,
         cronExpression,
         timezone: timezone || 'UTC',
         status: 'active',
         emailSubject: emailSubject || `Scheduled Report: ${name}`,
+        emailBody: `Your scheduled report "${name}" has been generated.`,
         recipients: recipients || [],
         ccRecipients: [],
         bccRecipients: [],
-        emailPriority: 'normal'
+        recipientList: recipients || [],
+        emailPriority: 'normal',
+        isActive: true,
+        executionCount: 0,
+        errorCount: 0,
+        successCount: 0,
+        sentImmediately: false,
+        sendingStatus: 'draft',
+        placeholderConfig: {},
+        formatSettings: {},
+        airflowConfiguration: {},
+        emailTemplate: '{}'
       };
       
       const newReport = await storage.createScheduledReport(reportData);
@@ -4264,16 +4277,29 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       // Create a temporary scheduled report for immediate execution
       const tempReportData = {
         templateId: id,
+        presentationId: id, // Use template ID as presentation ID
         name: reportName,
         description: 'Immediately generated report',
         cronExpression: '0 0 * * *', // Placeholder cron expression
         timezone: 'UTC',
         status: 'active',
         emailSubject: `Report: ${reportName}`,
+        emailBody: `Your report "${reportName}" has been generated.`,
         recipients: [],
         ccRecipients: [],
         bccRecipients: [],
-        emailPriority: 'normal'
+        recipientList: [],
+        emailPriority: 'normal',
+        isActive: true,
+        executionCount: 0,
+        errorCount: 0,
+        successCount: 0,
+        sentImmediately: false,
+        sendingStatus: 'draft',
+        placeholderConfig: {},
+        formatSettings: {},
+        airflowConfiguration: {},
+        emailTemplate: '{}'
       };
       
       const scheduledReport = await storage.createScheduledReport(tempReportData);
