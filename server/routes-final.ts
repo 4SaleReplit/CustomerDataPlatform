@@ -2383,10 +2383,42 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
 
   app.post("/api/scheduled-reports-new", async (req: Request, res: Response) => {
     try {
-      const { insertScheduledReportSchema } = await import('../shared/schema');
-      const validatedData = insertScheduledReportSchema.parse(req.body);
+      const { templateId, name, cronExpression, recipients, description, timezone, emailSubject } = req.body;
       
-      const newReport = await storage.createScheduledReport(validatedData);
+      // Get the template to use as presentation_id (since templates are stored in presentations table)
+      const template = await storage.getTemplateById(templateId);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      
+      const reportData = {
+        templateId,
+        presentationId: templateId, // Use template ID as presentation ID since templates are presentations
+        name,
+        description: description || null,
+        cronExpression,
+        timezone: timezone || 'UTC',
+        status: 'active' as const,
+        emailSubject: emailSubject || `Scheduled Report: ${name}`,
+        emailBody: `Your scheduled report "${name}" has been generated.`,
+        recipients: recipients || [],
+        ccRecipients: [],
+        bccRecipients: [],
+        recipientList: recipients || [],
+        emailPriority: 'normal' as const,
+        isActive: true,
+        executionCount: 0,
+        errorCount: 0,
+        successCount: 0,
+        sentImmediately: false,
+        sendingStatus: 'draft' as const,
+        placeholderConfig: {},
+        formatSettings: {},
+        airflowConfiguration: {},
+        emailTemplate: {}
+      };
+      
+      const newReport = await storage.createScheduledReport(reportData);
       res.status(201).json(newReport);
     } catch (error) {
       console.error("Create scheduled report error:", error);
