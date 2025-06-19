@@ -68,19 +68,32 @@ export class SnowflakeService {
 
           console.log('Snowflake connection successful');
 
-          // First, explicitly set the warehouse to ensure it's active
-          const useWarehouseQuery = `USE WAREHOUSE ${this.config.warehouse}`;
-          
+          // First, check available warehouses and set one that exists
           connection.execute({
-            sqlText: useWarehouseQuery,
-            complete: (warehouseErr: any) => {
-              if (warehouseErr) {
-                console.warn('Warning setting warehouse:', warehouseErr.message);
-                // Continue anyway as warehouse might already be set
+            sqlText: "SHOW WAREHOUSES",
+            complete: (showWarehousesErr: any, warehouseStmt: any, warehouseRows: any) => {
+              let warehouseToUse = this.config.warehouse;
+              
+              if (!showWarehousesErr && warehouseRows && warehouseRows.length > 0) {
+                // Get first available warehouse name
+                const availableWarehouse = warehouseRows[0];
+                const warehouseName = availableWarehouse['name'] || availableWarehouse[0];
+                console.log('Available warehouses found, using:', warehouseName);
+                warehouseToUse = warehouseName;
+              } else {
+                console.warn('Could not get warehouse list, trying configured warehouse:', warehouseToUse);
               }
               
-              // Now execute the actual query
+              // Now set the warehouse
               connection.execute({
+                sqlText: `USE WAREHOUSE ${warehouseToUse}`,
+                complete: (useWarehouseErr: any) => {
+                  if (useWarehouseErr) {
+                    console.warn('Warning setting warehouse:', useWarehouseErr.message);
+                  }
+                  
+                  // Now execute the actual query
+                  connection.execute({
                 sqlText: query,
                 fetchAsString: ['Number', 'Date'],
                 streamResult: false,
@@ -144,6 +157,8 @@ export class SnowflakeService {
                   }
                 }
               });
+            }
+          });
             }
           });
         });
