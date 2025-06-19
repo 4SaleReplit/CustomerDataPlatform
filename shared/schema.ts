@@ -252,6 +252,45 @@ export const presentations = pgTable("presentations", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
+// Templates - stored reports that can be used as base for scheduled reports
+export const templates = pgTable("templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  slideIds: uuid("slide_ids").array(),
+  previewImageUrl: text("preview_image_url"), // Thumbnail for template selection
+  editableS3Key: text("editable_s3_key"), // S3 key for editable report format
+  pdfS3Key: text("pdf_s3_key"), // S3 key for PDF preview
+  editableUrl: text("editable_url"), // S3 public URL for editable format
+  pdfUrl: text("pdf_url"), // S3 public URL for PDF preview
+  createdBy: varchar("created_by", { length: 255 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
+// Scheduled Reports - instances of templates with scheduling configuration
+export const scheduledReports = pgTable("scheduled_reports", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  templateId: uuid("template_id").references(() => templates.id, { onDelete: 'cascade' }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  cronExpression: varchar("cron_expression", { length: 100 }).notNull(),
+  timezone: varchar("timezone", { length: 50 }).default('UTC'),
+  status: varchar("status", { length: 20 }).default('active'), // active, paused
+  emailTemplate: text("email_template"),
+  emailSubject: varchar("email_subject", { length: 255 }),
+  recipients: jsonb("recipients").default('[]'), // Array of email addresses
+  lastRunAt: timestamp("last_run_at", { withTimezone: true }),
+  nextRunAt: timestamp("next_run_at", { withTimezone: true }),
+  lastGeneratedPdfUrl: text("last_generated_pdf_url"), // Latest generated report PDF
+  lastGeneratedS3Key: text("last_generated_s3_key"), // S3 key for latest report
+  createdBy: varchar("created_by", { length: 255 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
+
+
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -294,6 +333,14 @@ export const insertDashboardTileInstanceSchema = createInsertSchema(dashboardTil
   createdAt: true,
   updatedAt: true,
 });
+
+export const insertTemplateSchema = createInsertSchema(templates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+
 
 export const insertCampaignSchema = createInsertSchema(campaigns).omit({
   id: true,
@@ -422,41 +469,7 @@ export const environmentConfigurations = pgTable("environment_configurations", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
 });
 
-// Scheduled Reports System
-export const scheduledReports = pgTable("scheduled_reports", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 255 }).notNull(),
-  description: text("description"),
-  presentationId: uuid("presentation_id").references(() => presentations.id, { onDelete: 'cascade' }).notNull(),
-  cronExpression: varchar("cron_expression", { length: 100 }), // "0 9 * * 1" for weekly Monday 9AM, null for one-time sends
-  timezone: varchar("timezone", { length: 50 }).default('UTC'),
-  emailSubject: text("email_subject").notNull(),
-  emailBody: text("email_body").notNull(), // Template with {placeholders}
-  recipientList: jsonb("recipient_list").notNull().default('[]'), // Array of email addresses
-  ccList: jsonb("cc_list").default('[]'),
-  bccList: jsonb("bcc_list").default('[]'),
-  isActive: boolean("is_active").default(true),
-  lastExecuted: timestamp("last_executed", { withTimezone: true }),
-  lastExecutionAt: timestamp("last_execution_at", { withTimezone: true }),
-  nextExecution: timestamp("next_execution", { withTimezone: true }),
-  executionCount: integer("execution_count").default(0),
-  successCount: integer("success_count").default(0),
-  errorCount: integer("error_count").default(0),
-  lastError: text("last_error"),
-  airflowDagId: varchar("airflow_dag_id", { length: 255 }),
-  airflowTaskId: varchar("airflow_task_id", { length: 255 }),
-  airflowConfiguration: jsonb("airflow_configuration").default('{}'), // Complete Airflow DAG configuration
-  pdfDeliveryUrl: text("pdf_delivery_url"), // Public URL for PDF delivery
-  placeholderConfig: jsonb("placeholder_config").default('{}'), // Available placeholders and their sources
-  formatSettings: jsonb("format_settings").default('{}'), // PDF/Excel export settings
-  emailTemplate: jsonb("email_template").default('{}'), // Email template configuration
-  sentImmediately: boolean("sent_immediately").default(false), // True for one-time emails that were sent
-  sentAt: timestamp("sent_at", { withTimezone: true }), // When the one-time email was sent
-  sendingStatus: varchar("sending_status", { length: 20 }).default('draft'), // 'draft', 'sent', 'failed'
-  createdBy: uuid("created_by").references(() => team.id, { onDelete: 'set null' }),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
-});
+
 
 // Email Templates for Reports
 export const emailTemplates = pgTable("email_templates", {
