@@ -207,7 +207,8 @@ export const integrations = pgTable("integrations", {
   metadata: jsonb("metadata").default('{}'), // account info, data available, etc
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
-  lastTestedAt: timestamp("last_tested_at", { withTimezone: true })
+  lastTestedAt: timestamp("last_tested_at", { withTimezone: true }),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true })
 });
 
 // Uploaded images for presentations

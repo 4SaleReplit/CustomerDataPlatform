@@ -463,13 +463,13 @@ export function EmailTemplatesDesigner() {
                       <TabsTrigger value="html">HTML Source</TabsTrigger>
                     </TabsList>
                     <TabsContent value="preview" className="mt-4">
-                      <div className="border rounded-lg p-4 bg-gray-50 max-h-96 overflow-y-auto flex justify-center">
+                      <div className="border rounded-lg p-4 bg-gray-50 flex justify-center">
                         <iframe
                           srcDoc={previewHtml}
                           className="border-0"
                           style={{
                             width: '600px',
-                            height: '500px',
+                            height: '800px',
                             transform: 'scale(0.8)',
                             transformOrigin: 'top center',
                             maxWidth: '600px'
