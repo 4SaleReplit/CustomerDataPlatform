@@ -180,8 +180,7 @@ export default function ReportsScheduler() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/scheduled-reports-new'] });
       queryClient.invalidateQueries({ queryKey: ['/api/presentations'] });
-      setIsDialogOpen(false); // Close the Schedule Report creation form
-      setSelectedTemplate(null);
+      setIsCreateDialogOpen(false); // Close the Schedule Report creation form
       toast({ 
         title: "Report Created Successfully", 
         description: `${data.reportName} is now available in All Reports` 

@@ -4287,28 +4287,38 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         day: 'numeric' 
       })}`;
       
-      // Copy slides from template if they exist
+      // Copy slides from template content
       let copiedSlideIds: string[] = [];
-      if (template.slideIds && template.slideIds.length > 0) {
-        for (const slideId of template.slideIds) {
-          try {
-            const originalSlide = await storage.getSlide(slideId);
-            if (originalSlide) {
-              // Create a new slide with copied data
+      try {
+        if (template.content) {
+          console.log('Template content:', template.content);
+          const templateContent = JSON.parse(template.content);
+          console.log('Parsed template content:', templateContent);
+          
+          if (templateContent.slides && Array.isArray(templateContent.slides)) {
+            console.log(`Found ${templateContent.slides.length} slides in template`);
+            for (let i = 0; i < templateContent.slides.length; i++) {
+              const slideData = templateContent.slides[i];
+              console.log(`Creating slide ${i + 1}:`, slideData);
+              
               const newSlide = await storage.createSlide({
-                title: originalSlide.title,
-                elements: originalSlide.elements as Json,
-                backgroundImage: originalSlide.backgroundImage,
-                backgroundColor: originalSlide.backgroundColor,
-                order: originalSlide.order,
+                title: slideData.name || `Slide ${i + 1}`,
+                elements: slideData.elements || [],
+                backgroundColor: slideData.backgroundColor || '#ffffff',
+                order: i,
                 createdBy: 'system'
               });
               copiedSlideIds.push(newSlide.id);
+              console.log(`Created slide with ID: ${newSlide.id}`);
             }
-          } catch (error) {
-            console.error(`Error copying slide ${slideId}:`, error);
+          } else {
+            console.log('No slides array found in template content');
           }
+        } else {
+          console.log('No template content found');
         }
+      } catch (error) {
+        console.error('Error parsing template content:', error);
       }
       
       // Create a presentation for the report
