@@ -2385,37 +2385,31 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     try {
       const { templateId, name, cronExpression, recipients, description, timezone, emailSubject } = req.body;
       
+      // Validate required fields
+      if (!templateId || !name || !cronExpression) {
+        return res.status(400).json({ error: "Missing required fields: templateId, name, cronExpression" });
+      }
+      
       // Get the template to verify it exists
       const template = await storage.getTemplate(templateId);
       if (!template) {
         return res.status(404).json({ error: "Template not found" });
       }
       
+      // Create report data matching schema exactly
       const reportData = {
-        templateId,
-        presentationId: templateId, // Use templateId as presentationId since templates are presentations
-        name,
+        templateId: templateId,
+        name: name,
         description: description || null,
-        cronExpression,
+        cronExpression: cronExpression,
         timezone: timezone || 'UTC',
         status: 'active',
+        emailTemplate: null,
         emailSubject: emailSubject || `Scheduled Report: ${name}`,
-        emailBody: `Your scheduled report "${name}" has been generated.`,
         recipients: recipients || [],
         ccRecipients: [],
         bccRecipients: [],
-        recipientList: recipients || [],
-        emailPriority: 'normal',
-        isActive: true,
-        executionCount: 0,
-        errorCount: 0,
-        successCount: 0,
-        sentImmediately: false,
-        sendingStatus: 'draft',
-        placeholderConfig: {},
-        formatSettings: {},
-        airflowConfiguration: {},
-        emailTemplate: '{}'
+        emailPriority: 'normal'
       };
       
       const newReport = await storage.createScheduledReport(reportData);
@@ -4277,29 +4271,17 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       // Create a temporary scheduled report for immediate execution
       const tempReportData = {
         templateId: id,
-        presentationId: id, // Use template ID as presentation ID
         name: reportName,
         description: 'Immediately generated report',
         cronExpression: '0 0 * * *', // Placeholder cron expression
         timezone: 'UTC',
         status: 'active',
+        emailTemplate: null,
         emailSubject: `Report: ${reportName}`,
-        emailBody: `Your report "${reportName}" has been generated.`,
         recipients: [],
         ccRecipients: [],
         bccRecipients: [],
-        recipientList: [],
-        emailPriority: 'normal',
-        isActive: true,
-        executionCount: 0,
-        errorCount: 0,
-        successCount: 0,
-        sentImmediately: false,
-        sendingStatus: 'draft',
-        placeholderConfig: {},
-        formatSettings: {},
-        airflowConfiguration: {},
-        emailTemplate: '{}'
+        emailPriority: 'normal'
       };
       
       const scheduledReport = await storage.createScheduledReport(tempReportData);
