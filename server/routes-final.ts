@@ -4291,15 +4291,11 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       let copiedSlideIds: string[] = [];
       try {
         if (template.content) {
-          console.log('Template content:', template.content);
           const templateContent = JSON.parse(template.content);
-          console.log('Parsed template content:', templateContent);
           
           if (templateContent.slides && Array.isArray(templateContent.slides)) {
-            console.log(`Found ${templateContent.slides.length} slides in template`);
             for (let i = 0; i < templateContent.slides.length; i++) {
               const slideData = templateContent.slides[i];
-              console.log(`Creating slide ${i + 1}:`, slideData);
               
               const newSlide = await storage.createSlide({
                 title: slideData.name || `Slide ${i + 1}`,
@@ -4309,13 +4305,8 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
                 createdBy: 'system'
               });
               copiedSlideIds.push(newSlide.id);
-              console.log(`Created slide with ID: ${newSlide.id}`);
             }
-          } else {
-            console.log('No slides array found in template content');
           }
-        } else {
-          console.log('No template content found');
         }
       } catch (error) {
         console.error('Error parsing template content:', error);
@@ -4333,6 +4324,40 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       const newPresentation = await storage.createPresentation(presentationData);
       
       console.log(`Report presentation created: ${reportName} with ${copiedSlideIds.length} slides`);
+      
+      // Generate PDF and upload to S3 if S3 integration is available
+      try {
+        const s3Integrations = await storage.getIntegrations();
+        const s3Integration = s3Integrations.find((integration: any) => 
+          integration.type === 's3' && integration.active
+        );
+        
+        if (s3Integration && copiedSlideIds.length > 0) {
+          // Import PDF generation services
+          const { PDFGeneratorService } = await import('../server/services/pdfGeneratorService');
+          const { PDFStorageService } = await import('../server/services/pdfStorageService');
+          
+          const pdfGenerator = new PDFGeneratorService();
+          const pdfStorage = new PDFStorageService();
+          
+          // Generate PDF from slides
+          const pdfBuffer = await pdfGenerator.generateFromSlides(copiedSlideIds, reportName);
+          
+          // Upload to S3
+          const s3Result = await pdfStorage.uploadPDF(pdfBuffer, newPresentation.id, reportName);
+          
+          // Update presentation with S3 URLs
+          await storage.updatePresentation(newPresentation.id, {
+            pdfUrl: s3Result.publicUrl,
+            pdfS3Key: s3Result.s3Key
+          });
+          
+          console.log(`PDF generated and uploaded to S3: ${s3Result.publicUrl}`);
+        }
+      } catch (error) {
+        console.error('Error generating PDF or uploading to S3:', error);
+        // Continue without failing the report creation
+      }
       
       // Return success response
       res.json({ 
