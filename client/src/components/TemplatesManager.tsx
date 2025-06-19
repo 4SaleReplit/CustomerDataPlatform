@@ -790,7 +790,7 @@ export function TemplatesManager() {
                         </SelectTrigger>
                         <SelectContent>
                           {Array.from({ length: 12 }, (_, i) => {
-                            const hour = i === 0 ? 12 : i;
+                            const hour = i + 1;
                             return (
                               <SelectItem key={i} value={hour.toString()}>
                                 {hour.toString().padStart(2, '0')}
@@ -818,11 +818,14 @@ export function TemplatesManager() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {['00', '15', '30', '45'].map((minute) => (
-                            <SelectItem key={minute} value={minute}>
-                              {minute}
-                            </SelectItem>
-                          ))}
+                          {Array.from({ length: 60 }, (_, i) => {
+                            const minute = i.toString().padStart(2, '0');
+                            return (
+                              <SelectItem key={i} value={minute}>
+                                {minute}
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     </div>
