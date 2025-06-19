@@ -1966,8 +1966,6 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         }
       } else if (integration.type === 's3') {
         // Test S3 connection
-        const { S3Client, HeadBucketCommand, ListObjectsV2Command } = await import('@aws-sdk/client-s3');
-        
         const credentials = integration.credentials as any;
         
         const s3Client = new S3Client({
@@ -2038,6 +2036,24 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         } catch (error) {
           console.error('S3 connection failed:', error);
           
+          let errorMessage = "Unknown error";
+          let suggestion = "";
+          
+          if (error && typeof error === 'object' && '$metadata' in error) {
+            const metadata = (error as any).$metadata;
+            if (metadata.httpStatusCode === 403) {
+              errorMessage = "Access denied (403) - Check bucket permissions";
+              suggestion = "The access key may not have permissions for this bucket, or bucket policy restricts access";
+            } else if (metadata.httpStatusCode === 404) {
+              errorMessage = "Bucket not found (404)";
+              suggestion = "Check if bucket name and region are correct";
+            } else {
+              errorMessage = `HTTP ${metadata.httpStatusCode}: ${error instanceof Error ? error.message : "Unknown error"}`;
+            }
+          } else if (error instanceof Error) {
+            errorMessage = error.message;
+          }
+          
           // Update integration status to disconnected
           await storage.updateIntegration(id, { 
             status: 'disconnected',
@@ -2046,14 +2062,16 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
               lastTestResult: {
                 success: false,
                 testedAt: new Date().toISOString(),
-                error: error instanceof Error ? error.message : "Unknown error"
+                error: errorMessage,
+                suggestion: suggestion
               }
             }
           });
           
           res.json({ 
             success: false, 
-            error: "S3 connection failed: " + (error instanceof Error ? error.message : "Unknown error")
+            error: `S3 connection failed: ${errorMessage}`,
+            suggestion: suggestion
           });
         }
       } else {
