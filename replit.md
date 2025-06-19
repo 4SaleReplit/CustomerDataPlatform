@@ -111,6 +111,18 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 19, 2025**: Complete S3 Template & Report Persistence System Implementation
+  - Created comprehensive TemplateS3StorageService for automatic template and report storage in S3
+  - Implemented /templates/{templateId}/ and /reports/{reportId}/ folder structure in S3 bucket
+  - Added automatic storage of template metadata, slides JSON, and all embedded images to S3
+  - Enhanced template creation to store complete template data including slides and images in S3
+  - Updated report generation (Create Now) to automatically persist all content to S3 with proper folder organization
+  - Added dedicated S3 storage endpoints: /api/templates/:id/store-s3 and /api/presentations/:id/store-s3
+  - Integrated S3 URLs into database schema with editableS3Key, editableUrl, pdfS3Key, and pdfUrl fields
+  - System now extracts and stores all uploaded images and direct file references from slide elements
+  - Templates stored with complete slide content and image assets for full reconstruction capability
+  - Reports persistently stored in both database and S3 with comprehensive slide and image backup
+
 - **June 19, 2025**: Fixed Report Naming Format - Template Name + User-Entered Report Name
   - Corrected template execution endpoint to use "template name + user-entered report name" instead of "template name + timestamp"
   - Updated frontend components (ReportsScheduler, TemplatesManager) to pass user-entered report names to backend

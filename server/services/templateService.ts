@@ -108,7 +108,39 @@ export class TemplateService {
       })
       .returning();
 
-    return template as Template;
+    // Store template to S3 with slides and images
+    try {
+      const { templateS3Storage } = await import('./templateS3Storage');
+      const templateData = {
+        id: template.id,
+        name: template.name,
+        description: template.description,
+        slideIds: template.slideIds,
+        previewImageUrl: template.previewImageUrl,
+        createdBy: template.createdBy,
+        createdAt: template.createdAt,
+        sourcePresentation: presentationId
+      };
+      
+      const s3Result = await templateS3Storage.storeTemplate(template.id, templateData, template.slideIds || []);
+      
+      // Update template with S3 URLs
+      const [updatedTemplate] = await db
+        .update(templates)
+        .set({
+          editableS3Key: s3Result.templateS3Key,
+          editableUrl: s3Result.templateUrl,
+        })
+        .where(eq(templates.id, template.id))
+        .returning();
+      
+      console.log(`✅ Template stored to S3: ${s3Result.templateS3Key} with ${s3Result.slides.length} slides and ${s3Result.images.length} images`);
+      return updatedTemplate as Template;
+    } catch (s3Error) {
+      console.error('Failed to store template to S3:', s3Error);
+      // Return template without S3 URLs if storage fails
+      return template as Template;
+    }
   }
 
   // Get all templates

@@ -4257,6 +4257,94 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     }
   });
 
+  // Store template to S3 with slides and images
+  app.post("/api/templates/:id/store-s3", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      const template = await storage.getTemplate(id);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+
+      const { templateS3Storage } = await import('./services/templateS3Storage');
+      const templateData = {
+        id: template.id,
+        name: template.name,
+        description: template.description,
+        slideIds: template.slideIds,
+        previewImageUrl: template.previewImageUrl,
+        createdBy: template.createdBy,
+        createdAt: template.createdAt
+      };
+      
+      const s3Result = await templateS3Storage.storeTemplate(template.id, templateData, template.slideIds || []);
+      
+      // Update template with S3 URLs
+      await storage.updateTemplate(template.id, {
+        editableS3Key: s3Result.templateS3Key,
+        editableUrl: s3Result.templateUrl,
+      });
+      
+      res.json({
+        success: true,
+        message: `Template stored to S3 with ${s3Result.slides.length} slides and ${s3Result.images.length} images`,
+        s3Key: s3Result.templateS3Key,
+        s3Url: s3Result.templateUrl,
+        slideCount: s3Result.slides.length,
+        imageCount: s3Result.images.length
+      });
+    } catch (error) {
+      console.error('Error storing template to S3:', error);
+      res.status(500).json({ error: "Failed to store template to S3" });
+    }
+  });
+
+  // Store presentation/report to S3 with slides and images
+  app.post("/api/presentations/:id/store-s3", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      const presentation = await storage.getPresentation(id);
+      if (!presentation) {
+        return res.status(404).json({ error: "Presentation not found" });
+      }
+
+      const { templateS3Storage } = await import('./services/templateS3Storage');
+      const reportData = {
+        id: presentation.id,
+        title: presentation.title,
+        description: presentation.description,
+        slideIds: presentation.slideIds,
+        previewImageUrl: presentation.previewImageUrl,
+        templateId: presentation.templateId,
+        instanceType: presentation.instanceType,
+        createdBy: presentation.createdBy,
+        createdAt: presentation.createdAt
+      };
+      
+      const s3Result = await templateS3Storage.storeReport(presentation.id, reportData, presentation.slideIds || []);
+      
+      // Update presentation with S3 URLs
+      await storage.updatePresentation(presentation.id, {
+        pdfS3Key: s3Result.templateS3Key,
+        pdfUrl: s3Result.templateUrl,
+      });
+      
+      res.json({
+        success: true,
+        message: `Report stored to S3 with ${s3Result.slides.length} slides and ${s3Result.images.length} images`,
+        s3Key: s3Result.templateS3Key,
+        s3Url: s3Result.templateUrl,
+        slideCount: s3Result.slides.length,
+        imageCount: s3Result.images.length
+      });
+    } catch (error) {
+      console.error('Error storing presentation to S3:', error);
+      res.status(500).json({ error: "Failed to store presentation to S3" });
+    }
+  });
+
   // Execute template immediately to create report
   app.post("/api/templates/:id/execute", async (req: Request, res: Response) => {
     try {
@@ -4311,6 +4399,23 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       const newPresentation = await storage.createPresentation(presentationData);
       
       console.log(`Report presentation created: ${finalReportName} with ${copiedSlideIds.length} slides`);
+      
+      // Store report to S3 with slides and images
+      try {
+        const { templateS3Storage } = await import('./services/templateS3Storage');
+        const s3Result = await templateS3Storage.storeReport(newPresentation.id, presentationData, copiedSlideIds);
+        
+        // Update presentation with S3 URLs
+        await storage.updatePresentation(newPresentation.id, {
+          pdfS3Key: s3Result.templateS3Key,
+          pdfUrl: s3Result.templateUrl
+        });
+        
+        console.log(`✅ Report stored to S3: ${s3Result.templateS3Key} with ${s3Result.slides.length} slides and ${s3Result.images.length} images`);
+      } catch (s3Error) {
+        console.error('Failed to store report to S3:', s3Error);
+        // Continue without failing the report creation
+      }
       
       // Generate PDF and upload to S3 if S3 integration is available
       try {
