@@ -37,7 +37,8 @@ import {
   PieChart,
   LineChart,
   TrendingUp,
-  Table
+  Table,
+  FileDown
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -970,6 +971,10 @@ export function DataStudioReports() {
                             <DropdownMenuItem onClick={() => handleRefreshReport(report.id)}>
                               <RefreshCw className="h-4 w-4 mr-2" />
                               Refresh Data
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDownloadPDF(report.id, report.name)}>
+                              <FileDown className="h-4 w-4 mr-2" />
+                              Download PDF
                             </DropdownMenuItem>
                             <DropdownMenuItem>
                               <Send className="h-4 w-4 mr-2" />

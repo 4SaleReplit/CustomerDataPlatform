@@ -111,20 +111,20 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
-- **June 19, 2025**: Complete Apache ECharts Migration & S3 Integration Fix
-  - Implemented complete Apache ECharts visualization system with 22 chart types (line, bar, pie, scatter, heatmap, radar, funnel, gauge, treemap, sunburst, network graphs, etc.)
-  - Updated main visualization dropdown to show all 22 chart types directly instead of limited categories
-  - Migrated dashboard tile rendering system to use Apache ECharts for all chart visualizations
-  - Created comprehensive testing dashboard with 29 total tiles demonstrating all chart types using real Snowflake data
-  - Built EChartsRenderer component supporting all major chart configurations with theme support
-  - Enhanced tile creation interface with direct chart type selection from main dropdown
-  - Fixed critical Snowflake "No active warehouse selected" error affecting dashboard tile SQL execution
-  - Implemented automatic warehouse detection using SHOW WAREHOUSES command
-  - Enhanced Snowflake service with dynamic warehouse selection and fallback logic
-  - Resolved runtime error with map chart by implementing geographic bar chart fallback for missing map region data
-  - Dashboard now displays 29 visualization tiles (7 original + 22 new) demonstrating full Apache ECharts capability with authentic data
-  - Fixed S3 integration connection issue by updating Access Key ID to correct credentials (AKIAZKEOWRP6NDGUZJK3)
-  - S3 integration now successfully connects to 4sale-cdp-assets bucket in eu-west-1 region with 1 object detected
+- **June 19, 2025**: Complete S3 PDF Storage Integration & Report Generation Enhancement
+  - Implemented comprehensive S3 PDF storage system for automated report generation and distribution
+  - Created PDFStorageService with automatic S3 bucket integration using existing 4sale-cdp-assets bucket
+  - Built PDFGeneratorService using PDFKit for professional PDF creation with 4Sale branding and multi-slide support
+  - Enhanced presentations schema to include pdfUrl and pdfS3Key fields for public URL storage
+  - Updated report generation system to store PDFs in S3 instead of local storage with organized folder structure
+  - Integrated S3 PDF URLs into email template system with {pdf_download_url} and {report_url} variables
+  - Fixed S3 ACL configuration issue preventing PDF uploads (removed unsupported ACL parameter)
+  - Enhanced /api/reports/pdf/:id endpoint to redirect to existing S3 URLs or generate new PDFs automatically
+  - Added /api/presentations/:id/generate-pdf endpoint for manual PDF regeneration with public URL response
+  - PDF files now stored in S3 with structure: reports/pdfs/{presentationId}/{timestamp}_{filename}.pdf
+  - Email reports now include clickable PDF download links instead of large email attachments
+  - System successfully tested with presentation PDF generation and S3 storage verification
+  - Fixed Email Templates Designer visual preview scrolling issue by removing container scroll and increasing height to 800px
 
 - **June 18, 2025**: Final Email Sender UI/UX Enhancements and Status Management
   - Updated status tags for One-Time Emails: removed "Pending", kept only "Sent" (green) and "Failed" (red)
