@@ -18,6 +18,7 @@ import {
 } from "@shared/schema";
 import multer from "multer";
 import path from "path";
+import { S3Client, HeadBucketCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import fs from "fs";
 import { nanoid } from "nanoid";
 import * as cron from "node-cron";
@@ -1961,6 +1962,98 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
           res.json({ 
             success: false, 
             error: "PostgreSQL connection failed: " + (error instanceof Error ? error.message : "Unknown error")
+          });
+        }
+      } else if (integration.type === 's3') {
+        // Test S3 connection
+        const { S3Client, HeadBucketCommand, ListObjectsV2Command } = await import('@aws-sdk/client-s3');
+        
+        const credentials = integration.credentials as any;
+        
+        const s3Client = new S3Client({
+          region: credentials.region,
+          credentials: {
+            accessKeyId: credentials.accessKeyId,
+            secretAccessKey: credentials.secretAccessKey
+          }
+        });
+
+        try {
+          console.log(`Testing S3 connection to bucket: ${credentials.bucketName} in region: ${credentials.region}`);
+          
+          // Test bucket access
+          await s3Client.send(new HeadBucketCommand({ 
+            Bucket: credentials.bucketName 
+          }));
+          
+          // Get bucket metadata
+          const listCommand = new ListObjectsV2Command({
+            Bucket: credentials.bucketName,
+            MaxKeys: 1
+          });
+          
+          const listResult = await s3Client.send(listCommand);
+          
+          // Get object count (sample for performance)
+          const countCommand = new ListObjectsV2Command({
+            Bucket: credentials.bucketName,
+            MaxKeys: 1000
+          });
+          
+          const countResult = await s3Client.send(countCommand);
+          const objectCount = countResult.KeyCount || 0;
+          
+          const metadata = {
+            lastTested: new Date().toISOString(),
+            lastTestResult: {
+              success: true,
+              testedAt: new Date().toISOString(),
+              bucket: credentials.bucketName,
+              region: credentials.region
+            },
+            bucketName: credentials.bucketName,
+            region: credentials.region,
+            objectCount: objectCount,
+            lastModified: listResult.Contents?.[0]?.LastModified?.toISOString() || null,
+            accessible: true
+          };
+
+          // Update integration status to connected
+          await storage.updateIntegration(id, { 
+            status: 'connected',
+            metadata
+          });
+
+          console.log(`S3 connection successful - Bucket: ${credentials.bucketName}, Objects: ${objectCount}`);
+          
+          res.json({ 
+            success: true, 
+            message: "S3 connection successful",
+            details: {
+              bucket: credentials.bucketName,
+              region: credentials.region,
+              objectCount: objectCount
+            }
+          });
+        } catch (error) {
+          console.error('S3 connection failed:', error);
+          
+          // Update integration status to disconnected
+          await storage.updateIntegration(id, { 
+            status: 'disconnected',
+            metadata: {
+              lastTested: new Date().toISOString(),
+              lastTestResult: {
+                success: false,
+                testedAt: new Date().toISOString(),
+                error: error instanceof Error ? error.message : "Unknown error"
+              }
+            }
+          });
+          
+          res.json({ 
+            success: false, 
+            error: "S3 connection failed: " + (error instanceof Error ? error.message : "Unknown error")
           });
         }
       } else {
