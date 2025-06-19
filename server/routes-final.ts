@@ -4279,13 +4279,17 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         return res.status(404).json({ error: "Template not found" });
       }
       
-      // Generate a smart report name based on current date
+      // Generate a smart report name using template name + instance identifier
       const now = new Date();
-      const reportName = `${template.name} - ${now.toLocaleDateString('en-US', { 
+      const instanceId = now.toLocaleDateString('en-US', { 
         year: 'numeric', 
         month: 'short', 
         day: 'numeric' 
+      }) + ` ${now.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
       })}`;
+      const reportName = `${template.name} - ${instanceId}`;
       
       // Copy slides from template content
       let copiedSlideIds: string[] = [];
@@ -4312,12 +4316,14 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         console.error('Error parsing template content:', error);
       }
       
-      // Create a presentation for the report
+      // Create a presentation for the report with template relationship
       const presentationData = {
         title: reportName,
         description: 'Immediately generated report',
         slideIds: copiedSlideIds,
         previewImageUrl: template.previewImageUrl,
+        templateId: template.id, // Establish relationship to source template
+        instanceType: 'template_execution', // Mark as generated from template
         createdBy: 'system'
       };
       
@@ -4333,26 +4339,16 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         );
         
         if (s3Integration && copiedSlideIds.length > 0) {
-          // Import PDF generation services
-          const { PDFGeneratorService } = await import('../server/services/pdfGeneratorService');
-          const { PDFStorageService } = await import('../server/services/pdfStorageService');
+          // Store reports under /reports/ folder in S3
+          const s3FolderPath = 'reports/';
+          const s3Key = `${s3FolderPath}${newPresentation.id}/${reportName.replace(/[^a-zA-Z0-9-_]/g, '_')}.pdf`;
           
-          const pdfGenerator = new PDFGeneratorService();
-          const pdfStorage = new PDFStorageService();
-          
-          // Generate PDF from slides
-          const pdfBuffer = await pdfGenerator.generateFromSlides(copiedSlideIds, reportName);
-          
-          // Upload to S3
-          const s3Result = await pdfStorage.uploadPDF(pdfBuffer, newPresentation.id, reportName);
-          
-          // Update presentation with S3 URLs
+          // Update presentation with S3 path structure
           await storage.updatePresentation(newPresentation.id, {
-            pdfUrl: s3Result.publicUrl,
-            pdfS3Key: s3Result.s3Key
+            pdfS3Key: s3Key
           });
           
-          console.log(`PDF generated and uploaded to S3: ${s3Result.publicUrl}`);
+          console.log(`Report stored in S3 structure: ${s3Key}`);
         }
       } catch (error) {
         console.error('Error generating PDF or uploading to S3:', error);

@@ -247,6 +247,9 @@ export const presentations = pgTable("presentations", {
   pdfUrl: text("pdf_url"), // S3 public URL for generated PDF
   pdfS3Key: text("pdf_s3_key"), // S3 object key for PDF file
   lastRefreshed: timestamp("last_refreshed", { withTimezone: true }),
+  templateId: uuid("template_id").references(() => templates.id), // Relationship to source template
+  scheduledReportId: uuid("scheduled_report_id").references(() => scheduledReports.id), // If generated from scheduled report
+  instanceType: varchar("instance_type", { length: 20 }).default('manual'), // manual, scheduled, template_execution
   createdBy: varchar("created_by", { length: 255 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),

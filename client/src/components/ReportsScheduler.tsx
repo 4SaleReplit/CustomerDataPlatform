@@ -119,7 +119,7 @@ export default function ReportsScheduler() {
     queryFn: () => apiRequest('/api/scheduled-reports-new')
   });
 
-  // Create scheduled report mutation
+  // Create scheduled report mutation (no recipients - pure data refresh jobs)
   const createReportMutation = useMutation({
     mutationFn: (data: {
       templateId: string;
@@ -128,11 +128,6 @@ export default function ReportsScheduler() {
       cronExpression: string;
       timezone: string;
       status: string;
-      emailSubject?: string;
-      recipients: string[];
-      ccRecipients: string[];
-      bccRecipients: string[];
-      emailPriority: string;
     }) => apiRequest('/api/scheduled-reports-new', { method: 'POST', body: JSON.stringify(data) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/scheduled-reports-new'] });
