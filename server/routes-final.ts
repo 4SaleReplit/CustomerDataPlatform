@@ -22,6 +22,7 @@ import { S3Client, HeadBucketCommand, ListObjectsV2Command } from '@aws-sdk/clie
 import fs from "fs";
 import { nanoid } from "nanoid";
 import * as cron from "node-cron";
+import { cronJobService } from "./services/cronJobService";
 
 const activeCronJobs = new Map<string, any>();
 

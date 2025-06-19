@@ -64,6 +64,9 @@ app.use((req, res, next) => {
 (async () => {
   try {
     const server = await registerRoutes(app);
+    
+    // Initialize cron job service for scheduled reports
+    await cronJobService.initializeJobs();
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;

@@ -193,12 +193,12 @@ class CronJobService {
       // Update scheduled report with execution details
       await storage.updateScheduledReport(scheduledReport.id, {
         lastRunAt: now,
-        lastGeneratedPdfUrl: newPresentation.pdfUrl,
-        lastGeneratedS3Key: newPresentation.pdfS3Key,
+        lastGeneratedPdfUrl: newPresentation.pdfUrl || undefined,
+        lastGeneratedS3Key: newPresentation.pdfS3Key || undefined,
       });
       
       // Update next run time
-      await this.updateNextRunTime(scheduledReport.id, scheduledReport.cronExpression, scheduledReport.timezone);
+      await this.updateNextRunTime(scheduledReport.id, scheduledReport.cronExpression, scheduledReport.timezone || undefined);
       
       console.log(`✅ Successfully executed scheduled report: ${scheduledReport.name} - Created presentation: ${newPresentation.id}`);
       
@@ -226,7 +226,7 @@ class CronJobService {
   private async updateNextRunTime(scheduledReportId: string, cronExpression: string, timezone?: string): Promise<void> {
     try {
       // Calculate next execution time
-      const task = cron.schedule(cronExpression, () => {}, { scheduled: false, timezone: timezone || 'UTC' });
+      const task = cron.schedule(cronExpression, () => {}, { timezone: timezone || 'UTC' });
       
       // Get the next execution time
       const nextRun = new Date();
@@ -254,9 +254,9 @@ class CronJobService {
   async stopAllJobs(): Promise<void> {
     console.log('🛑 Stopping all cron jobs...');
     
-    for (const [reportId, job] of this.jobs) {
+    Array.from(this.jobs.values()).forEach((job) => {
       job.task.destroy();
-    }
+    });
     
     this.jobs.clear();
     console.log('✅ All cron jobs stopped');
