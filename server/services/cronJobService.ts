@@ -249,33 +249,47 @@ class CronJobService {
       }
 
       const [minute, hour, day, month, dayOfWeek] = cronParts;
+      
+      // Get current time in the specified timezone
       const now = new Date();
-      const next = new Date(now);
-
-      // Parse hour and minute
       const targetHour = parseInt(hour);
       const targetMinute = parseInt(minute);
-
-      // Set target time for today
-      next.setHours(targetHour, targetMinute, 0, 0);
-
-      // If the time has already passed today, move to next occurrence
-      if (next <= now) {
+      
+      // Calculate timezone offset for Africa/Cairo (UTC+2)
+      let timezoneOffset = 0;
+      if (timezone === 'Africa/Cairo') {
+        timezoneOffset = 2 * 60 * 60 * 1000; // +2 hours in milliseconds
+      } else if (timezone === 'Asia/Kuwait') {
+        timezoneOffset = 3 * 60 * 60 * 1000; // +3 hours in milliseconds
+      }
+      
+      // Create next execution time in UTC
+      const next = new Date();
+      next.setUTCHours(targetHour, targetMinute, 0, 0);
+      
+      // Adjust for timezone - subtract offset to get UTC time that will display correctly
+      next.setTime(next.getTime() - timezoneOffset);
+      
+      // If the time has already passed today in the target timezone, move to next occurrence
+      const nowInTargetTz = new Date(now.getTime() + timezoneOffset);
+      const nextInTargetTz = new Date(next.getTime() + timezoneOffset);
+      
+      if (nextInTargetTz <= nowInTargetTz) {
         if (day === '*' && month === '*' && dayOfWeek === '*') {
           // Daily - add one day
-          next.setDate(next.getDate() + 1);
+          next.setTime(next.getTime() + 24 * 60 * 60 * 1000);
         } else if (dayOfWeek !== '*') {
           // Weekly - find next occurrence of the day
           const targetDay = parseInt(dayOfWeek);
-          const currentDay = next.getDay();
+          const currentDay = nextInTargetTz.getDay();
           let daysUntilTarget = targetDay - currentDay;
           if (daysUntilTarget <= 0) {
             daysUntilTarget += 7;
           }
-          next.setDate(next.getDate() + daysUntilTarget);
+          next.setTime(next.getTime() + daysUntilTarget * 24 * 60 * 60 * 1000);
         } else {
           // Monthly or other - add one day for now
-          next.setDate(next.getDate() + 1);
+          next.setTime(next.getTime() + 24 * 60 * 60 * 1000);
         }
       }
 

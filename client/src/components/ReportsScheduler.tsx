@@ -657,15 +657,15 @@ export default function ReportsScheduler() {
                     <div className="space-y-2 text-sm text-gray-600">
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4" />
-                        <span>{formatCronToHumanReadable(report.cronExpression, report.timezone)}</span>
+                        <span>{formatCronToHumanReadable(report.cronExpression, report.timezone)} ({report.timezone})</span>
                       </div>
                       <div className="flex items-center gap-4 text-xs">
                         <span>Created: {format(new Date(report.createdAt), 'MMM d, yyyy')}</span>
                         {report.nextRunAt && (
-                          <span>Next run: {formatDateTime(report.nextRunAt)}</span>
+                          <span>Next run: {formatDateTime(report.nextRunAt, report.timezone)} ({report.timezone})</span>
                         )}
                         {report.lastRunAt && (
-                          <span>Last run: {formatDateTime(report.lastRunAt)}</span>
+                          <span>Last run: {formatDateTime(report.lastRunAt, report.timezone)} ({report.timezone})</span>
                         )}
                       </div>
                     </div>

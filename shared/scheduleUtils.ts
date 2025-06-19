@@ -82,10 +82,24 @@ export function getNextRunTime(cronExpression: string, timezone: string = 'UTC')
   }
 }
 
-export function formatDateTime(date: Date | string | null): string {
+export function formatDateTime(date: Date | string | null, timezone?: string): string {
   if (!date) return 'Not scheduled';
   
   const dateObj = typeof date === 'string' ? new Date(date) : date;
+  
+  // If timezone is provided, format in that timezone
+  if (timezone) {
+    return dateObj.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: timezone
+    });
+  }
+  
+  // Default formatting without timezone conversion
   return dateObj.toLocaleDateString('en-US', { 
     year: 'numeric', 
     month: 'short', 
