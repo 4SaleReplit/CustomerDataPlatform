@@ -1103,10 +1103,10 @@ export function DataStudioReports() {
                       // Store form data in localStorage to persist across navigation
                       localStorage.setItem('newReportFormData', JSON.stringify(newReportForm));
                       setShowNewReport(false);
-                      window.location.href = '/reports/builder';
+                      window.location.href = '/design-studio';
                     }}
                     disabled={!newReportForm.name.trim()}
-                  >Create & Open Builder</Button>
+                  >Create & Open Design Studio</Button>
                 </div>
               </div>
             </DialogContent>

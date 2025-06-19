@@ -46,11 +46,10 @@ interface ScheduledReport {
 
 export function TemplatesManager() {
   const [activeTab, setActiveTab] = useState<'templates' | 'scheduled'>('templates');
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-  const queryClient = useQueryClient();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch templates
   const { data: templates = [], isLoading: templatesLoading } = useQuery({
@@ -68,20 +67,6 @@ export function TemplatesManager() {
   const { data: presentations = [] } = useQuery({
     queryKey: ['/api/presentations'],
     queryFn: () => apiRequest('/api/presentations')
-  });
-
-  // Create template mutation
-  const createTemplateMutation = useMutation({
-    mutationFn: (data: { presentationId: string; name: string; description?: string }) =>
-      apiRequest('/api/templates', { method: 'POST', body: JSON.stringify(data) }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
-      setIsCreateDialogOpen(false);
-      toast({ title: "Template created successfully" });
-    },
-    onError: () => {
-      toast({ title: "Failed to create template", variant: "destructive" });
-    }
   });
 
   // Delete template mutation
@@ -158,19 +143,10 @@ export function TemplatesManager() {
     }
   });
 
-  const handleCreateTemplate = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    createTemplateMutation.mutate({
-      presentationId: formData.get('presentationId') as string,
-      name: formData.get('name') as string,
-      description: formData.get('description') as string || undefined,
-    });
-  };
-
   const handleCreateScheduledReport = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
+    
     const recipients = (formData.get('recipients') as string)
       .split(',')
       .map(email => email.trim())
@@ -189,14 +165,9 @@ export function TemplatesManager() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header with Tab Navigation */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Templates Management</h2>
-          <p className="text-muted-foreground">
-            Create reusable templates and schedule automated reports
-          </p>
-        </div>
+        <h2 className="text-2xl font-bold">Templates & Scheduled Reports</h2>
         <div className="flex gap-2">
           <Button
             variant={activeTab === 'templates' ? 'default' : 'outline'}
@@ -220,56 +191,10 @@ export function TemplatesManager() {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Templates</h3>
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Template
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Template</DialogTitle>
-                  <DialogDescription>
-                    Convert an existing presentation into a reusable template
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleCreateTemplate} className="space-y-4">
-                  <div>
-                    <Label htmlFor="presentationId">Source Presentation</Label>
-                    <select
-                      name="presentationId"
-                      id="presentationId"
-                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md"
-                      required
-                    >
-                      <option value="">Select a presentation</option>
-                      {presentations.map((presentation: any) => (
-                        <option key={presentation.id} value={presentation.id}>
-                          {presentation.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="name">Template Name</Label>
-                    <Input name="name" id="name" required />
-                  </div>
-                  <div>
-                    <Label htmlFor="description">Description (Optional)</Label>
-                    <Textarea name="description" id="description" />
-                  </div>
-                  <div className="flex gap-2 justify-end">
-                    <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={createTemplateMutation.isPending}>
-                      {createTemplateMutation.isPending ? 'Creating...' : 'Create Template'}
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
+            <Button onClick={() => window.location.href = '/design-studio'}>
+              <Plus className="w-4 h-4 mr-2" />
+              Create New Template
+            </Button>
           </div>
 
           {templatesLoading ? (
@@ -281,32 +206,31 @@ export function TemplatesManager() {
                     <div className="h-3 bg-gray-200 rounded w-1/2"></div>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-20 bg-gray-200 rounded"></div>
+                    <div className="h-3 bg-gray-200 rounded w-full mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-2/3"></div>
                   </CardContent>
                 </Card>
               ))}
             </div>
           ) : templates.length === 0 ? (
             <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <FileText className="w-12 h-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No templates yet</h3>
-                <p className="text-gray-500 text-center mb-4">
-                  Create your first template from an existing presentation to get started
-                </p>
-                <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <CardContent className="text-center py-8">
+                <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Templates Found</h3>
+                <p className="text-gray-500 mb-4">Create your first template to get started with automated reporting</p>
+                <Button onClick={() => window.location.href = '/design-studio'}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Create Template
+                  Create First Template
                 </Button>
               </CardContent>
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {templates.map((template: Template) => (
-                <Card key={template.id} className="group hover:shadow-md transition-shadow">
+                <Card key={template.id} className="hover:shadow-md transition-shadow">
                   <CardHeader>
                     <div className="flex items-start justify-between">
-                      <div>
+                      <div className="flex-1">
                         <CardTitle className="text-lg">{template.name}</CardTitle>
                         <CardDescription className="mt-1">
                           {template.description || 'No description'}
@@ -319,16 +243,18 @@ export function TemplatesManager() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => {
-                            setSelectedTemplate(template);
-                            setIsScheduleDialogOpen(true);
-                          }}>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedTemplate(template);
+                              setIsScheduleDialogOpen(true);
+                            }}
+                          >
                             <Calendar className="w-4 h-4 mr-2" />
                             Schedule Report
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => window.location.href = '/design-studio'}>
                             <Edit3 className="w-4 h-4 mr-2" />
-                            Edit Template
+                            Edit in Design Studio
                           </DropdownMenuItem>
                           {template.pdfUrl && (
                             <DropdownMenuItem asChild>
@@ -352,7 +278,7 @@ export function TemplatesManager() {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Delete Template</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Are you sure you want to delete "{template.name}"? This will also delete all scheduled reports using this template. This action cannot be undone.
+                                  Are you sure you want to delete "{template.name}"? This action cannot be undone.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
@@ -371,20 +297,9 @@ export function TemplatesManager() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm text-gray-500">
-                        <span>{template.slideIds?.length || 0} slides</span>
-                        <span>Created {format(new Date(template.createdAt), 'MMM d, yyyy')}</span>
-                      </div>
-                      {template.previewImageUrl && (
-                        <div className="aspect-video bg-gray-100 rounded-md overflow-hidden">
-                          <img
-                            src={template.previewImageUrl}
-                            alt={template.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
+                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                      <span>{template.slideIds?.length || 0} slides</span>
+                      <span>Created {format(new Date(template.createdAt), 'MMM d, yyyy')}</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -402,46 +317,58 @@ export function TemplatesManager() {
           </div>
 
           {scheduledLoading ? (
-            <div className="space-y-4">
-              {[...Array(4)].map((_, i) => (
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
                 <Card key={i} className="animate-pulse">
-                  <CardHeader>
-                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                      </div>
+                      <div className="h-6 bg-gray-200 rounded w-16"></div>
+                    </div>
+                  </CardContent>
                 </Card>
               ))}
             </div>
           ) : scheduledReports.length === 0 ? (
             <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Clock className="w-12 h-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No scheduled reports yet</h3>
-                <p className="text-gray-500 text-center mb-4">
-                  Create templates first, then schedule automated reports
-                </p>
+              <CardContent className="text-center py-8">
+                <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Scheduled Reports</h3>
+                <p className="text-gray-500 mb-4">Schedule automated reports from your templates</p>
                 <Button onClick={() => setActiveTab('templates')}>
                   <FileText className="w-4 h-4 mr-2" />
-                  Create Templates First
+                  Browse Templates
                 </Button>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {scheduledReports.map((report: ScheduledReport) => (
                 <Card key={report.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg">{report.name}</CardTitle>
-                        <CardDescription className="mt-1">
-                          {report.description || 'No description'}
-                        </CardDescription>
-                      </div>
-                      <div className="flex items-center gap-2">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-5 w-5 text-blue-600" />
+                          <div>
+                            <CardTitle className="text-lg">{report.name}</CardTitle>
+                            <CardDescription className="mt-1">
+                              {report.description || 'No description'}
+                            </CardDescription>
+                          </div>
+                        </div>
                         <Badge variant={report.status === 'active' ? 'default' : 'secondary'}>
                           {report.status}
                         </Badge>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-sm text-gray-500">
+                          <div>Schedule: {report.cronExpression}</div>
+                          <div>Recipients: {report.recipients.length}</div>
+                        </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm">
@@ -500,34 +427,6 @@ export function TemplatesManager() {
                         </DropdownMenu>
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <span className="text-gray-500">Schedule:</span>
-                        <p className="font-medium">{report.cronExpression}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Recipients:</span>
-                        <p className="font-medium">{report.recipients.length} email(s)</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Last Run:</span>
-                        <p className="font-medium">
-                          {report.lastRunAt
-                            ? format(new Date(report.lastRunAt), 'MMM d, HH:mm')
-                            : 'Never'}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Next Run:</span>
-                        <p className="font-medium">
-                          {report.nextRunAt
-                            ? format(new Date(report.nextRunAt), 'MMM d, HH:mm')
-                            : 'Not scheduled'}
-                        </p>
-                      </div>
-                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -538,51 +437,49 @@ export function TemplatesManager() {
 
       {/* Schedule Report Dialog */}
       <Dialog open={isScheduleDialogOpen} onOpenChange={setIsScheduleDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Schedule Report</DialogTitle>
             <DialogDescription>
-              Create a scheduled report using the template: {selectedTemplate?.name}
+              Create a scheduled report from template: {selectedTemplate?.name}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateScheduledReport} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name">Report Name</Label>
-                <Input name="name" id="name" required />
-              </div>
-              <div>
-                <Label htmlFor="cronExpression">Schedule (Cron Expression)</Label>
-                <Input
-                  name="cronExpression"
-                  id="cronExpression"
-                  placeholder="0 9 * * 1 (Monday 9 AM)"
-                  required
-                />
-              </div>
+            <div>
+              <Label htmlFor="name">Report Name</Label>
+              <Input name="name" id="name" required />
             </div>
             <div>
-              <Label htmlFor="recipients">Email Recipients</Label>
+              <Label htmlFor="description">Description (Optional)</Label>
+              <Textarea name="description" id="description" />
+            </div>
+            <div>
+              <Label htmlFor="cronExpression">Schedule (Cron Expression)</Label>
+              <Input
+                name="cronExpression"
+                id="cronExpression"
+                placeholder="0 9 * * 1"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">Example: "0 9 * * 1" = Every Monday at 9 AM</p>
+            </div>
+            <div>
+              <Label htmlFor="timezone">Timezone</Label>
+              <Input name="timezone" id="timezone" defaultValue="UTC" />
+            </div>
+            <div>
+              <Label htmlFor="emailSubject">Email Subject (Optional)</Label>
+              <Input name="emailSubject" id="emailSubject" />
+            </div>
+            <div>
+              <Label htmlFor="recipients">Recipients (Email Addresses)</Label>
               <Input
                 name="recipients"
                 id="recipients"
                 placeholder="email1@example.com, email2@example.com"
                 required
               />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="timezone">Timezone</Label>
-                <Input name="timezone" id="timezone" defaultValue="UTC" />
-              </div>
-              <div>
-                <Label htmlFor="emailSubject">Email Subject</Label>
-                <Input name="emailSubject" id="emailSubject" placeholder="Weekly Report" />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="description">Description (Optional)</Label>
-              <Textarea name="description" id="description" />
+              <p className="text-xs text-gray-500 mt-1">Separate multiple emails with commas</p>
             </div>
             <div className="flex gap-2 justify-end">
               <Button type="button" variant="outline" onClick={() => setIsScheduleDialogOpen(false)}>

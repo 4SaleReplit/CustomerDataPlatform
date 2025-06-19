@@ -2298,7 +2298,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       // Execute the report (this would integrate with your existing report generation logic)
       // For now, we'll just update the lastRunAt timestamp
       await storage.updateScheduledReport(id, {
-        lastRunAt: new Date().toISOString()
+        lastRunAt: new Date()
       });
       
       res.json({ success: true, message: "Report executed successfully" });
