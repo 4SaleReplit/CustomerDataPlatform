@@ -92,23 +92,17 @@ export default function ReportsScheduler() {
 
   // Helper function to get schedule description
   const getScheduleDescription = (form: typeof scheduleForm) => {
-    const [hour24, minute] = form.time.split(':');
-    const hour12 = parseInt(hour24) === 0 ? 12 : parseInt(hour24) > 12 ? parseInt(hour24) - 12 : parseInt(hour24);
-    const ampm = parseInt(hour24) >= 12 ? 'PM' : 'AM';
-    const timeStr = `${hour12}:${minute} ${ampm}`;
-    
+    const timeFormat = form.time;
     switch (form.frequency) {
-      case 'hourly':
-        return `Every hour at minute ${minute}`;
       case 'daily':
-        return `Every day at ${timeStr}`;
+        return `Every day at ${timeFormat}`;
       case 'weekly':
-        return `Every ${form.dayOfWeek} at ${timeStr}`;
+        return `Every ${form.dayOfWeek} at ${timeFormat}`;
       case 'monthly':
         if (form.dayOfMonth === 'last') {
-          return `Last day of every month at ${timeStr}`;
+          return `Last day of every month at ${timeFormat}`;
         }
-        return `${form.dayOfMonth === '1' ? '1st' : form.dayOfMonth === '15' ? '15th' : form.dayOfMonth} of every month at ${timeStr}`;
+        return `${form.dayOfMonth === '1' ? '1st' : form.dayOfMonth === '15' ? '15th' : form.dayOfMonth} of every month at ${timeFormat}`;
       default:
         return 'Custom schedule';
     }
@@ -406,7 +400,6 @@ export default function ReportsScheduler() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="hourly">Hourly</SelectItem>
                         <SelectItem value="daily">Daily</SelectItem>
                         <SelectItem value="weekly">Weekly</SelectItem>
                         <SelectItem value="monthly">Monthly</SelectItem>
@@ -465,132 +458,56 @@ export default function ReportsScheduler() {
                     </div>
                   )}
 
-                  <div className="space-y-3">
-                    <Label>Time</Label>
-                    <div className="border rounded-md p-4 bg-gray-50">
-                      <div className="text-center mb-3">
-                        <span className="text-lg font-mono">
-                          {(() => {
-                            const [hour24, minute] = scheduleForm.time.split(':');
-                            const hour12 = parseInt(hour24) === 0 ? 12 : parseInt(hour24) > 12 ? parseInt(hour24) - 12 : parseInt(hour24);
-                            const ampm = parseInt(hour24) >= 12 ? 'PM' : 'AM';
-                            return `${hour12}:${minute} ${ampm}`;
-                          })()}
-                        </span>
-                        <button
-                          type="button"
-                          className="ml-2 px-2 py-1 bg-blue-500 text-white text-xs rounded"
-                          onClick={() => {
-                            const now = new Date();
-                            const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-                            setScheduleForm(prev => ({
-                              ...prev,
-                              time: currentTime,
-                              cronExpression: generateCronExpression(prev.frequency, prev.dayOfWeek || prev.dayOfMonth, currentTime)
-                            }));
-                          }}
-                        >
-                          NOW
-                        </button>
-                      </div>
-                      
-                      <div className="grid grid-cols-3 gap-4 text-center">
-                        <div>
-                          <Label className="text-sm text-gray-600">Hour</Label>
-                          <Select
-                            value={(() => {
-                              const hour24 = parseInt(scheduleForm.time.split(':')[0]);
-                              return hour24 === 0 ? '12' : hour24 > 12 ? (hour24 - 12).toString() : hour24.toString();
-                            })()}
-                            onValueChange={(value) => {
-                              const currentHour24 = parseInt(scheduleForm.time.split(':')[0]);
-                              const isAM = currentHour24 < 12;
-                              let newHour24;
-                              if (value === '12') {
-                                newHour24 = isAM ? 0 : 12;
-                              } else {
-                                newHour24 = isAM ? parseInt(value) : parseInt(value) + 12;
-                              }
-                              const newTime = `${newHour24.toString().padStart(2, '0')}:${scheduleForm.time.split(':')[1]}`;
-                              setScheduleForm(prev => ({
-                                ...prev,
-                                time: newTime,
-                                cronExpression: generateCronExpression(prev.frequency, prev.dayOfWeek || prev.dayOfMonth, newTime)
-                              }));
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-48">
-                              {Array.from({ length: 12 }, (_, i) => {
-                                const hour = i === 0 ? 12 : i;
-                                return (
-                                  <SelectItem key={i} value={hour.toString()}>
-                                    {hour}
-                                  </SelectItem>
-                                );
-                              })}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div>
-                          <Label className="text-sm text-gray-600">Minute</Label>
-                          <Select
-                            value={scheduleForm.time.split(':')[1]}
-                            onValueChange={(value) => {
-                              const newTime = `${scheduleForm.time.split(':')[0]}:${value.padStart(2, '0')}`;
-                              setScheduleForm(prev => ({
-                                ...prev,
-                                time: newTime,
-                                cronExpression: generateCronExpression(prev.frequency, prev.dayOfWeek || prev.dayOfMonth, newTime)
-                              }));
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-48">
-                              {Array.from({ length: 60 }, (_, i) => (
-                                <SelectItem key={i} value={i.toString().padStart(2, '0')}>
-                                  {i.toString().padStart(2, '0')}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div>
-                          <Label className="text-sm text-gray-600">AM/PM</Label>
-                          <Select
-                            value={parseInt(scheduleForm.time.split(':')[0]) >= 12 ? 'PM' : 'AM'}
-                            onValueChange={(value) => {
-                              const currentHour24 = parseInt(scheduleForm.time.split(':')[0]);
-                              let newHour24;
-                              if (value === 'AM') {
-                                newHour24 = currentHour24 >= 12 ? currentHour24 - 12 : currentHour24;
-                              } else {
-                                newHour24 = currentHour24 < 12 ? currentHour24 + 12 : currentHour24;
-                              }
-                              const newTime = `${newHour24.toString().padStart(2, '0')}:${scheduleForm.time.split(':')[1]}`;
-                              setScheduleForm(prev => ({
-                                ...prev,
-                                time: newTime,
-                                cronExpression: generateCronExpression(prev.frequency, prev.dayOfWeek || prev.dayOfMonth, newTime)
-                              }));
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="AM">AM</SelectItem>
-                              <SelectItem value="PM">PM</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label htmlFor="hour">Hour</Label>
+                      <Select
+                        value={scheduleForm.time.split(':')[0]}
+                        onValueChange={(value) => {
+                          const newTime = `${value.padStart(2, '0')}:${scheduleForm.time.split(':')[1] || '00'}`;
+                          setScheduleForm(prev => ({
+                            ...prev,
+                            time: newTime,
+                            cronExpression: generateCronExpression(prev.frequency, prev.dayOfWeek || prev.dayOfMonth, newTime)
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 24 }, (_, i) => (
+                            <SelectItem key={i} value={i.toString()}>
+                              {i.toString().padStart(2, '0')}:00
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="minute">Minute</Label>
+                      <Select
+                        value={scheduleForm.time.split(':')[1]}
+                        onValueChange={(value) => {
+                          const newTime = `${scheduleForm.time.split(':')[0] || '09'}:${value.padStart(2, '0')}`;
+                          setScheduleForm(prev => ({
+                            ...prev,
+                            time: newTime,
+                            cronExpression: generateCronExpression(prev.frequency, prev.dayOfWeek || prev.dayOfMonth, newTime)
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[0, 15, 30, 45].map((minute) => (
+                            <SelectItem key={minute} value={minute.toString()}>
+                              :{minute.toString().padStart(2, '0')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 </div>
