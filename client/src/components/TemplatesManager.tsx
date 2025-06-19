@@ -725,45 +725,42 @@ export function TemplatesManager() {
                 </div>
               )}
 
-              <div className="space-y-4">
-                <Label className="text-base font-medium">Time</Label>
-                <div className="border rounded-lg p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
+              <div className="space-y-3">
+                <Label>Time</Label>
+                <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
                   {/* Time Display */}
-                  <div className="text-center mb-6">
-                    <div className="inline-flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg px-6 py-3 shadow-sm border">
-                      <Clock className="w-5 h-5 text-blue-600" />
-                      <span className="text-2xl font-mono font-bold text-gray-900 dark:text-gray-100">
-                        {(() => {
-                          const [hour24, minute] = scheduleForm.time.split(':');
-                          const hour12 = parseInt(hour24) === 0 ? 12 : parseInt(hour24) > 12 ? parseInt(hour24) - 12 : parseInt(hour24);
-                          const ampm = parseInt(hour24) >= 12 ? 'PM' : 'AM';
-                          return `${hour12}:${minute} ${ampm}`;
-                        })()}
-                      </span>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        className="ml-2 bg-blue-100 hover:bg-blue-200 text-blue-700 border-blue-200"
-                        onClick={() => {
-                          const now = new Date();
-                          const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-                          setScheduleForm(prev => ({
-                            ...prev,
-                            time: currentTime,
-                            cronExpression: generateCronExpression(prev.frequency, prev.dayOfWeek || prev.dayOfMonth, currentTime)
-                          }));
-                        }}
-                      >
-                        Now
-                      </Button>
-                    </div>
+                  <div className="flex items-center justify-center gap-3 p-3 bg-white rounded-md border">
+                    <Clock className="w-4 h-4 text-blue-600" />
+                    <span className="text-xl font-mono font-semibold">
+                      {(() => {
+                        const [hour24, minute] = scheduleForm.time.split(':');
+                        const hour12 = parseInt(hour24) === 0 ? 12 : parseInt(hour24) > 12 ? parseInt(hour24) - 12 : parseInt(hour24);
+                        const ampm = parseInt(hour24) >= 12 ? 'PM' : 'AM';
+                        return `${hour12}:${minute} ${ampm}`;
+                      })()}
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const now = new Date();
+                        const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                        setScheduleForm(prev => ({
+                          ...prev,
+                          time: currentTime,
+                          cronExpression: generateCronExpression(prev.frequency, prev.dayOfWeek || prev.dayOfMonth, currentTime)
+                        }));
+                      }}
+                    >
+                      Now
+                    </Button>
                   </div>
                   
                   {/* Time Controls */}
-                  <div className="grid grid-cols-3 gap-6">
+                  <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Hour</Label>
+                      <Label className="text-xs text-gray-600">Hour</Label>
                       <Select
                         value={(() => {
                           const hour24 = parseInt(scheduleForm.time.split(':')[0]);
@@ -786,14 +783,14 @@ export function TemplatesManager() {
                           }));
                         }}
                       >
-                        <SelectTrigger className="h-12 text-lg font-medium">
+                        <SelectTrigger className="h-10">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="max-h-48">
                           {Array.from({ length: 12 }, (_, i) => {
                             const hour = i === 0 ? 12 : i;
                             return (
-                              <SelectItem key={i} value={hour.toString()} className="text-lg py-3">
+                              <SelectItem key={i} value={hour.toString()}>
                                 {hour.toString().padStart(2, '0')}
                               </SelectItem>
                             );
@@ -803,7 +800,7 @@ export function TemplatesManager() {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Minute</Label>
+                      <Label className="text-xs text-gray-600">Minute</Label>
                       <Select
                         value={scheduleForm.time.split(':')[1]}
                         onValueChange={(value) => {
@@ -815,13 +812,13 @@ export function TemplatesManager() {
                           }));
                         }}
                       >
-                        <SelectTrigger className="h-12 text-lg font-medium">
+                        <SelectTrigger className="h-10">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="max-h-48">
-                          {Array.from({ length: 60 }, (_, i) => (
-                            <SelectItem key={i} value={i.toString().padStart(2, '0')} className="text-lg py-3">
-                              {i.toString().padStart(2, '0')}
+                          {['00', '15', '30', '45'].map((minute) => (
+                            <SelectItem key={minute} value={minute}>
+                              {minute}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -829,7 +826,7 @@ export function TemplatesManager() {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Period</Label>
+                      <Label className="text-xs text-gray-600">AM/PM</Label>
                       <Select
                         value={parseInt(scheduleForm.time.split(':')[0]) >= 12 ? 'PM' : 'AM'}
                         onValueChange={(value) => {
@@ -848,12 +845,12 @@ export function TemplatesManager() {
                           }));
                         }}
                       >
-                        <SelectTrigger className="h-12 text-lg font-medium">
+                        <SelectTrigger className="h-10">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="AM" className="text-lg py-3">AM</SelectItem>
-                          <SelectItem value="PM" className="text-lg py-3">PM</SelectItem>
+                          <SelectItem value="AM">AM</SelectItem>
+                          <SelectItem value="PM">PM</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
