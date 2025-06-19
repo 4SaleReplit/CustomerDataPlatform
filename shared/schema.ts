@@ -343,6 +343,9 @@ export const insertTemplateSchema = createInsertSchema(templates).omit({
   updatedAt: true,
 });
 
+export type Template = typeof templates.$inferSelect;
+export type InsertTemplate = z.infer<typeof insertTemplateSchema>;
+
 
 
 export const insertCampaignSchema = createInsertSchema(campaigns).omit({

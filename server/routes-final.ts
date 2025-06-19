@@ -4073,10 +4073,30 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
 
   app.post("/api/templates", async (req: Request, res: Response) => {
     try {
-      const { presentationId, name, description } = req.body;
-      const { templateService } = await import('./services/templateService');
-      const template = await templateService.createTemplateFromPresentation(presentationId, name, description);
-      res.json(template);
+      const { presentationId, name, description, content, category, tags } = req.body;
+      
+      if (presentationId) {
+        // Create template from existing presentation
+        const { templateService } = await import('./services/templateService');
+        const template = await templateService.createTemplateFromPresentation(presentationId, name, description);
+        res.json(template);
+      } else {
+        // Create template directly with content (from Design Studio)
+        const templateData = {
+          id: nanoid(),
+          name: name || 'Untitled Template',
+          description: description || '',
+          content: content || '{}',
+          category: category || 'presentation',
+          tags: tags || [],
+          createdBy: 'admin',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+
+        const result = await storage.createTemplate(templateData);
+        res.status(201).json(result);
+      }
     } catch (error) {
       console.error('Error creating template:', error);
       res.status(500).json({ error: "Failed to create template" });

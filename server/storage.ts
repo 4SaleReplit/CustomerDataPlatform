@@ -15,6 +15,7 @@ import {
   scheduledReports,
   mailingLists,
   reportExecutions,
+  templates,
   type User, 
   type InsertUser, 
   type Team, 
@@ -55,7 +56,9 @@ import {
   type MailingList,
   type InsertMailingList,
   type ReportExecution,
-  type InsertReportExecution
+  type InsertReportExecution,
+  type Template,
+  type InsertTemplate
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, or, and, desc } from "drizzle-orm";
