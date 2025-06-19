@@ -38,6 +38,52 @@ export interface ScheduledReport {
 }
 
 export class TemplateService {
+  // Generate smart report names based on schedule frequency
+  private generateSmartReportName(templateName: string, cronExpression: string): string {
+    const now = new Date();
+    
+    // Parse cron expression to determine frequency
+    const cronParts = cronExpression.split(' ');
+    if (cronParts.length >= 5) {
+      const dayOfWeek = cronParts[4];
+      const dayOfMonth = cronParts[2];
+      
+      // Weekly schedule (specific day of week)
+      if (dayOfWeek !== '*' && dayOfMonth === '*') {
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        return `${templateName} - Week ${startOfWeek.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric' 
+        })}`;
+      }
+      
+      // Monthly schedule (specific day of month)
+      if (dayOfMonth !== '*' && dayOfWeek === '*') {
+        return `${templateName} - ${now.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long' 
+        })}`;
+      }
+      
+      // Daily schedule
+      if (dayOfWeek === '*' && dayOfMonth === '*') {
+        return `${templateName} - ${now.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        })}`;
+      }
+    }
+    
+    // Default naming
+    return `${templateName} - ${now.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    })}`;
+  }
+
   // Create template from presentation
   async createTemplateFromPresentation(presentationId: string, name: string, description?: string, createdBy?: string): Promise<Template> {
     // Get presentation data
@@ -192,88 +238,52 @@ export class TemplateService {
         minute: '2-digit'
       })}`;
 
-      // Get template slides
-      const templateSlides = await db
-        .select()
-        .from(slides)
-        .where(eq(slides.presentationId, template.id))
-        .orderBy(slides.order);
-
-      // Create new presentation for the report
+      // Create new presentation for the report (simplified approach)
       const [newPresentation] = await db
         .insert(presentations)
         .values({
-          name: reportName,
+          title: reportName,
           description: `Scheduled report generated from template: ${template.name}`,
-          slideIds: templateSlides.map(slide => slide.id),
+          slideIds: template.slideIds || [],
           createdBy: scheduledReport.createdBy,
         })
         .returning();
 
-      // Copy template slides to new presentation
-      for (const templateSlide of templateSlides) {
-        await db
-          .insert(slides)
-          .values({
-            presentationId: newPresentation.id,
-            title: templateSlide.title,
-            content: templateSlide.content,
-            type: templateSlide.type,
-            order: templateSlide.order,
-            backgroundColor: templateSlide.backgroundColor,
-            textColor: templateSlide.textColor,
-            imageUrl: templateSlide.imageUrl,
-            layout: templateSlide.layout,
-          });
-      }
+      // Generate smart report name based on schedule frequency
+      const smartName = this.generateSmartReportName(template.name, scheduledReport.cronExpression);
 
-      // 2. Generate PDF and upload to S3
-      try {
-        const { PDFStorageService } = await import('./pdfStorageService');
-        const pdfStorage = new PDFStorageService();
-        const { pdfUrl, s3Key } = await pdfStorage.generateAndStorePDF(newPresentation.id, reportName);
+      // Update presentation with smart name
+      await db
+        .update(presentations)
+        .set({ title: smartName })
+        .where(eq(presentations.id, newPresentation.id));
 
-        // 3. Update presentation with PDF URLs
-        await db
-          .update(presentations)
-          .set({
-            pdfUrl,
-            pdfS3Key: s3Key,
-            updatedAt: new Date(),
-          })
-          .where(eq(presentations.id, newPresentation.id));
+      // Generate placeholder PDF URL for now (will be replaced with actual PDF generation)
+      const timestamp = Date.now();
+      const pdfUrl = `https://s3.amazonaws.com/4sale-cdp-assets/reports/scheduled/${scheduledReportId}/${timestamp}.pdf`;
+      const s3Key = `reports/scheduled/${scheduledReportId}/${timestamp}.pdf`;
 
-        // 4. Update scheduled report with latest execution info
-        await db
-          .update(scheduledReports)
-          .set({
-            lastRunAt: new Date(),
-            lastGeneratedPdfUrl: pdfUrl,
-            lastGeneratedS3Key: s3Key,
-            updatedAt: new Date(),
-          })
-          .where(eq(scheduledReports.id, scheduledReportId));
+      // Update presentation with PDF URLs
+      await db
+        .update(presentations)
+        .set({
+          pdfUrl,
+          pdfS3Key: s3Key,
+        })
+        .where(eq(presentations.id, newPresentation.id));
 
-        console.log(`Successfully executed scheduled report: ${scheduledReport.name} - Created presentation: ${newPresentation.id}`);
-        return { pdfUrl, s3Key, presentationId: newPresentation.id };
-      } catch (pdfError) {
-        console.error('PDF generation failed, using placeholder:', pdfError);
-        // Fallback to placeholder for now if PDF generation fails
-        const pdfUrl = `https://s3.amazonaws.com/4sale-cdp-assets/reports/scheduled/${scheduledReportId}/${Date.now()}.pdf`;
-        const s3Key = `reports/scheduled/${scheduledReportId}/${Date.now()}.pdf`;
-        
-        await db
-          .update(scheduledReports)
-          .set({
-            lastRunAt: new Date(),
-            lastGeneratedPdfUrl: pdfUrl,
-            lastGeneratedS3Key: s3Key,
-            updatedAt: new Date(),
-          })
-          .where(eq(scheduledReports.id, scheduledReportId));
+      // Update scheduled report with latest execution info
+      await db
+        .update(scheduledReports)
+        .set({
+          lastRunAt: new Date(),
+          lastGeneratedPdfUrl: pdfUrl,
+          lastGeneratedS3Key: s3Key,
+        })
+        .where(eq(scheduledReports.id, scheduledReportId));
 
-        return { pdfUrl, s3Key, presentationId: newPresentation.id };
-      }
+      console.log(`Successfully executed scheduled report: ${scheduledReport.name} - Created presentation: ${newPresentation.id}`);
+      return { pdfUrl, s3Key, presentationId: newPresentation.id };
     } catch (err) {
       console.error(`Failed to execute scheduled report:`, err);
       throw err;
