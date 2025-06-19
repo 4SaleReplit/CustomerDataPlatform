@@ -1620,23 +1620,9 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         doc.on('end', () => resolve(Buffer.concat(chunks)));
       });
 
-      // Title page
-      doc.fillColor('#1e3a8a')
-         .fontSize(20)
-         .font('Helvetica-Bold')
-         .text('4Sale Analytics Report', 30, 50);
-
-      doc.fontSize(16)
-         .text(presentation.title, 30, 100);
-
-      if (presentation.description) {
-        doc.fillColor('#4b5563')
-           .fontSize(12)
-           .text(presentation.description, 30, 130);
-      }
-
-      // Find uploaded images from slides and add them directly
+      // Find uploaded images from slides and add them directly - no title page
       let imageCount = 0;
+      let isFirstSlide = true;
       
       if (presentation.slideIds && Array.isArray(presentation.slideIds)) {
         for (const slideId of presentation.slideIds) {
@@ -1650,20 +1636,18 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
                   const fullPath = pathModule.join(process.cwd(), 'uploads', relativePath);
                   
                   if (fsModule.existsSync(fullPath)) {
-                    doc.addPage();
-                    
-                    // Add slide title
-                    doc.fillColor('#1e3a8a')
-                       .fontSize(14)
-                       .font('Helvetica-Bold')
-                       .text(slide.title || `Slide ${imageCount + 1}`, 30, 20);
+                    // Add page only if not the first slide (doc already has one page)
+                    if (!isFirstSlide) {
+                      doc.addPage();
+                    }
+                    isFirstSlide = false;
 
-                    // Add the actual uploaded image
+                    // Add the actual uploaded image with no padding - full page coverage
                     try {
-                      doc.image(fullPath, 30, 60, { 
-                        width: doc.page.width - 60, 
-                        height: doc.page.height - 120,
-                        fit: [doc.page.width - 60, doc.page.height - 120]
+                      doc.image(fullPath, 0, 0, { 
+                        width: doc.page.width, 
+                        height: doc.page.height,
+                        fit: [doc.page.width, doc.page.height]
                       });
                       imageCount++;
                       console.log(`Added slide image: ${fullPath}`);
