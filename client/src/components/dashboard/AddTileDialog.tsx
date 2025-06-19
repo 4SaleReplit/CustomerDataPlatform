@@ -26,9 +26,7 @@ interface AddTileDialogProps {
 
 const TILE_TYPES = [
   { value: 'metric', label: 'Metric Card', icon: Activity },
-  { value: 'chart', label: 'Line Chart', icon: LineChart },
-  { value: 'bar', label: 'Bar Chart', icon: BarChart },
-  { value: 'pie', label: 'Pie Chart', icon: PieChart },
+  { value: 'chart', label: 'Chart (ECharts)', icon: LineChart },
   { value: 'table', label: 'Data Table', icon: Table }
 ];
 
@@ -240,8 +238,6 @@ export function AddTileDialog({ isOpen, onClose, onSave, editTile }: AddTileDial
         );
 
       case 'chart':
-      case 'bar':
-      case 'pie':
         const chartData = data.map((row, idx) => ({
           name: Object.values(row)[0]?.toString() || `Item ${idx + 1}`,
           value: Number(Object.values(row)[1]) || 0,
@@ -389,7 +385,7 @@ export function AddTileDialog({ isOpen, onClose, onSave, editTile }: AddTileDial
                     </Select>
                   </div>
                   
-                  {(tileConfig.type === 'chart' || tileConfig.type === 'bar' || tileConfig.type === 'pie') && (
+                  {tileConfig.type === 'chart' && (
                     <div className="space-y-2">
                       <Label>Chart Type</Label>
                       <ChartTypeSelector

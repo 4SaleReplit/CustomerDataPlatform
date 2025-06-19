@@ -229,6 +229,8 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
         );
 
       case 'chart':
+      case 'bar':
+      case 'pie':
         if (!dataToRender.rows?.length) {
           return <div className="h-full flex items-center justify-center text-muted-foreground">No data available</div>;
         }
@@ -241,7 +243,25 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
           category: row[0] || `Item ${index + 1}`
         }));
 
-        const chartType: ChartType = (tile.chartType as ChartType) || 'line';
+        // Map legacy tile types to ECharts types
+        let chartType: ChartType;
+        if (tile.chartType) {
+          chartType = tile.chartType as ChartType;
+        } else {
+          // Legacy tile type mapping
+          switch (tile.type) {
+            case 'bar':
+              chartType = 'bar';
+              break;
+            case 'pie':
+              chartType = 'pie';
+              break;
+            case 'chart':
+            default:
+              chartType = 'line';
+              break;
+          }
+        }
 
         return (
           <div className="h-full p-4">
