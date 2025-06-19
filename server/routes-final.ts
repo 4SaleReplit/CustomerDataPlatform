@@ -1601,24 +1601,166 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
 
   async function generateReportFile(presentation: any, formatSettings: any) {
     try {
-      // Import PDF services with image-focused approach
-      const { ImageBasedPDFGenerator } = await import('./services/imageBasedPDFGenerator');
-      const pdfGenerator = new ImageBasedPDFGenerator();
+      // Create a simple PDF using only uploaded slide images - no content generation
+      const PDFDocument = require('pdfkit');
+      const { pdfStorageService } = await import('./services/pdfStorage');
+      const fs = require('fs');
+      const path = require('path');
+
+      // Create PDF document
+      const doc = new PDFDocument({
+        size: 'A4',
+        layout: 'landscape',
+        margins: { top: 30, bottom: 30, left: 30, right: 30 }
+      });
+
+      const chunks: Buffer[] = [];
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
       
-      // Generate PDF using uploaded slide images directly
-      const result = await pdfGenerator.generateFromUploadedImages(presentation);
+      const pdfPromise = new Promise<Buffer>((resolve) => {
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+      });
+
+      // Title page
+      doc.rect(0, 0, doc.page.width, 60)
+         .fillAndStroke('#1e3a8a', '#1e3a8a');
+
+      doc.fillColor('white')
+         .fontSize(20)
+         .font('Helvetica-Bold')
+         .text('4Sale Analytics Report', 30, 20);
+
+      doc.fillColor('#1e3a8a')
+         .fontSize(16)
+         .font('Helvetica-Bold')
+         .text(presentation.title, 30, 100);
+
+      if (presentation.description) {
+        doc.fillColor('#4b5563')
+           .fontSize(12)
+           .text(presentation.description, 30, 130, { width: 700 });
+      }
+
+      doc.fillColor('#6b7280')
+         .fontSize(10)
+         .text(`Generated: ${new Date().toLocaleDateString()}`, 30, doc.page.height - 50);
+
+      // Find and add uploaded images from slides
+      const slideImages: Array<{title: string; imagePath: string}> = [];
       
-      console.log(`✅ PDF generated from uploaded images and stored in S3: ${result.pdfUrl}`);
+      if (presentation.slideIds && Array.isArray(presentation.slideIds)) {
+        for (const slideId of presentation.slideIds) {
+          try {
+            const slide = await storage.getSlide(slideId);
+            
+            if (slide?.elements && Array.isArray(slide.elements)) {
+              for (const element of slide.elements) {
+                if (element.type === 'image') {
+                  // Check for direct content URL path
+                  if (element.content && typeof element.content === 'string' && element.content.startsWith('/uploads/')) {
+                    const relativePath = element.content.split('/uploads/')[1];
+                    const fullPath = path.join(process.cwd(), 'uploads', relativePath);
+                    
+                    if (fs.existsSync(fullPath)) {
+                      slideImages.push({
+                        title: slide.title,
+                        imagePath: fullPath
+                      });
+                      console.log(`Found slide image via content path: ${fullPath}`);
+                    }
+                  }
+                  // Also check uploadedImageId for backup
+                  else if (element.uploadedImageId) {
+                    const uploadedImage = await storage.getUploadedImage(element.uploadedImageId);
+                    
+                    if (uploadedImage && uploadedImage.url.startsWith('/uploads/')) {
+                      const relativePath = uploadedImage.url.split('/uploads/')[1];
+                      const fullPath = path.join(process.cwd(), 'uploads', relativePath);
+                      
+                      if (fs.existsSync(fullPath)) {
+                        slideImages.push({
+                          title: slide.title,
+                          imagePath: fullPath
+                        });
+                        console.log(`Found slide image via uploadedImageId: ${fullPath}`);
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            console.warn(`Error processing slide ${slideId}:`, error);
+          }
+        }
+      }
+
+      console.log(`Found ${slideImages.length} slide images for PDF`);
+
+      // Add each image as a page
+      for (let i = 0; i < slideImages.length; i++) {
+        const slideImage = slideImages[i];
+        doc.addPage();
+
+        // Page header
+        doc.rect(0, 0, doc.page.width, 40)
+           .fillAndStroke('#f8fafc', '#e2e8f0');
+
+        doc.fillColor('#1e3a8a')
+           .fontSize(12)
+           .font('Helvetica-Bold')
+           .text(slideImage.title || `Slide ${i + 1}`, 30, 12);
+
+        // Add the image
+        try {
+          doc.image(slideImage.imagePath, 30, 50, { 
+            width: doc.page.width - 60, 
+            height: doc.page.height - 100,
+            fit: [doc.page.width - 60, doc.page.height - 100]
+          });
+          console.log(`Added slide image: ${slideImage.imagePath}`);
+        } catch (error) {
+          console.warn(`Failed to add image: ${error}`);
+          doc.fillColor('#9ca3af')
+             .fontSize(12)
+             .text(`[Image could not be loaded]`, 30, 100);
+        }
+      }
+
+      if (slideImages.length === 0) {
+        doc.addPage();
+        doc.fillColor('#374151')
+           .fontSize(14)
+           .text('No slide images found in this presentation', 30, 100, { 
+             width: doc.page.width - 60,
+             align: 'center'
+           });
+      }
+
+      doc.end();
+      const pdfBuffer = await pdfPromise;
+
+      // Upload to S3
+      const filename = `${presentation.title.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      const uploadResult = await pdfStorageService.uploadPDF(presentation.id, pdfBuffer, filename);
+      
+      // Update presentation with PDF URL
+      await pdfStorageService.updatePresentationPdfUrl(
+        presentation.id,
+        uploadResult.publicUrl,
+        uploadResult.s3Key
+      );
+
+      console.log(`✅ PDF generated from slide images and stored in S3: ${uploadResult.publicUrl}`);
       
       return {
-        filename: `${presentation.title.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
-        content: Buffer.from('PDF stored in S3'), // Placeholder since file is in S3
-        s3Url: result.pdfUrl,
-        s3Key: result.s3Key
+        filename: filename,
+        content: Buffer.from('PDF stored in S3'),
+        s3Url: uploadResult.publicUrl,
+        s3Key: uploadResult.s3Key
       };
     } catch (error) {
-      console.error('Error generating PDF from images:', error);
-      // Fallback to simple content
+      console.error('Error generating PDF from slide images:', error);
       return {
         filename: `${presentation.title}_${new Date().toISOString().split('T')[0]}.pdf`,
         content: Buffer.from('Generated report content')
