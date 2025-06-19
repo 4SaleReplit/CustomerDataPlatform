@@ -3761,16 +3761,17 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         return res.status(404).json({ error: "S3 integration not configured" });
       }
       
+      const credentials = s3Integration.credentials as any;
       const s3Client = new S3Client({
-        region: s3Integration.credentials.region,
+        region: credentials.region,
         credentials: {
-          accessKeyId: s3Integration.credentials.accessKeyId,
-          secretAccessKey: s3Integration.credentials.secretAccessKey
+          accessKeyId: credentials.accessKeyId,
+          secretAccessKey: credentials.secretAccessKey
         }
       });
 
       const command = new ListObjectsV2Command({
-        Bucket: '4sale-cdp-assets',
+        Bucket: credentials.bucketName,
         Prefix: prefix as string,
         Delimiter: '/'
       });
@@ -3863,16 +3864,27 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
       const { S3Client, GetObjectCommand } = await import('@aws-sdk/client-s3');
       
+      // Get S3 credentials from integrations
+      const s3Integrations = await storage.getIntegrations();
+      const s3Integration = s3Integrations.find((integration: any) => 
+        integration.type === 's3' && integration.active
+      );
+      
+      if (!s3Integration) {
+        return res.status(404).json({ error: "S3 integration not configured" });
+      }
+      
+      const credentials = s3Integration.credentials as any;
       const s3Client = new S3Client({
-        region: 'eu-west-1',
+        region: credentials.region,
         credentials: {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
+          accessKeyId: credentials.accessKeyId,
+          secretAccessKey: credentials.secretAccessKey
         }
       });
 
       const command = new GetObjectCommand({
-        Bucket: '4sale-cdp-assets',
+        Bucket: credentials.bucketName,
         Key: key
       });
 
@@ -3891,16 +3903,27 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       const { key } = req.params;
       const { S3Client, DeleteObjectCommand } = await import('@aws-sdk/client-s3');
       
+      // Get S3 credentials from integrations
+      const s3Integrations = await storage.getIntegrations();
+      const s3Integration = s3Integrations.find((integration: any) => 
+        integration.type === 's3' && integration.active
+      );
+      
+      if (!s3Integration) {
+        return res.status(404).json({ error: "S3 integration not configured" });
+      }
+      
+      const credentials = s3Integration.credentials as any;
       const s3Client = new S3Client({
-        region: 'eu-west-1',
+        region: credentials.region,
         credentials: {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
+          accessKeyId: credentials.accessKeyId,
+          secretAccessKey: credentials.secretAccessKey
         }
       });
 
       const command = new DeleteObjectCommand({
-        Bucket: '4sale-cdp-assets',
+        Bucket: credentials.bucketName,
         Key: key
       });
 
