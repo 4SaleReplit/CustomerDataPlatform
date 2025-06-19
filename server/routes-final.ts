@@ -806,6 +806,40 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     }
   });
 
+  // Get specific presentation by ID
+  app.get("/api/presentations/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const presentation = await storage.getPresentationById(id);
+      
+      if (!presentation) {
+        return res.status(404).json({ error: "Presentation not found" });
+      }
+      
+      res.json(presentation);
+    } catch (error) {
+      console.error('Error fetching presentation:', error);
+      res.status(500).json({ error: "Failed to fetch presentation" });
+    }
+  });
+
+  // Get specific slide by ID
+  app.get("/api/slides/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const slide = await storage.getSlide(id);
+      
+      if (!slide) {
+        return res.status(404).json({ error: "Slide not found" });
+      }
+      
+      res.json(slide);
+    } catch (error) {
+      console.error('Error fetching slide:', error);
+      res.status(500).json({ error: "Failed to fetch slide" });
+    }
+  });
+
   // PDF Report Generation Endpoint with S3 integration
   app.get("/api/reports/pdf/:presentationId", async (req: Request, res: Response) => {
     try {
