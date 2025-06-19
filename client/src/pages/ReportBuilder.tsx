@@ -144,9 +144,10 @@ export default function ReportBuilder() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Get URL parameters for loading existing presentations
+  // Get URL parameters for loading existing presentations and templates
   const urlParams = new URLSearchParams(window.location.search);
   const presentationId = urlParams.get('presentationId');
+  const templateId = urlParams.get('templateId');
   const mode = urlParams.get('mode') as 'report' | 'template' || 'report';
   
   // Initialize creation mode from URL parameter
@@ -166,6 +167,18 @@ export default function ReportBuilder() {
     enabled: !!presentationId
   });
 
+  // Load existing template if templateId is provided
+  const { data: existingTemplate } = useQuery({
+    queryKey: ['/api/templates', templateId],
+    queryFn: async () => {
+      if (!templateId) return null;
+      const response = await fetch(`/api/templates/${templateId}`);
+      if (!response.ok) throw new Error('Failed to fetch template');
+      return response.json();
+    },
+    enabled: !!templateId
+  });
+
   // Load slides for existing presentation
   const { data: existingSlides } = useQuery({
     queryKey: ['/api/slides', existingPresentation?.slideIds],
@@ -183,7 +196,7 @@ export default function ReportBuilder() {
     enabled: !!existingPresentation?.slideIds?.length
   });
 
-  // Initialize with existing presentation or default report
+  // Initialize with existing presentation, template, or default report
   useEffect(() => {
     if (existingPresentation && existingSlides && !currentReport) {
       const reportSlides: Slide[] = existingSlides.map((slide: any) => ({

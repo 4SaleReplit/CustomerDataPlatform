@@ -191,7 +191,7 @@ export function TemplatesManager() {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Templates</h3>
-            <Button onClick={() => window.location.href = '/design-studio'}>
+            <Button onClick={() => window.location.href = '/design-studio?mode=template'}>
               <Plus className="w-4 h-4 mr-2" />
               Create New Template
             </Button>
@@ -218,7 +218,7 @@ export function TemplatesManager() {
                 <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No Templates Found</h3>
                 <p className="text-gray-500 mb-4">Create your first template to get started with automated reporting</p>
-                <Button onClick={() => window.location.href = '/design-studio'}>
+                <Button onClick={() => window.location.href = '/design-studio?mode=template'}>
                   <Plus className="w-4 h-4 mr-2" />
                   Create First Template
                 </Button>
@@ -252,7 +252,7 @@ export function TemplatesManager() {
                             <Calendar className="w-4 h-4 mr-2" />
                             Schedule Report
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => window.location.href = '/design-studio'}>
+                          <DropdownMenuItem onClick={() => window.location.href = `/design-studio?mode=template&templateId=${template.id}`}>
                             <Edit3 className="w-4 h-4 mr-2" />
                             Edit in Design Studio
                           </DropdownMenuItem>
