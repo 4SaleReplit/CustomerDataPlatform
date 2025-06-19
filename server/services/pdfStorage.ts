@@ -62,6 +62,7 @@ export class PDFStorageService {
         Key: s3Key,
         Body: pdfBuffer,
         ContentType: 'application/pdf',
+        CacheControl: 'max-age=31536000', // 1 year cache
         Metadata: {
           'presentation-id': presentationId,
           'generated-at': new Date().toISOString(),
@@ -71,14 +72,14 @@ export class PDFStorageService {
 
       await this.s3Client.send(command);
       
-      // Generate public URL
-      const publicUrl = `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${s3Key}`;
+      // Generate a long-lived signed URL (24 hours) for public access
+      const signedUrl = await this.getSignedDownloadUrl(s3Key, 86400); // 24 hours
       
       console.log(`✅ PDF uploaded to S3: ${s3Key}`);
       
       return {
         s3Key,
-        publicUrl,
+        publicUrl: signedUrl,
         filename
       };
     } catch (error) {

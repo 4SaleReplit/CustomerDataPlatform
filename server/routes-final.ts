@@ -850,10 +850,23 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         return res.status(404).json({ error: "Presentation not found" });
       }
       
-      // Check if PDF already exists in S3
-      if (presentation.pdfUrl) {
-        console.log(`Redirecting to existing S3 PDF: ${presentation.pdfUrl}`);
-        return res.redirect(presentation.pdfUrl);
+      const pdfStorageService = (await import('./services/pdfStorage')).pdfStorageService;
+      
+      // Initialize PDF storage
+      const storageInitialized = await pdfStorageService.initialize();
+      if (!storageInitialized) {
+        return res.status(500).json({ error: "PDF storage not available" });
+      }
+
+      // Check if PDF already exists in S3 and generate fresh signed URL
+      if (presentation.pdfS3Key) {
+        try {
+          const freshSignedUrl = await pdfStorageService.getSignedDownloadUrl(presentation.pdfS3Key, 86400); // 24 hours
+          console.log(`Redirecting to fresh signed S3 PDF: ${freshSignedUrl}`);
+          return res.redirect(freshSignedUrl);
+        } catch (error) {
+          console.log(`Existing PDF not accessible, regenerating...`);
+        }
       }
       
       // Generate PDF and store in S3
