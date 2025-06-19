@@ -208,7 +208,7 @@ export default function ReportsScheduler() {
       templateId: formData.get('templateId') as string,
       name: formData.get('name') as string,
       description: formData.get('description') as string || undefined,
-      cronExpression: formData.get('cronExpression') as string,
+      cronExpression: scheduleForm.cronExpression,
       timezone: formData.get('timezone') as string || 'UTC',
       status: formData.get('status') as string || 'active',
       emailSubject: formData.get('emailSubject') as string || undefined,
@@ -327,17 +327,130 @@ export default function ReportsScheduler() {
               </div>
 
               {/* Schedule Settings */}
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="cronExpression">Schedule (Cron)</Label>
-                  <Input
-                    name="cronExpression"
-                    id="cronExpression"
-                    placeholder="0 9 * * 1"
-                    required
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Monday 9 AM example</p>
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Schedule Settings</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="frequency">Frequency</Label>
+                    <Select
+                      value={scheduleForm.frequency}
+                      onValueChange={(value) => setScheduleForm(prev => ({
+                        ...prev,
+                        frequency: value,
+                        cronExpression: generateCronExpression(value, prev.dayOfWeek, prev.time)
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="daily">Daily</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="custom">Custom</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {scheduleForm.frequency === 'weekly' && (
+                    <div>
+                      <Label htmlFor="dayOfWeek">Day of Week</Label>
+                      <Select
+                        value={scheduleForm.dayOfWeek}
+                        onValueChange={(value) => setScheduleForm(prev => ({
+                          ...prev,
+                          dayOfWeek: value,
+                          cronExpression: generateCronExpression(prev.frequency, value, prev.time)
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monday">Monday</SelectItem>
+                          <SelectItem value="tuesday">Tuesday</SelectItem>
+                          <SelectItem value="wednesday">Wednesday</SelectItem>
+                          <SelectItem value="thursday">Thursday</SelectItem>
+                          <SelectItem value="friday">Friday</SelectItem>
+                          <SelectItem value="saturday">Saturday</SelectItem>
+                          <SelectItem value="sunday">Sunday</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {scheduleForm.frequency === 'monthly' && (
+                    <div>
+                      <Label htmlFor="dayOfMonth">Day of Month</Label>
+                      <Select
+                        value={scheduleForm.dayOfMonth}
+                        onValueChange={(value) => setScheduleForm(prev => ({
+                          ...prev,
+                          dayOfMonth: value,
+                          cronExpression: generateCronExpression(prev.frequency, value, prev.time)
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1st</SelectItem>
+                          <SelectItem value="15">15th</SelectItem>
+                          <SelectItem value="last">Last day</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div>
+                    <Label htmlFor="time">Time</Label>
+                    <Select
+                      value={scheduleForm.time}
+                      onValueChange={(value) => setScheduleForm(prev => ({
+                        ...prev,
+                        time: value,
+                        cronExpression: generateCronExpression(prev.frequency, prev.dayOfWeek || prev.dayOfMonth, value)
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="06:00">6:00 AM</SelectItem>
+                        <SelectItem value="09:00">9:00 AM</SelectItem>
+                        <SelectItem value="12:00">12:00 PM</SelectItem>
+                        <SelectItem value="15:00">3:00 PM</SelectItem>
+                        <SelectItem value="18:00">6:00 PM</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+
+                {scheduleForm.frequency === 'custom' && (
+                  <div>
+                    <Label htmlFor="cronExpression">Custom Cron Expression</Label>
+                    <Input
+                      value={scheduleForm.cronExpression}
+                      onChange={(e) => setScheduleForm(prev => ({ ...prev, cronExpression: e.target.value }))}
+                      placeholder="0 9 * * 1"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Example: "0 9 * * 1" = Every Monday at 9 AM</p>
+                  </div>
+                )}
+
+                {scheduleForm.frequency !== 'custom' && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-sm text-gray-600">
+                      <strong>Schedule:</strong> {getScheduleDescription(scheduleForm)}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Cron: {scheduleForm.cronExpression}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="timezone">Timezone</Label>
                   <Input name="timezone" id="timezone" defaultValue="UTC" />

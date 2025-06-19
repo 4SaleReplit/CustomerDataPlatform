@@ -111,6 +111,23 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 19, 2025**: User-Friendly Cron Schedule Dropdowns for Templates & Scheduled Reports
+  - Replaced manual cron expression inputs with intuitive dropdown menus for frequency, day, and time selection
+  - Added smart schedule form management with automatic cron expression generation
+  - Implemented frequency options: Daily, Weekly, Monthly, and Custom with conditional day/time selectors
+  - Enhanced Templates Manager schedule dialog with professional dropdown interface
+  - Updated Reports Scheduler with user-friendly schedule configuration replacing technical cron syntax
+  - Added real-time schedule preview showing human-readable descriptions (e.g., "Every Monday at 9:00 AM")
+  - Maintained custom cron expression option for advanced users while simplifying common scheduling tasks
+  - Improved user experience by eliminating need to understand cron syntax for standard scheduling scenarios
+
+- **June 19, 2025**: Complete Delete Report Functionality Fix
+  - Added missing DELETE endpoint for presentations in server routes connecting to existing database delete method
+  - Fixed delete report functionality that was returning 200 status but not actually removing reports
+  - Replaced browser native confirm dialogs with professional AlertDialog confirmation system
+  - Enhanced error handling and success responses with proper toast notifications
+  - Delete confirmation now shows clear warning messages with report names and permanent deletion notices
+
 - **June 19, 2025**: Enhanced Reports Management with Design Studio Integration
   - Updated all "New Report" and "Create Template" buttons to redirect to Design Studio for unified report creation
   - Modified Templates Manager to redirect template creation and editing to Design Studio interface
