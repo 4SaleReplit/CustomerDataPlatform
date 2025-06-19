@@ -1601,14 +1601,13 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
 
   async function generateReportFile(presentation: any, formatSettings: any) {
     try {
-      // Create a simple PDF using only uploaded slide images - no content generation
-      const PDFDocument = require('pdfkit');
+      // Use direct image-based PDF generation without content regeneration
+      const PDFKit = await import('pdfkit');
       const { pdfStorageService } = await import('./services/pdfStorage');
-      const fs = require('fs');
-      const path = require('path');
+      const fsModule = await import('fs');
+      const pathModule = await import('path');
 
-      // Create PDF document
-      const doc = new PDFDocument({
+      const doc = new (PDFKit.default)({
         size: 'A4',
         layout: 'landscape',
         margins: { top: 30, bottom: 30, left: 30, right: 30 }
@@ -1622,31 +1621,22 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       });
 
       // Title page
-      doc.rect(0, 0, doc.page.width, 60)
-         .fillAndStroke('#1e3a8a', '#1e3a8a');
-
-      doc.fillColor('white')
+      doc.fillColor('#1e3a8a')
          .fontSize(20)
          .font('Helvetica-Bold')
-         .text('4Sale Analytics Report', 30, 20);
+         .text('4Sale Analytics Report', 30, 50);
 
-      doc.fillColor('#1e3a8a')
-         .fontSize(16)
-         .font('Helvetica-Bold')
+      doc.fontSize(16)
          .text(presentation.title, 30, 100);
 
       if (presentation.description) {
         doc.fillColor('#4b5563')
            .fontSize(12)
-           .text(presentation.description, 30, 130, { width: 700 });
+           .text(presentation.description, 30, 130);
       }
 
-      doc.fillColor('#6b7280')
-         .fontSize(10)
-         .text(`Generated: ${new Date().toLocaleDateString()}`, 30, doc.page.height - 50);
-
-      // Find and add uploaded images from slides
-      const slideImages: Array<{title: string; imagePath: string}> = [];
+      // Find uploaded images from slides and add them directly
+      let imageCount = 0;
       
       if (presentation.slideIds && Array.isArray(presentation.slideIds)) {
         for (const slideId of presentation.slideIds) {
@@ -1655,86 +1645,48 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
             
             if (slide?.elements && Array.isArray(slide.elements)) {
               for (const element of slide.elements) {
-                if (element.type === 'image') {
-                  // Check for direct content URL path
-                  if (element.content && typeof element.content === 'string' && element.content.startsWith('/uploads/')) {
-                    const relativePath = element.content.split('/uploads/')[1];
-                    const fullPath = path.join(process.cwd(), 'uploads', relativePath);
+                if (element.type === 'image' && element.content && typeof element.content === 'string' && element.content.startsWith('/uploads/')) {
+                  const relativePath = element.content.split('/uploads/')[1];
+                  const fullPath = pathModule.join(process.cwd(), 'uploads', relativePath);
+                  
+                  if (fsModule.existsSync(fullPath)) {
+                    doc.addPage();
                     
-                    if (fs.existsSync(fullPath)) {
-                      slideImages.push({
-                        title: slide.title,
-                        imagePath: fullPath
+                    // Add slide title
+                    doc.fillColor('#1e3a8a')
+                       .fontSize(14)
+                       .font('Helvetica-Bold')
+                       .text(slide.title || `Slide ${imageCount + 1}`, 30, 20);
+
+                    // Add the actual uploaded image
+                    try {
+                      doc.image(fullPath, 30, 60, { 
+                        width: doc.page.width - 60, 
+                        height: doc.page.height - 120,
+                        fit: [doc.page.width - 60, doc.page.height - 120]
                       });
-                      console.log(`Found slide image via content path: ${fullPath}`);
-                    }
-                  }
-                  // Also check uploadedImageId for backup
-                  else if (element.uploadedImageId) {
-                    const uploadedImage = await storage.getUploadedImage(element.uploadedImageId);
-                    
-                    if (uploadedImage && uploadedImage.url.startsWith('/uploads/')) {
-                      const relativePath = uploadedImage.url.split('/uploads/')[1];
-                      const fullPath = path.join(process.cwd(), 'uploads', relativePath);
-                      
-                      if (fs.existsSync(fullPath)) {
-                        slideImages.push({
-                          title: slide.title,
-                          imagePath: fullPath
-                        });
-                        console.log(`Found slide image via uploadedImageId: ${fullPath}`);
-                      }
+                      imageCount++;
+                      console.log(`Added slide image: ${fullPath}`);
+                    } catch (imageError) {
+                      console.warn(`Failed to add image ${fullPath}:`, imageError);
                     }
                   }
                 }
               }
             }
-          } catch (error) {
-            console.warn(`Error processing slide ${slideId}:`, error);
+          } catch (slideError) {
+            console.warn(`Error processing slide ${slideId}:`, slideError);
           }
         }
       }
 
-      console.log(`Found ${slideImages.length} slide images for PDF`);
+      console.log(`✅ Found and added ${imageCount} slide images to PDF`);
 
-      // Add each image as a page
-      for (let i = 0; i < slideImages.length; i++) {
-        const slideImage = slideImages[i];
-        doc.addPage();
-
-        // Page header
-        doc.rect(0, 0, doc.page.width, 40)
-           .fillAndStroke('#f8fafc', '#e2e8f0');
-
-        doc.fillColor('#1e3a8a')
-           .fontSize(12)
-           .font('Helvetica-Bold')
-           .text(slideImage.title || `Slide ${i + 1}`, 30, 12);
-
-        // Add the image
-        try {
-          doc.image(slideImage.imagePath, 30, 50, { 
-            width: doc.page.width - 60, 
-            height: doc.page.height - 100,
-            fit: [doc.page.width - 60, doc.page.height - 100]
-          });
-          console.log(`Added slide image: ${slideImage.imagePath}`);
-        } catch (error) {
-          console.warn(`Failed to add image: ${error}`);
-          doc.fillColor('#9ca3af')
-             .fontSize(12)
-             .text(`[Image could not be loaded]`, 30, 100);
-        }
-      }
-
-      if (slideImages.length === 0) {
+      if (imageCount === 0) {
         doc.addPage();
         doc.fillColor('#374151')
            .fontSize(14)
-           .text('No slide images found in this presentation', 30, 100, { 
-             width: doc.page.width - 60,
-             align: 'center'
-           });
+           .text('No slide images found in this presentation', 30, 100);
       }
 
       doc.end();
@@ -1751,7 +1703,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         uploadResult.s3Key
       );
 
-      console.log(`✅ PDF generated from slide images and stored in S3: ${uploadResult.publicUrl}`);
+      console.log(`✅ PDF generated with ${imageCount} slide images: ${uploadResult.publicUrl}`);
       
       return {
         filename: filename,
@@ -1763,7 +1715,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       console.error('Error generating PDF from slide images:', error);
       return {
         filename: `${presentation.title}_${new Date().toISOString().split('T')[0]}.pdf`,
-        content: Buffer.from('Generated report content')
+        content: Buffer.from('Error generating PDF')
       };
     }
   }

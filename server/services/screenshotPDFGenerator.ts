@@ -176,19 +176,33 @@ export class SlideScreenshotPDFGenerator {
         return null;
       }
 
-      // Look for the first image element in the slide
+      // Look for image elements in the slide
       for (const element of slide.elements) {
-        if (element.type === 'image' && element.content?.uploadedImageId) {
-          const { storage } = await import('../storage');
-          const uploadedImage = await storage.getUploadedImage(element.content.uploadedImageId);
+        if (element.type === 'image') {
+          // Check direct content path first (this is the main approach based on slide data)
+          if (element.content && typeof element.content === 'string' && element.content.startsWith('/uploads/')) {
+            const relativePath = element.content.split('/uploads/')[1];
+            const fullPath = path.join(process.cwd(), 'uploads', relativePath);
+            if (fs.existsSync(fullPath)) {
+              console.log(`Found slide image via content path: ${fullPath}`);
+              return fullPath;
+            }
+          }
           
-          if (uploadedImage) {
-            let imageUrl = uploadedImage.url;
-            if (imageUrl.startsWith('/uploads/')) {
-              const relativePath = imageUrl.split('/uploads/')[1];
-              const fullPath = path.join(process.cwd(), 'uploads', relativePath);
-              if (fs.existsSync(fullPath)) {
-                return fullPath;
+          // Fallback: check uploadedImageId
+          if (element.uploadedImageId) {
+            const { storage } = await import('../storage');
+            const uploadedImage = await storage.getUploadedImage(element.uploadedImageId);
+            
+            if (uploadedImage) {
+              let imageUrl = uploadedImage.url;
+              if (imageUrl.startsWith('/uploads/')) {
+                const relativePath = imageUrl.split('/uploads/')[1];
+                const fullPath = path.join(process.cwd(), 'uploads', relativePath);
+                if (fs.existsSync(fullPath)) {
+                  console.log(`Found slide image via uploadedImageId: ${fullPath}`);
+                  return fullPath;
+                }
               }
             }
           }
