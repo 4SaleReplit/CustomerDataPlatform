@@ -25,6 +25,31 @@ import * as cron from "node-cron";
 
 const activeCronJobs = new Map<string, any>();
 
+// Configure multer for image uploads
+const storage_multer = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/');
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage_multer,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
   const server = createServer(app);
 
@@ -35,6 +60,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       timestamp: new Date().toISOString(),
       uptime: process.uptime()
     });
+  });
+
+  // Image upload endpoint
+  app.post("/api/images/upload", upload.single('image'), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No image file provided" });
+      }
+
+      // Create uploaded image record in database
+      const uploadedImageData = {
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+        url: `/uploads/${req.file.filename}`,
+        uploadedBy: null // Could be set from authenticated user if needed
+      };
+
+      const uploadedImage = await storage.createUploadedImage(uploadedImageData);
+
+      res.json({
+        id: uploadedImage.id,
+        filename: uploadedImage.filename,
+        url: uploadedImage.url,
+        originalName: uploadedImage.originalName,
+        size: uploadedImage.size
+      });
+
+    } catch (error) {
+      console.error("Image upload error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to upload image" 
+      });
+    }
   });
 
   // Authentication routes
