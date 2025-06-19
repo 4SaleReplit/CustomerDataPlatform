@@ -20,17 +20,25 @@ if (!FALLBACK_DATABASE_URL) {
 
 // Function to create a new pool with given connection string
 function createPool(connectionString: string): Pool {
-  return new Pool({ 
+  const config = {
     connectionString,
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 60000, // Increased to 60 seconds
-    query_timeout: 30000, // 30 second query timeout
-    statement_timeout: 30000, // 30 second statement timeout
+    max: 10, // Maximum connections in pool
+    min: 2, // Minimum connections to maintain
+    idleTimeoutMillis: 30000, // How long client can be idle before closing
+    connectionTimeoutMillis: 20000, // How long to wait when connecting
     ssl: connectionString.includes('localhost') ? false : {
       rejectUnauthorized: false
     }
-  });
+  };
+
+  // Add Neon-specific optimizations for serverless database
+  if (connectionString.includes('neon.tech')) {
+    config.max = 5; // Reduce pool size for serverless
+    config.min = 0; // No minimum connections for serverless
+    config.idleTimeoutMillis = 10000; // Shorter idle timeout for serverless
+  }
+
+  return new Pool(config);
 }
 
 // Function to switch database environment
@@ -99,26 +107,52 @@ export const pool = new Proxy({} as Pool, {
   }
 });
 
-// Handle pool errors gracefully
+// Handle pool errors gracefully with reconnection
 pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
+  console.error('Database pool error:', err);
+  // Pool will automatically attempt to reconnect
 });
 
-// Test connection on startup
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error('❌ Error connecting to Supabase database:', err);
-  } else {
-    console.log('✅ Successfully connected to Supabase database');
-    client?.query('SELECT NOW()', (err, result) => {
-      release();
-      if (err) {
-        console.error('Error executing test query:', err);
-      } else {
-        console.log('🕐 Database time:', result?.rows[0]?.now);
-      }
-    });
-  }
+pool.on('connect', (client) => {
+  console.log('🔗 New database connection established');
 });
+
+pool.on('acquire', (client) => {
+  console.log('📊 Database connection acquired from pool');
+});
+
+pool.on('remove', (client) => {
+  console.log('🔌 Database connection removed from pool');
+});
+
+// Enhanced connection test with retry logic
+async function testDatabaseConnection(retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const client = await pool.connect();
+      const result = await client.query('SELECT NOW()');
+      client.release();
+      
+      console.log('✅ Successfully connected to database');
+      console.log('🕐 Database time:', result.rows[0]?.now);
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      console.error(`❌ Connection attempt ${attempt}/${retries} failed:`, errorMessage);
+      
+      if (attempt < retries) {
+        const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
+        console.log(`⏳ Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  console.error('❌ Failed to connect after all retries');
+  return false;
+}
+
+// Test connection on startup
+testDatabaseConnection();
 
 export const db = drizzle(pool, { schema });
