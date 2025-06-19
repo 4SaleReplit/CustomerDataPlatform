@@ -3745,5 +3745,164 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     }
   });
 
+  // S3 Bucket Explorer endpoints
+  app.get("/api/s3/browse", async (req: Request, res: Response) => {
+    try {
+      const { prefix = '', search = '', sortBy = 'name', sortOrder = 'asc' } = req.query;
+      const { S3Client, ListObjectsV2Command } = await import('@aws-sdk/client-s3');
+      
+      const s3Client = new S3Client({
+        region: 'eu-west-1',
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
+        }
+      });
+
+      const command = new ListObjectsV2Command({
+        Bucket: '4sale-cdp-assets',
+        Prefix: prefix as string,
+        Delimiter: '/'
+      });
+
+      const response = await s3Client.send(command);
+      
+      // Process folders
+      const folders = (response.CommonPrefixes || []).map(folder => ({
+        type: 'folder',
+        name: folder.Prefix?.split('/').slice(-2, -1)[0] || '',
+        path: folder.Prefix || '',
+        size: 0,
+        lastModified: null,
+        key: folder.Prefix || ''
+      }));
+
+      // Process files
+      const files = (response.Contents || [])
+        .filter(object => object.Key !== prefix) // Exclude the folder itself
+        .map(object => ({
+          type: 'file',
+          name: object.Key?.split('/').pop() || '',
+          path: object.Key || '',
+          size: object.Size || 0,
+          lastModified: object.LastModified || null,
+          key: object.Key || '',
+          extension: object.Key?.split('.').pop()?.toLowerCase() || ''
+        }));
+
+      let allItems = [...folders, ...files];
+
+      // Apply search filter
+      if (search) {
+        const searchTerm = (search as string).toLowerCase();
+        allItems = allItems.filter(item => 
+          item.name.toLowerCase().includes(searchTerm) ||
+          item.path.toLowerCase().includes(searchTerm)
+        );
+      }
+
+      // Apply sorting
+      allItems.sort((a, b) => {
+        let aValue: any, bValue: any;
+        
+        switch (sortBy) {
+          case 'name':
+            aValue = a.name.toLowerCase();
+            bValue = b.name.toLowerCase();
+            break;
+          case 'size':
+            aValue = a.size;
+            bValue = b.size;
+            break;
+          case 'lastModified':
+            aValue = a.lastModified ? new Date(a.lastModified).getTime() : 0;
+            bValue = b.lastModified ? new Date(b.lastModified).getTime() : 0;
+            break;
+          case 'type':
+            aValue = a.type;
+            bValue = b.type;
+            break;
+          default:
+            aValue = a.name.toLowerCase();
+            bValue = b.name.toLowerCase();
+        }
+
+        if (sortOrder === 'desc') {
+          return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
+        } else {
+          return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+        }
+      });
+
+      res.json({
+        items: allItems,
+        prefix: prefix,
+        hasMore: response.IsTruncated || false,
+        totalItems: allItems.length
+      });
+
+    } catch (error) {
+      console.error('Error browsing S3:', error);
+      res.status(500).json({ error: "Failed to browse S3 bucket" });
+    }
+  });
+
+  app.get("/api/s3/download/:key(*)", async (req: Request, res: Response) => {
+    try {
+      const { key } = req.params;
+      const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
+      const { S3Client, GetObjectCommand } = await import('@aws-sdk/client-s3');
+      
+      const s3Client = new S3Client({
+        region: 'eu-west-1',
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
+        }
+      });
+
+      const command = new GetObjectCommand({
+        Bucket: '4sale-cdp-assets',
+        Key: key
+      });
+
+      const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+      
+      res.redirect(signedUrl);
+
+    } catch (error) {
+      console.error('Error generating S3 download URL:', error);
+      res.status(500).json({ error: "Failed to generate download URL" });
+    }
+  });
+
+  app.delete("/api/s3/delete/:key(*)", async (req: Request, res: Response) => {
+    try {
+      const { key } = req.params;
+      const { S3Client, DeleteObjectCommand } = await import('@aws-sdk/client-s3');
+      
+      const s3Client = new S3Client({
+        region: 'eu-west-1',
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
+        }
+      });
+
+      const command = new DeleteObjectCommand({
+        Bucket: '4sale-cdp-assets',
+        Key: key
+      });
+
+      await s3Client.send(command);
+      
+      res.json({ success: true, message: "File deleted successfully" });
+
+    } catch (error) {
+      console.error('Error deleting S3 object:', error);
+      res.status(500).json({ error: "Failed to delete file" });
+    }
+  });
+
   return server;
 }

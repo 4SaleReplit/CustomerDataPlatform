@@ -38,7 +38,16 @@ import {
   LineChart,
   TrendingUp,
   Table,
-  FileDown
+  FileDown,
+  Folder,
+  File,
+  Download,
+  FolderOpen,
+  ArrowUpDown,
+  Filter,
+  SortAsc,
+  SortDesc,
+  HardDrive
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -74,6 +83,16 @@ interface ScheduledJob {
   status: 'scheduled' | 'running' | 'completed' | 'failed';
 }
 
+interface S3Item {
+  type: 'file' | 'folder';
+  name: string;
+  path: string;
+  size: number;
+  lastModified: string | null;
+  key: string;
+  extension?: string;
+}
+
 export function DataStudioReports() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('reports');
@@ -93,8 +112,150 @@ export function DataStudioReports() {
     recipients: '',
     autoRefresh: false
   });
+
+  // S3 Explorer state
+  const [s3Items, setS3Items] = useState<S3Item[]>([]);
+  const [s3Loading, setS3Loading] = useState(false);
+  const [s3Search, setS3Search] = useState('');
+  const [s3SortBy, setS3SortBy] = useState('name');
+  const [s3SortOrder, setS3SortOrder] = useState<'asc' | 'desc'>('asc');
+  const [s3TypeFilter, setS3TypeFilter] = useState<'all' | 'files' | 'folders'>('all');
+  const [currentPrefix, setCurrentPrefix] = useState('');
+  const [breadcrumbs, setBreadcrumbs] = useState<string[]>([]);
   
   const { toast } = useToast();
+
+  // S3 data fetching
+  const fetchS3Items = async (prefix = '', search = '', sortBy = 'name', sortOrder = 'asc') => {
+    setS3Loading(true);
+    try {
+      const params = new URLSearchParams({
+        prefix,
+        search,
+        sortBy,
+        sortOrder
+      });
+      
+      const response = await fetch(`/api/s3/browse?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch S3 items');
+      
+      const data = await response.json();
+      setS3Items(data.items);
+      
+      // Update breadcrumbs
+      if (prefix) {
+        const parts = prefix.split('/').filter(Boolean);
+        setBreadcrumbs(parts);
+      } else {
+        setBreadcrumbs([]);
+      }
+    } catch (error) {
+      console.error('Error fetching S3 items:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load S3 bucket contents",
+        variant: "destructive"
+      });
+    } finally {
+      setS3Loading(false);
+    }
+  };
+
+  // Load S3 items when tab becomes active
+  useEffect(() => {
+    if (activeTab === 's3-explorer') {
+      fetchS3Items(currentPrefix, s3Search, s3SortBy, s3SortOrder);
+    }
+  }, [activeTab, currentPrefix, s3Search, s3SortBy, s3SortOrder]);
+
+  // S3 Helper functions
+  const handleFolderClick = (folderPath: string) => {
+    setCurrentPrefix(folderPath);
+  };
+
+  const handleBackClick = () => {
+    if (breadcrumbs.length > 0) {
+      const newBreadcrumbs = breadcrumbs.slice(0, -1);
+      const newPrefix = newBreadcrumbs.length > 0 ? newBreadcrumbs.join('/') + '/' : '';
+      setCurrentPrefix(newPrefix);
+    }
+  };
+
+  const handleBreadcrumbClick = (index: number) => {
+    const newBreadcrumbs = breadcrumbs.slice(0, index + 1);
+    const newPrefix = newBreadcrumbs.length > 0 ? newBreadcrumbs.join('/') + '/' : '';
+    setCurrentPrefix(newPrefix);
+  };
+
+  const handleFileDownload = (key: string) => {
+    window.open(`/api/s3/download/${encodeURIComponent(key)}`, '_blank');
+  };
+
+  const handleFileDelete = async (key: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+    
+    try {
+      const response = await fetch(`/api/s3/delete/${encodeURIComponent(key)}`, {
+        method: 'DELETE'
+      });
+      
+      if (!response.ok) throw new Error('Failed to delete file');
+      
+      toast({
+        title: "Success",
+        description: `"${name}" deleted successfully`
+      });
+      
+      // Refresh the current view
+      fetchS3Items(currentPrefix, s3Search, s3SortBy, s3SortOrder);
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete file",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const getFileIcon = (item: S3Item) => {
+    if (item.type === 'folder') return Folder;
+    
+    const ext = item.extension?.toLowerCase();
+    switch (ext) {
+      case 'pdf': return FileText;
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+      case 'webp': return ImageIcon;
+      case 'mp4':
+      case 'avi':
+      case 'mov': return Play;
+      default: return File;
+    }
+  };
+
+  // Filter S3 items based on search and type filter
+  const filteredS3Items = s3Items.filter(item => {
+    const matchesSearch = !s3Search || 
+      item.name.toLowerCase().includes(s3Search.toLowerCase()) ||
+      item.path.toLowerCase().includes(s3Search.toLowerCase());
+    
+    const matchesType = s3TypeFilter === 'all' || 
+      (s3TypeFilter === 'files' && item.type === 'file') ||
+      (s3TypeFilter === 'folders' && item.type === 'folder');
+    
+    return matchesSearch && matchesType;
+  });
 
   // Fetch presentations from database
   const { data: presentations = [], isLoading, error, refetch } = useQuery({
