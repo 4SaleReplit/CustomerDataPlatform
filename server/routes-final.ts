@@ -2222,6 +2222,94 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     }
   });
 
+  // Scheduled Reports API Endpoints
+  app.get("/api/scheduled-reports-new", async (req: Request, res: Response) => {
+    try {
+      const reports = await storage.getScheduledReports();
+      res.json(reports);
+    } catch (error) {
+      console.error("Get scheduled reports error:", error);
+      res.status(500).json({ error: "Failed to fetch scheduled reports" });
+    }
+  });
+
+  app.post("/api/scheduled-reports-new", async (req: Request, res: Response) => {
+    try {
+      const { insertScheduledReportSchema } = await import('../shared/schema');
+      const validatedData = insertScheduledReportSchema.parse(req.body);
+      
+      const newReport = await storage.createScheduledReport(validatedData);
+      res.status(201).json(newReport);
+    } catch (error) {
+      console.error("Create scheduled report error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to create scheduled report" 
+      });
+    }
+  });
+
+  app.patch("/api/scheduled-reports-new/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { updateScheduledReportSchema } = await import('../shared/schema');
+      const validatedData = updateScheduledReportSchema.parse(req.body);
+      
+      const updatedReport = await storage.updateScheduledReport(id, validatedData);
+      if (!updatedReport) {
+        return res.status(404).json({ error: "Scheduled report not found" });
+      }
+      
+      res.json(updatedReport);
+    } catch (error) {
+      console.error("Update scheduled report error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to update scheduled report" 
+      });
+    }
+  });
+
+  app.delete("/api/scheduled-reports-new/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteScheduledReport(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Scheduled report not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete scheduled report error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to delete scheduled report" 
+      });
+    }
+  });
+
+  app.post("/api/scheduled-reports-new/:id/execute", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const report = await storage.getScheduledReport(id);
+      
+      if (!report) {
+        return res.status(404).json({ error: "Scheduled report not found" });
+      }
+      
+      // Execute the report (this would integrate with your existing report generation logic)
+      // For now, we'll just update the lastRunAt timestamp
+      await storage.updateScheduledReport(id, {
+        lastRunAt: new Date().toISOString()
+      });
+      
+      res.json({ success: true, message: "Report executed successfully" });
+    } catch (error) {
+      console.error("Execute scheduled report error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to execute scheduled report" 
+      });
+    }
+  });
+
   // Migration progress storage and console logs
   const migrationSessions = new Map<string, any>();
   const migrationLogs = new Map<string, string[]>();

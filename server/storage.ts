@@ -167,6 +167,7 @@ export interface IStorage {
   
   // Scheduled Reports management
   getScheduledReports(): Promise<ScheduledReport[]>;
+  getScheduledReport(id: string): Promise<ScheduledReport | undefined>;
   getScheduledReportById(id: string): Promise<ScheduledReport | undefined>;
   createScheduledReport(report: InsertScheduledReport): Promise<ScheduledReport>;
   updateScheduledReport(id: string, updates: Partial<InsertScheduledReport>): Promise<ScheduledReport | undefined>;
@@ -799,6 +800,11 @@ export class DatabaseStorage implements IStorage {
   // Scheduled Reports management methods
   async getScheduledReports(): Promise<ScheduledReport[]> {
     return await db.select().from(scheduledReports).orderBy(desc(scheduledReports.createdAt));
+  }
+
+  async getScheduledReport(id: string): Promise<ScheduledReport | undefined> {
+    const [report] = await db.select().from(scheduledReports).where(eq(scheduledReports.id, id));
+    return report || undefined;
   }
 
   async getScheduledReportById(id: string): Promise<ScheduledReport | undefined> {
