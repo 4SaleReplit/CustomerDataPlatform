@@ -503,31 +503,14 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
           const reportInsertData = {
             name: reportData.name,
             description: reportData.description || null,
-            presentationId: reportData.presentationId,
-            cronExpression: null as any, // No schedule for one-time sends
+            templateId: reportData.presentationId, // Use presentation as template
+            cronExpression: '0 0 * * *', // Default daily schedule
             timezone: reportData.timezone || 'Africa/Cairo',
+            status: 'paused', // One-time sends are paused schedules
             emailSubject: emailData.subject,
-            emailBody: emailHtml,
-            recipientList: reportData.recipientList,
-            ccList: reportData.ccList || [],
-            bccList: reportData.bccList || [],
-            isActive: false, // One-time sends are not active schedules
-            formatSettings: reportData.formatSettings || {},
-            airflowConfiguration: null,
-            airflowDagId: null,
-            airflowTaskId: null,
-            pdfDeliveryUrl: null,
-            nextExecution: null,
-            executionCount: 1,
-            errorCount: 0,
-            successCount: 1,
-            lastExecuted: new Date(),
-            lastError: null,
-            createdBy: (req as any).session?.user?.id || null,
-            emailTemplate: reportData.emailTemplate,
-            sentImmediately: true,
-            sentAt: new Date(),
-            sendingStatus: 'sent'
+            emailTemplate: emailHtml,
+            recipients: JSON.stringify(reportData.recipientList || []),
+            createdBy: (req as any).session?.user?.id || 'system'
           };
 
           const scheduledReport = await storage.createScheduledReport(reportInsertData);
@@ -543,33 +526,16 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
           
           // Create a failed one-time report record for tracking
           const failedReportData = {
-            name: reportData.name,
-            description: reportData.description || null,
-            presentationId: reportData.presentationId,
-            cronExpression: null as any,
+            name: reportData.name + ' (Failed)',
+            description: 'Failed email delivery: ' + (emailError as Error).message,
+            templateId: reportData.presentationId, // Use presentation as template
+            cronExpression: '0 0 * * *', // Default daily schedule
             timezone: reportData.timezone || 'Africa/Cairo',
+            status: 'paused', // Failed sends are paused
             emailSubject: reportData.emailTemplate?.subject || `Report: ${reportData.name}`,
-            emailBody: emailHtml,
-            recipientList: reportData.recipientList,
-            ccList: reportData.ccList || [],
-            bccList: reportData.bccList || [],
-            isActive: false,
-            formatSettings: reportData.formatSettings || {},
-            airflowConfiguration: null,
-            airflowDagId: null,
-            airflowTaskId: null,
-            pdfDeliveryUrl: null,
-            nextExecution: null,
-            executionCount: 1,
-            errorCount: 1,
-            successCount: 0,
-            lastExecuted: new Date(),
-            lastError: (emailError as Error).message,
-            createdBy: (req as any).session?.user?.id || null,
-            emailTemplate: reportData.emailTemplate,
-            sentImmediately: false,
-            sentAt: null,
-            sendingStatus: 'failed'
+            emailTemplate: emailHtml,
+            recipients: JSON.stringify(reportData.recipientList || []),
+            createdBy: (req as any).session?.user?.id || 'system'
           };
           
           try {
@@ -660,7 +626,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       const scheduledReport = await storage.createScheduledReport(reportInsertData);
       
       // Schedule the actual cron job
-      if (scheduledReport.isActive && scheduledReport.cronExpression) {
+      if (scheduledReport.status === 'active' && scheduledReport.cronExpression) {
         scheduleReportJob(scheduledReport);
       }
       
@@ -689,7 +655,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
           activeCronJobs.delete(id);
         }
         
-        if (updatedReport.isActive && updatedReport.cronExpression) {
+        if (updatedReport.status === 'active' && updatedReport.cronExpression) {
           scheduleReportJob(updatedReport);
         }
         
