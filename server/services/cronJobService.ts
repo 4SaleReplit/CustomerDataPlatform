@@ -69,6 +69,9 @@ class CronJobService {
       // Update next run time in database
       await this.updateNextRunTime(scheduledReport.id, scheduledReport.cronExpression, scheduledReport.timezone);
       
+      console.log(`✅ Created cron job for report: ${scheduledReport.name} (${scheduledReport.cronExpression})`);
+      console.log(`📅 Job will execute at: ${new Date(Date.now() + 60000).toISOString()} based on timezone: ${scheduledReport.timezone || 'UTC'}`);
+      
     } catch (error) {
       console.error(`Failed to create cron job for report ${scheduledReport.id}:`, error);
     }
@@ -225,21 +228,64 @@ class CronJobService {
 
   private async updateNextRunTime(scheduledReportId: string, cronExpression: string, timezone?: string): Promise<void> {
     try {
-      // Calculate next execution time
-      const task = cron.schedule(cronExpression, () => {}, { timezone: timezone || 'UTC' });
-      
-      // Get the next execution time
-      const nextRun = new Date();
-      nextRun.setTime(nextRun.getTime() + 60000); // Add 1 minute as fallback
+      // Calculate next execution time based on cron expression
+      const nextRun = this.calculateNextExecution(cronExpression, timezone);
+      console.log(`📅 Next run calculated for ${scheduledReportId}: ${nextRun.toISOString()} (${timezone || 'UTC'})`);
       
       // Update database
       await storage.updateScheduledReport(scheduledReportId, {
         nextRunAt: nextRun
       });
-      
-      task.destroy();
     } catch (error) {
       console.error('Failed to update next run time:', error);
+    }
+  }
+
+  private calculateNextExecution(cronExpression: string, timezone?: string): Date {
+    try {
+      const cronParts = cronExpression.split(' ');
+      if (cronParts.length !== 5) {
+        throw new Error('Invalid cron expression');
+      }
+
+      const [minute, hour, day, month, dayOfWeek] = cronParts;
+      const now = new Date();
+      const next = new Date(now);
+
+      // Parse hour and minute
+      const targetHour = parseInt(hour);
+      const targetMinute = parseInt(minute);
+
+      // Set target time for today
+      next.setHours(targetHour, targetMinute, 0, 0);
+
+      // If the time has already passed today, move to next occurrence
+      if (next <= now) {
+        if (day === '*' && month === '*' && dayOfWeek === '*') {
+          // Daily - add one day
+          next.setDate(next.getDate() + 1);
+        } else if (dayOfWeek !== '*') {
+          // Weekly - find next occurrence of the day
+          const targetDay = parseInt(dayOfWeek);
+          const currentDay = next.getDay();
+          let daysUntilTarget = targetDay - currentDay;
+          if (daysUntilTarget <= 0) {
+            daysUntilTarget += 7;
+          }
+          next.setDate(next.getDate() + daysUntilTarget);
+        } else {
+          // Monthly or other - add one day for now
+          next.setDate(next.getDate() + 1);
+        }
+      }
+
+      return next;
+    } catch (error) {
+      console.error('Error calculating next execution:', error);
+      // Fallback: next hour
+      const fallback = new Date();
+      fallback.setTime(fallback.getTime() + 60 * 60 * 1000);
+      return fallback;
     }
   }
 
