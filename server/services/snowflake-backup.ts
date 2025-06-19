@@ -68,7 +68,7 @@ export class SnowflakeService {
 
           console.log('Snowflake connection successful');
 
-          // First, explicitly set the warehouse to ensure it's active
+          // First, explicitly set the warehouse if not already active
           const useWarehouseQuery = `USE WAREHOUSE ${this.config.warehouse}`;
           
           connection.execute({
@@ -169,7 +169,7 @@ config();
 /**
  * Get dynamic Snowflake service instance using integration credentials
  */
-async function getDynamicSnowflakeService(): Promise<SnowflakeService | null> {
+export async function getDynamicSnowflakeService(): Promise<SnowflakeService | null> {
   const credentials = await credentialManager.getSnowflakeCredentials();
   
   if (!credentials) {
@@ -179,8 +179,6 @@ async function getDynamicSnowflakeService(): Promise<SnowflakeService | null> {
 
   return new SnowflakeService(credentials);
 }
-
-export { getDynamicSnowflakeService };
 
 // All Snowflake operations now use getDynamicSnowflakeService() 
 // which loads credentials from database integration
