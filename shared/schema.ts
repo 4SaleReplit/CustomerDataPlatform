@@ -551,6 +551,10 @@ export const insertScheduledReportSchema = createInsertSchema(scheduledReports).
   id: true,
   createdAt: true,
   updatedAt: true,
+  lastRunAt: true,
+  nextRunAt: true,
+  lastGeneratedPdfUrl: true,
+  lastGeneratedS3Key: true,
 });
 
 export const insertEmailTemplateSchema = createInsertSchema(emailTemplates).omit({
