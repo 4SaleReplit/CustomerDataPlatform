@@ -311,11 +311,7 @@ export default function ReportsScheduler() {
         cronExpression: formData.get('cronExpression') as string,
         timezone: formData.get('timezone') as string || 'UTC',
         status: formData.get('status') as string as 'active' | 'paused',
-        emailSubject: formData.get('emailSubject') as string || undefined,
-        recipients,
-        ccRecipients,
-        bccRecipients,
-        emailPriority: formData.get('emailPriority') as string as 'normal' | 'high' | 'low',
+
       }
     });
   };
@@ -740,12 +736,10 @@ export default function ReportsScheduler() {
                     <p className="font-medium">{formatScheduleDescription(report.cronExpression)}</p>
                   </div>
                   <div>
-                    <span className="text-gray-500 block">Timezone:</span>
-                    <p className="font-medium">{report.timezone}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 block">Timezone:</span>
-                    <p className="font-medium">{report.timezone}</p>
+                    <span className="text-gray-500 block">Created:</span>
+                    <p className="font-medium">
+                      {format(new Date(report.createdAt), 'MMM d, yyyy')}
+                    </p>
                   </div>
                   <div>
                     <span className="text-gray-500 block">Last Run:</span>
@@ -834,58 +828,33 @@ export default function ReportsScheduler() {
 
               {/* Email Settings */}
               <div className="space-y-4 border-t pt-4">
-                <h3 className="text-lg font-semibold">Email Settings</h3>
+                <h3 className="text-lg font-semibold">Schedule Settings</h3>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="edit-emailSubject">Email Subject</Label>
-                    <Input 
-                      name="emailSubject" 
-                      id="edit-emailSubject" 
-                      defaultValue={selectedReport.emailSubject || ''} 
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-emailPriority">Priority</Label>
-                    <Select name="emailPriority" defaultValue={selectedReport.emailPriority}>
+                    <Label htmlFor="edit-status">Status</Label>
+                    <Select name="status" defaultValue={selectedReport.status}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="paused">Paused</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="edit-recipients">Recipients (TO)</Label>
-                  <Input
-                    name="recipients"
-                    id="edit-recipients"
-                    defaultValue={selectedReport.recipients.join(', ')}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="edit-ccRecipients">CC Recipients</Label>
-                  <Input
-                    name="ccRecipients"
-                    id="edit-ccRecipients"
-                    defaultValue={selectedReport.ccRecipients?.join(', ') || ''}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="edit-bccRecipients">BCC Recipients</Label>
-                  <Input
-                    name="bccRecipients"
-                    id="edit-bccRecipients"
-                    defaultValue={selectedReport.bccRecipients?.join(', ') || ''}
-                  />
+                  <div>
+                    <Label htmlFor="edit-timezone">Timezone</Label>
+                    <Select name="timezone" defaultValue={selectedReport.timezone}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Africa/Cairo">Cairo (GMT+2)</SelectItem>
+                        <SelectItem value="Asia/Kuwait">Kuwait (GMT+3)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 

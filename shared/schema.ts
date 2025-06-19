@@ -283,12 +283,7 @@ export const scheduledReports = pgTable("scheduled_reports", {
   cronExpression: varchar("cron_expression", { length: 100 }).notNull(),
   timezone: varchar("timezone", { length: 50 }).default('UTC'),
   status: varchar("status", { length: 20 }).default('active'), // active, paused
-  emailTemplate: text("email_template"),
-  emailSubject: varchar("email_subject", { length: 255 }),
-  recipients: jsonb("recipients").default('[]'), // Array of email addresses
-  ccRecipients: jsonb("cc_recipients").default('[]'), // Array of CC email addresses
-  bccRecipients: jsonb("bcc_recipients").default('[]'), // Array of BCC email addresses
-  emailPriority: varchar("email_priority", { length: 10 }).default('normal'), // normal, high, low
+  // Removed email fields - scheduled reports are now pure data refresh jobs
   lastRunAt: timestamp("last_run_at", { withTimezone: true }),
   nextRunAt: timestamp("next_run_at", { withTimezone: true }),
   lastGeneratedPdfUrl: text("last_generated_pdf_url"), // Latest generated report PDF
