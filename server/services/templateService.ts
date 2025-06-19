@@ -207,10 +207,6 @@ export class TemplateService {
       throw err;
     }
   }
-
-      throw error;
-    }
-  }
 }
 
 export const templateService = new TemplateService();
