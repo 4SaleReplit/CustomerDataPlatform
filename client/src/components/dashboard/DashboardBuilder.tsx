@@ -14,6 +14,7 @@ export interface DashboardTile {
   width: number;
   height: number;
   icon?: string;
+  chartType?: 'line' | 'bar' | 'pie' | 'scatter' | 'area' | 'column' | 'heatmap' | 'radar' | 'funnel' | 'gauge' | 'sankey' | 'treemap' | 'sunburst' | 'graph' | 'candlestick' | 'boxplot' | 'parallel' | 'tree' | 'map' | 'pictorial' | 'themeRiver' | 'calendar';
   dataSource: {
     table: string;
     query: string;

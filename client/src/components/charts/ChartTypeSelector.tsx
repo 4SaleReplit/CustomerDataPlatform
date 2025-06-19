@@ -115,7 +115,7 @@ const chartTypes: ChartTypeInfo[] = [
     type: 'parallel',
     name: 'Parallel Coordinates',
     description: 'Multi-dimensional data visualization',
-    icon: <ParallelCoordinates className="h-5 w-5" />,
+    icon: <Split className="h-5 w-5" />,
     category: 'statistical',
     useCase: 'Multi-variable analysis, patterns',
     complexity: 'complex'

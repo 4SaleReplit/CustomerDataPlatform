@@ -7,7 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Settings, X, GripVertical, MoreVertical, RefreshCw, Edit, Copy, Trash2, Users, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import { SiSnowflake } from 'react-icons/si';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { EChartsRenderer, ChartType } from '@/components/charts/EChartsRenderer';
+import { ChartTypeSelector } from '@/components/charts/ChartTypeSelector';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type { DashboardTile } from './DashboardBuilder';
@@ -235,40 +236,22 @@ export function DashboardTileComponent({ tile, isEditMode, onEdit, onRemove, onD
         const chartDataFormatted = dataToRender.rows.map((row: any[], index: number) => ({
           name: row[0] || `Item ${index + 1}`,
           value: Number(row[1]) || 0,
+          x: row[0] || `Item ${index + 1}`,
+          y: Number(row[1]) || 0,
+          category: row[0] || `Item ${index + 1}`
         }));
+
+        const chartType: ChartType = (tile.chartType as ChartType) || 'line';
 
         return (
           <div className="h-full p-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartDataFormatted} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                <XAxis 
-                  dataKey="name" 
-                  tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-                  axisLine={{ stroke: 'hsl(var(--border))' }}
-                />
-                <YAxis 
-                  tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-                  axisLine={{ stroke: 'hsl(var(--border))' }}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--background))', 
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '6px',
-                    fontSize: '12px'
-                  }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="hsl(var(--primary))" 
-                  strokeWidth={2}
-                  dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, r: 3 }}
-                  activeDot={{ r: 5, stroke: 'hsl(var(--primary))', strokeWidth: 2 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <EChartsRenderer
+              type={chartType}
+              data={chartDataFormatted}
+              width="100%"
+              height="100%"
+              theme="light"
+            />
           </div>
         );
 

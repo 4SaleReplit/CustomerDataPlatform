@@ -12,7 +12,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table as TableComponent, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Play, Database, BarChart, LineChart, PieChart, Table, Activity, Eye, Save, Loader2 } from 'lucide-react';
 import { CodeMirrorSQLEditor } from './CodeMirrorSQLEditor';
-import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart as RechartsBarChart, Bar, PieChart as RechartsPieChart, Cell, Pie } from 'recharts';
+import { EChartsRenderer, ChartType } from '@/components/charts/EChartsRenderer';
+import { ChartTypeSelector } from '@/components/charts/ChartTypeSelector';
 import type { DashboardTile } from './DashboardBuilder';
 import { useToast } from '@/hooks/use-toast';
 
