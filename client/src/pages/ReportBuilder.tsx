@@ -221,7 +221,36 @@ export default function ReportBuilder() {
 
       setCurrentReport(report);
       setReportTitle(existingPresentation.title);
-    } else if (!currentReport && !presentationId) {
+    } else if (existingTemplate && !currentReport) {
+      // Initialize with template content
+      try {
+        const templateContent = JSON.parse(existingTemplate.content);
+        const templateSlides: Slide[] = templateContent.slides || [];
+
+        const report: Report = {
+          id: nanoid(),
+          name: existingTemplate.name,
+          description: existingTemplate.description || '',
+          slides: templateSlides,
+          settings: {
+            schedule: 'manual',
+            recipients: [],
+            autoRefresh: false
+          },
+          status: 'draft'
+        };
+
+        setCurrentReport(report);
+        setReportTitle(existingTemplate.name);
+      } catch (error) {
+        console.error('Error parsing template content:', error);
+        toast({
+          title: "Template Load Error",
+          description: "Failed to load template content. Starting with blank template.",
+          variant: "destructive"
+        });
+      }
+    } else if (!currentReport && !presentationId && !templateId) {
       // Check for persisted form data from new report creation
       const savedFormData = localStorage.getItem('newReportFormData');
       let reportData = {
@@ -276,7 +305,7 @@ export default function ReportBuilder() {
 
       setCurrentReport(newReport);
     }
-  }, [existingPresentation, existingSlides, currentReport, presentationId]);
+  }, [existingPresentation, existingSlides, existingTemplate, currentReport, presentationId, templateId]);
 
   const currentSlide = currentReport?.slides[currentSlideIndex];
 
