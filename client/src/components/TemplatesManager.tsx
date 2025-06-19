@@ -191,7 +191,11 @@ export function TemplatesManager() {
 
   // Execute template mutation
   const executeReportMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/templates/${id}/execute`, { method: 'POST' }),
+    mutationFn: ({ id, reportName }: { id: string, reportName: string }) => 
+      apiRequest(`/api/templates/${id}/execute`, { 
+        method: 'POST',
+        body: JSON.stringify({ reportName })
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/presentations'] });
       queryClient.invalidateQueries({ queryKey: ['/api/scheduled-reports-new'] });
@@ -199,6 +203,19 @@ export function TemplatesManager() {
     },
     onError: () => {
       toast({ title: "Failed to create report", variant: "destructive" });
+    }
+  });
+
+  // Execute scheduled report mutation (for immediate execution)
+  const executeScheduledReportMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/scheduled-reports-new/${id}/execute`, { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/presentations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/scheduled-reports-new'] });
+      toast({ title: "Scheduled report executed successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to execute scheduled report", variant: "destructive" });
     }
   });
 
@@ -251,8 +268,19 @@ export function TemplatesManager() {
   const handleCreateNow = async () => {
     if (!selectedTemplate) return;
     
-    const reportName = generateSmartReportName(selectedTemplate.name, 'now');
-    executeReportMutation.mutate(selectedTemplate.id);
+    // Get report name from form input
+    const form = document.querySelector('form[data-schedule-form]') as HTMLFormElement;
+    if (!form) return;
+    
+    const formData = new FormData(form);
+    const reportName = formData.get('name') as string;
+    
+    if (!reportName) {
+      toast({ title: "Please enter a report name", variant: "destructive" });
+      return;
+    }
+    
+    executeReportMutation.mutate({ id: selectedTemplate.id, reportName });
   };
 
   const handleCreateScheduledReport = (event: React.FormEvent<HTMLFormElement>) => {
@@ -583,7 +611,7 @@ export function TemplatesManager() {
                             >
                               {report.status === 'active' ? 'Pause' : 'Activate'}
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => executeReportMutation.mutate(report.id)}>
+                            <DropdownMenuItem onClick={() => executeScheduledReportMutation.mutate(report.id)}>
                               Execute Now
                             </DropdownMenuItem>
                             {report.lastGeneratedPdfUrl && (

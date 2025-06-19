@@ -111,6 +111,14 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 19, 2025**: Fixed Report Naming Format - Template Name + User-Entered Report Name
+  - Corrected template execution endpoint to use "template name + user-entered report name" instead of "template name + timestamp"
+  - Updated frontend components (ReportsScheduler, TemplatesManager) to pass user-entered report names to backend
+  - Enhanced report creation to validate report name input before execution
+  - Fixed TypeScript errors by creating separate mutations for template execution vs scheduled report execution
+  - Reports now display proper naming format: e.g., "Analytics Template - Monthly Revenue Report" instead of "Analytics Template - Jun 19, 2025 02:27 PM"
+  - Maintained template-report relationship tracking while fixing naming convention throughout system
+
 - **June 19, 2025**: Complete Reports & Scheduling System Overhaul
   - Fixed "Create Now" functionality to instantly create reports as presentations in All Reports section
   - Transformed scheduled reports into pure data refresh jobs without email recipients
