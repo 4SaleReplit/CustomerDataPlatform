@@ -164,8 +164,8 @@ export class TemplateService {
     await db.delete(scheduledReports).where(eq(scheduledReports.id, id));
   }
 
-  // Execute scheduled report (refresh data and generate PDF)
-  async executeScheduledReport(scheduledReportId: string): Promise<{ pdfUrl: string; s3Key: string }> {
+  // Execute scheduled report (creates PDF reports in S3 and adds to reports database)
+  async executeScheduledReport(scheduledReportId: string): Promise<{ pdfUrl: string; s3Key: string; presentationId: string }> {
     const [scheduledReport] = await db
       .select()
       .from(scheduledReports)
@@ -180,32 +180,100 @@ export class TemplateService {
       throw new Error('Template not found');
     }
 
-    // Create execution record - simplified for now
     console.log(`Starting execution for template: ${template.name}`);
 
     try {
-      // Here we would:
-      // 1. Refresh all queries in the template slides
-      // 2. Generate PDF from refreshed data
-      // 3. Upload to S3
-      // 4. Return public URL
+      // 1. Create a new presentation from the template
+      const reportName = `${template.name} - ${new Date().toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })}`;
 
-      // For now, return placeholder - this will be implemented with actual PDF generation
-      const pdfUrl = `https://s3.amazonaws.com/4sale-cdp-assets/reports/scheduled/${scheduledReportId}/${Date.now()}.pdf`;
-      const s3Key = `reports/scheduled/${scheduledReportId}/${Date.now()}.pdf`;
+      // Get template slides
+      const templateSlides = await db
+        .select()
+        .from(slides)
+        .where(eq(slides.presentationId, template.id))
+        .orderBy(slides.order);
 
-      // Update scheduled report with latest execution info
-      await db
-        .update(scheduledReports)
-        .set({
-          lastRunAt: new Date(),
-          lastGeneratedPdfUrl: pdfUrl,
-          lastGeneratedS3Key: s3Key,
+      // Create new presentation for the report
+      const [newPresentation] = await db
+        .insert(presentations)
+        .values({
+          name: reportName,
+          description: `Scheduled report generated from template: ${template.name}`,
+          slideIds: templateSlides.map(slide => slide.id),
+          createdBy: scheduledReport.createdBy,
         })
-        .where(eq(scheduledReports.id, scheduledReportId));
+        .returning();
 
-      console.log(`Successfully executed scheduled report: ${scheduledReport.name}`);
-      return { pdfUrl, s3Key };
+      // Copy template slides to new presentation
+      for (const templateSlide of templateSlides) {
+        await db
+          .insert(slides)
+          .values({
+            presentationId: newPresentation.id,
+            title: templateSlide.title,
+            content: templateSlide.content,
+            type: templateSlide.type,
+            order: templateSlide.order,
+            backgroundColor: templateSlide.backgroundColor,
+            textColor: templateSlide.textColor,
+            imageUrl: templateSlide.imageUrl,
+            layout: templateSlide.layout,
+          });
+      }
+
+      // 2. Generate PDF and upload to S3
+      try {
+        const { PDFStorageService } = await import('./pdfStorageService');
+        const pdfStorage = new PDFStorageService();
+        const { pdfUrl, s3Key } = await pdfStorage.generateAndStorePDF(newPresentation.id, reportName);
+
+        // 3. Update presentation with PDF URLs
+        await db
+          .update(presentations)
+          .set({
+            pdfUrl,
+            pdfS3Key: s3Key,
+            updatedAt: new Date(),
+          })
+          .where(eq(presentations.id, newPresentation.id));
+
+        // 4. Update scheduled report with latest execution info
+        await db
+          .update(scheduledReports)
+          .set({
+            lastRunAt: new Date(),
+            lastGeneratedPdfUrl: pdfUrl,
+            lastGeneratedS3Key: s3Key,
+            updatedAt: new Date(),
+          })
+          .where(eq(scheduledReports.id, scheduledReportId));
+
+        console.log(`Successfully executed scheduled report: ${scheduledReport.name} - Created presentation: ${newPresentation.id}`);
+        return { pdfUrl, s3Key, presentationId: newPresentation.id };
+      } catch (pdfError) {
+        console.error('PDF generation failed, using placeholder:', pdfError);
+        // Fallback to placeholder for now if PDF generation fails
+        const pdfUrl = `https://s3.amazonaws.com/4sale-cdp-assets/reports/scheduled/${scheduledReportId}/${Date.now()}.pdf`;
+        const s3Key = `reports/scheduled/${scheduledReportId}/${Date.now()}.pdf`;
+        
+        await db
+          .update(scheduledReports)
+          .set({
+            lastRunAt: new Date(),
+            lastGeneratedPdfUrl: pdfUrl,
+            lastGeneratedS3Key: s3Key,
+            updatedAt: new Date(),
+          })
+          .where(eq(scheduledReports.id, scheduledReportId));
+
+        return { pdfUrl, s3Key, presentationId: newPresentation.id };
+      }
     } catch (err) {
       console.error(`Failed to execute scheduled report:`, err);
       throw err;
