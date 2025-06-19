@@ -3751,11 +3751,21 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       const { prefix = '', search = '', sortBy = 'name', sortOrder = 'asc' } = req.query;
       const { S3Client, ListObjectsV2Command } = await import('@aws-sdk/client-s3');
       
+      // Get S3 credentials from integrations
+      const s3Integrations = await storage.getIntegrations();
+      const s3Integration = s3Integrations.find((integration: any) => 
+        integration.type === 's3' && integration.active
+      );
+      
+      if (!s3Integration) {
+        return res.status(404).json({ error: "S3 integration not configured" });
+      }
+      
       const s3Client = new S3Client({
-        region: 'eu-west-1',
+        region: s3Integration.credentials.region,
         credentials: {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
+          accessKeyId: s3Integration.credentials.accessKeyId,
+          secretAccessKey: s3Integration.credentials.secretAccessKey
         }
       });
 

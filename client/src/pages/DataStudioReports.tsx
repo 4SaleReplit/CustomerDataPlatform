@@ -1128,6 +1128,7 @@ export function DataStudioReports() {
             <TabsTrigger value="reports">All Reports</TabsTrigger>
             <TabsTrigger value="scheduled">Scheduled Jobs</TabsTrigger>
             <TabsTrigger value="templates">Templates</TabsTrigger>
+            <TabsTrigger value="s3-explorer">S3 Bucket Explorer</TabsTrigger>
           </TabsList>
 
           <TabsContent value="reports" className="space-y-4 mt-4">
@@ -1384,6 +1385,198 @@ export function DataStudioReports() {
                 </Card>
               ))}
             </div>
+          </TabsContent>
+
+          <TabsContent value="s3-explorer" className="space-y-4 mt-4">
+            {/* S3 Explorer Header with Search and Filters */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search files and folders..."
+                    value={s3Search}
+                    onChange={(e) => setS3Search(e.target.value)}
+                    className="pl-10 w-80"
+                  />
+                </div>
+                <Select value={s3TypeFilter} onValueChange={(value: 'all' | 'files' | 'folders') => setS3TypeFilter(value)}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Items</SelectItem>
+                    <SelectItem value="files">Files Only</SelectItem>
+                    <SelectItem value="folders">Folders Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Select value={s3SortBy} onValueChange={setS3SortBy}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name">Name</SelectItem>
+                    <SelectItem value="size">Size</SelectItem>
+                    <SelectItem value="lastModified">Modified</SelectItem>
+                    <SelectItem value="type">Type</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setS3SortOrder(s3SortOrder === 'asc' ? 'desc' : 'asc')}
+                >
+                  {s3SortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fetchS3Items(currentPrefix, s3Search, s3SortBy, s3SortOrder)}
+                  disabled={s3Loading}
+                >
+                  <RefreshCw className={`h-4 w-4 ${s3Loading ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
+            </div>
+
+            {/* Breadcrumb Navigation */}
+            {breadcrumbs.length > 0 && (
+              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                <HardDrive className="h-4 w-4 text-gray-500" />
+                <span className="text-sm text-gray-600">4sale-cdp-assets</span>
+                <span className="text-gray-400">/</span>
+                {breadcrumbs.map((crumb, index) => (
+                  <React.Fragment key={index}>
+                    <button
+                      className="text-sm text-blue-600 hover:underline"
+                      onClick={() => handleBreadcrumbClick(index)}
+                    >
+                      {crumb}
+                    </button>
+                    {index < breadcrumbs.length - 1 && <span className="text-gray-400">/</span>}
+                  </React.Fragment>
+                ))}
+                {breadcrumbs.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleBackClick}
+                    className="ml-auto"
+                  >
+                    <FolderOpen className="h-4 w-4 mr-1" />
+                    Back
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* S3 Items Display */}
+            {s3Loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-2 text-sm text-gray-600">Loading S3 bucket contents...</p>
+              </div>
+            ) : filteredS3Items.length === 0 ? (
+              <div className="text-center py-8">
+                <HardDrive className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">No items found</p>
+                <p className="text-sm text-gray-500">
+                  {s3Search ? 'Try adjusting your search criteria' : 'This folder is empty'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {/* Items Summary */}
+                <div className="text-sm text-gray-600 mb-4">
+                  {filteredS3Items.length} items ({filteredS3Items.filter(i => i.type === 'folder').length} folders, {filteredS3Items.filter(i => i.type === 'file').length} files)
+                </div>
+
+                {/* Items Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {filteredS3Items.map((item) => {
+                    const IconComponent = getFileIcon(item);
+                    return (
+                      <Card 
+                        key={item.key} 
+                        className="hover:shadow-md transition-shadow cursor-pointer group"
+                        onClick={() => item.type === 'folder' ? handleFolderClick(item.path) : undefined}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <IconComponent 
+                                className={`h-5 w-5 flex-shrink-0 ${
+                                  item.type === 'folder' 
+                                    ? 'text-blue-600' 
+                                    : item.extension === 'pdf' 
+                                      ? 'text-red-600'
+                                      : ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(item.extension || '')
+                                        ? 'text-green-600'
+                                        : 'text-gray-600'
+                                }`} 
+                              />
+                              <span className="text-sm font-medium truncate" title={item.name}>
+                                {item.name}
+                              </span>
+                            </div>
+                            {item.type === 'file' && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                  <DropdownMenuItem onClick={() => handleFileDownload(item.key)}>
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => navigator.clipboard.writeText(item.path)}>
+                                    <Copy className="h-4 w-4 mr-2" />
+                                    Copy Path
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem 
+                                    onClick={() => handleFileDelete(item.key, item.name)}
+                                    className="text-red-600"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </div>
+                          
+                          <div className="space-y-1 text-xs text-gray-500">
+                            {item.type === 'file' && (
+                              <div className="flex justify-between">
+                                <span>Size:</span>
+                                <span>{formatFileSize(item.size)}</span>
+                              </div>
+                            )}
+                            {item.lastModified && (
+                              <div className="flex justify-between">
+                                <span>Modified:</span>
+                                <span>{new Date(item.lastModified).toLocaleDateString()}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between">
+                              <span>Type:</span>
+                              <span className="capitalize">
+                                {item.type === 'file' ? (item.extension?.toUpperCase() || 'File') : 'Folder'}
+                              </span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
