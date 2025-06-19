@@ -111,7 +111,7 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
-- **June 19, 2025**: Complete Apache ECharts Migration & Comprehensive Testing Dashboard
+- **June 19, 2025**: Complete Apache ECharts Migration & S3 Integration Fix
   - Implemented complete Apache ECharts visualization system with 22 chart types (line, bar, pie, scatter, heatmap, radar, funnel, gauge, treemap, sunburst, network graphs, etc.)
   - Updated main visualization dropdown to show all 22 chart types directly instead of limited categories
   - Migrated dashboard tile rendering system to use Apache ECharts for all chart visualizations
@@ -123,6 +123,8 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
   - Enhanced Snowflake service with dynamic warehouse selection and fallback logic
   - Resolved runtime error with map chart by implementing geographic bar chart fallback for missing map region data
   - Dashboard now displays 29 visualization tiles (7 original + 22 new) demonstrating full Apache ECharts capability with authentic data
+  - Fixed S3 integration connection issue by updating Access Key ID to correct credentials (AKIAZKEOWRP6NDGUZJK3)
+  - S3 integration now successfully connects to 4sale-cdp-assets bucket in eu-west-1 region with 1 object detected
 
 - **June 18, 2025**: Final Email Sender UI/UX Enhancements and Status Management
   - Updated status tags for One-Time Emails: removed "Pending", kept only "Sent" (green) and "Failed" (red)
