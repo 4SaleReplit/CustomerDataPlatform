@@ -2412,12 +2412,15 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         name: name,
         description: description || null,
         cronExpression: cronExpression,
-        timezone: timezone || 'UTC',
+        timezone: timezone || 'Africa/Cairo',
         status: 'active',
-        nextRunAt: nextRunAt
+        nextRunAt: nextRunAt,
+        createdBy: (req as any).session?.user?.id || 'system'
       };
       
+      console.log('Creating scheduled report with data:', JSON.stringify(reportData, null, 2));
       const newReport = await storage.createScheduledReport(reportData);
+      console.log('Successfully created scheduled report:', JSON.stringify(newReport, null, 2));
       res.status(201).json(newReport);
     } catch (error) {
       console.error("Create scheduled report error:", error);
