@@ -4287,27 +4287,51 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         day: 'numeric' 
       })}`;
       
-      // Create a presentation for the report (not a scheduled report)
+      // Copy slides from template if they exist
+      let copiedSlideIds: string[] = [];
+      if (template.slideIds && template.slideIds.length > 0) {
+        for (const slideId of template.slideIds) {
+          try {
+            const originalSlide = await storage.getSlide(slideId);
+            if (originalSlide) {
+              // Create a new slide with copied data
+              const newSlide = await storage.createSlide({
+                title: originalSlide.title,
+                elements: originalSlide.elements as Json,
+                backgroundImage: originalSlide.backgroundImage,
+                backgroundColor: originalSlide.backgroundColor,
+                order: originalSlide.order,
+                createdBy: 'system'
+              });
+              copiedSlideIds.push(newSlide.id);
+            }
+          } catch (error) {
+            console.error(`Error copying slide ${slideId}:`, error);
+          }
+        }
+      }
+      
+      // Create a presentation for the report
       const presentationData = {
         title: reportName,
         description: 'Immediately generated report',
-        slideIds: template.slideIds || [],
+        slideIds: copiedSlideIds,
         previewImageUrl: template.previewImageUrl,
         createdBy: 'system'
       };
       
       const newPresentation = await storage.createPresentation(presentationData);
       
-      // PDF generation will be handled separately - focus on creating the presentation first
-      console.log(`Report presentation created: ${reportName}`);
+      console.log(`Report presentation created: ${reportName} with ${copiedSlideIds.length} slides`);
       
       // Return success response
       res.json({ 
         success: true, 
-        message: `Report "${reportName}" created successfully`,
+        message: `Report "${reportName}" created successfully with ${copiedSlideIds.length} slides`,
         reportId: newPresentation.id,
         reportName: reportName,
-        presentationType: 'report'
+        presentationType: 'report',
+        slideCount: copiedSlideIds.length
       });
     } catch (error) {
       console.error('Error executing template:', error);

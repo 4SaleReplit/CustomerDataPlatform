@@ -174,16 +174,21 @@ export default function ReportsScheduler() {
     }
   });
 
-  // Execute report mutation
+  // Execute report mutation (Create Now functionality)
   const executeReportMutation = useMutation({
     mutationFn: (id: string) => apiRequest(`/api/templates/${id}/execute`, { method: 'POST' }),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/scheduled-reports-new'] });
       queryClient.invalidateQueries({ queryKey: ['/api/presentations'] });
-      toast({ title: "Report executed successfully" });
+      setIsDialogOpen(false); // Close the Schedule Report creation form
+      setSelectedTemplate(null);
+      toast({ 
+        title: "Report Created Successfully", 
+        description: `${data.reportName} is now available in All Reports` 
+      });
     },
     onError: () => {
-      toast({ title: "Failed to execute report", variant: "destructive" });
+      toast({ title: "Failed to create report", variant: "destructive" });
     }
   });
 
