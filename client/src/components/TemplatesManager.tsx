@@ -760,7 +760,7 @@ export function TemplatesManager() {
                   </div>
                   
                   {/* Time Controls */}
-                  <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
                       <Label className="text-xs text-gray-600 block mb-1">Hour</Label>
                       <Select
@@ -785,7 +785,7 @@ export function TemplatesManager() {
                           }));
                         }}
                       >
-                        <SelectTrigger className="h-9 text-sm">
+                        <SelectTrigger className="h-10 text-sm w-full min-w-[60px]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -814,7 +814,7 @@ export function TemplatesManager() {
                           }));
                         }}
                       >
-                        <SelectTrigger className="h-9 text-sm">
+                        <SelectTrigger className="h-10 text-sm w-full min-w-[60px]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -850,7 +850,7 @@ export function TemplatesManager() {
                           }));
                         }}
                       >
-                        <SelectTrigger className="h-9 text-sm">
+                        <SelectTrigger className="h-10 text-sm w-full min-w-[60px]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
