@@ -3036,18 +3036,23 @@ export default function ReportBuilder() {
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{presentationId ? 'Update Report' : 'Save Report'}</DialogTitle>
+            <DialogTitle>
+              {creationMode === 'template' 
+                ? (templateId ? 'Update Template' : 'Save Template')
+                : (presentationId ? 'Update Report' : 'Save Report')
+              }
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label htmlFor="report-title" className="text-sm font-medium">
-                Report Title
+                {creationMode === 'template' ? 'Template Name' : 'Report Title'}
               </Label>
               <Input
                 id="report-title"
                 value={reportTitle}
                 onChange={(e) => setReportTitle(e.target.value)}
-                placeholder="Enter report title..."
+                placeholder={creationMode === 'template' ? 'Enter template name...' : 'Enter report title...'}
                 className="mt-1"
               />
             </div>

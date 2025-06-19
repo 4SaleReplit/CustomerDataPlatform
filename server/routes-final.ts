@@ -4083,15 +4083,12 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       } else {
         // Create template directly with content (from Design Studio)
         const templateData = {
-          id: nanoid(),
           name: name || 'Untitled Template',
           description: description || '',
           content: content || '{}',
           category: category || 'presentation',
-          tags: tags || [],
-          createdBy: 'admin',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          tags: Array.isArray(tags) ? tags : (tags ? [tags] : []),
+          createdBy: 'admin'
         };
 
         const result = await storage.createTemplate(templateData);
