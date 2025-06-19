@@ -2396,22 +2396,14 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         return res.status(404).json({ error: "Template not found" });
       }
       
-      // Calculate next run time based on cron expression
+      // Calculate next run time based on cron expression using proper timezone-aware calculation
       let nextRunAt;
       try {
-        // Simple calculation based on common patterns
-        if (cronExpression === '0 9 * * *') {
-          // Daily at 9 AM
-          const tomorrow = new Date();
-          tomorrow.setDate(tomorrow.getDate() + 1);
-          tomorrow.setHours(9, 0, 0, 0);
-          nextRunAt = tomorrow;
-        } else {
-          // Default to 24 hours from now for other patterns
-          nextRunAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-        }
+        nextRunAt = calculateNextExecution(cronExpression, timezone || 'Africa/Cairo');
       } catch (error) {
-        nextRunAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        console.error('Error calculating next execution time:', error);
+        // Fallback: schedule for next hour
+        nextRunAt = new Date(Date.now() + 60 * 60 * 1000);
       }
       
       // Create report data for job scheduling only (no recipients - pure data refresh jobs)
