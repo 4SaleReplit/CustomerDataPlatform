@@ -597,28 +597,14 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       const reportInsertData = {
         name: reportData.name,
         description: reportData.description || null,
-        presentationId: reportData.presentationId,
+        templateId: reportData.presentationId, // Use presentation as template
         cronExpression: reportData.cronExpression,
         timezone: reportData.timezone || 'Africa/Cairo',
+        status: reportData.isActive !== false ? 'active' : 'paused',
         emailSubject: reportData.emailTemplate?.subject || `Report: ${reportData.name}`,
-        emailBody: reportData.emailTemplate?.customContent || 'Please find your scheduled report attached.',
-        recipientList: reportData.recipientList || [],
-        ccList: reportData.ccList || [],
-        bccList: reportData.bccList || [],
-        isActive: reportData.isActive !== false,
-        formatSettings: reportData.formatSettings || {},
-        airflowConfiguration,
-        airflowDagId: airflowConfiguration.dag_id,
-        airflowTaskId: reportData.airflowTaskId || "send_report",
-        pdfDeliveryUrl,
-        nextExecution,
-        executionCount: 0,
-        errorCount: 0,
-        successCount: 0,
-        lastExecutionAt: null,
-        lastError: null,
-        createdBy: (req as any).session?.user?.id || null,
-        emailTemplate: reportData.emailTemplate
+        emailTemplate: reportData.emailTemplate?.customContent || 'Please find your scheduled report attached.',
+        recipients: JSON.stringify(reportData.recipientList || []),
+        createdBy: (req as any).session?.user?.id || 'system'
       };
 
       console.log('Creating scheduled report with data:', JSON.stringify(reportInsertData, null, 2));
@@ -1340,21 +1326,16 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
           
           // Update execution metadata
           await storage.updateScheduledReport(jobId, {
-            executionCount: (scheduledReport.executionCount || 0) + 1,
-            successCount: (scheduledReport.successCount || 0) + 1,
-            lastExecutionAt: new Date(),
-            nextExecution: calculateNextExecution(scheduledReport.cronExpression, scheduledReport.timezone)
+            lastRunAt: new Date(),
+            nextRunAt: calculateNextExecution(scheduledReport.cronExpression, scheduledReport.timezone)
           });
         } catch (error) {
           console.error(`Error executing scheduled report ${scheduledReport.name}:`, error);
           
           // Update error metadata
           await storage.updateScheduledReport(jobId, {
-            executionCount: (scheduledReport.executionCount || 0) + 1,
-            errorCount: (scheduledReport.errorCount || 0) + 1,
-            lastExecutionAt: new Date(),
-            lastError: error instanceof Error ? error.message : 'Unknown error',
-            nextExecution: calculateNextExecution(scheduledReport.cronExpression, scheduledReport.timezone)
+            lastRunAt: new Date(),
+            nextRunAt: calculateNextExecution(scheduledReport.cronExpression, scheduledReport.timezone)
           });
         }
       }, {
