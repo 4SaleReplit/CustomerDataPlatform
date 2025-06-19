@@ -111,6 +111,21 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 19, 2025**: Database Connection Timeout Issue Resolution
+  - Fixed critical database connection timeouts causing API failures and data loading issues
+  - Increased PostgreSQL connection timeout from 10 to 60 seconds to handle network latency
+  - Added query timeout and statement timeout configurations for improved stability
+  - Verified complete system restoration with all API endpoints responding properly
+  - Database read/write operations now working reliably from Replit PostgreSQL instance
+
+- **June 19, 2025**: Complete Timezone Display and Cron Job Execution Fixes
+  - Fixed timezone display issue where scheduled reports showed incorrect next run times
+  - Enhanced formatDateTime function with proper Intl.DateTimeFormat timezone handling
+  - Added timezone labels beside schedule and next run times for clarity
+  - Resolved cron job execution issue by adding proper task.start() after job creation
+  - Verified automatic scheduled report execution working correctly at specified times
+  - System now displays accurate timezone information and executes jobs reliably
+
 - **June 19, 2025**: Complete Functional Cron Job System Implementation for Scheduled Reports
   - Implemented real cron job execution using node-cron package for automated scheduled report generation
   - Created comprehensive CronJobService class managing job lifecycle: creation, updates, deletion, and execution
