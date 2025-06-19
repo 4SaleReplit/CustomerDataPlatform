@@ -942,19 +942,53 @@ export function TemplatesManager() {
               <Button type="button" variant="outline" onClick={() => setIsScheduleDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button 
-                type="button" 
-                variant="secondary" 
-                onClick={() => handleCreateNow()}
-                disabled={executeReportMutation.isPending}
-              >
-                {executeReportMutation.isPending ? 'Creating...' : 'Create Now'}
-              </Button>
               <Button type="submit" disabled={createScheduledReportMutation.isPending}>
                 {createScheduledReportMutation.isPending ? 'Scheduling...' : 'Schedule Report'}
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Now Dialog */}
+      <Dialog open={isCreateNowDialogOpen} onOpenChange={setIsCreateNowDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Report Now</DialogTitle>
+            <DialogDescription>
+              Generate an immediate report from "{selectedTemplate?.name}" template
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="reportName">Report Name</Label>
+              <Input
+                id="reportName"
+                value={createNowForm.reportName}
+                onChange={(e) => setCreateNowForm({ reportName: e.target.value })}
+                placeholder="Enter report name..."
+                className="mt-1"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Final name: "{selectedTemplate?.name} - {createNowForm.reportName || 'Report Name'}"
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCreateNowDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateNow}
+                disabled={executeReportMutation.isPending || !createNowForm.reportName.trim()}
+              >
+                {executeReportMutation.isPending ? 'Creating...' : 'Create Report'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

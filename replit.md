@@ -111,6 +111,16 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 19, 2025**: Added "Create Now" Button to Template Cards with Streamlined Report Generation
+  - Added "Create Now" button directly on each template card in /reports alongside Schedule button
+  - Removed "Create Now" option from Schedule Report form for cleaner workflow separation
+  - Implemented immediate report generation dialog that prompts for report name only
+  - Enhanced template execution to refresh all queries and generate reports instantly
+  - Reports automatically stored as PDF files in S3 under /reports/ folder structure
+  - New reports immediately appear in "All Reports" section with full metadata persistence
+  - Streamlined user experience: template cards → Create Now → enter name → instant report generation
+  - Complete integration with existing S3 storage and database persistence systems
+
 - **June 19, 2025**: Complete S3 Template & Report Persistence System Implementation
   - Created comprehensive TemplateS3StorageService for automatic template and report storage in S3
   - Implemented /templates/{templateId}/ and /reports/{reportId}/ folder structure in S3 bucket
