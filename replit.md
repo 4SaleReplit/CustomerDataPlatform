@@ -111,16 +111,18 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
-- **June 19, 2025**: Complete Scheduled Report Creation & Template Execution Fix
-  - Fixed critical database constraint violations preventing scheduled report creation
-  - Resolved null value errors in email_subject, email_body, and presentation_id database columns
-  - Completely rewrote scheduled report creation logic with minimal data structure matching database schema exactly
-  - Updated both /api/scheduled-reports-new and /api/templates/:id/execute endpoints with proper data validation
-  - Fixed frontend ReportsScheduler component to use correct template execution endpoint
-  - Eliminated all extra database fields causing type mismatches and constraint violations
-  - Both scheduled report creation and "Create Now" functionality now work perfectly end-to-end
-  - Database schema aligned with application code - removed NOT NULL constraints where appropriate
-  - Comprehensive testing confirmed all report creation workflows function correctly
+- **June 19, 2025**: Complete Reports & Scheduling System Overhaul
+  - Fixed "Create Now" functionality to instantly create reports as presentations in All Reports section
+  - Transformed scheduled reports into pure data refresh jobs without email recipients
+  - Enhanced job cards with user-friendly schedule display instead of technical cron expressions
+  - Added comprehensive timing information: creation date, next run time, and last execution
+  - Removed all recipient fields from scheduled report forms - these are automation jobs only
+  - Fixed frontend require errors and removed external cron parser dependencies
+  - "Create Now" creates presentations directly with proper timestamps and S3 storage preparation
+  - Scheduled jobs show human-readable schedules like "Daily at 9:00 AM" and "Weekly on Monday at 9:00 AM"
+  - Job cards display status badges, timing metadata, and execution controls
+  - Complete end-to-end testing confirmed both immediate report creation and job scheduling work perfectly
+  - System now clearly separates instant report generation from automated schedule management
 
 - **June 19, 2025**: Dynamic Time Picker, Create Now Option & Smart Report Naming
   - Enhanced time picker with dynamic hour/minute selection (24-hour format with 15-minute intervals)

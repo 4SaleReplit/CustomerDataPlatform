@@ -2397,7 +2397,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       }
       
       // Calculate next run time based on cron expression
-      let nextRunAt = null;
+      let nextRunAt;
       try {
         // Simple calculation based on common patterns
         if (cronExpression === '0 9 * * *') {
