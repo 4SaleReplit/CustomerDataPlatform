@@ -189,15 +189,16 @@ export function TemplatesManager() {
     }
   });
 
-  // Execute scheduled report mutation
+  // Execute template mutation
   const executeReportMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/scheduled-reports-new/${id}/execute`, { method: 'POST' }),
+    mutationFn: (id: string) => apiRequest(`/api/templates/${id}/execute`, { method: 'POST' }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/presentations'] });
       queryClient.invalidateQueries({ queryKey: ['/api/scheduled-reports-new'] });
-      toast({ title: "Report executed successfully" });
+      toast({ title: "Report created successfully" });
     },
     onError: () => {
-      toast({ title: "Failed to execute report", variant: "destructive" });
+      toast({ title: "Failed to create report", variant: "destructive" });
     }
   });
 
