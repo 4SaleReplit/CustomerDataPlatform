@@ -179,6 +179,54 @@ export function DataStudioReports() {
     }
   };
 
+  // Handle PDF download
+  const handleDownloadPDF = async (reportId: string, reportName: string) => {
+    try {
+      // Show loading state
+      toast({
+        title: "Generating PDF",
+        description: "Creating PDF report, please wait...",
+        duration: 3000,
+      });
+
+      // First try to get existing PDF URL or generate new one
+      const response = await fetch(`/api/presentations/${reportId}/generate-pdf`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.success && data.pdfUrl) {
+          // Open PDF in new tab
+          window.open(data.pdfUrl, '_blank');
+          
+          toast({
+            title: "PDF Ready",
+            description: `PDF for "${reportName}" is ready to download`,
+            duration: 5000,
+          });
+        } else {
+          throw new Error(data.message || 'Failed to generate PDF');
+        }
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate PDF');
+      }
+    } catch (error) {
+      console.error('PDF download error:', error);
+      toast({
+        title: "PDF Generation Failed",
+        description: error instanceof Error ? error.message : "Failed to generate PDF report",
+        variant: "destructive",
+        duration: 5000,
+      });
+    }
+  };
+
   // Refresh report data function
   // Generate thumbnails for presentations that don't have preview images
   const generateMissingThumbnails = async () => {
@@ -950,13 +998,23 @@ export function DataStudioReports() {
                             {report.status}
                           </Badge>
                         </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadPDF(report.id, report.name)}
+                            className="h-8 px-3"
+                          >
+                            <FileDown className="h-4 w-4 mr-1" />
+                            PDF
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
                             <DropdownMenuItem onClick={() => {
                               setSelectedPresentationId(report.id);
                               setShowPresentationModal(true);
