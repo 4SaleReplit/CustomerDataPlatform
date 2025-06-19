@@ -130,6 +130,9 @@ export default function ReportBuilder() {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [reportTitle, setReportTitle] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Tab selection for report vs template creation
+  const [creationMode, setCreationMode] = useState<'report' | 'template'>('report');
 
   // Delete slide confirmation dialog state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -144,6 +147,12 @@ export default function ReportBuilder() {
   // Get URL parameters for loading existing presentations
   const urlParams = new URLSearchParams(window.location.search);
   const presentationId = urlParams.get('presentationId');
+  const mode = urlParams.get('mode') as 'report' | 'template' || 'report';
+  
+  // Initialize creation mode from URL parameter
+  useEffect(() => {
+    setCreationMode(mode);
+  }, [mode]);
 
   // Load existing presentation if presentationId is provided
   const { data: existingPresentation } = useQuery({
@@ -312,64 +321,103 @@ export default function ReportBuilder() {
         }
       }
       
-      // Determine if this is an update or create operation
-      const isExistingReport = !!presentationId;
-      const presentationData = {
-        title: reportTitle.trim(),
-        description: `Presentation with ${slideIds.length} slides`,
-        slideIds: slideIds,
-        createdBy: 'admin'
-      };
+      if (creationMode === 'template') {
+        // Save as template
+        const templateData = {
+          name: reportTitle.trim(),
+          description: `Template with ${slideIds.length} slides`,
+          content: JSON.stringify({
+            slides: currentReport.slides,
+            slideIds: slideIds
+          }),
+          category: 'presentation',
+          tags: ['design-studio']
+        };
 
-      let response;
-      if (isExistingReport) {
-        // Update existing presentation
-        response = await fetch(`/api/presentations/${presentationId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(presentationData)
-        });
-      } else {
-        // Create new presentation
-        response = await fetch('/api/presentations', {
+        const response = await fetch('/api/templates', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(presentationData)
+          body: JSON.stringify(templateData)
         });
-      }
 
-      if (response.ok) {
-        const savedPresentation = await response.json();
-        console.log('Presentation saved successfully:', savedPresentation.id);
-        
-        // Generate thumbnail from first slide with image content
-        await generateThumbnailForPresentation(savedPresentation.id);
-        
-        // Invalidate cache to refresh reports list
-        queryClient.invalidateQueries({ queryKey: ['/api/presentations'] });
-        
-        // Reset dialog state
-        setShowSaveDialog(false);
-        setReportTitle('');
-        setIsSaving(false);
-        
-        // Show success toast notification
-        const action = isExistingReport ? 'updated' : 'created';
-        toast({
-          title: "Report Saved Successfully",
-          description: `Report "${reportTitle}" has been ${action} and saved to your reports library.`,
-          duration: 4000,
-        });
+        if (response.ok) {
+          toast({
+            title: "Template Saved",
+            description: `Template "${reportTitle}" has been saved successfully.`
+          });
+          setShowSaveDialog(false);
+          // Redirect to Templates page
+          setLocation('/reports?tab=templates');
+        } else {
+          throw new Error('Failed to save template');
+        }
       } else {
-        console.error('Failed to save presentation');
-        setIsSaving(false);
+        // Save as presentation/report
+        const isExistingReport = !!presentationId;
+        const presentationData = {
+          title: reportTitle.trim(),
+          description: `Presentation with ${slideIds.length} slides`,
+          slideIds: slideIds,
+          createdBy: 'admin'
+        };
+
+        let response;
+        if (isExistingReport) {
+          // Update existing presentation
+          response = await fetch(`/api/presentations/${presentationId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(presentationData)
+          });
+        } else {
+          // Create new presentation
+          response = await fetch('/api/presentations', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(presentationData)
+          });
+        }
+
+        if (response.ok) {
+          const savedPresentation = await response.json();
+          console.log('Presentation saved successfully:', savedPresentation.id);
+          
+          // Invalidate cache to refresh reports list
+          queryClient.invalidateQueries({ queryKey: ['/api/presentations'] });
+          
+          // Reset dialog state
+          setShowSaveDialog(false);
+          setReportTitle('');
+          setIsSaving(false);
+          
+          // Show success toast notification
+          const action = isExistingReport ? 'updated' : 'created';
+          toast({
+            title: "Report Saved Successfully",
+            description: `Report "${reportTitle}" has been ${action} and saved to your reports library.`,
+            duration: 4000,
+          });
+          
+          // Redirect to Reports page
+          setLocation('/reports?tab=reports');
+        } else {
+          console.error('Failed to save presentation');
+          setIsSaving(false);
+        }
       }
     } catch (error) {
       console.error('Error saving report:', error);
+      toast({
+        title: "Save Failed",
+        description: "Failed to save. Please try again.",
+        variant: "destructive"
+      });
       setIsSaving(false);
     }
   };
@@ -1658,6 +1706,30 @@ export default function ReportBuilder() {
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-semibold text-gray-900">{currentReport.name}</h1>
           <Badge variant="secondary">{currentReport.status}</Badge>
+          
+          {/* Tab Selector for Report vs Template */}
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setCreationMode('report')}
+              className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                creationMode === 'report'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Report
+            </button>
+            <button
+              onClick={() => setCreationMode('template')}
+              className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                creationMode === 'template'
+                  ? 'bg-white text-purple-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Template
+            </button>
+          </div>
         </div>
         
         <div className="flex items-center gap-3">
@@ -1686,7 +1758,7 @@ export default function ReportBuilder() {
             className="bg-green-50 hover:bg-green-100 border-green-300"
           >
             <Save className="h-4 w-4 mr-2" />
-            Save Slides
+            Save
           </Button>
 
           {/* View Controls */}
