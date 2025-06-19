@@ -631,13 +631,27 @@ export default function ReportsScheduler() {
                           </>
                         )}
                       </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        Priority: {report.emailPriority}
-                      </Badge>
                     </div>
                     <CardDescription className="mb-3">
-                      {report.description || 'No description'}
+                      {report.description || 'Automated report generation job'}
                     </CardDescription>
+                    
+                    {/* Schedule and timing information */}
+                    <div className="space-y-2 text-sm text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        <span>{formatCronToHumanReadable(report.cronExpression, report.timezone)}</span>
+                      </div>
+                      <div className="flex items-center gap-4 text-xs">
+                        <span>Created: {format(new Date(report.createdAt), 'MMM d, yyyy')}</span>
+                        {report.nextRunAt && (
+                          <span>Next run: {formatDateTime(report.nextRunAt)}</span>
+                        )}
+                        {report.lastRunAt && (
+                          <span>Last run: {formatDateTime(report.lastRunAt)}</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -668,7 +682,7 @@ export default function ReportsScheduler() {
                           </>
                         )}
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => executeReportMutation.mutate(report.id)}>
+                      <DropdownMenuItem onClick={() => executeReportMutation.mutate(report.templateId)}>
                         <Play className="w-4 h-4 mr-2" />
                         Execute Now
                       </DropdownMenuItem>
