@@ -3898,6 +3898,137 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     }
   });
 
+  // Templates Management API
+  app.get("/api/templates", async (req: Request, res: Response) => {
+    try {
+      const { templateService } = await import('./services/templateService');
+      const templates = await templateService.getTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+      res.status(500).json({ error: "Failed to fetch templates" });
+    }
+  });
+
+  app.post("/api/templates", async (req: Request, res: Response) => {
+    try {
+      const { presentationId, name, description } = req.body;
+      const { templateService } = await import('./services/templateService');
+      const template = await templateService.createTemplateFromPresentation(presentationId, name, description);
+      res.json(template);
+    } catch (error) {
+      console.error('Error creating template:', error);
+      res.status(500).json({ error: "Failed to create template" });
+    }
+  });
+
+  app.get("/api/templates/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { templateService } = await import('./services/templateService');
+      const template = await templateService.getTemplate(id);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error('Error fetching template:', error);
+      res.status(500).json({ error: "Failed to fetch template" });
+    }
+  });
+
+  app.patch("/api/templates/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const { templateService } = await import('./services/templateService');
+      const template = await templateService.updateTemplate(id, updates);
+      res.json(template);
+    } catch (error) {
+      console.error('Error updating template:', error);
+      res.status(500).json({ error: "Failed to update template" });
+    }
+  });
+
+  app.delete("/api/templates/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { templateService } = await import('./services/templateService');
+      await templateService.deleteTemplate(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      res.status(500).json({ error: "Failed to delete template" });
+    }
+  });
+
+  // Scheduled Reports API (new template-based system)
+  app.get("/api/scheduled-reports-new", async (req: Request, res: Response) => {
+    try {
+      const { templateService } = await import('./services/templateService');
+      const scheduledReports = await templateService.getScheduledReports();
+      res.json(scheduledReports);
+    } catch (error) {
+      console.error('Error fetching scheduled reports:', error);
+      res.status(500).json({ error: "Failed to fetch scheduled reports" });
+    }
+  });
+
+  app.post("/api/scheduled-reports-new", async (req: Request, res: Response) => {
+    try {
+      const { templateId, name, cronExpression, recipients, ...options } = req.body;
+      const { templateService } = await import('./services/templateService');
+      const scheduledReport = await templateService.createScheduledReport(
+        templateId,
+        name,
+        cronExpression,
+        recipients,
+        options
+      );
+      res.json(scheduledReport);
+    } catch (error) {
+      console.error('Error creating scheduled report:', error);
+      res.status(500).json({ error: "Failed to create scheduled report" });
+    }
+  });
+
+  app.patch("/api/scheduled-reports-new/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const { templateService } = await import('./services/templateService');
+      const scheduledReport = await templateService.updateScheduledReport(id, updates);
+      res.json(scheduledReport);
+    } catch (error) {
+      console.error('Error updating scheduled report:', error);
+      res.status(500).json({ error: "Failed to update scheduled report" });
+    }
+  });
+
+  app.delete("/api/scheduled-reports-new/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { templateService } = await import('./services/templateService');
+      await templateService.deleteScheduledReport(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting scheduled report:', error);
+      res.status(500).json({ error: "Failed to delete scheduled report" });
+    }
+  });
+
+  app.post("/api/scheduled-reports-new/:id/execute", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { templateService } = await import('./services/templateService');
+      const result = await templateService.executeScheduledReport(id);
+      res.json(result);
+    } catch (error) {
+      console.error('Error executing scheduled report:', error);
+      res.status(500).json({ error: "Failed to execute scheduled report" });
+    }
+  });
+
   app.delete("/api/s3/delete/:key(*)", async (req: Request, res: Response) => {
     try {
       const { key } = req.params;

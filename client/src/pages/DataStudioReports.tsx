@@ -56,6 +56,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { TemplatesManager } from '@/components/TemplatesManager';
 
 interface Report {
   id: string;
@@ -1358,34 +1359,8 @@ export function DataStudioReports() {
           </TabsContent>
 
           <TabsContent value="templates" className="space-y-4 mt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[
-                { name: 'Executive Summary', description: 'High-level KPIs and trends', slides: 6, preview: 'executive.jpg' },
-                { name: 'Sales Performance', description: 'Revenue and pipeline analysis', slides: 8, preview: 'sales.jpg' },
-                { name: 'Marketing Report', description: 'Campaign performance and ROI', slides: 10, preview: 'marketing.jpg' },
-                { name: 'Product Metrics', description: 'User engagement and feature usage', slides: 7, preview: 'product.jpg' },
-                { name: 'Financial Overview', description: 'P&L and budget analysis', slides: 12, preview: 'financial.jpg' },
-                { name: 'Customer Analytics', description: 'Customer behavior and satisfaction', slides: 9, preview: 'customer.jpg' },
-              ].map((template) => (
-                <Card key={template.name} className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardContent className="p-4">
-                    <div className="aspect-video bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg mb-3 flex items-center justify-center">
-                      <div className="text-center">
-                        <BarChart3 className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-                        <p className="text-xs text-blue-600">Preview</p>
-                      </div>
-                    </div>
-                    <h4 className="font-medium mb-1">{template.name}</h4>
-                    <p className="text-sm text-muted-foreground mb-2">{template.description}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">{template.slides} slides</span>
-                      <Button size="sm" variant="outline">Use Template</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
+        <TemplatesManager />
+      </TabsContent>
 
           <TabsContent value="s3-explorer" className="space-y-4 mt-4">
             {/* S3 Explorer Header with Search and Filters */}
