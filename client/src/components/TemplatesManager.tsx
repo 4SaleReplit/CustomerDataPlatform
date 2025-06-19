@@ -322,9 +322,31 @@ export function TemplatesManager() {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
-                      <span>{template.slideIds?.length || 0} slides</span>
-                      <span>Created {format(new Date(template.createdAt), 'MMM d, yyyy')}</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <span>{template.slideIds?.length || 0} slides</span>
+                        <span>Created {format(new Date(template.createdAt), 'MMM d, yyyy')}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.location.href = `/design-studio?mode=template&templateId=${template.id}`}
+                        >
+                          <Edit3 className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setSelectedTemplate(template);
+                            setIsScheduleDialogOpen(true);
+                          }}
+                        >
+                          <Calendar className="w-4 h-4 mr-1" />
+                          Schedule
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
