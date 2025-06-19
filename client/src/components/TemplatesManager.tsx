@@ -201,28 +201,6 @@ export function TemplatesManager() {
     }
   });
 
-
-
-  const getScheduleDescription = (form: any): string => {
-    const [hour24, minute] = form.time.split(':');
-    const hour12 = parseInt(hour24) === 0 ? 12 : parseInt(hour24) > 12 ? parseInt(hour24) - 12 : parseInt(hour24);
-    const ampm = parseInt(hour24) >= 12 ? 'PM' : 'AM';
-    const timeStr = `${hour12}:${minute} ${ampm}`;
-    
-    switch (form.frequency) {
-      case 'hourly':
-        return `Every hour at minute ${minute}`;
-      case 'daily':
-        return `Every day at ${timeStr}`;
-      case 'weekly':
-        return `Every ${form.dayOfWeek} at ${timeStr}`;
-      case 'monthly':
-        return `Every month on the ${form.dayOfMonth}${getOrdinalSuffix(form.dayOfMonth)} at ${timeStr}`;
-      default:
-        return `At ${timeStr}`;
-    }
-  };
-
   const getOrdinalSuffix = (day: number): string => {
     if (day > 3 && day < 21) return 'th';
     switch (day % 10) {
