@@ -4261,6 +4261,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
   app.post("/api/templates/:id/execute", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
+      const { reportName } = req.body; // Get user-entered report name from request body
       
       // Get the template to verify it exists
       const template = await storage.getTemplate(id);
@@ -4268,17 +4269,8 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         return res.status(404).json({ error: "Template not found" });
       }
       
-      // Generate a smart report name using template name + instance identifier
-      const now = new Date();
-      const instanceId = now.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
-      }) + ` ${now.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      })}`;
-      const reportName = `${template.name} - ${instanceId}`;
+      // Generate report name using template name + user-entered report name
+      const finalReportName = reportName ? `${template.name} - ${reportName}` : template.name;
       
       // Copy slides from template content
       let copiedSlideIds: string[] = [];
@@ -4307,7 +4299,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       
       // Create a presentation for the report with template relationship
       const presentationData = {
-        title: reportName,
+        title: finalReportName,
         description: 'Immediately generated report',
         slideIds: copiedSlideIds,
         previewImageUrl: template.previewImageUrl,
@@ -4318,7 +4310,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       
       const newPresentation = await storage.createPresentation(presentationData);
       
-      console.log(`Report presentation created: ${reportName} with ${copiedSlideIds.length} slides`);
+      console.log(`Report presentation created: ${finalReportName} with ${copiedSlideIds.length} slides`);
       
       // Generate PDF and upload to S3 if S3 integration is available
       try {
@@ -4330,7 +4322,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         if (s3Integration && copiedSlideIds.length > 0) {
           // Store reports under /reports/ folder in S3
           const s3FolderPath = 'reports/';
-          const s3Key = `${s3FolderPath}${newPresentation.id}/${reportName.replace(/[^a-zA-Z0-9-_]/g, '_')}.pdf`;
+          const s3Key = `${s3FolderPath}${newPresentation.id}/${finalReportName.replace(/[^a-zA-Z0-9-_]/g, '_')}.pdf`;
           
           // Update presentation with S3 path structure
           await storage.updatePresentation(newPresentation.id, {
@@ -4347,9 +4339,9 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       // Return success response
       res.json({ 
         success: true, 
-        message: `Report "${reportName}" created successfully with ${copiedSlideIds.length} slides`,
+        message: `Report "${finalReportName}" created successfully with ${copiedSlideIds.length} slides`,
         reportId: newPresentation.id,
-        reportName: reportName,
+        reportName: finalReportName,
         presentationType: 'report',
         slideCount: copiedSlideIds.length
       });

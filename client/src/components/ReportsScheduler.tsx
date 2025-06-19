@@ -254,10 +254,16 @@ export default function ReportsScheduler() {
   const handleCreateNow = async () => {
     const formData = new FormData(document.querySelector('form') as HTMLFormElement);
     const templateId = formData.get('templateId') as string;
+    const reportName = formData.get('name') as string;
     const selectedTemplate = templates.find(t => t.id === templateId);
     
     if (!selectedTemplate) {
       toast({ title: "Please select a template first", variant: "destructive" });
+      return;
+    }
+    
+    if (!reportName) {
+      toast({ title: "Please enter a report name", variant: "destructive" });
       return;
     }
     
@@ -266,7 +272,7 @@ export default function ReportsScheduler() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          name: generateSmartReportName(selectedTemplate.name, 'now'),
+          reportName: reportName, // Use user-entered report name
           description: formData.get('description') as string || undefined
         })
       });
