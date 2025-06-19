@@ -18,7 +18,10 @@ interface Template {
   id: string;
   name: string;
   description?: string;
-  slideIds: string[];
+  content?: string;
+  category?: string;
+  tags?: string[];
+  slideIds?: string[];
   previewImageUrl?: string;
   editableUrl?: string;
   pdfUrl?: string;
@@ -50,6 +53,8 @@ export function TemplatesManager() {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+
 
 
 
@@ -300,27 +305,72 @@ export function TemplatesManager() {
                     )}
                   </CardHeader>
                   <CardContent className="pt-0">
-                    {/* Template Preview - same as report preview */}
+                    {/* Template Preview - enhanced to show actual preview */}
                     <div className="mb-3">
-                      {template.previewImageUrl ? (
-                        <div className="w-full aspect-video bg-white rounded border border-gray-200 overflow-hidden">
-                          <img 
-                            src={template.previewImageUrl.startsWith('/uploads/') 
-                              ? `${window.location.origin}${template.previewImageUrl}`
-                              : template.previewImageUrl
-                            } 
-                            alt="Template preview" 
-                            className="w-full h-full object-contain"
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-full aspect-video bg-gray-50 rounded border border-gray-200 flex items-center justify-center">
-                          <div className="text-center">
-                            <Presentation className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                            <p className="text-sm text-gray-500">Template Preview</p>
+                      {(() => {
+                        // Check if template has a preview image URL
+                        if (template.previewImageUrl) {
+                          const thumbnailUrl = template.previewImageUrl.startsWith('/uploads/') 
+                            ? `${window.location.origin}${template.previewImageUrl}`
+                            : template.previewImageUrl;
+                          
+                          return (
+                            <div className="w-full aspect-video bg-white rounded border border-gray-200 overflow-hidden">
+                              <img 
+                                src={thumbnailUrl} 
+                                alt="Template preview" 
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                          );
+                        }
+
+                        // If template has content, try to generate a preview from first slide
+                        if (template.content) {
+                          try {
+                            const content = JSON.parse(template.content);
+                            if (content.slides && content.slides.length > 0) {
+                              const firstSlide = content.slides[0];
+                              
+                              // Check if first slide has elements with images
+                              if (firstSlide.elements && Array.isArray(firstSlide.elements)) {
+                                for (const element of firstSlide.elements) {
+                                  if (element.type === 'image' && element.content) {
+                                    const imageUrl = element.content.startsWith('/uploads/') 
+                                      ? `${window.location.origin}${element.content}`
+                                      : element.content;
+                                    
+                                    return (
+                                      <div className="w-full aspect-video bg-white rounded border border-gray-200 overflow-hidden">
+                                        <img 
+                                          src={imageUrl} 
+                                          alt="Template preview" 
+                                          className="w-full h-full object-contain"
+                                          onError={(e) => {
+                                            console.log('Failed to load template preview image:', imageUrl);
+                                          }}
+                                        />
+                                      </div>
+                                    );
+                                  }
+                                }
+                              }
+                            }
+                          } catch (error) {
+                            console.log('Failed to parse template content for preview:', error);
+                          }
+                        }
+
+                        // Default placeholder for templates without preview
+                        return (
+                          <div className="w-full aspect-video bg-gray-50 rounded border border-gray-200 flex items-center justify-center">
+                            <div className="text-center">
+                              <Presentation className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                              <p className="text-sm text-gray-500">Template Preview</p>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4 text-sm text-gray-500">
