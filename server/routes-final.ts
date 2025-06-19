@@ -169,6 +169,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/presentations/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deletePresentation(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Presentation not found" });
+      }
+      
+      res.json({ success: true, message: "Presentation deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting presentation:', error);
+      res.status(500).json({ error: "Failed to delete presentation" });
+    }
+  });
+
   // Authentication routes
   app.post("/api/auth/login", async (req: Request, res: Response) => {
     try {
