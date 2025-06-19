@@ -338,6 +338,12 @@ export const insertPresentationSchema = createInsertSchema(presentations).omit({
   updatedAt: true,
 });
 
+export const updatePresentationSchema = createInsertSchema(presentations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
 
 
 // Type exports
@@ -366,6 +372,7 @@ export type InsertSlide = z.infer<typeof insertSlideSchema>;
 export type UpdateSlide = z.infer<typeof updateSlideSchema>;
 export type Slide = typeof slides.$inferSelect;
 export type InsertPresentation = z.infer<typeof insertPresentationSchema>;
+export type UpdatePresentation = z.infer<typeof updatePresentationSchema>;
 export type Presentation = typeof presentations.$inferSelect;
 
 // Scheduler type exports

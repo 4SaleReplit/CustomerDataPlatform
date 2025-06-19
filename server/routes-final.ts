@@ -806,7 +806,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     }
   });
 
-  // PDF Report Generation Endpoint
+  // PDF Report Generation Endpoint with S3 integration
   app.get("/api/reports/pdf/:presentationId", async (req: Request, res: Response) => {
     try {
       const { presentationId } = req.params;
@@ -816,15 +816,55 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         return res.status(404).json({ error: "Presentation not found" });
       }
       
-      // Generate PDF from presentation data
-      const pdfBuffer = await generateReportFile(presentation, { format: 'pdf', includeCharts: true });
+      // Check if PDF already exists in S3
+      if (presentation.pdfUrl) {
+        console.log(`Redirecting to existing S3 PDF: ${presentation.pdfUrl}`);
+        return res.redirect(presentation.pdfUrl);
+      }
       
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${presentation.title}.pdf"`);
-      res.send(pdfBuffer.content);
+      // Generate PDF and store in S3
+      const reportFile = await generateReportFile(presentation, { format: 'pdf', includeCharts: true });
+      
+      // Redirect to S3 URL if available, otherwise serve content
+      if (reportFile.s3Url) {
+        console.log(`Redirecting to new S3 PDF: ${reportFile.s3Url}`);
+        return res.redirect(reportFile.s3Url);
+      } else {
+        // Fallback: serve PDF directly
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${presentation.title}.pdf"`);
+        res.send(reportFile.content);
+      }
     } catch (error) {
       console.error("Error generating PDF report:", error);
       res.status(500).json({ error: "Failed to generate PDF report" });
+    }
+  });
+
+  // API endpoint to generate/regenerate PDF for a presentation
+  app.post("/api/presentations/:id/generate-pdf", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      // Get presentation
+      const presentation = await storage.getPresentationById(id);
+      if (!presentation) {
+        return res.status(404).json({ error: "Presentation not found" });
+      }
+      
+      // Generate and store PDF in S3
+      const reportFile = await generateReportFile(presentation, { format: 'pdf', includeCharts: true });
+      
+      res.json({ 
+        success: true,
+        message: "PDF generated successfully",
+        pdfUrl: reportFile.s3Url,
+        filename: reportFile.filename
+      });
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      res.status(500).json({ error: "Failed to generate PDF" });
     }
   });
 
@@ -1443,27 +1483,35 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         throw new Error(`Presentation not found: ${scheduledReport.presentationId}`);
       }
       
-      // Generate the report file (PDF/PowerPoint)
+      // Generate the report file (PDF/PowerPoint) and store in S3
       const reportFile = await generateReportFile(presentation, scheduledReport.formatSettings || { format: 'pdf', includeCharts: true });
       
-      // Process email template with placeholders
-      const processedSubject = processEmailTemplate(scheduledReport.emailSubject, scheduledReport);
-      const processedBody = processEmailTemplate(scheduledReport.emailBody, scheduledReport);
+      // Enhanced template data with PDF URL
+      const templateData = {
+        ...scheduledReport,
+        pdf_download_url: reportFile.s3Url || '#',
+        report_url: reportFile.s3Url || '#',
+        dashboard_url: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/reports/presentation/${presentation.id}`
+      };
       
-      // Prepare email data
+      // Process email template with enhanced placeholders
+      const processedSubject = processEmailTemplate(scheduledReport.emailSubject, templateData);
+      const processedBody = processEmailTemplate(scheduledReport.emailBody, templateData);
+      
+      // Prepare email data with S3 PDF link in body
       const emailData = {
         to: scheduledReport.recipientList || [],
         cc: scheduledReport.ccList || [],
         bcc: scheduledReport.bccList || [],
         subject: processedSubject,
         html: processedBody,
-        attachments: reportFile ? [reportFile] : []
+        attachments: reportFile.s3Url ? [] : [reportFile] // No attachment if S3 URL available
       };
       
       // Send email
       await sendReportEmail(emailData);
       
-      console.log(`Successfully executed scheduled report: ${scheduledReport.name}`);
+      console.log(`Successfully executed scheduled report: ${scheduledReport.name} with PDF URL: ${reportFile.s3Url}`);
       
     } catch (error) {
       console.error(`Error in executeScheduledReport for ${scheduledReport.name}:`, error);
@@ -1502,11 +1550,43 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
   }
 
   async function generateReportFile(presentation: any, formatSettings: any) {
-    // Implementation would generate actual PDF/PowerPoint from presentation data
-    return {
-      filename: `${presentation.title}_${new Date().toISOString().split('T')[0]}.pdf`,
-      content: Buffer.from('Generated report content')
-    };
+    try {
+      // Import PDF services
+      const { pdfGeneratorService } = await import('./services/pdfGenerator');
+      
+      // Get presentation slides for PDF generation
+      const slides = presentation.slideIds ? 
+        await Promise.all(presentation.slideIds.map(async (slideId: string) => {
+          return await storage.getSlide(slideId);
+        })) : [];
+      
+      // Create presentation object for PDF generation
+      const presentationData = {
+        id: presentation.id,
+        title: presentation.title,
+        description: presentation.description,
+        slides: slides.filter(slide => slide !== undefined)
+      };
+      
+      // Generate and store PDF in S3
+      const result = await pdfGeneratorService.generateAndStorePDF(presentationData);
+      
+      console.log(`✅ PDF generated and stored in S3: ${result.pdfUrl}`);
+      
+      return {
+        filename: `${presentation.title.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
+        content: Buffer.from('PDF stored in S3'), // Placeholder since file is in S3
+        s3Url: result.pdfUrl,
+        s3Key: result.s3Key
+      };
+    } catch (error) {
+      console.error('Error generating PDF report:', error);
+      // Fallback to simple content
+      return {
+        filename: `${presentation.title}_${new Date().toISOString().split('T')[0]}.pdf`,
+        content: Buffer.from('Generated report content')
+      };
+    }
   }
 
   async function sendReportEmail(emailData: any) {
