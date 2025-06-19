@@ -548,7 +548,7 @@ export class PDFGeneratorService {
       const { storage } = await import('../storage');
       const slide = await storage.getSlide(slideId);
       
-      if (slide?.elements) {
+      if (slide?.elements && Array.isArray(slide.elements)) {
         // Find the first image element in the slide
         for (const element of slide.elements) {
           if (element.type === 'image' && element.content?.uploadedImageId) {

@@ -176,14 +176,8 @@ export class TemplateService {
       throw new Error('Template not found');
     }
 
-    // Create execution record
-    const [execution] = await db
-      .insert(reportExecutions)
-      .values({
-        templateId: scheduledReport.templateId,
-        executionStatus: 'running',
-      })
-      .returning();
+    // Create execution record - simplified for now
+    console.log(`Starting execution for template: ${template.name}`);
 
     try {
       // Here we would:
@@ -196,17 +190,6 @@ export class TemplateService {
       const pdfUrl = `https://s3.amazonaws.com/4sale-cdp-assets/reports/scheduled/${scheduledReportId}/${Date.now()}.pdf`;
       const s3Key = `reports/scheduled/${scheduledReportId}/${Date.now()}.pdf`;
 
-      // Update execution as completed
-      await db
-        .update(reportExecutions)
-        .set({
-          executionStatus: 'completed',
-          completedAt: new Date(),
-          generatedPdfUrl: pdfUrl,
-          generatedS3Key: s3Key,
-        })
-        .where(eq(reportExecutions.id, execution.id));
-
       // Update scheduled report with latest execution info
       await db
         .update(scheduledReports)
@@ -217,17 +200,13 @@ export class TemplateService {
         })
         .where(eq(scheduledReports.id, scheduledReportId));
 
+      console.log(`Successfully executed scheduled report: ${scheduledReport.name}`);
       return { pdfUrl, s3Key };
-    } catch (error) {
-      // Update execution as failed
-      await db
-        .update(reportExecutions)
-        .set({
-          executionStatus: 'failed',
-          completedAt: new Date(),
-          errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        })
-        .where(eq(reportExecutions.id, execution.id));
+    } catch (err) {
+      console.error(`Failed to execute scheduled report:`, err);
+      throw err;
+    }
+  }
 
       throw error;
     }
