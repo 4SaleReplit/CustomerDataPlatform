@@ -642,38 +642,40 @@ function generateTreeChart(data: any[], baseOptions: any, theme: string) {
 }
 
 function generateMapChart(data: any[], baseOptions: any, theme: string) {
+  // Fallback to bar chart for geographic data since map regions aren't loaded
+  const colors = theme === 'dark' 
+    ? ['#60a5fa', '#34d399', '#fbbf24', '#f87171', '#a78bfa']
+    : ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+
   return {
     ...baseOptions,
+    color: colors,
     tooltip: {
-      trigger: 'item',
-      showDelay: 0,
-      transitionDuration: 0.2
+      trigger: 'axis',
+      axisPointer: {
+        type: 'shadow'
+      }
     },
-    visualMap: {
-      left: 'right',
-      min: Math.min(...data.map(item => item.value || 0)),
-      max: Math.max(...data.map(item => item.value || 0)),
-      inRange: {
-        color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffcc', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
-      },
-      text: ['High', 'Low'],
-      calculable: true,
-      textStyle: { color: theme === 'dark' ? '#ffffff' : '#333333' }
+    xAxis: {
+      type: 'category',
+      data: data.map(item => item.country || item.name || item.region),
+      axisLabel: { 
+        color: theme === 'dark' ? '#a0aec0' : '#718096',
+        rotate: 45
+      }
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: { color: theme === 'dark' ? '#a0aec0' : '#718096' }
     },
     series: [{
-      name: 'Data',
-      type: 'map',
-      roam: true,
-      map: 'world',
-      emphasis: {
-        label: {
-          show: true
-        }
-      },
-      data: data.map(item => ({
-        name: item.name || item.region,
-        value: item.value || 0
-      }))
+      name: 'Geographic Distribution',
+      type: 'bar',
+      data: data.map(item => item.users || item.value || 0),
+      barWidth: '60%',
+      itemStyle: {
+        borderRadius: [4, 4, 0, 0]
+      }
     }]
   };
 }
