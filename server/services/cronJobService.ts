@@ -93,7 +93,7 @@ class CronJobService {
     }
   }
 
-  private async executeScheduledReport(scheduledReportId: string): Promise<void> {
+  async executeScheduledReport(scheduledReportId: string): Promise<void> {
     try {
       console.log(`🚀 Starting execution of scheduled report: ${scheduledReportId}`);
       

@@ -2442,6 +2442,9 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         return res.status(404).json({ error: "Scheduled report not found" });
       }
       
+      // Update the cron job based on the new configuration
+      await cronJobService.updateCronJob(updatedReport);
+      
       res.json(updatedReport);
     } catch (error) {
       console.error("Update scheduled report error:", error);
@@ -2454,6 +2457,10 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
   app.delete("/api/scheduled-reports-new/:id", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
+      
+      // Remove the cron job first
+      await cronJobService.removeCronJob(id);
+      
       const deleted = await storage.deleteScheduledReport(id);
       
       if (!deleted) {
@@ -2472,17 +2479,14 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
   app.post("/api/scheduled-reports-new/:id/execute", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const report = await storage.getScheduledReport(id);
+      const report = await storage.getScheduledReportById(id);
       
       if (!report) {
         return res.status(404).json({ error: "Scheduled report not found" });
       }
       
-      // Execute the report (this would integrate with your existing report generation logic)
-      // For now, we'll just update the lastRunAt timestamp
-      await storage.updateScheduledReport(id, {
-        lastRunAt: new Date()
-      });
+      // Execute the report using the cron job service
+      await cronJobService.executeScheduledReport(id);
       
       res.json({ success: true, message: "Report executed successfully" });
     } catch (error) {
@@ -4214,6 +4218,12 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         recipients,
         options
       );
+      
+      // Create cron job for the scheduled report
+      if (scheduledReport.status === 'active') {
+        await cronJobService.createCronJob(scheduledReport);
+      }
+      
       res.json(scheduledReport);
     } catch (error) {
       console.error('Error creating scheduled report:', error);
