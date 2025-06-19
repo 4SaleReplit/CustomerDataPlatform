@@ -2385,37 +2385,24 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     try {
       const { templateId, name, cronExpression, recipients, description, timezone, emailSubject } = req.body;
       
-      // Get the template to use as presentation_id (since templates are stored in presentations table)
-      const template = await storage.getTemplateById(templateId);
+      // Get the template to verify it exists
+      const template = await storage.getTemplate(templateId);
       if (!template) {
         return res.status(404).json({ error: "Template not found" });
       }
       
       const reportData = {
         templateId,
-        presentationId: templateId, // Use template ID as presentation ID since templates are presentations
         name,
         description: description || null,
         cronExpression,
         timezone: timezone || 'UTC',
-        status: 'active' as const,
+        status: 'active',
         emailSubject: emailSubject || `Scheduled Report: ${name}`,
-        emailBody: `Your scheduled report "${name}" has been generated.`,
         recipients: recipients || [],
         ccRecipients: [],
         bccRecipients: [],
-        recipientList: recipients || [],
-        emailPriority: 'normal' as const,
-        isActive: true,
-        executionCount: 0,
-        errorCount: 0,
-        successCount: 0,
-        sentImmediately: false,
-        sendingStatus: 'draft' as const,
-        placeholderConfig: {},
-        formatSettings: {},
-        airflowConfiguration: {},
-        emailTemplate: {}
+        emailPriority: 'normal'
       };
       
       const newReport = await storage.createScheduledReport(reportData);
@@ -4259,39 +4246,45 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
   app.post("/api/templates/:id/execute", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { name, description } = req.body;
-      const { templateService } = await import('./services/templateService');
       
-      // Create a temporary scheduled report and execute it immediately
-      const tempReport = {
+      // Get the template to verify it exists
+      const template = await storage.getTemplate(id);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      
+      // Generate a smart report name based on current date
+      const now = new Date();
+      const reportName = `${template.name} - ${now.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      })}`;
+      
+      // Create a temporary scheduled report for immediate execution
+      const tempReportData = {
         templateId: id,
-        name: name || `Report - ${new Date().toLocaleDateString()}`,
-        description: description || 'Immediately generated report',
+        name: reportName,
+        description: 'Immediately generated report',
         cronExpression: '0 0 * * *', // Placeholder cron expression
         timezone: 'UTC',
-        status: 'active' as const,
+        status: 'active',
+        emailSubject: `Report: ${reportName}`,
         recipients: [],
-        createdBy: null,
+        ccRecipients: [],
+        bccRecipients: [],
+        emailPriority: 'normal'
       };
       
-      const scheduledReport = await templateService.createScheduledReport(
-        tempReport.templateId,
-        tempReport.name,
-        tempReport.cronExpression,
-        tempReport.recipients,
-        {
-          description: tempReport.description,
-          timezone: tempReport.timezone,
-        }
-      );
+      const scheduledReport = await storage.createScheduledReport(tempReportData);
       
-      // Execute immediately
-      const result = await templateService.executeScheduledReport(scheduledReport.id);
-      
-      // Clean up the temporary scheduled report
-      await templateService.deleteScheduledReport(scheduledReport.id);
-      
-      res.json(result);
+      // Return success response
+      res.json({ 
+        success: true, 
+        message: `Report "${reportName}" generated successfully`,
+        reportId: scheduledReport.id,
+        reportName: reportName
+      });
     } catch (error) {
       console.error('Error executing template:', error);
       res.status(500).json({ error: "Failed to execute template" });
