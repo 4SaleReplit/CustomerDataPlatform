@@ -998,23 +998,13 @@ export function DataStudioReports() {
                             {report.status}
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDownloadPDF(report.id, report.name)}
-                            className="h-8 px-3"
-                          >
-                            <FileDown className="h-4 w-4 mr-1" />
-                            PDF
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
                             <DropdownMenuItem onClick={() => {
                               setSelectedPresentationId(report.id);
                               setShowPresentationModal(true);
@@ -1086,6 +1076,20 @@ export function DataStudioReports() {
                       <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                         {report.description}
                       </p>
+                      
+                      {/* Download PDF Button */}
+                      <div className="mb-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownloadPDF(report.id, report.name)}
+                          className="w-full h-9"
+                        >
+                          <FileDown className="h-4 w-4 mr-2" />
+                          Download PDF Report
+                        </Button>
+                      </div>
+                      
                       <div className="space-y-2 text-xs">
                         <div className="flex items-center justify-between">
                           <span className="flex items-center gap-1">
