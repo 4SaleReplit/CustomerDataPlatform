@@ -135,7 +135,7 @@ class CronJobService {
                 title: slideData.name || `Slide ${i + 1}`,
                 elements: (slideData.elements || []) as any,
                 backgroundColor: slideData.backgroundColor || '#ffffff',
-                createdBy: 'scheduled_system'
+                createdBy: null
               });
               
               copiedSlideIds.push(newSlide.id);
@@ -150,7 +150,7 @@ class CronJobService {
                 title: originalSlide.title,
                 elements: originalSlide.elements as any,
                 backgroundColor: originalSlide.backgroundColor || '#ffffff',
-                createdBy: 'scheduled_system'
+                createdBy: null
               });
               copiedSlideIds.push(newSlide.id);
             }
@@ -169,7 +169,7 @@ class CronJobService {
         templateId: template.id,
         scheduledReportId: scheduledReport.id,
         instanceType: 'scheduled',
-        createdBy: 'scheduled_system'
+        createdBy: null
       };
       
       const newPresentation = await storage.createPresentation(presentationData);

@@ -2416,7 +2416,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         timezone: timezone || 'Africa/Cairo',
         status: 'active',
         nextRunAt: nextRunAt,
-        createdBy: (req as any).session?.user?.id || 'system'
+        createdBy: (req as any).session?.user?.id || null
       };
       
       console.log('Creating scheduled report with data:', JSON.stringify(reportData, null, 2));
@@ -4207,42 +4207,9 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     }
   });
 
-  app.post("/api/scheduled-reports-new", async (req: Request, res: Response) => {
-    try {
-      const { templateId, name, cronExpression, recipients, ...options } = req.body;
-      const { templateService } = await import('./services/templateService');
-      const scheduledReport = await templateService.createScheduledReport(
-        templateId,
-        name,
-        cronExpression,
-        recipients,
-        options
-      );
-      
-      // Create cron job for the scheduled report
-      if (scheduledReport.status === 'active') {
-        await cronJobService.createCronJob(scheduledReport);
-      }
-      
-      res.json(scheduledReport);
-    } catch (error) {
-      console.error('Error creating scheduled report:', error);
-      res.status(500).json({ error: "Failed to create scheduled report" });
-    }
-  });
+  // This endpoint is removed - using the correct implementation below
 
-  app.patch("/api/scheduled-reports-new/:id", async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const updates = req.body;
-      const { templateService } = await import('./services/templateService');
-      const scheduledReport = await templateService.updateScheduledReport(id, updates);
-      res.json(scheduledReport);
-    } catch (error) {
-      console.error('Error updating scheduled report:', error);
-      res.status(500).json({ error: "Failed to update scheduled report" });
-    }
-  });
+  // This endpoint is removed - using the correct implementation below
 
   app.delete("/api/scheduled-reports-new/:id", async (req: Request, res: Response) => {
     try {
