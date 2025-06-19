@@ -96,8 +96,12 @@ export class TemplateService {
     return template as Template;
   }
 
-  // Delete template
+  // Delete template and all related scheduled reports
   async deleteTemplate(id: string): Promise<void> {
+    // First delete all scheduled reports that reference this template
+    await db.delete(scheduledReports).where(eq(scheduledReports.templateId, id));
+    
+    // Then delete the template
     await db.delete(templates).where(eq(templates.id, id));
   }
 
