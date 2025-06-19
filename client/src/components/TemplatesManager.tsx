@@ -725,20 +725,22 @@ export function TemplatesManager() {
                 </div>
               )}
 
-              <div className="space-y-3">
-                <Label>Time</Label>
-                <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Time</Label>
+                <div className="space-y-3">
                   {/* Time Display */}
-                  <div className="flex items-center justify-center gap-3 p-3 bg-white rounded-md border">
-                    <Clock className="w-4 h-4 text-blue-600" />
-                    <span className="text-xl font-mono font-semibold">
-                      {(() => {
-                        const [hour24, minute] = scheduleForm.time.split(':');
-                        const hour12 = parseInt(hour24) === 0 ? 12 : parseInt(hour24) > 12 ? parseInt(hour24) - 12 : parseInt(hour24);
-                        const ampm = parseInt(hour24) >= 12 ? 'PM' : 'AM';
-                        return `${hour12}:${minute} ${ampm}`;
-                      })()}
-                    </span>
+                  <div className="flex items-center justify-between p-3 border rounded-md bg-gray-50">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-gray-500" />
+                      <span className="text-lg font-mono">
+                        {(() => {
+                          const [hour24, minute] = scheduleForm.time.split(':');
+                          const hour12 = parseInt(hour24) === 0 ? 12 : parseInt(hour24) > 12 ? parseInt(hour24) - 12 : parseInt(hour24);
+                          const ampm = parseInt(hour24) >= 12 ? 'PM' : 'AM';
+                          return `${hour12}:${minute} ${ampm}`;
+                        })()}
+                      </span>
+                    </div>
                     <Button
                       type="button"
                       size="sm"
@@ -758,9 +760,9 @@ export function TemplatesManager() {
                   </div>
                   
                   {/* Time Controls */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-2">
-                      <Label className="text-xs text-gray-600">Hour</Label>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <Label className="text-xs text-gray-600 block mb-1">Hour</Label>
                       <Select
                         value={(() => {
                           const hour24 = parseInt(scheduleForm.time.split(':')[0]);
@@ -783,10 +785,10 @@ export function TemplatesManager() {
                           }));
                         }}
                       >
-                        <SelectTrigger className="h-10">
+                        <SelectTrigger className="h-9 text-sm">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="max-h-48">
+                        <SelectContent>
                           {Array.from({ length: 12 }, (_, i) => {
                             const hour = i === 0 ? 12 : i;
                             return (
@@ -799,8 +801,8 @@ export function TemplatesManager() {
                       </Select>
                     </div>
                     
-                    <div className="space-y-2">
-                      <Label className="text-xs text-gray-600">Minute</Label>
+                    <div>
+                      <Label className="text-xs text-gray-600 block mb-1">Minute</Label>
                       <Select
                         value={scheduleForm.time.split(':')[1]}
                         onValueChange={(value) => {
@@ -812,10 +814,10 @@ export function TemplatesManager() {
                           }));
                         }}
                       >
-                        <SelectTrigger className="h-10">
+                        <SelectTrigger className="h-9 text-sm">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="max-h-48">
+                        <SelectContent>
                           {['00', '15', '30', '45'].map((minute) => (
                             <SelectItem key={minute} value={minute}>
                               {minute}
@@ -825,8 +827,8 @@ export function TemplatesManager() {
                       </Select>
                     </div>
                     
-                    <div className="space-y-2">
-                      <Label className="text-xs text-gray-600">AM/PM</Label>
+                    <div>
+                      <Label className="text-xs text-gray-600 block mb-1">AM/PM</Label>
                       <Select
                         value={parseInt(scheduleForm.time.split(':')[0]) >= 12 ? 'PM' : 'AM'}
                         onValueChange={(value) => {
@@ -845,7 +847,7 @@ export function TemplatesManager() {
                           }));
                         }}
                       >
-                        <SelectTrigger className="h-10">
+                        <SelectTrigger className="h-9 text-sm">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
