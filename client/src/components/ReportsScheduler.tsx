@@ -70,6 +70,8 @@ export default function ReportsScheduler() {
     const [hour, minute] = time.split(':');
     
     switch (frequency) {
+      case 'hourly':
+        return `${minute} * * * *`;
       case 'daily':
         return `${minute} ${hour} * * *`;
       case 'weekly':

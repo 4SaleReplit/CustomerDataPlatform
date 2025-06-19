@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Edit3, Trash2, Calendar, Download, MoreVertical, Play, Pause, Clock, FileText } from "lucide-react";
+import { Plus, Edit3, Trash2, Calendar, Download, MoreVertical, FileText, Clock, Presentation } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -53,7 +53,7 @@ export function TemplatesManager() {
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [scheduleForm, setScheduleForm] = useState({
-    frequency: 'daily',
+    frequency: 'weekly',
     dayOfWeek: 'monday',
     dayOfMonth: '1',
     time: '09:00',
@@ -111,15 +111,11 @@ export function TemplatesManager() {
     }
   };
 
-  const getOrdinalSuffix = (day: number): string => {
-    if (day > 3 && day < 21) return 'th';
-    switch (day % 10) {
-      case 1: return 'st';
-      case 2: return 'nd';
-      case 3: return 'rd';
-      default: return 'th';
-    }
-  };
+
+
+
+
+
 
   // Fetch templates
   const { data: templates = [], isLoading: templatesLoading } = useQuery({
@@ -128,7 +124,7 @@ export function TemplatesManager() {
   });
 
   // Fetch scheduled reports
-  const { data: scheduledReports = [], isLoading: scheduledReportsLoading } = useQuery({
+  const { data: scheduledReports = [], isLoading: scheduledLoading } = useQuery({
     queryKey: ['/api/scheduled-reports-new'],
     queryFn: () => apiRequest('/api/scheduled-reports-new')
   });
@@ -164,9 +160,9 @@ export function TemplatesManager() {
     }) => apiRequest('/api/scheduled-reports-new', { method: 'POST', body: JSON.stringify(data) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/scheduled-reports-new'] });
-      toast({ title: "Scheduled report created successfully" });
       setIsScheduleDialogOpen(false);
       setSelectedTemplate(null);
+      toast({ title: "Scheduled report created successfully" });
     },
     onError: () => {
       toast({ title: "Failed to create scheduled report", variant: "destructive" });
@@ -212,6 +208,10 @@ export function TemplatesManager() {
       toast({ title: "Failed to execute report", variant: "destructive" });
     }
   });
+
+
+
+
 
   const generateSmartReportName = (templateName: string, frequency: string): string => {
     const now = new Date();
@@ -323,41 +323,172 @@ export function TemplatesManager() {
               ))}
             </div>
           ) : templates.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No templates</h3>
-              <p className="mt-1 text-sm text-gray-500">Get started by creating a new template.</p>
-              <div className="mt-6">
+            <Card>
+              <CardContent className="text-center py-8">
+                <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Templates Found</h3>
+                <p className="text-gray-500 mb-4">Create your first template to get started with automated reporting</p>
                 <Button onClick={() => window.location.href = '/design-studio?mode=template'}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Create New Template
+                  Create First Template
                 </Button>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {templates.map((template: Template) => (
-                <Card key={template.id}>
-                  <CardHeader>
-                    <CardTitle className="text-lg">{template.name}</CardTitle>
-                    <CardDescription>{template.description || 'No description available'}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {template.previewImageUrl && (
-                        <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                          <img 
-                            src={template.previewImageUrl} 
-                            alt={template.name}
-                            className="w-full h-full object-contain"
-                          />
-                        </div>
-                      )}
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Clock className="w-4 h-4 mr-1" />
-                        Created {format(new Date(template.createdAt), 'MMM d, yyyy')}
+                <Card key={template.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <Presentation className="h-5 w-5 text-blue-600" />
+                        <CardTitle className="text-base">{template.name}</CardTitle>
                       </div>
-                      <div className="flex gap-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedTemplate(template);
+                              setIsScheduleDialogOpen(true);
+                            }}
+                          >
+                            <Calendar className="w-4 h-4 mr-2" />
+                            Schedule Report
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => window.location.href = `/design-studio?mode=template&templateId=${template.id}`}>
+                            <Edit3 className="w-4 h-4 mr-2" />
+                            Edit in Design Studio
+                          </DropdownMenuItem>
+                          {template.pdfUrl && (
+                            <DropdownMenuItem asChild>
+                              <a href={template.pdfUrl} target="_blank" rel="noopener noreferrer">
+                                <Download className="w-4 h-4 mr-2" />
+                                Download PDF
+                              </a>
+                            </DropdownMenuItem>
+                          )}
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onSelect={(e) => e.preventDefault()}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Template</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete "{template.name}"? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteTemplateMutation.mutate(template.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Delete Template
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    {template.description && (
+                      <CardDescription className="text-sm">{template.description}</CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    {/* Template Preview - enhanced to show actual preview */}
+                    <div className="mb-3">
+                      {(() => {
+                        // Check if template has a preview image URL
+                        if (template.previewImageUrl) {
+                          const thumbnailUrl = template.previewImageUrl.startsWith('/uploads/') 
+                            ? `${window.location.origin}${template.previewImageUrl}`
+                            : template.previewImageUrl;
+                          
+                          return (
+                            <div className="w-full aspect-video bg-white rounded border border-gray-200 overflow-hidden">
+                              <img 
+                                src={thumbnailUrl} 
+                                alt="Template preview" 
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                          );
+                        }
+
+                        // If template has content, try to generate a preview from first slide
+                        if (template.content) {
+                          try {
+                            const content = JSON.parse(template.content);
+                            if (content.slides && content.slides.length > 0) {
+                              const firstSlide = content.slides[0];
+                              
+                              // Check if first slide has elements with images
+                              if (firstSlide.elements && Array.isArray(firstSlide.elements)) {
+                                for (const element of firstSlide.elements) {
+                                  if (element.type === 'image' && element.content) {
+                                    const imageUrl = element.content.startsWith('/uploads/') 
+                                      ? `${window.location.origin}${element.content}`
+                                      : element.content;
+                                    
+                                    return (
+                                      <div className="w-full aspect-video bg-white rounded border border-gray-200 overflow-hidden">
+                                        <img 
+                                          src={imageUrl} 
+                                          alt="Template preview" 
+                                          className="w-full h-full object-contain"
+                                          onError={(e) => {
+                                            console.log('Failed to load template preview image:', imageUrl);
+                                          }}
+                                        />
+                                      </div>
+                                    );
+                                  }
+                                }
+                              }
+                            }
+                          } catch (error) {
+                            console.log('Failed to parse template content for preview:', error);
+                          }
+                        }
+
+                        // Default placeholder for templates without preview
+                        return (
+                          <div className="w-full aspect-video bg-gray-50 rounded border border-gray-200 flex items-center justify-center">
+                            <div className="text-center">
+                              <Presentation className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                              <p className="text-sm text-gray-500">Template Preview</p>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <span>{template.slideIds?.length || 0} slides</span>
+                        <span>Created {format(new Date(template.createdAt), 'MMM d, yyyy')}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.location.href = `/design-studio?mode=template&templateId=${template.id}`}
+                        >
+                          <Edit3 className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
                         <Button
                           size="sm"
                           onClick={() => {
@@ -368,50 +499,6 @@ export function TemplatesManager() {
                           <Calendar className="w-4 h-4 mr-1" />
                           Schedule
                         </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            <DropdownMenuItem onClick={() => window.location.href = `/design-studio?templateId=${template.id}`}>
-                              <Edit3 className="w-4 h-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            {template.pdfUrl && (
-                              <DropdownMenuItem onClick={() => window.open(template.pdfUrl, '_blank')}>
-                                <Download className="w-4 h-4 mr-2" />
-                                Download PDF
-                              </DropdownMenuItem>
-                            )}
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Template</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete the template "{template.name}"? This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => deleteTemplateMutation.mutate(template.id)}
-                                    className="bg-red-600 hover:bg-red-700"
-                                  >
-                                    Delete Template
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                       </div>
                     </div>
                   </CardContent>
@@ -429,78 +516,91 @@ export function TemplatesManager() {
             <h3 className="text-lg font-semibold">Scheduled Reports</h3>
           </div>
 
-          {scheduledReportsLoading ? (
-            <div className="grid grid-cols-1 gap-4">
+          {scheduledLoading ? (
+            <div className="space-y-3">
               {[...Array(3)].map((_, i) => (
                 <Card key={i} className="animate-pulse">
-                  <CardHeader>
-                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-3 bg-gray-200 rounded w-full mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                      </div>
+                      <div className="h-6 bg-gray-200 rounded w-16"></div>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
           ) : scheduledReports.length === 0 ? (
-            <div className="text-center py-12">
-              <Calendar className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No scheduled reports</h3>
-              <p className="mt-1 text-sm text-gray-500">Schedule reports from your templates to run automatically.</p>
-            </div>
+            <Card>
+              <CardContent className="text-center py-8">
+                <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Scheduled Reports</h3>
+                <p className="text-gray-500 mb-4">Schedule automated reports from your templates</p>
+                <Button onClick={() => setActiveTab('templates')}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Browse Templates
+                </Button>
+              </CardContent>
+            </Card>
           ) : (
-            <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-3">
               {scheduledReports.map((report: ScheduledReport) => (
                 <Card key={report.id}>
-                  <CardHeader>
+                  <CardContent className="p-4">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">{report.name}</CardTitle>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-5 w-5 text-blue-600" />
+                          <div>
+                            <CardTitle className="text-lg">{report.name}</CardTitle>
+                            <CardDescription className="mt-1">
+                              {report.description || 'No description'}
+                            </CardDescription>
+                          </div>
+                        </div>
                         <Badge variant={report.status === 'active' ? 'default' : 'secondary'}>
                           {report.status}
                         </Badge>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-sm text-gray-500">
+                          <div>Schedule: {report.cronExpression}</div>
+                          <div>Recipients: {report.recipients.length}</div>
+                        </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm">
+                            <Button variant="ghost" size="sm">
                               <MoreVertical className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            <DropdownMenuItem 
-                              onClick={() => executeReportMutation.mutate(report.id)}
-                            >
-                              <Play className="w-4 h-4 mr-2" />
-                              Execute Now
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => updateScheduledReportMutation.mutate({ 
-                                id: report.id, 
-                                status: report.status === 'active' ? 'paused' : 'active' 
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => updateScheduledReportMutation.mutate({
+                                id: report.id,
+                                status: report.status === 'active' ? 'paused' : 'active'
                               })}
                             >
-                              {report.status === 'active' ? (
-                                <>
-                                  <Pause className="w-4 h-4 mr-2" />
-                                  Pause
-                                </>
-                              ) : (
-                                <>
-                                  <Play className="w-4 h-4 mr-2" />
-                                  Activate
-                                </>
-                              )}
+                              {report.status === 'active' ? 'Pause' : 'Activate'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => executeReportMutation.mutate(report.id)}>
+                              Execute Now
                             </DropdownMenuItem>
                             {report.lastGeneratedPdfUrl && (
-                              <DropdownMenuItem onClick={() => window.open(report.lastGeneratedPdfUrl, '_blank')}>
-                                <Download className="w-4 h-4 mr-2" />
-                                Download Latest PDF
+                              <DropdownMenuItem asChild>
+                                <a href={report.lastGeneratedPdfUrl} target="_blank" rel="noopener noreferrer">
+                                  <Download className="w-4 h-4 mr-2" />
+                                  Download Latest PDF
+                                </a>
                               </DropdownMenuItem>
                             )}
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                <DropdownMenuItem
+                                  className="text-red-600"
+                                  onSelect={(e) => e.preventDefault()}
+                                >
                                   <Trash2 className="w-4 h-4 mr-2" />
                                   Delete
                                 </DropdownMenuItem>
@@ -527,30 +627,6 @@ export function TemplatesManager() {
                         </DropdownMenu>
                       </div>
                     </div>
-                    <CardDescription>{report.description || 'No description available'}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Clock className="w-4 h-4 mr-2" />
-                        Schedule: {getScheduleDescription({
-                          frequency: report.cronExpression.split(' ').length === 5 && report.cronExpression.split(' ')[1] === '*' ? 'hourly' : 'daily',
-                          time: `${report.cronExpression.split(' ')[2] || '09'}:${report.cronExpression.split(' ')[0]}`,
-                          dayOfWeek: 'monday',
-                          dayOfMonth: '1'
-                        })}
-                      </div>
-                      {report.lastRunAt && (
-                        <div className="text-sm text-gray-500">
-                          Last run: {format(new Date(report.lastRunAt), 'MMM d, yyyy HH:mm')}
-                        </div>
-                      )}
-                      {report.nextRunAt && (
-                        <div className="text-sm text-gray-500">
-                          Next run: {format(new Date(report.nextRunAt), 'MMM d, yyyy HH:mm')}
-                        </div>
-                      )}
-                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -561,7 +637,7 @@ export function TemplatesManager() {
 
       {/* Schedule Report Dialog */}
       <Dialog open={isScheduleDialogOpen} onOpenChange={setIsScheduleDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Schedule Report</DialogTitle>
             <DialogDescription>
@@ -783,14 +859,13 @@ export function TemplatesManager() {
 
             {scheduleForm.frequency === 'custom' && (
               <div>
-                <Label htmlFor="customCron">Custom Cron Expression</Label>
+                <Label htmlFor="cronExpression">Custom Cron Expression</Label>
                 <Input
-                  name="customCron"
-                  id="customCron"
-                  placeholder="0 9 * * 1"
                   value={scheduleForm.cronExpression}
                   onChange={(e) => setScheduleForm(prev => ({ ...prev, cronExpression: e.target.value }))}
+                  placeholder="0 9 * * 1"
                 />
+                <p className="text-xs text-gray-500 mt-1">Example: "0 9 * * 1" = Every Monday at 9 AM</p>
               </div>
             )}
 
