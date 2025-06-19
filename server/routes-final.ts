@@ -2414,7 +2414,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         nextRunAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
       }
       
-      // Create report data for job scheduling only (no recipients)
+      // Create report data for job scheduling only (no recipients - pure data refresh jobs)
       const reportData = {
         templateId: templateId,
         name: name,
@@ -2422,12 +2422,6 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         cronExpression: cronExpression,
         timezone: timezone || 'UTC',
         status: 'active',
-        emailTemplate: null,
-        emailSubject: null,
-        recipients: [],
-        ccRecipients: [],
-        bccRecipients: [],
-        emailPriority: 'normal',
         nextRunAt: nextRunAt
       };
       
