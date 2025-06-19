@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -105,6 +106,7 @@ export function DataStudioReports() {
   const [refreshingReports, setRefreshingReports] = useState<Set<string>>(new Set());
   const [refreshProgress, setRefreshProgress] = useState<Record<string, { current: number; total: number; startTime: number }>>({});
   const [showSuccessToast, setShowSuccessToast] = useState<{ show: boolean; message: string; reportId?: string }>({ show: false, message: '' });
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ show: boolean; reportId: string; reportName: string }>({ show: false, reportId: '', reportName: '' });
   
   // New report form state
   const [newReportForm, setNewReportForm] = useState({
@@ -319,26 +321,38 @@ export function DataStudioReports() {
     return acc;
   }, {} as Record<string, any>);
 
-  // Handle delete report
-  const handleDeleteReport = async (reportId: string, reportName: string) => {
-    if (!confirm(`Are you sure you want to delete the report "${reportName}"? This action cannot be undone.`)) {
-      return;
-    }
+  // Handle delete report - show confirmation dialog
+  const showDeleteConfirmation = (reportId: string, reportName: string) => {
+    setDeleteConfirmation({ show: true, reportId, reportName });
+  };
 
+  // Handle confirmed delete
+  const handleConfirmedDelete = async () => {
+    const { reportId, reportName } = deleteConfirmation;
+    
     try {
       const response = await fetch(`/api/presentations/${reportId}`, {
         method: 'DELETE'
       });
 
       if (response.ok) {
-        alert(`Report "${reportName}" deleted successfully!`);
+        toast({
+          title: "Report deleted",
+          description: `"${reportName}" has been deleted successfully.`,
+        });
         refetch(); // Refresh the list
       } else {
         throw new Error('Failed to delete report');
       }
     } catch (error) {
       console.error('Delete report error:', error);
-      alert('Failed to delete report. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to delete report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteConfirmation({ show: false, reportId: '', reportName: '' });
     }
   };
 
@@ -1203,7 +1217,7 @@ export function DataStudioReports() {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               className="text-red-600"
-                              onClick={() => handleDeleteReport(report.id, report.name)}
+                              onClick={() => showDeleteConfirmation(report.id, report.name)}
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete
@@ -1514,6 +1528,31 @@ export function DataStudioReports() {
           setSelectedPresentationId('');
         }}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmation.show} onOpenChange={(open) => {
+        if (!open) {
+          setDeleteConfirmation({ show: false, reportId: '', reportName: '' });
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Report</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteConfirmation.reportName}"? This action cannot be undone and will permanently remove the report and all its data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmedDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Report
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
