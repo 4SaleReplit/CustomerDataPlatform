@@ -4223,6 +4223,49 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     }
   });
 
+  // Execute template immediately to create report
+  app.post("/api/templates/:id/execute", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { name, description } = req.body;
+      const { templateService } = await import('./services/templateService');
+      
+      // Create a temporary scheduled report and execute it immediately
+      const tempReport = {
+        templateId: id,
+        name: name || `Report - ${new Date().toLocaleDateString()}`,
+        description: description || 'Immediately generated report',
+        cronExpression: '0 0 * * *', // Placeholder cron expression
+        timezone: 'UTC',
+        status: 'active' as const,
+        recipients: [],
+        createdBy: null,
+      };
+      
+      const scheduledReport = await templateService.createScheduledReport(
+        tempReport.templateId,
+        tempReport.name,
+        tempReport.cronExpression,
+        tempReport.recipients,
+        {
+          description: tempReport.description,
+          timezone: tempReport.timezone,
+        }
+      );
+      
+      // Execute immediately
+      const result = await templateService.executeScheduledReport(scheduledReport.id);
+      
+      // Clean up the temporary scheduled report
+      await templateService.deleteScheduledReport(scheduledReport.id);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error executing template:', error);
+      res.status(500).json({ error: "Failed to execute template" });
+    }
+  });
+
   app.delete("/api/s3/delete/:key(*)", async (req: Request, res: Response) => {
     try {
       const { key } = req.params;

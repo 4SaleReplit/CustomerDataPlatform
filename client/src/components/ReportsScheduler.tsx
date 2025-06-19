@@ -185,6 +185,69 @@ export default function ReportsScheduler() {
     }
   });
 
+  const generateSmartReportName = (templateName: string, frequency: string): string => {
+    const now = new Date();
+    
+    switch (frequency) {
+      case 'daily':
+        return `${templateName} - ${now.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        })}`;
+      case 'weekly':
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        return `${templateName} - Week ${startOfWeek.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric' 
+        })}`;
+      case 'monthly':
+        return `${templateName} - ${now.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long' 
+        })}`;
+      default:
+        return `${templateName} - ${now.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        })}`;
+    }
+  };
+
+  const handleCreateNow = async () => {
+    const formData = new FormData(document.querySelector('form') as HTMLFormElement);
+    const templateId = formData.get('templateId') as string;
+    const selectedTemplate = templates.find(t => t.id === templateId);
+    
+    if (!selectedTemplate) {
+      toast({ title: "Please select a template first", variant: "destructive" });
+      return;
+    }
+    
+    try {
+      const result = await fetch(`/api/templates/${templateId}/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name: generateSmartReportName(selectedTemplate.name, 'now'),
+          description: formData.get('description') as string || undefined
+        })
+      });
+      
+      if (result.ok) {
+        toast({ title: "Report created successfully" });
+        setIsCreateDialogOpen(false);
+        queryClient.invalidateQueries({ queryKey: ['/api/presentations'] });
+      } else {
+        throw new Error('Failed to create report');
+      }
+    } catch (error) {
+      toast({ title: "Failed to create report", variant: "destructive" });
+    }
+  };
+
   const handleCreateReport = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -193,12 +256,8 @@ export default function ReportsScheduler() {
     const templateId = formData.get('templateId') as string;
     const selectedTemplate = templates.find(t => t.id === templateId);
     
-    // Generate report name using template name and current date
-    const reportName = `${selectedTemplate?.name || 'Report'} - ${new Date().toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    })}`;
+    // Generate smart report name based on schedule frequency
+    const reportName = generateSmartReportName(selectedTemplate?.name || 'Report', scheduleForm.frequency);
 
     createReportMutation.mutate({
       templateId,
@@ -397,27 +456,57 @@ export default function ReportsScheduler() {
                     </div>
                   )}
 
-                  <div>
-                    <Label htmlFor="time">Time</Label>
-                    <Select
-                      value={scheduleForm.time}
-                      onValueChange={(value) => setScheduleForm(prev => ({
-                        ...prev,
-                        time: value,
-                        cronExpression: generateCronExpression(prev.frequency, prev.dayOfWeek || prev.dayOfMonth, value)
-                      }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="06:00">6:00 AM</SelectItem>
-                        <SelectItem value="09:00">9:00 AM</SelectItem>
-                        <SelectItem value="12:00">12:00 PM</SelectItem>
-                        <SelectItem value="15:00">3:00 PM</SelectItem>
-                        <SelectItem value="18:00">6:00 PM</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label htmlFor="hour">Hour</Label>
+                      <Select
+                        value={scheduleForm.time.split(':')[0]}
+                        onValueChange={(value) => {
+                          const newTime = `${value.padStart(2, '0')}:${scheduleForm.time.split(':')[1] || '00'}`;
+                          setScheduleForm(prev => ({
+                            ...prev,
+                            time: newTime,
+                            cronExpression: generateCronExpression(prev.frequency, prev.dayOfWeek || prev.dayOfMonth, newTime)
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 24 }, (_, i) => (
+                            <SelectItem key={i} value={i.toString()}>
+                              {i.toString().padStart(2, '0')}:00
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="minute">Minute</Label>
+                      <Select
+                        value={scheduleForm.time.split(':')[1]}
+                        onValueChange={(value) => {
+                          const newTime = `${scheduleForm.time.split(':')[0] || '09'}:${value.padStart(2, '0')}`;
+                          setScheduleForm(prev => ({
+                            ...prev,
+                            time: newTime,
+                            cronExpression: generateCronExpression(prev.frequency, prev.dayOfWeek || prev.dayOfMonth, newTime)
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[0, 15, 30, 45].map((minute) => (
+                            <SelectItem key={minute} value={minute.toString()}>
+                              :{minute.toString().padStart(2, '0')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 
@@ -488,8 +577,16 @@ export default function ReportsScheduler() {
                 >
                   Cancel
                 </Button>
+                <Button 
+                  type="button" 
+                  variant="secondary"
+                  onClick={handleCreateNow}
+                  disabled={createReportMutation.isPending}
+                >
+                  {createReportMutation.isPending ? 'Creating...' : 'Create Now'}
+                </Button>
                 <Button type="submit" disabled={createReportMutation.isPending}>
-                  {createReportMutation.isPending ? 'Creating...' : 'Create Report'}
+                  {createReportMutation.isPending ? 'Scheduling...' : 'Schedule Report'}
                 </Button>
               </div>
             </form>

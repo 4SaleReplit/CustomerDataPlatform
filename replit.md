@@ -111,6 +111,19 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 19, 2025**: Dynamic Time Picker, Create Now Option & Smart Report Naming
+  - Enhanced time picker with dynamic hour/minute selection (24-hour format with 15-minute intervals)
+  - Added "Create Now" button to both Templates Manager and Reports Scheduler for immediate report generation
+  - Implemented smart report naming based on schedule frequency:
+    * Daily: "Template Name - Month Day, Year"
+    * Weekly: "Template Name - Week Month Day" (start of week)
+    * Monthly: "Template Name - Month Year"
+  - Updated timezone dropdown to show only Cairo (GMT+2) and Kuwait (GMT+3) options
+  - Removed email subject and recipient fields - system now creates PDF reports stored in S3 instead of emails
+  - Enhanced backend with /api/templates/:id/execute endpoint for immediate template execution
+  - Reports auto-generate with template name plus creation date/period for better organization
+  - System refreshes all queries before creating PDFs and uploads to S3 with public URLs
+
 - **June 19, 2025**: User-Friendly Cron Schedule Dropdowns for Templates & Scheduled Reports
   - Replaced manual cron expression inputs with intuitive dropdown menus for frequency, day, and time selection
   - Added smart schedule form management with automatic cron expression generation
