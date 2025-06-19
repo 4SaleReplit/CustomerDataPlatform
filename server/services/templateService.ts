@@ -174,9 +174,6 @@ export class TemplateService {
         cronExpression,
         timezone: options.timezone || 'UTC',
         status: 'active',
-        emailSubject: options.emailSubject,
-        emailTemplate: options.emailTemplate,
-        recipients,
         createdBy: options.createdBy,
       })
       .returning();
