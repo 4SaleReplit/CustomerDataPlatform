@@ -799,16 +799,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (emailTemplate) {
               console.log('Found email template:', emailTemplate.name);
               
-              // Generate PDF URL for the presentation
-              let pdfDownloadUrl = '#';
-              if (presentation.pdfUrl) {
-                pdfDownloadUrl = presentation.pdfUrl;
-              } else {
-                // Generate PDF if not exists
-                const domain = process.env.REPLIT_DEV_DOMAIN ? 
-                  `https://${process.env.REPLIT_DEV_DOMAIN}` : 
-                  'https://analytics.4sale.tech';
-                pdfDownloadUrl = `${domain}/api/reports/pdf/${presentation.id}`;
+              // Generate PDF URL for the presentation - always use the endpoint to ensure fresh signed URLs
+              const domain = process.env.REPLIT_DEV_DOMAIN ? 
+                `https://${process.env.REPLIT_DEV_DOMAIN}` : 
+                'https://analytics.4sale.tech';
+              let pdfDownloadUrl = `${domain}/api/reports/pdf/${presentation.id}`;
+              
+              // If PDF exists in S3, generate a fresh signed URL directly
+              if (presentation.pdfS3Key) {
+                try {
+                  const pdfStorageService = (await import('./services/pdfStorage')).pdfStorageService;
+                  await pdfStorageService.initialize();
+                  const freshSignedUrl = await pdfStorageService.getSignedDownloadUrl(presentation.pdfS3Key, 604800); // 7 days
+                  pdfDownloadUrl = freshSignedUrl;
+                  console.log('Generated fresh signed PDF URL for email:', pdfDownloadUrl);
+                } catch (error) {
+                  console.warn('Failed to generate signed URL, using endpoint fallback:', error);
+                }
               }
               
               // Use the database template with proper PDF URL - override any incorrect URLs from frontend
@@ -1360,8 +1367,14 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       // Check if PDF already exists in S3 and generate fresh signed URL
       if (presentation.pdfS3Key) {
         try {
-          const freshSignedUrl = await pdfStorageService.getSignedDownloadUrl(presentation.pdfS3Key, 86400); // 24 hours
-          console.log(`Redirecting to fresh signed S3 PDF: ${freshSignedUrl}`);
+          const freshSignedUrl = await pdfStorageService.getSignedDownloadUrl(presentation.pdfS3Key, 604800); // 7 days
+          console.log(`Generated fresh signed S3 PDF URL: ${freshSignedUrl}`);
+          
+          // Update presentation with the new signed URL
+          await storage.updatePresentation(presentationId, {
+            pdfUrl: freshSignedUrl
+          });
+          
           return res.redirect(freshSignedUrl);
         } catch (error) {
           console.log(`Existing PDF not accessible, regenerating...`);
