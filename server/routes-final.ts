@@ -800,24 +800,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log('Found email template:', emailTemplate.name);
               console.log('Template HTML preview:', emailTemplate.bodyHtml.substring(0, 200) + '...');
               
-              // Generate PDF URL for the presentation - always use the endpoint to ensure fresh signed URLs
+              // Generate PDF URL for the presentation - ensure we get actual PDF files
               const domain = process.env.REPLIT_DEV_DOMAIN ? 
                 `https://${process.env.REPLIT_DEV_DOMAIN}` : 
                 'https://analytics.4sale.tech';
+              
+              // Always use the PDF generation endpoint to ensure we get actual PDF files
+              // This endpoint handles PDF generation and returns public S3 URLs or generates new ones
               let pdfDownloadUrl = `${domain}/api/reports/pdf/${presentation.id}`;
               
-              // If PDF exists in S3, generate a fresh signed URL directly
-              if (presentation.pdfS3Key) {
-                try {
-                  const pdfStorageService = (await import('./services/pdfStorage')).pdfStorageService;
-                  await pdfStorageService.initialize();
-                  const freshSignedUrl = await pdfStorageService.getSignedDownloadUrl(presentation.pdfS3Key, 604800); // 7 days
-                  pdfDownloadUrl = freshSignedUrl;
-                  console.log('Generated fresh signed PDF URL for email:', pdfDownloadUrl);
-                } catch (error) {
-                  console.warn('Failed to generate signed URL, using endpoint fallback:', error);
-                }
-              }
+              console.log('Using PDF endpoint for reliable PDF access:', pdfDownloadUrl);
               
               // Use the database template with proper PDF URL - override any incorrect URLs from frontend
               const templateVariables = {
@@ -1380,8 +1372,8 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         return res.status(500).json({ error: "PDF storage not available" });
       }
 
-      // Check if PDF already exists in S3 and generate fresh signed URL
-      if (presentation.pdfS3Key) {
+      // Check if PDF already exists in S3 and is actually a PDF file (not JSON)
+      if (presentation.pdfS3Key && presentation.pdfS3Key.endsWith('.pdf')) {
         try {
           const freshSignedUrl = await pdfStorageService.getSignedDownloadUrl(presentation.pdfS3Key, 604800); // 7 days
           console.log(`Generated fresh signed S3 PDF URL: ${freshSignedUrl}`);
@@ -1395,6 +1387,8 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         } catch (error) {
           console.log(`Existing PDF not accessible, regenerating...`);
         }
+      } else if (presentation.pdfS3Key) {
+        console.log(`Skipping non-PDF S3 key: ${presentation.pdfS3Key} - will regenerate actual PDF`);
       }
       
       // Generate PDF and store in S3
