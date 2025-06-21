@@ -4744,6 +4744,55 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
 
 
 
+  // Email Templates API
+  app.get("/api/email-templates", async (req: Request, res: Response) => {
+    try {
+      const templates = await storage.getEmailTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error('Error fetching email templates:', error);
+      res.status(500).json({ error: "Failed to fetch email templates" });
+    }
+  });
+
+  app.post("/api/email-templates", async (req: Request, res: Response) => {
+    try {
+      const template = await storage.createEmailTemplate(req.body);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error('Error creating email template:', error);
+      res.status(500).json({ error: "Failed to create email template" });
+    }
+  });
+
+  app.patch("/api/email-templates/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const template = await storage.updateEmailTemplate(id, req.body);
+      if (!template) {
+        return res.status(404).json({ error: "Email template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error('Error updating email template:', error);
+      res.status(500).json({ error: "Failed to update email template" });
+    }
+  });
+
+  app.delete("/api/email-templates/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteEmailTemplate(id);
+      if (!success) {
+        return res.status(404).json({ error: "Email template not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting email template:', error);
+      res.status(500).json({ error: "Failed to delete email template" });
+    }
+  });
+
   // Scheduled Reports API (new template-based system)
   app.get("/api/scheduled-reports-new", async (req: Request, res: Response) => {
     try {

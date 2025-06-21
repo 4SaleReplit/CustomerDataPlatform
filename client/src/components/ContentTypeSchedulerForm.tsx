@@ -514,14 +514,20 @@ export function ContentTypeSchedulerForm({
                         <SelectValue placeholder="Select an email template" />
                       </SelectTrigger>
                       <SelectContent>
-                        {emailTemplates.map((template) => (
-                          <SelectItem key={template.id} value={template.id}>
-                            <div>
-                              <div className="font-medium">{template.name}</div>
-                              <div className="text-xs text-muted-foreground">{template.description}</div>
-                            </div>
+                        {emailTemplates && emailTemplates.length > 0 ? (
+                          emailTemplates.map((template) => (
+                            <SelectItem key={template.id} value={template.id}>
+                              <div>
+                                <div className="font-medium">{template.name || 'Untitled Template'}</div>
+                                <div className="text-xs text-muted-foreground">{template.description || 'No description'}</div>
+                              </div>
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-templates" disabled>
+                            No templates available
                           </SelectItem>
-                        ))}
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -750,7 +756,15 @@ export function ContentTypeSchedulerForm({
                         style={{ backgroundColor: 'white' }}
                         srcDoc={(() => {
                           try {
-                            const selectedTemplate = emailTemplates?.find(t => t.id === formData.emailTemplate?.templateId);
+                            if (!emailTemplates || emailTemplates.length === 0) {
+                              return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="padding: 40px; font-family: Arial, sans-serif; text-align: center;">
+<p>No email templates available. Please create templates first.</p>
+</body></html>`;
+                            }
+
+                            const selectedTemplate = emailTemplates.find(t => t.id === formData.emailTemplate?.templateId);
                             const reportName = formData.emailTemplate?.reportName || 'Analytics Report';
                             const sections = formData.emailTemplate?.sections || {
                               showHeader: true,
@@ -759,9 +773,14 @@ export function ContentTypeSchedulerForm({
                               showFooter: true
                             };
                             
-                            if (selectedTemplate) {
-                              let htmlContent = selectedTemplate.bodyHtml || '';
-                              htmlContent = htmlContent.replace(/{report_name}/g, reportName);
+                            if (selectedTemplate && selectedTemplate.bodyHtml) {
+                              let htmlContent = selectedTemplate.bodyHtml;
+                              try {
+                                htmlContent = htmlContent.replace(/{report_name}/g, reportName);
+                              } catch (replaceError) {
+                                console.warn('Template replacement error:', replaceError);
+                                htmlContent = selectedTemplate.bodyHtml;
+                              }
                               
                               return `<!DOCTYPE html>
 <html lang="en">
