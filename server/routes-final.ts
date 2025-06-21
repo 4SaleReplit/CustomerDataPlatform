@@ -4739,5 +4739,95 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     }
   });
 
+  app.post("/api/endpoints/auto-discover", async (req: Request, res: Response) => {
+    try {
+      console.log("🔍 Starting endpoint auto-discovery...");
+      
+      // Define all system endpoints to monitor
+      const systemEndpoints = [
+        { name: "Dashboard API", url: `${req.protocol}://${req.get('host')}/api/dashboard/tiles`, method: "GET" },
+        { name: "Users API", url: `${req.protocol}://${req.get('host')}/api/users/all`, method: "GET" },
+        { name: "Segments API", url: `${req.protocol}://${req.get('host')}/api/segments`, method: "GET" },
+        { name: "Cohorts API", url: `${req.protocol}://${req.get('host')}/api/cohorts`, method: "GET" },
+        { name: "Integrations API", url: `${req.protocol}://${req.get('host')}/api/integrations`, method: "GET" },
+        { name: "Templates API", url: `${req.protocol}://${req.get('host')}/api/templates`, method: "GET" },
+        { name: "Reports API", url: `${req.protocol}://${req.get('host')}/api/presentations`, method: "GET" },
+        { name: "Team API", url: `${req.protocol}://${req.get('host')}/api/team`, method: "GET" },
+        { name: "Roles API", url: `${req.protocol}://${req.get('host')}/api/roles`, method: "GET" },
+        { name: "Calendar API", url: `${req.protocol}://${req.get('host')}/api/scheduled-reports`, method: "GET" },
+        { name: "Email Templates API", url: `${req.protocol}://${req.get('host')}/api/email-templates`, method: "GET" },
+        { name: "S3 Bucket API", url: `${req.protocol}://${req.get('host')}/api/s3/list`, method: "GET" },
+        { name: "Amplitude Config", url: `${req.protocol}://${req.get('host')}/api/amplitude/config`, method: "GET" },
+        { name: "Health Check", url: `${req.protocol}://${req.get('host')}/api/health`, method: "GET" }
+      ];
+
+      const discoveredEndpoints = [];
+      const errors = [];
+
+      // Test each endpoint and add to monitoring
+      for (const endpoint of systemEndpoints) {
+        try {
+          // Check if endpoint already exists
+          const existing = await storage.getMonitoredEndpoints();
+          const alreadyExists = existing.some(e => e.url === endpoint.url);
+          
+          if (!alreadyExists) {
+            // Test the endpoint first
+            const testResult = await testEndpointHealth({
+              ...endpoint,
+              timeout: 10,
+              expectedStatus: endpoint.url.includes('/amplitude/') ? 404 : 200 // Amplitude may not be configured
+            });
+
+            // Create monitored endpoint
+            const createdEndpoint = await storage.createMonitoredEndpoint({
+              name: endpoint.name,
+              url: endpoint.url,
+              method: endpoint.method,
+              expectedStatus: endpoint.url.includes('/amplitude/') ? 404 : 200,
+              timeout: 30,
+              checkInterval: 300, // 5 minutes
+              isActive: true,
+              alertEmail: true,
+              alertSlack: false
+            });
+
+            // Start monitoring
+            await scheduleEndpointMonitoring(createdEndpoint);
+
+            discoveredEndpoints.push({
+              ...createdEndpoint,
+              testResult
+            });
+
+            console.log(`✅ Added monitoring for: ${endpoint.name}`);
+          } else {
+            console.log(`⏭️  Already monitoring: ${endpoint.name}`);
+          }
+        } catch (error: any) {
+          console.error(`❌ Error adding ${endpoint.name}:`, error.message);
+          errors.push({
+            endpoint: endpoint.name,
+            error: error.message
+          });
+        }
+      }
+
+      console.log(`🎉 Auto-discovery complete: ${discoveredEndpoints.length} new endpoints added`);
+
+      res.json({
+        success: true,
+        discovered: discoveredEndpoints.length,
+        errors: errors.length,
+        endpoints: discoveredEndpoints,
+        errorDetails: errors
+      });
+
+    } catch (error: any) {
+      console.error("Error in endpoint auto-discovery:", error);
+      res.status(500).json({ error: "Failed to auto-discover endpoints" });
+    }
+  });
+
   return server;
 }

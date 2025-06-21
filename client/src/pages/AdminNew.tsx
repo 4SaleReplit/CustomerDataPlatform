@@ -1051,6 +1051,31 @@ export default function AdminNew() {
     }
   });
 
+  const autoDiscoverMutation = useMutation({
+    mutationFn: () => apiRequest('/api/endpoints/auto-discover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    }),
+    onSuccess: (data: any) => {
+      toast({
+        title: "Auto-Discovery Complete",
+        description: `Discovered and added ${data.discovered} endpoints for monitoring. ${data.errors > 0 ? `${data.errors} errors occurred.` : ''}`
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/endpoints'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Auto-Discovery Failed",
+        description: error.message || "Failed to auto-discover endpoints",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleAutoDiscoverEndpoints = () => {
+    autoDiscoverMutation.mutate();
+  };
+
   const testEndpointMutation = useMutation({
     mutationFn: (endpointId: string) => apiRequest(`/api/endpoints/${endpointId}/test`, {
       method: 'POST'
@@ -1671,6 +1696,24 @@ export default function AdminNew() {
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Refresh Status
               </Button>
+              <Button 
+                onClick={handleAutoDiscoverEndpoints}
+                disabled={autoDiscoverMutation.isPending}
+                variant="outline"
+                className="border-green-200 text-green-700 hover:bg-green-50"
+              >
+                {autoDiscoverMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Discovering...
+                  </>
+                ) : (
+                  <>
+                    <Target className="h-4 w-4 mr-2" />
+                    Auto-Discover Endpoints
+                  </>
+                )}
+              </Button>
               <Button onClick={handleAddEndpoint} className="bg-blue-600 hover:bg-blue-700">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Endpoint
@@ -1886,10 +1929,29 @@ export default function AdminNew() {
                   <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No endpoints configured</h3>
                   <p className="text-gray-500 mb-4">Add your first endpoint to start monitoring your API health.</p>
-                  <Button onClick={handleAddEndpoint}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Endpoint
-                  </Button>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <Button 
+                      onClick={handleAutoDiscoverEndpoints}
+                      disabled={autoDiscoverMutation.isPending}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      {autoDiscoverMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Discovering...
+                        </>
+                      ) : (
+                        <>
+                          <Target className="h-4 w-4 mr-2" />
+                          Refresh and Monitor All Endpoints
+                        </>
+                      )}
+                    </Button>
+                    <Button variant="outline" onClick={handleAddEndpoint}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Endpoint Manually
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
