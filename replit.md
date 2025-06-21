@@ -111,7 +111,7 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
-- **June 21, 2025**: Complete Email Template Selector System with Rich Preview Integration
+- **June 21, 2025**: Complete Email Template System with User-Customizable Variables
   - Created email_templates database table with proper schema and constraints
   - Implemented comprehensive email template storage methods with full CRUD operations
   - Added email template types (EmailTemplate, InsertEmailTemplate) to shared schema
@@ -119,11 +119,12 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
   - Created /api/email-templates endpoint returning authentic database templates
   - Enhanced ContentTypeSchedulerForm with working email template selector dropdown
   - Added three professional system email templates: Professional Report, Simple Alert, Dashboard Summary
-  - Integrated rich email preview with iframe rendering showing final email appearance without HTML tags
-  - Enhanced preview with authentic email headers (From, To, Subject, Date) for realistic email simulation
-  - Complete template variable substitution with comprehensive placeholder values for all template types
-  - Email preview displays professional email styling identical to final recipient experience
-  - System supports both database templates and custom content with consistent rich preview functionality
+  - Replaced HTML editor with plain text email body editor for user-friendly content creation
+  - Implemented editable template variables section where users can enter custom values or SQL queries
+  - Enhanced email preview with iframe rendering showing final email appearance using user-defined variables
+  - Preview displays authentic email headers (From, To, Subject, Date) with customized variable substitution
+  - System merges user-defined variables with defaults for comprehensive template personalization
+  - Rich preview updates in real-time as users modify template variables and email content
 
 - **June 21, 2025**: Complete S3 Template Synchronization System with `/templates` Folder Structure
   - Implemented comprehensive TemplateS3Service for automatic template storage and retrieval from S3
