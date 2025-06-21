@@ -130,21 +130,11 @@ export function ComprehensiveEmailForm({
   };
 
   const getDefaultEmailTemplate = () => {
-    return `
-      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <h2 style="color: #1a73e8;">{{report_name}}</h2>
-        <p>Your report has been generated successfully and is ready for review.</p>
-        <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin: 16px 0;">
-          <p style="margin: 0; color: #5f6368;">This automated report contains the latest data from your analytics dashboard.</p>
-        </div>
-        <p>Click the button below to download your report:</p>
-        <a href="{{report_download_url}}" style="display: inline-block; background: #1a73e8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">Download Report</a>
-        <p style="margin-top: 24px; color: #5f6368; font-size: 14px;">
-          Best regards,<br>
-          <strong>4Sale Analytics Team</strong>
-        </p>
-      </div>
-    `;
+    // Use first available email template from database, or return empty if none
+    if (emailTemplates && emailTemplates.length > 0) {
+      return emailTemplates[0].html || '';
+    }
+    return '';
   };
 
   useEffect(() => {
@@ -207,18 +197,18 @@ export function ComprehensiveEmailForm({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl max-h-[95vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-7xl h-[95vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             Configure and preview your email before sending
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col space-y-6 overflow-hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 overflow-hidden">
             {/* Left Panel - Configuration */}
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto pr-2">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Content Selection</CardTitle>
@@ -417,9 +407,9 @@ export function ComprehensiveEmailForm({
             </div>
 
             {/* Right Panel - Gmail Preview */}
-            <div className="space-y-4">
-              <Card>
-                <CardHeader>
+            <div className="flex flex-col h-full">
+              <Card className="flex-1 flex flex-col">
+                <CardHeader className="flex-shrink-0">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Mail className="h-5 w-5" />
                     Gmail Preview
@@ -428,13 +418,12 @@ export function ComprehensiveEmailForm({
                     How your email will appear in Gmail inbox
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="border rounded-lg overflow-hidden bg-white">
+                <CardContent className="flex-1 p-4">
+                  <div className="border rounded-lg overflow-hidden bg-white h-full">
                     <iframe
                       srcDoc={previewHtml}
-                      className="w-full h-96 border-0"
+                      className="w-full h-full border-0"
                       title="Gmail Email Preview"
-                      style={{ minHeight: '500px' }}
                     />
                   </div>
                 </CardContent>

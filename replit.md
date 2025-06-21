@@ -111,6 +111,13 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 21, 2025**: Final Email Sender UI Enhancement - Database-Only Templates & Full-Height Preview
+  - Fixed email template dropdown to read exclusively from database templates (removed all mock data)
+  - Enhanced email preview to use full available vertical space without scrolling constraints
+  - Dialog now uses 95% viewport height with proper flex layout for maximum preview area
+  - Left panel form remains scrollable while right Gmail preview expands to full dialog height
+  - Clean iframe rendering provides authentic Gmail inbox experience at full scale
+
 - **June 21, 2025**: Complete Fresh Email Templates Designer - Clean Rebuild
   - Completely removed problematic EmailTemplatesDesigner causing persistent runtime errors
   - Created brand new EmailTemplatesDesigner component from scratch with modern React patterns
