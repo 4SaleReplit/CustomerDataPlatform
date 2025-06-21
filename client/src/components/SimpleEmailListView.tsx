@@ -9,6 +9,27 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Calendar, Clock, Mail, MoreVertical, Copy, Edit, Trash2, Play, Pause, CheckCircle, XCircle, Clock3, Download } from "lucide-react";
 
+interface SentEmail {
+  id: string;
+  templateId: string | null;
+  presentationId: string | null;
+  scheduledReportId: string | null;
+  subject: string;
+  recipients: string[];
+  ccRecipients: string[];
+  bccRecipients: string[];
+  emailType: 'one_time' | 'scheduled';
+  status: 'sent' | 'failed' | 'pending';
+  pdfDownloadUrl: string | null;
+  emailHtml: string | null;
+  emailText: string | null;
+  messageId: string | null;
+  errorMessage: string | null;
+  deliveredAt: string | null;
+  sentBy: string | null;
+  createdAt: string;
+}
+
 interface ScheduledReport {
   id: string;
   name: string;
