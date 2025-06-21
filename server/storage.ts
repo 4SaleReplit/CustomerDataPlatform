@@ -1041,85 +1041,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Sent Emails management methods
-  async getSentEmails(): Promise<any[]> {
-    const client = await this.getConnection();
-    try {
-      const result = await client.query(`
-        SELECT 
-          id,
-          report_name,
-          report_id,
-          email_subject,
-          email_type,
-          recipients,
-          cc_recipients,
-          bcc_recipients,
-          email_template_id,
-          email_template_name,
-          pdf_download_url,
-          status,
-          delivery_status,
-          error_message,
-          sent_by,
-          sent_at,
-          scheduled_report_id,
-          email_content,
-          created_at,
-          updated_at
-        FROM sent_emails 
-        ORDER BY sent_at DESC
-      `);
-      return result.rows;
-    } finally {
-      this.releaseConnection(client);
-    }
+  async getSentEmails(): Promise<SentEmail[]> {
+    const result = await db.select().from(sentEmails).orderBy(desc(sentEmails.createdAt));
+    return result;
   }
 
-  async getSentEmail(id: string): Promise<any | undefined> {
-    const client = await this.getConnection();
-    try {
-      const result = await client.query(`
-        SELECT * FROM sent_emails WHERE id = $1
-      `, [id]);
-      return result.rows[0] || undefined;
-    } finally {
-      this.releaseConnection(client);
-    }
+  async getSentEmail(id: string): Promise<SentEmail | undefined> {
+    const [result] = await db.select().from(sentEmails).where(eq(sentEmails.id, id));
+    return result || undefined;
   }
 
-  async createSentEmail(sentEmailData: any): Promise<any> {
-    const client = await this.getConnection();
-    try {
-      const result = await client.query(`
-        INSERT INTO sent_emails (
-          report_name, report_id, email_subject, email_type, recipients, 
-          cc_recipients, bcc_recipients, email_template_id, email_template_name,
-          pdf_download_url, status, delivery_status, error_message, sent_by,
-          scheduled_report_id, email_content
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-        RETURNING *
-      `, [
-        sentEmailData.reportName,
-        sentEmailData.reportId || null,
-        sentEmailData.emailSubject,
-        sentEmailData.emailType || 'one-time',
-        JSON.stringify(sentEmailData.recipients || []),
-        JSON.stringify(sentEmailData.ccRecipients || []),
-        JSON.stringify(sentEmailData.bccRecipients || []),
-        sentEmailData.emailTemplateId || null,
-        sentEmailData.emailTemplateName || null,
-        sentEmailData.pdfDownloadUrl || null,
-        sentEmailData.status || 'sent',
-        sentEmailData.deliveryStatus || null,
-        sentEmailData.errorMessage || null,
-        sentEmailData.sentBy || null,
-        sentEmailData.scheduledReportId || null,
-        sentEmailData.emailContent || null
-      ]);
-      return result.rows[0];
-    } finally {
-      this.releaseConnection(client);
-    }
+  async createSentEmail(sentEmailData: InsertSentEmail): Promise<SentEmail> {
+    const [result] = await db.insert(sentEmails).values(sentEmailData).returning();
+    return result;
   }
 
   async updateSentEmail(id: string, updates: any): Promise<any | undefined> {
