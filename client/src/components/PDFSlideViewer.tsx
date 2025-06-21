@@ -57,9 +57,6 @@ export function PDFSlideViewer({ presentationId, templateId, className }: PDFSli
   const isLoading = contentLoading || slidesLoading;
 
   useEffect(() => {
-    console.log('PDFSlideViewer - slidesArray:', slidesArray);
-    console.log('PDFSlideViewer - contentData:', contentData);
-    
     if (slidesArray?.length) {
       const sortedSlides = slidesArray
         .map((slide: any, index: number) => ({
@@ -69,7 +66,6 @@ export function PDFSlideViewer({ presentationId, templateId, className }: PDFSli
           slideNumber: slide.slideNumber || index + 1
         }))
         .sort((a: Slide, b: Slide) => a.slideNumber - b.slideNumber);
-      console.log('PDFSlideViewer - sortedSlides:', sortedSlides);
       setSlides(sortedSlides);
       setCurrentSlide(0);
     }

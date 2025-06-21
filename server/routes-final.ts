@@ -1011,7 +1011,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
             emailSubject: emailData.subject,
             emailTemplate: emailHtml,
             recipients: JSON.stringify(reportData.recipientList || []),
-            createdBy: (req as any).session?.user?.id || 'system'
+            createdBy: (req as any).session?.user?.id || null
           };
 
           const scheduledReport = await storage.createScheduledReport(reportInsertData);
@@ -1036,7 +1036,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
             emailSubject: reportData.emailTemplate?.subject || `Report: ${reportData.name}`,
             emailTemplate: emailHtml,
             recipients: JSON.stringify(reportData.recipientList || []),
-            createdBy: (req as any).session?.user?.id || 'system'
+            createdBy: (req as any).session?.user?.id || null
           };
           
           try {

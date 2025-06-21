@@ -111,6 +111,14 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 21, 2025**: Complete PDF Slide Viewer & Email Sending Functionality Fix
+  - Fixed PDFSlideViewer component to properly fetch and display slides using slideIds pattern
+  - Enhanced slide rendering to show actual slide elements (images, text, charts) with correct positioning
+  - Resolved UUID validation error in email sending by using null instead of "system" for createdBy field
+  - Email sending now works correctly with Gmail SMTP and proper database record saving
+  - PDF slide navigation with Previous/Next buttons working with 3+ slides per report
+  - Real-time slide content display matching actual report structure with proper element positioning
+
 - **June 21, 2025**: Complete Email Template Editor with Side-by-Side HTML Editor & Live Preview
   - Enhanced Edit Email Template dialog with full side-by-side HTML editor interface
   - HTML code editor on left with monospace font and syntax highlighting for professional editing
