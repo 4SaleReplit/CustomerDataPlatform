@@ -926,8 +926,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                             <!-- Call to Action -->
                             <div style="text-align: center; margin: 35px 0;">
                                 <a href="https://bfe134db-1159-40e3-8fad-f3dbf1426e39-00-2pzuierkpxkak.janeway.replit.dev" 
-                                   style="display: inline-block; background-color: #3b82f6; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                                   style="display: inline-block; background-color: #3b82f6; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 10px;">
                                     View Analytics Dashboard
+                                </a>
+                                <a href="${presentation.pdfS3Key && presentation.pdfS3Key.includes('reports/pdfs/') ? `https://4sale-cdp-assets.s3.eu-west-1.amazonaws.com/${presentation.pdfS3Key}` : `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://analytics.4sale.tech'}/api/reports/pdf/${presentation.id}`}" 
+                                   style="display: inline-block; background-color: #dc2626; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    Download PDF Report
                                 </a>
                             </div>
                             
@@ -1029,8 +1033,15 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
           
           // Log successful email to database
           try {
-            const pdfDownloadUrl = presentation.pdfUrl || 
-              `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://analytics.4sale.tech'}/api/reports/pdf/${presentation.id}`;
+            // Generate direct public S3 URL for PDF download
+            let pdfDownloadUrl = '#';
+            if (presentation.pdfS3Key && presentation.pdfS3Key.includes('reports/pdfs/')) {
+              // Use direct public S3 URL without signed authentication
+              pdfDownloadUrl = `https://4sale-cdp-assets.s3.eu-west-1.amazonaws.com/${presentation.pdfS3Key}`;
+            } else {
+              // Fallback to PDF generation endpoint
+              pdfDownloadUrl = `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://analytics.4sale.tech'}/api/reports/pdf/${presentation.id}`;
+            }
             
             await storage.createSentEmail({
               templateId: reportData.emailTemplate?.templateId || null,
