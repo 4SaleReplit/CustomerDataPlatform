@@ -1968,20 +1968,27 @@ export default function AdminNew() {
                               const testResult = lastTestResult;
                               const currentStatus = testResult?.status || endpoint.lastStatus;
                               
-                              if (currentStatus >= 200 && currentStatus < 300) {
+                              // Show proper status based on current or stored status
+                              if (currentStatus && currentStatus >= 200 && currentStatus < 300) {
                                 return (
                                   <div className="p-2 bg-green-100 rounded-lg">
                                     <CheckCircle className="h-5 w-5 text-green-600" />
                                   </div>
                                 );
-                              } else if (currentStatus >= 400 || currentStatus === 0) {
+                              } else if (currentStatus && (currentStatus >= 400 || currentStatus === 0)) {
                                 return (
                                   <div className="p-2 bg-red-100 rounded-lg">
                                     <XCircle className="h-5 w-5 text-red-600" />
                                   </div>
                                 );
+                              } else if (currentStatus && currentStatus >= 300 && currentStatus < 400) {
+                                return (
+                                  <div className="p-2 bg-yellow-100 rounded-lg">
+                                    <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                                  </div>
+                                );
                               } else {
-                                // Unknown status or no test yet
+                                // No status available yet
                                 return (
                                   <div className="p-2 bg-gray-100 rounded-lg">
                                     <Clock className="h-5 w-5 text-gray-600" />
@@ -2073,6 +2080,9 @@ export default function AdminNew() {
                                   const result = await response.json();
                                   setLastTestResult(result);
                                   if (!isExpanded) setIsExpanded(true);
+                                  
+                                  // Refresh endpoint list to get updated status
+                                  queryClient.invalidateQueries({ queryKey: ['/api/endpoints'] });
                                 } catch (error) {
                                   console.error('Test failed:', error);
                                 } finally {
@@ -2161,12 +2171,10 @@ export default function AdminNew() {
                                     }, null, 2)}</pre>
                                   </div>
                                 </div>
-                                {lastTestResult?.requestDetails && (
-                                  <div>
-                                    <span className="text-xs font-medium text-gray-500 uppercase">Last Request Timestamp</span>
-                                    <p className="text-sm bg-white px-2 py-1 rounded border mt-1">{lastTestResult.requestDetails.timestamp}</p>
-                                  </div>
-                                )}
+                                <div>
+                                  <span className="text-xs font-medium text-gray-500 uppercase">Last Request Timestamp</span>
+                                  <p className="text-sm bg-white px-2 py-1 rounded border mt-1">{new Date().toLocaleString()}</p>
+                                </div>
                               </div>
                             </div>
 
@@ -2182,11 +2190,11 @@ export default function AdminNew() {
                                     <div>
                                       <span className="text-xs font-medium text-gray-500 uppercase">Status</span>
                                       <p className={`text-sm font-mono px-2 py-1 rounded border mt-1 ${
-                                        lastTestResult.responseDetails.status >= 200 && lastTestResult.responseDetails.status < 300 
+                                        lastTestResult.status >= 200 && lastTestResult.status < 300 
                                           ? 'bg-green-50 text-green-800 border-green-200' 
                                           : 'bg-red-50 text-red-800 border-red-200'
                                       }`}>
-                                        {lastTestResult.responseDetails.status} {lastTestResult.responseDetails.statusText}
+                                        {lastTestResult.status} {lastTestResult.responseDetails?.statusText || 'OK'}
                                       </p>
                                     </div>
                                     <div>
