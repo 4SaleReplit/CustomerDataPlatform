@@ -1101,6 +1101,76 @@ export default function AdminNew() {
     refreshAllMutation.mutate();
   };
 
+  const toggleEndpointMutation = useMutation({
+    mutationFn: ({ endpointId, isActive }: { endpointId: string, isActive: boolean }) => 
+      apiRequest(`/api/endpoints/${endpointId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ isActive }),
+        headers: { 'Content-Type': 'application/json' }
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/endpoints'] });
+      toast({
+        title: "Endpoint Updated",
+        description: "Monitoring status has been updated"
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update endpoint",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleToggleEndpoint = (endpointId: string, isActive: boolean) => {
+    toggleEndpointMutation.mutate({ endpointId, isActive });
+  };
+
+  const updateEndpointMutation = useMutation({
+    mutationFn: (data: any) => apiRequest(`/api/endpoints/${data.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+      headers: { 'Content-Type': 'application/json' }
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/endpoints'] });
+      setShowEditEndpointModal(false);
+      setEditingEndpoint(null);
+      toast({
+        title: "Endpoint Updated",
+        description: "Endpoint configuration has been updated successfully"
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update endpoint",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleUpdateEndpoint = () => {
+    const requiredFields = ['name', 'url'];
+    const missingFields = requiredFields.filter(field => !endpointFormData[field]);
+    
+    if (missingFields.length > 0) {
+      toast({
+        title: "Validation Error",
+        description: `Please fill in required fields: ${missingFields.join(', ')}`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    updateEndpointMutation.mutate({
+      ...endpointFormData,
+      id: editingEndpoint.id
+    });
+  };
+
   const testEndpointMutation = useMutation({
     mutationFn: (endpointId: string) => apiRequest(`/api/endpoints/${endpointId}/test`, {
       method: 'POST'
@@ -1892,7 +1962,7 @@ export default function AdminNew() {
                       <div className="flex items-center space-x-2">
                         <Switch 
                           checked={endpoint.isActive}
-                          // onCheckedChange={(checked) => handleToggleEndpoint(endpoint.id, checked)}
+                          onCheckedChange={(checked) => handleToggleEndpoint(endpoint.id, checked)}
                         />
                         <Button
                           variant="outline"
@@ -1921,6 +1991,17 @@ export default function AdminNew() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => {
                               setEditingEndpoint(endpoint);
+                              setEndpointFormData({
+                                name: endpoint.name,
+                                url: endpoint.url,
+                                method: endpoint.method,
+                                expectedStatus: endpoint.expectedStatus || 200,
+                                checkInterval: endpoint.checkInterval || 300,
+                                timeout: endpoint.timeout || 30,
+                                alertEmail: endpoint.alertEmail || false,
+                                alertSlack: endpoint.alertSlack || false,
+                                isActive: endpoint.isActive
+                              });
                               setShowEditEndpointModal(true);
                             }}>
                               <Edit className="h-4 w-4 mr-2" />
@@ -3083,6 +3164,181 @@ export default function AdminNew() {
                 <>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Endpoint
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Endpoint Modal */}
+      <Dialog open={showEditEndpointModal} onOpenChange={setShowEditEndpointModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Endpoint Monitor</DialogTitle>
+            <DialogDescription>
+              Update configuration for endpoint monitoring
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Basic Configuration */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-gray-900">Basic Configuration</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Monitor Name *
+                  </label>
+                  <Input
+                    value={endpointFormData.name || ''}
+                    onChange={(e) => setEndpointFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g., User API, Payment Gateway"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    HTTP Method
+                  </label>
+                  <Select 
+                    value={endpointFormData.method || 'GET'}
+                    onValueChange={(value) => setEndpointFormData(prev => ({ ...prev, method: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="GET">GET</SelectItem>
+                      <SelectItem value="POST">POST</SelectItem>
+                      <SelectItem value="PUT">PUT</SelectItem>
+                      <SelectItem value="DELETE">DELETE</SelectItem>
+                      <SelectItem value="PATCH">PATCH</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Endpoint URL *
+                </label>
+                <Input
+                  value={endpointFormData.url || ''}
+                  onChange={(e) => setEndpointFormData(prev => ({ ...prev, url: e.target.value }))}
+                  placeholder="https://api.example.com/health"
+                />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Expected Status Code
+                  </label>
+                  <Input
+                    type="number"
+                    value={endpointFormData.expectedStatus || 200}
+                    onChange={(e) => setEndpointFormData(prev => ({ ...prev, expectedStatus: parseInt(e.target.value) }))}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Check Interval
+                  </label>
+                  <Select 
+                    value={endpointFormData.checkInterval?.toString() || '300'}
+                    onValueChange={(value) => setEndpointFormData(prev => ({ ...prev, checkInterval: parseInt(value) }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="60">1 minute</SelectItem>
+                      <SelectItem value="300">5 minutes</SelectItem>
+                      <SelectItem value="600">10 minutes</SelectItem>
+                      <SelectItem value="1800">30 minutes</SelectItem>
+                      <SelectItem value="3600">1 hour</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Timeout (seconds)
+                  </label>
+                  <Input
+                    type="number"
+                    value={endpointFormData.timeout || 30}
+                    onChange={(e) => setEndpointFormData(prev => ({ ...prev, timeout: parseInt(e.target.value) }))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Alert Configuration */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-gray-900">Alert Settings</h3>
+              
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <Switch
+                    checked={endpointFormData.alertEmail || false}
+                    onCheckedChange={(checked) => setEndpointFormData(prev => ({ ...prev, alertEmail: checked }))}
+                  />
+                  <div>
+                    <div className="text-sm font-medium">Email Alerts</div>
+                    <div className="text-xs text-gray-500">Send email notifications when endpoint goes down</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <Switch
+                    checked={endpointFormData.alertSlack || false}
+                    onCheckedChange={(checked) => setEndpointFormData(prev => ({ ...prev, alertSlack: checked }))}
+                  />
+                  <div>
+                    <div className="text-sm font-medium">Slack Alerts</div>
+                    <div className="text-xs text-gray-500">Send Slack messages when endpoint goes down</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <Switch
+                    checked={endpointFormData.isActive !== false}
+                    onCheckedChange={(checked) => setEndpointFormData(prev => ({ ...prev, isActive: checked }))}
+                  />
+                  <div>
+                    <div className="text-sm font-medium">Enable Monitoring</div>
+                    <div className="text-xs text-gray-500">Keep monitoring this endpoint</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowEditEndpointModal(false);
+              setEditingEndpoint(null);
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpdateEndpoint}
+              disabled={updateEndpointMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {updateEndpointMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Update Endpoint
                 </>
               )}
             </Button>
