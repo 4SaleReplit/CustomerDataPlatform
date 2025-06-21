@@ -538,52 +538,115 @@ export function ContentTypeSchedulerForm({
                           subject: e.target.value
                         }
                       })}
-                      placeholder="e.g., Weekly Report - {week_start} to {week_end}"
+                      placeholder="e.g., Analytics Report - {report_name}"
                     />
                     <p className="text-xs text-muted-foreground">
-                      Use {`{week_start}`} and {`{week_end}`} for dynamic date ranges
+                      Use {`{report_name}`} for dynamic report names
                     </p>
                   </div>
 
-                  {/* Date Configuration for Subject */}
+                  {/* Report Name Configuration */}
                   <div className="space-y-3 p-4 bg-muted rounded-lg">
-                    <Label className="text-sm font-medium">Subject Date Parameters</Label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-xs">{`{week_start}`}</Label>
-                        <Input
-                          placeholder="June 15, 2025"
-                          value={formData.emailTemplate?.subjectVariables?.week_start || ''}
+                    <Label className="text-sm font-medium">Report Configuration</Label>
+                    <div>
+                      <Label className="text-xs">{`{report_name}`}</Label>
+                      <Input
+                        placeholder="Weekly Analytics Dashboard"
+                        value={formData.emailTemplate?.reportName || ''}
+                        onChange={(e) => onFormDataChange({
+                          ...formData,
+                          emailTemplate: {
+                            ...formData.emailTemplate,
+                            reportName: e.target.value
+                          }
+                        })}
+                        className="text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Template Sections Configuration */}
+                  <div className="space-y-3 p-4 bg-muted rounded-lg">
+                    <Label className="text-sm font-medium">Template Sections</Label>
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="showHeader"
+                          checked={formData.emailTemplate?.sections?.showHeader !== false}
                           onChange={(e) => onFormDataChange({
                             ...formData,
                             emailTemplate: {
                               ...formData.emailTemplate,
-                              subjectVariables: {
-                                ...formData.emailTemplate?.subjectVariables,
-                                week_start: e.target.value
+                              sections: {
+                                ...formData.emailTemplate?.sections,
+                                showHeader: e.target.checked
                               }
                             }
                           })}
-                          className="text-xs"
+                          className="rounded"
                         />
+                        <Label htmlFor="showHeader" className="text-xs">Header Section</Label>
                       </div>
-                      <div>
-                        <Label className="text-xs">{`{week_end}`}</Label>
-                        <Input
-                          placeholder="June 21, 2025"
-                          value={formData.emailTemplate?.subjectVariables?.week_end || ''}
+                      
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="showSummary"
+                          checked={formData.emailTemplate?.sections?.showSummary !== false}
                           onChange={(e) => onFormDataChange({
                             ...formData,
                             emailTemplate: {
                               ...formData.emailTemplate,
-                              subjectVariables: {
-                                ...formData.emailTemplate?.subjectVariables,
-                                week_end: e.target.value
+                              sections: {
+                                ...formData.emailTemplate?.sections,
+                                showSummary: e.target.checked
                               }
                             }
                           })}
-                          className="text-xs"
+                          className="rounded"
                         />
+                        <Label htmlFor="showSummary" className="text-xs">Summary Section</Label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="showMetrics"
+                          checked={formData.emailTemplate?.sections?.showMetrics !== false}
+                          onChange={(e) => onFormDataChange({
+                            ...formData,
+                            emailTemplate: {
+                              ...formData.emailTemplate,
+                              sections: {
+                                ...formData.emailTemplate?.sections,
+                                showMetrics: e.target.checked
+                              }
+                            }
+                          })}
+                          className="rounded"
+                        />
+                        <Label htmlFor="showMetrics" className="text-xs">Metrics Section</Label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="showFooter"
+                          checked={formData.emailTemplate?.sections?.showFooter !== false}
+                          onChange={(e) => onFormDataChange({
+                            ...formData,
+                            emailTemplate: {
+                              ...formData.emailTemplate,
+                              sections: {
+                                ...formData.emailTemplate?.sections,
+                                showFooter: e.target.checked
+                              }
+                            }
+                          })}
+                          className="rounded"
+                        />
+                        <Label htmlFor="showFooter" className="text-xs">Footer Section</Label>
                       </div>
                     </div>
                   </div>
@@ -674,16 +737,8 @@ export function ContentTypeSchedulerForm({
                       <div className="font-medium text-gray-900">
                         Subject: {(() => {
                           const subject = formData.emailTemplate?.subject || 'Email Subject';
-                          const subjectVars = formData.emailTemplate?.subjectVariables || {};
-                          let processedSubject = subject;
-                          
-                          Object.entries(subjectVars).forEach(([key, value]) => {
-                            if (value) {
-                              processedSubject = processedSubject.replace(new RegExp(`{${key}}`, 'g'), value as string);
-                            }
-                          });
-                          
-                          return processedSubject;
+                          const reportName = formData.emailTemplate?.reportName || 'Analytics Report';
+                          return subject.replace(/{report_name}/g, reportName);
                         })()}
                       </div>
                     </div>
@@ -694,12 +749,21 @@ export function ContentTypeSchedulerForm({
                         className="w-full h-[450px] border-0"
                         style={{ backgroundColor: 'white' }}
                         srcDoc={(() => {
-                          const selectedTemplate = emailTemplates.find(t => t.id === formData.emailTemplate?.templateId);
-                          
-                          if (selectedTemplate) {
-                            const htmlContent = selectedTemplate.bodyHtml || '';
+                          try {
+                            const selectedTemplate = emailTemplates?.find(t => t.id === formData.emailTemplate?.templateId);
+                            const reportName = formData.emailTemplate?.reportName || 'Analytics Report';
+                            const sections = formData.emailTemplate?.sections || {
+                              showHeader: true,
+                              showSummary: true,
+                              showMetrics: true,
+                              showFooter: true
+                            };
                             
-                            return `<!DOCTYPE html>
+                            if (selectedTemplate) {
+                              let htmlContent = selectedTemplate.bodyHtml || '';
+                              htmlContent = htmlContent.replace(/{report_name}/g, reportName);
+                              
+                              return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -727,6 +791,7 @@ export function ContentTypeSchedulerForm({
             color: white;
             padding: 30px 20px;
             text-align: center;
+            ${!sections.showHeader ? 'display: none;' : ''}
         }
         .email-header h1 {
             margin: 0;
@@ -736,6 +801,12 @@ export function ContentTypeSchedulerForm({
         .email-body {
             padding: 30px;
         }
+        .summary-section {
+            ${!sections.showSummary ? 'display: none;' : ''}
+        }
+        .metrics-section {
+            ${!sections.showMetrics ? 'display: none;' : ''}
+        }
         .email-footer {
             background: #f8f9fa;
             padding: 20px;
@@ -743,6 +814,7 @@ export function ContentTypeSchedulerForm({
             color: #666;
             font-size: 14px;
             border-top: 1px solid #e9ecef;
+            ${!sections.showFooter ? 'display: none;' : ''}
         }
         .btn {
             display: inline-block;
@@ -760,27 +832,76 @@ export function ContentTypeSchedulerForm({
             border-left: 4px solid #2196f3;
             margin: 15px 0;
         }
+        .metric-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
     </style>
 </head>
 <body>
     <div class="email-container">
+        ${sections.showHeader ? `
         <div class="email-header">
-            <h1>4Sale Analytics Report</h1>
+            <h1>📊 ${reportName}</h1>
         </div>
+        ` : ''}
         <div class="email-body">
-            ${htmlContent}
+            ${sections.showSummary ? `
+            <div class="summary-section">
+                <h2>Executive Summary</h2>
+                <div class="highlight">
+                    <p>Your ${reportName} has been generated successfully. This automated report contains key insights and metrics from your latest data analysis.</p>
+                </div>
+            </div>
+            ` : ''}
+            
+            ${sections.showMetrics ? `
+            <div class="metrics-section">
+                <h3>Key Metrics</h3>
+                <div class="metric-card">
+                    <div class="metric-value">1,234</div>
+                    <div>Total Users</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">89.5%</div>
+                    <div>Success Rate</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">567</div>
+                    <div>Active Sessions</div>
+                </div>
+            </div>
+            ` : ''}
+            
+            <div style="margin: 20px 0;">
+                ${htmlContent}
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="#" class="btn">View Full Report</a>
+            </div>
         </div>
+        ${sections.showFooter ? `
         <div class="email-footer">
             <p>Best regards,<br><strong>4Sale Analytics Team</strong></p>
             <p style="font-size: 12px; color: #999;">
                 This is an automated report. Please do not reply to this email.
             </p>
         </div>
+        ` : ''}
     </div>
 </body>
 </html>`;
-                          } else {
-                            return `<!DOCTYPE html>
+                            } else {
+                              return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -801,15 +922,28 @@ export function ContentTypeSchedulerForm({
             text-align: center;
             color: #666;
             font-size: 18px;
+            padding: 40px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
     </style>
 </head>
 <body>
     <div class="placeholder">
-        <p>Please select an email template to see the preview</p>
+        <p>📧 Select an email template to see the preview</p>
+        <p style="font-size: 14px; color: #999; margin-top: 10px;">Configure sections and report name to customize the layout</p>
     </div>
 </body>
 </html>`;
+                            }
+                          } catch (error) {
+                            console.error('Email preview error:', error);
+                            return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="padding: 40px; font-family: Arial, sans-serif; text-align: center;">
+<p>Error loading email preview. Please try again.</p>
+</body></html>`;
                           }
                         })()}
                       />
