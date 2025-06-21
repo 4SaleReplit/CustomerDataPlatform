@@ -124,6 +124,11 @@ export function EmailSender() {
     queryFn: () => apiRequest('/api/templates')
   });
 
+  const { data: emailTemplates, isLoading: emailTemplatesLoading } = useQuery({
+    queryKey: ['/api/email-templates'],
+    queryFn: () => apiRequest('/api/email-templates')
+  });
+
   // Mutations
   const createReportMutation = useMutation({
     mutationFn: (data: any) => apiRequest('/api/scheduled-reports', { method: 'POST', body: data }),
@@ -445,6 +450,7 @@ export function EmailSender() {
                 onFormDataChange={setFormData}
                 presentations={presentations || []}
                 templates={templates || []}
+                emailTemplates={emailTemplates || []}
                 isLoading={createReportMutation.isPending}
                 mode="create"
                 title="Send One-Time Email"
@@ -491,6 +497,7 @@ export function EmailSender() {
                 onFormDataChange={setFormData}
                 presentations={presentations || []}
                 templates={templates || []}
+                emailTemplates={emailTemplates || []}
                 isLoading={createReportMutation.isPending}
                 mode="create"
                 title="Schedule New Report"
@@ -528,6 +535,7 @@ export function EmailSender() {
         onFormDataChange={setFormData}
         presentations={presentations || []}
         templates={templates || []}
+        emailTemplates={emailTemplates || []}
         isLoading={updateReportMutation.isPending}
         mode="edit"
         title="Edit Scheduled Report"

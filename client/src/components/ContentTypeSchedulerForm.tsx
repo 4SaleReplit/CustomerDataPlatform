@@ -614,14 +614,31 @@ export function ContentTypeSchedulerForm({
                             pdf_download_url: '#download-link',
                             dashboard_url: '#dashboard-link',
                             recipient_name: 'John Doe',
-                            company_name: '4Sale Analytics'
+                            company_name: '4Sale Analytics',
+                            report_title: getSelectedContentName(),
+                            report_period: new Date().toLocaleDateString(),
+                            email_content: 'Your automated report is ready for review.',
+                            generation_date: new Date().toLocaleDateString(),
+                            generation_time: new Date().toLocaleTimeString(),
+                            alert_title: 'System Alert',
+                            alert_message: 'Important notification from your dashboard',
+                            alert_time: new Date().toLocaleTimeString(),
+                            dashboard_name: 'Analytics Dashboard',
+                            dashboard_period: new Date().toLocaleDateString(),
+                            dashboard_content: 'Key metrics and insights from your data.',
+                            metric_1_value: '1,234',
+                            metric_1_label: 'Total Users',
+                            metric_2_value: '567',
+                            metric_2_label: 'Active Sessions',
+                            metric_3_value: '89%',
+                            metric_3_label: 'Success Rate'
                           };
 
                           if (selectedTemplate) {
-                            return generateTemplateEmailPreview(selectedTemplate, variables);
+                            return processEmailTemplate(selectedTemplate.bodyHtml || '', variables);
                           } else {
                             return generateEmailPreviewHTML(
-                              formData.emailTemplate?.customContent || '',
+                              formData.emailTemplate?.customContent || 'Please select an email template or enter custom content.',
                               variables
                             );
                           }
