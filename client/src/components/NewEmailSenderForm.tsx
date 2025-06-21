@@ -229,7 +229,7 @@ export function NewEmailSenderForm({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex-1 flex flex-col space-y-6 overflow-hidden">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col space-y-6 overflow-y-auto px-1 pb-4">
           {/* Section One: Report Selection & Preview */}
           <Card className="flex-shrink-0">
             <CardHeader>
@@ -324,16 +324,16 @@ export function NewEmailSenderForm({
           </Card>
 
           {/* Section Two: Email Template Selection & Final Preview */}
-          <Card className="flex-1 flex flex-col overflow-hidden">
-            <CardHeader className="flex-shrink-0">
+          <Card className="flex-shrink-0">
+            <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Mail className="h-5 w-5" />
                 Email Configuration & Preview
               </CardTitle>
               <CardDescription>Configure email settings and preview final result</CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col space-y-4 overflow-hidden">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1">
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-96">
                 {/* Left: Email Configuration */}
                 <div className="space-y-4">
                   <div>
@@ -531,6 +531,25 @@ export function NewEmailSenderForm({
           </Card>
 
           {/* Submit Buttons */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isLoading || !selectedEmailTemplateId || !emailSubject || !recipientList}
+              className="min-w-24"
+            >
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  {mode === 'one-time' ? 'Sending...' : 'Scheduling...'}
+                </div>
+              ) : (
+                mode === 'one-time' ? 'Send Email' : 'Schedule Email'
+              )}
+            </Button>
+          </div>
           <div className="flex justify-end gap-3 flex-shrink-0">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
