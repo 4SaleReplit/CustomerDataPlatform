@@ -170,16 +170,23 @@ export function EmailTemplatesDesigner() {
   const saveTemplate = () => {
     if (!editingTemplate) return;
     
+    // Update the templates array with the edited template
     setTemplates(prev => 
       prev.map(t => t.id === editingTemplate.id ? editingTemplate : t)
     );
     
+    // Update the selected template if it's the one being edited
     if (selectedTemplate?.id === editingTemplate.id) {
       setSelectedTemplate(editingTemplate);
+      // Regenerate the main preview with updated template
+      generatePreview();
     }
     
     closeEditDialog();
-    toast({ title: "Template saved successfully" });
+    toast({ 
+      title: "Template saved successfully",
+      description: `${editingTemplate.name} has been updated`
+    });
   };
 
   const duplicateTemplate = (template: EmailTemplate) => {
@@ -461,12 +468,10 @@ export function EmailTemplatesDesigner() {
             >
               Cancel
             </Button>
-            {!editingTemplate?.isSystem && (
-              <Button onClick={saveTemplate}>
-                <Save className="h-4 w-4 mr-2" />
-                Save Template
-              </Button>
-            )}
+            <Button onClick={saveTemplate}>
+              <Save className="h-4 w-4 mr-2" />
+              Save Template
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
