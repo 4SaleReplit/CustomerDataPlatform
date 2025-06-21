@@ -3084,12 +3084,36 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
 
             addLog('Starting data migration...');
             
-            // Migrate each table
-            for (let i = 0; i < tables.length; i++) {
-              const table = tables[i];
-              const progressPercent = 50 + (i / tables.length) * 40;
+            // Define table migration order to handle dependencies
+            const tableOrder = [
+              'team', 'roles', 'permissions', 'role_permissions', 'users',
+              'integrations', 'presentations', 'uploaded_images', 'slides',
+              'email_templates', 'mailing_lists', 'segments', 'cohorts',
+              'dashboard_tile_instances', 'migration_history', 'sent_emails',
+              'scheduled_reports', 'report_executions', 'endpoint_monitoring_history',
+              'monitored_endpoints'
+            ];
+            
+            // Sort tables according to dependency order
+            const orderedTables: string[] = [];
+            for (const table of tableOrder) {
+              if (tables.includes(table)) {
+                orderedTables.push(table);
+              }
+            }
+            // Add any remaining tables not in the order list
+            for (const table of tables) {
+              if (!orderedTables.includes(table)) {
+                orderedTables.push(table);
+              }
+            }
+
+            // Migrate each table in dependency order
+            for (let i = 0; i < orderedTables.length; i++) {
+              const table = orderedTables[i];
+              const progressPercent = 50 + (i / orderedTables.length) * 40;
               
-              addLog(`Processing table: ${table} (${i + 1}/${tables.length})`);
+              addLog(`Processing table: ${table} (${i + 1}/${orderedTables.length})`);
               updateProgress({
                 stage: 'Data Migration',
                 currentJob: `Migrating table: ${table}`,
@@ -3158,7 +3182,16 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
               }
 
               addLog(`Creating table schema: ${table}`);
-              await targetClient.query(`CREATE TABLE "${table}" (${columns})`);
+              
+              // For tables with foreign key constraints, create without constraints first
+              if (table === 'scheduled_reports' || table === 'report_executions') {
+                // Remove foreign key constraints from table creation
+                const columnsWithoutFKs = columns.replace(/,\s*CONSTRAINT[^,]+/g, '');
+                await targetClient.query(`CREATE TABLE "${table}" (${columnsWithoutFKs})`);
+                addLog(`Created table ${table} without foreign key constraints`);
+              } else {
+                await targetClient.query(`CREATE TABLE "${table}" (${columns})`);
+              }
 
               // Copy data
               const countResult = await sourceClient.query(`SELECT COUNT(*) FROM "${table}"`);

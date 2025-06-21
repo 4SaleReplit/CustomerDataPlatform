@@ -111,6 +111,13 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 21, 2025**: Fixed Database Migration System for scheduled_reports Table
+  - Resolved critical migration failure that was causing database connection termination during scheduled_reports table creation
+  - Added proper dependency order for table migration to ensure referenced tables (team, presentations) exist before foreign key constraints
+  - Enhanced migration logic to create tables with foreign key dependencies without constraints initially
+  - Fixed migration table processing order to prevent constraint violations and database termination errors
+  - Migration system now handles complex table dependencies correctly for production database migrations
+
 - **June 21, 2025**: Fixed Authentication System for Real User Login
   - Enhanced authentication to properly handle temporary passwords stored in plain text
   - Fixed login endpoint to check temporary_password field before hashed password validation
