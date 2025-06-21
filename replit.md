@@ -111,20 +111,19 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
-- **June 21, 2025**: Complete Email Template System with User-Customizable Variables
+- **June 21, 2025**: Complete Email Template System with Fully Rendered HTML Preview and Recipient Management
   - Created email_templates database table with proper schema and constraints
   - Implemented comprehensive email template storage methods with full CRUD operations
   - Added email template types (EmailTemplate, InsertEmailTemplate) to shared schema
   - Fixed SelectItem validation error by removing empty string values from dropdown components
   - Created /api/email-templates endpoint returning authentic database templates
-  - Enhanced ContentTypeSchedulerForm with working email template selector dropdown
-  - Added three professional system email templates: Professional Report, Simple Alert, Dashboard Summary
-  - Replaced HTML editor with plain text email body editor for user-friendly content creation
-  - Implemented editable template variables section where users can enter custom values or SQL queries
-  - Enhanced email preview with iframe rendering showing final email appearance using user-defined variables
-  - Preview displays authentic email headers (From, To, Subject, Date) with customized variable substitution
-  - System merges user-defined variables with defaults for comprehensive template personalization
-  - Rich preview updates in real-time as users modify template variables and email content
+  - **Redesigned ContentTypeSchedulerForm with clean two-panel interface as requested**
+  - **Left panel: Template dropdown, subject configuration with date parameters, and recipient fields (To, CC, BCC)**
+  - **Right panel: Fully rendered HTML/CSS email preview showing final email appearance**
+  - Added professional email styling with gradient headers, modern typography, and 4Sale Analytics branding
+  - Email preview displays complete headers including all recipients (To, CC, BCC) and processes subject variables
+  - Removed complex variable systems in favor of minimal date parameter configuration (week_start, week_end)
+  - Preview shows authentic final email format with professional HTML/CSS styling and responsive design
 
 - **June 21, 2025**: Complete S3 Template Synchronization System with `/templates` Folder Structure
   - Implemented comprehensive TemplateS3Service for automatic template storage and retrieval from S3

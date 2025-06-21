@@ -587,26 +587,96 @@ export function ContentTypeSchedulerForm({
                       </div>
                     </div>
                   </div>
+
+                  {/* Recipients Configuration */}
+                  <div className="space-y-3 p-4 bg-muted rounded-lg">
+                    <Label className="text-sm font-medium">Email Recipients</Label>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-xs">To (Recipients)</Label>
+                        <Input
+                          placeholder="user1@example.com, user2@example.com"
+                          value={formData.emailTemplate?.recipients || ''}
+                          onChange={(e) => onFormDataChange({
+                            ...formData,
+                            emailTemplate: {
+                              ...formData.emailTemplate,
+                              recipients: e.target.value
+                            }
+                          })}
+                          className="text-xs"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label className="text-xs">CC (Carbon Copy)</Label>
+                        <Input
+                          placeholder="manager@example.com, team@example.com"
+                          value={formData.emailTemplate?.cc || ''}
+                          onChange={(e) => onFormDataChange({
+                            ...formData,
+                            emailTemplate: {
+                              ...formData.emailTemplate,
+                              cc: e.target.value
+                            }
+                          })}
+                          className="text-xs"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label className="text-xs">BCC (Blind Carbon Copy)</Label>
+                        <Input
+                          placeholder="admin@example.com"
+                          value={formData.emailTemplate?.bcc || ''}
+                          onChange={(e) => onFormDataChange({
+                            ...formData,
+                            emailTemplate: {
+                              ...formData.emailTemplate,
+                              bcc: e.target.value
+                            }
+                          })}
+                          className="text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Right Panel - Text-Only Preview */}
+                {/* Right Panel - Fully Rendered Email Preview */}
                 <div className="space-y-4">
-                  <div className="bg-gray-50 p-4 rounded-lg border">
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center text-sm text-gray-600">
-                        <span>From: 4Sale Analytics &lt;reports@4sale.tech&gt;</span>
-                        <span>{new Date().toLocaleDateString()}</span>
+                  <Label className="text-sm font-medium">Email Preview</Label>
+                  <div className="border rounded-lg bg-gray-50 overflow-hidden">
+                    {/* Email Headers */}
+                    <div className="bg-white border-b p-4 space-y-2">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600">From: 4Sale Analytics &lt;reports@4sale.tech&gt;</span>
+                        <span className="text-gray-500">{new Date().toLocaleDateString()}</span>
                       </div>
+                      
                       <div className="text-sm text-gray-600">
-                        To: recipient@example.com
+                        To: {formData.emailTemplate?.recipients || 'recipient@example.com'}
                       </div>
-                      <div className="font-medium text-gray-900 border-b pb-2">
+                      
+                      {formData.emailTemplate?.cc && (
+                        <div className="text-sm text-gray-600">
+                          CC: {formData.emailTemplate.cc}
+                        </div>
+                      )}
+                      
+                      {formData.emailTemplate?.bcc && (
+                        <div className="text-sm text-gray-600">
+                          BCC: {formData.emailTemplate.bcc}
+                        </div>
+                      )}
+                      
+                      <div className="font-medium text-gray-900">
                         Subject: {(() => {
                           const subject = formData.emailTemplate?.subject || 'Email Subject';
                           const subjectVars = formData.emailTemplate?.subjectVariables || {};
                           let processedSubject = subject;
                           
-                          // Replace subject variables
                           Object.entries(subjectVars).forEach(([key, value]) => {
                             if (value) {
                               processedSubject = processedSubject.replace(new RegExp(`{${key}}`, 'g'), value as string);
@@ -616,38 +686,133 @@ export function ContentTypeSchedulerForm({
                           return processedSubject;
                         })()}
                       </div>
-                      
-                      {/* Text-Only Email Body Preview */}
-                      <div className="mt-4 p-4 bg-white rounded border min-h-[350px] text-sm leading-relaxed">
-                        {(() => {
+                    </div>
+                    
+                    {/* Fully Rendered Email Body */}
+                    <div className="bg-white">
+                      <iframe
+                        className="w-full h-[450px] border-0"
+                        style={{ backgroundColor: 'white' }}
+                        srcDoc={(() => {
                           const selectedTemplate = emailTemplates.find(t => t.id === formData.emailTemplate?.templateId);
+                          
                           if (selectedTemplate) {
-                            // Convert HTML to plain text for display
                             const htmlContent = selectedTemplate.bodyHtml || '';
-                            const textContent = htmlContent
-                              .replace(/<br\s*\/?>/gi, '\n')
-                              .replace(/<\/p>/gi, '\n\n')
-                              .replace(/<[^>]*>/g, '')
-                              .replace(/&nbsp;/g, ' ')
-                              .replace(/&amp;/g, '&')
-                              .replace(/&lt;/g, '<')
-                              .replace(/&gt;/g, '>')
-                              .trim();
                             
-                            return (
-                              <div className="whitespace-pre-wrap">
-                                {textContent || 'No content available for this template'}
-                              </div>
-                            );
+                            return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Preview</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .email-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .email-header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        .email-body {
+            padding: 30px;
+        }
+        .email-footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            border-top: 1px solid #e9ecef;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            margin: 10px 0;
+        }
+        .highlight {
+            background: #e3f2fd;
+            padding: 15px;
+            border-left: 4px solid #2196f3;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="email-header">
+            <h1>4Sale Analytics Report</h1>
+        </div>
+        <div class="email-body">
+            ${htmlContent}
+        </div>
+        <div class="email-footer">
+            <p>Best regards,<br><strong>4Sale Analytics Team</strong></p>
+            <p style="font-size: 12px; color: #999;">
+                This is an automated report. Please do not reply to this email.
+            </p>
+        </div>
+    </div>
+</body>
+</html>`;
                           } else {
-                            return (
-                              <div className="text-gray-500 italic">
-                                Please select an email template to see the preview
-                              </div>
-                            );
+                            return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Preview</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 40px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+        }
+        .placeholder {
+            text-align: center;
+            color: #666;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="placeholder">
+        <p>Please select an email template to see the preview</p>
+    </div>
+</body>
+</html>`;
                           }
                         })()}
-                      </div>
+                      />
                     </div>
                   </div>
                 </div>
