@@ -186,7 +186,7 @@ export function NewEmailSenderForm({
       return;
     }
     
-    if (!recipientList.trim()) {
+    if (recipientList.length === 0) {
       toast({
         title: "Validation Error",
         description: "Please enter at least one recipient",
@@ -539,7 +539,7 @@ export function NewEmailSenderForm({
             </Button>
             <Button 
               type="submit" 
-              disabled={isLoading || !selectedEmailTemplateId || !emailSubject || !recipientList}
+              disabled={isLoading || !selectedEmailTemplateId || !emailSubject || recipientList.length === 0}
               className="min-w-24"
             >
               {isLoading ? (
