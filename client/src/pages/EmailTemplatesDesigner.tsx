@@ -16,9 +16,11 @@ interface EmailTemplate {
   id: string;
   name: string;
   description: string;
-  html: string;
-  variables: string[];
-  isSystem?: boolean;
+  bodyHtml: string;
+  availablePlaceholders: string[];
+  isSystemTemplate?: boolean;
+  templateType?: string;
+  subject?: string;
 }
 
 export function EmailTemplatesDesigner() {
@@ -100,9 +102,9 @@ export function EmailTemplatesDesigner() {
   }, [selectedTemplate, reportName]);
 
   const generatePreview = () => {
-    if (!selectedTemplate || !selectedTemplate.html) return;
+    if (!selectedTemplate || !selectedTemplate.bodyHtml) return;
     
-    let html = selectedTemplate.html;
+    let html = selectedTemplate.bodyHtml;
     
     // Replace variables with sample data
     const sampleData = {
@@ -128,8 +130,10 @@ export function EmailTemplatesDesigner() {
       id: '',
       name: '',
       description: '',
-      html: getDefaultTemplateHtml(),
-      variables: ['report_name', 'report_download_url']
+      bodyHtml: getDefaultTemplateHtml(),
+      availablePlaceholders: ['report_name', 'report_download_url'],
+      templateType: 'report',
+      subject: '{{report_name}} - Report Ready'
     });
     setIsCreateDialogOpen(true);
   };
