@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Mail, FileText, Calendar, Clock, Send, Users } from "lucide-react";
 import { EmailTagInput } from "./EmailTagInput";
+import { PDFSlideViewer } from "./PDFSlideViewer";
 
 interface NewEmailSenderFormProps {
   isOpen: boolean;
@@ -205,7 +206,11 @@ export function NewEmailSenderForm({
         templateId: selectedEmailTemplateId,
         subject: emailSubject,
         customContent: '',
-        templateVariables: {}
+        templateVariables: {
+          report_name: reportName || 'Analytics Report',
+          pdf_download_url: pdfPreviewUrl,
+          report_url: pdfPreviewUrl
+        }
       },
       recipientList: recipientList,
       ccList: ccList,
@@ -303,22 +308,13 @@ export function NewEmailSenderForm({
                   </div>
                 </div>
 
-                {/* Right: PDF Preview */}
+                {/* Right: PDF Slide Preview */}
                 <div className="space-y-2">
-                  <Label>PDF Preview</Label>
-                  <div className="border rounded-lg h-64 overflow-hidden">
-                    {pdfPreviewUrl ? (
-                      <iframe
-                        src={pdfPreviewUrl}
-                        className="w-full h-full border-0"
-                        title="PDF Preview"
-                      />
-                    ) : (
-                      <div className="h-full flex items-center justify-center text-muted-foreground">
-                        Select content to preview PDF
-                      </div>
-                    )}
-                  </div>
+                  <Label>PDF Slide Preview</Label>
+                  <PDFSlideViewer 
+                    presentationId={contentType === 'report' ? selectedReportId : undefined}
+                    templateId={contentType === 'template' ? selectedTemplateId : undefined}
+                  />
                 </div>
               </div>
             </CardContent>
