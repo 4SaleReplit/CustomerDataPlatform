@@ -344,6 +344,76 @@ export function ComprehensiveEmailForm({
                 </CardContent>
               </Card>
 
+              {/* Content Preview Section */}
+              {(formData.contentType === 'report' && formData.selectedReport) || 
+               (formData.contentType === 'template' && formData.selectedTemplate) ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Content Preview</CardTitle>
+                    <CardDescription>
+                      Preview of selected {formData.contentType === 'report' ? 'report' : 'template'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {formData.contentType === 'report' ? (
+                      <div className="space-y-2">
+                        <div className="font-medium">
+                          {presentations?.find(p => p.id === formData.selectedReport)?.title || 'Selected Report'}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {presentations?.find(p => p.id === formData.selectedReport)?.description || 'Report description'}
+                        </div>
+                        {presentations?.find(p => p.id === formData.selectedReport)?.previewImageUrl && (
+                          <div className="mt-2">
+                            <img 
+                              src={presentations?.find(p => p.id === formData.selectedReport)?.previewImageUrl} 
+                              alt="Report preview"
+                              className="w-full max-w-sm rounded border"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="font-medium">
+                          {templates?.find(t => t.id === formData.selectedTemplate)?.name || 'Selected Template'}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {templates?.find(t => t.id === formData.selectedTemplate)?.description || 'Template description'}
+                        </div>
+                        {templates?.find(t => t.id === formData.selectedTemplate)?.slides && (
+                          <div className="mt-2">
+                            <div className="text-xs text-muted-foreground mb-1">
+                              {JSON.parse(templates?.find(t => t.id === formData.selectedTemplate)?.slides || '[]').length} slides
+                            </div>
+                            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300">
+                              {JSON.parse(templates?.find(t => t.id === formData.selectedTemplate)?.slides || '[]').map((slide: any, index: number) => (
+                                <div key={index} className="flex-shrink-0 w-32 h-20 bg-gray-50 rounded border hover:border-blue-300 transition-colors">
+                                  {slide.elements?.find((el: any) => el.type === 'image' && (el.content || el.uploadedImageId)) ? (
+                                    <img 
+                                      src={slide.elements.find((el: any) => el.type === 'image' && (el.content || el.uploadedImageId))?.content || `/api/images/${slide.elements.find((el: any) => el.type === 'image' && el.uploadedImageId)?.uploadedImageId}`}
+                                      alt={`Slide ${index + 1}`}
+                                      className="w-full h-full object-cover rounded"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        e.currentTarget.nextElementSibling.style.display = 'flex';
+                                      }}
+                                    />
+                                  ) : null}
+                                  <div className="w-full h-full flex items-center justify-center text-xs text-gray-500" style={{ display: slide.elements?.find((el: any) => el.type === 'image') ? 'none' : 'flex' }}>
+                                    Slide {index + 1}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : null}
+
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Recipients</CardTitle>
