@@ -36,6 +36,7 @@ const INITIAL_TEMPLATES: EmailTemplate[] = [
     .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
     .header h1 { margin: 0; font-size: 28px; font-weight: 300; }
     .content { padding: 40px 30px; }
+    .download-btn { display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
     .footer { background-color: #f8f9fa; padding: 20px 30px; text-align: center; }
   </style>
 </head>
@@ -46,6 +47,8 @@ const INITIAL_TEMPLATES: EmailTemplate[] = [
     </div>
     <div class="content">
       <p>Your report is ready for review.</p>
+      <p>Click the button below to download your report:</p>
+      <a href="{{report_download_url}}" class="download-btn">Download Report</a>
     </div>
     <div class="footer">
       <p>© 2025 4Sale Analytics Platform</p>
@@ -53,7 +56,7 @@ const INITIAL_TEMPLATES: EmailTemplate[] = [
   </div>
 </body>
 </html>`,
-    variables: ['report_name'],
+    variables: ['report_name', 'report_download_url'],
     isSystem: true
   },
   {
@@ -71,6 +74,7 @@ const INITIAL_TEMPLATES: EmailTemplate[] = [
     .container { max-width: 600px; margin: 0 auto; }
     .header { border-bottom: 2px solid #f0f0f0; padding-bottom: 20px; margin-bottom: 30px; }
     .header h1 { margin: 0; font-size: 24px; color: #2c3e50; }
+    .download-btn { display: inline-block; background-color: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 3px; margin: 15px 0; }
   </style>
 </head>
 <body>
@@ -80,11 +84,12 @@ const INITIAL_TEMPLATES: EmailTemplate[] = [
     </div>
     <div class="content">
       <p>Your minimal report is ready.</p>
+      <a href="{{report_download_url}}" class="download-btn">Download Report</a>
     </div>
   </div>
 </body>
 </html>`,
-    variables: ['report_name'],
+    variables: ['report_name', 'report_download_url'],
     isSystem: true
   }
 ];
@@ -95,6 +100,7 @@ export function EmailTemplatesDesigner() {
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState('');
+  const [reportName, setReportName] = useState('Sample Analytics Report');
   
   const { toast } = useToast();
 
@@ -105,12 +111,12 @@ export function EmailTemplatesDesigner() {
     }
   }, [templates, selectedTemplate]);
 
-  // Generate preview when template changes
+  // Generate preview when template or report name changes
   useEffect(() => {
     if (selectedTemplate) {
       generatePreview();
     }
-  }, [selectedTemplate]);
+  }, [selectedTemplate, reportName]);
 
   const generatePreview = () => {
     if (!selectedTemplate) return;
@@ -119,7 +125,8 @@ export function EmailTemplatesDesigner() {
     
     // Replace variables with sample data
     const sampleData = {
-      report_name: 'Sample Analytics Report'
+      report_name: reportName,
+      report_download_url: '#download-report'
     };
     
     Object.entries(sampleData).forEach(([key, value]) => {
@@ -198,8 +205,8 @@ export function EmailTemplatesDesigner() {
             id: `template_${Date.now()}`,
             name: 'New Template',
             description: 'Custom email template',
-            html: '<!DOCTYPE html><html><head><meta charset="utf-8"><title>{{report_name}}</title></head><body><h1>{{report_name}}</h1><p>Your report content here.</p></body></html>',
-            variables: ['report_name'],
+            html: '<!DOCTYPE html><html><head><meta charset="utf-8"><title>{{report_name}}</title></head><body><h1>{{report_name}}</h1><p>Your report content here.</p><a href="{{report_download_url}}" style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Download Report</a></body></html>',
+            variables: ['report_name', 'report_download_url'],
             isSystem: false
           };
           setTemplates(prev => [...prev, newTemplate]);
@@ -286,41 +293,66 @@ export function EmailTemplatesDesigner() {
         {/* Preview Panel */}
         <div className="lg:col-span-3">
           {selectedTemplate && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Eye className="h-5 w-5" />
-                  Template Preview - {selectedTemplate.name}
-                </CardTitle>
-                <CardDescription>
-                  Preview how your email template will appear
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="preview" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="preview">Visual Preview</TabsTrigger>
-                    <TabsTrigger value="html">HTML Code</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="preview" className="mt-4">
-                    <div className="border rounded-lg overflow-hidden">
-                      <iframe
-                        srcDoc={previewHtml}
-                        className="w-full h-96 border-0"
-                        title="Email Template Preview"
+            <div className="space-y-4">
+              {/* Report Name Configuration */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Report Configuration</CardTitle>
+                  <CardDescription>Configure the preview settings</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <Label htmlFor="report-name">Report Name</Label>
+                      <Input
+                        id="report-name"
+                        value={reportName}
+                        onChange={(e) => setReportName(e.target.value)}
+                        placeholder="Enter report name..."
+                        className="mt-1"
                       />
                     </div>
-                  </TabsContent>
-                  <TabsContent value="html" className="mt-4">
-                    <div className="border rounded-lg p-4 bg-gray-50">
-                      <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
-                        <code>{previewHtml}</code>
-                      </pre>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Template Preview */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Eye className="h-5 w-5" />
+                    Template Preview - {selectedTemplate.name}
+                  </CardTitle>
+                  <CardDescription>
+                    Preview how your email template will appear
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Tabs defaultValue="preview" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="preview">Visual Preview</TabsTrigger>
+                      <TabsTrigger value="html">HTML Code</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="preview" className="mt-4">
+                      <div className="border rounded-lg overflow-hidden">
+                        <iframe
+                          srcDoc={previewHtml}
+                          className="w-full h-96 border-0"
+                          title="Email Template Preview"
+                        />
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="html" className="mt-4">
+                      <div className="border rounded-lg p-4 bg-gray-50">
+                        <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
+                          <code>{previewHtml}</code>
+                        </pre>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
+            </div>
           )}
         </div>
       </div>
