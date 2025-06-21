@@ -55,6 +55,22 @@ interface Role {
   updatedAt: string;
 }
 
+interface EndpointTestResult {
+  status: number;
+  responseTime: number;
+  isHealthy: boolean;
+  error?: string;
+  requestDetails?: {
+    timestamp: string;
+    headers: Record<string, string>;
+  };
+  responseDetails?: {
+    headers: Record<string, string>;
+    body: any;
+    statusText: string;
+  };
+}
+
 export default function AdminNew() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -1919,8 +1935,26 @@ export default function AdminNew() {
           ) : (
             <div className="grid gap-4">
               {monitoredEndpoints.map((endpoint: any) => {
-                const [isExpanded, setIsExpanded] = React.useState(false);
-                const [lastTestResult, setLastTestResult] = React.useState(null);
+                const isExpanded = expandedEndpoints.includes(endpoint.id);
+                const setIsExpanded = (expanded: boolean) => {
+                  if (expanded) {
+                    setExpandedEndpoints(prev => [...prev, endpoint.id]);
+                  } else {
+                    setExpandedEndpoints(prev => prev.filter(id => id !== endpoint.id));
+                  }
+                };
+                const lastTestResult: EndpointTestResult | undefined = endpointTestResults.get(endpoint.id);
+                const setLastTestResult = (result: EndpointTestResult | null) => {
+                  setEndpointTestResults(prev => {
+                    const newMap = new Map(prev);
+                    if (result) {
+                      newMap.set(endpoint.id, result);
+                    } else {
+                      newMap.delete(endpoint.id);
+                    }
+                    return newMap;
+                  });
+                };
                 
                 return (
                   <Card key={endpoint.id} className="hover:shadow-md transition-shadow">
