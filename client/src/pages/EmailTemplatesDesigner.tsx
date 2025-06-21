@@ -332,7 +332,7 @@ export function EmailTemplatesDesigner() {
             </Card>
           </div>
 
-          {/* Preview Panel */}
+          {/* Editor and Preview Panel */}
           <div className="lg:col-span-3">
             <Card>
               <CardHeader>
@@ -357,17 +357,100 @@ export function EmailTemplatesDesigner() {
                 </div>
               </CardHeader>
               <CardContent>
-                {selectedTemplate && previewHtml ? (
-                  <div className="border rounded-lg overflow-hidden">
-                    <iframe
-                      srcDoc={previewHtml}
-                      className="w-full h-96 border-0"
-                      title="Email Preview"
-                    />
-                  </div>
+                {selectedTemplate ? (
+                  <Tabs defaultValue="preview" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="preview">Preview</TabsTrigger>
+                      <TabsTrigger value="editor">HTML Editor</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="preview" className="mt-4">
+                      {previewHtml ? (
+                        <div className="border rounded-lg overflow-hidden">
+                          <iframe
+                            srcDoc={previewHtml}
+                            className="w-full h-96 border-0"
+                            title="Email Preview"
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-96 border rounded-lg flex items-center justify-center text-muted-foreground">
+                          Loading preview...
+                        </div>
+                      )}
+                    </TabsContent>
+                    
+                    <TabsContent value="editor" className="mt-4">
+                      <div className="grid grid-cols-2 gap-4 h-[500px]">
+                        {/* HTML Code Editor */}
+                        <div className="space-y-2">
+                          <Label>HTML Code</Label>
+                          <Textarea
+                            value={selectedTemplate.bodyHtml}
+                            onChange={(e) => {
+                              const updatedTemplate = {
+                                ...selectedTemplate,
+                                bodyHtml: e.target.value
+                              };
+                              setSelectedTemplate(updatedTemplate);
+                              // Update preview in real-time
+                              let html = e.target.value;
+                              const sampleData = {
+                                report_name: reportName,
+                                report_download_url: '#download-report'
+                              };
+                              Object.entries(sampleData).forEach(([key, value]) => {
+                                const regex = new RegExp(`{{${key}}}`, 'g');
+                                html = html.replace(regex, value);
+                              });
+                              setPreviewHtml(html);
+                            }}
+                            className="h-full font-mono text-sm resize-none"
+                            placeholder="Enter HTML content"
+                          />
+                        </div>
+                        
+                        {/* Live Preview */}
+                        <div className="space-y-2">
+                          <Label>Live Preview</Label>
+                          <div className="border rounded-lg overflow-hidden h-full">
+                            <iframe
+                              srcDoc={previewHtml}
+                              className="w-full h-full border-0"
+                              title="Live Email Preview"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4 flex gap-2">
+                        <Button
+                          onClick={() => {
+                            if (selectedTemplate) {
+                              const templateData = {
+                                name: selectedTemplate.name,
+                                description: selectedTemplate.description,
+                                templateType: selectedTemplate.templateType || 'report',
+                                subject: selectedTemplate.subject || '{{report_name}} - Report Ready',
+                                bodyHtml: selectedTemplate.bodyHtml,
+                                availablePlaceholders: selectedTemplate.availablePlaceholders
+                              };
+                              updateTemplateMutation.mutate({ id: selectedTemplate.id, data: templateData });
+                            }
+                          }}
+                          disabled={updateTemplateMutation.isPending}
+                        >
+                          {updateTemplateMutation.isPending ? 'Saving...' : 'Save Changes'}
+                        </Button>
+                        <Button variant="outline" onClick={() => window.location.reload()}>
+                          Reset
+                        </Button>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 ) : (
                   <div className="h-96 border rounded-lg flex items-center justify-center text-muted-foreground">
-                    Select a template to see the preview
+                    Select a template to see the preview and editor
                   </div>
                 )}
               </CardContent>
