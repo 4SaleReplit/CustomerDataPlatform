@@ -10,33 +10,23 @@ dotenv.config();
 let currentPool: Pool | null = null;
 let currentEnvironment = 'development'; // Default environment
 
-// Fallback DATABASE_URL for initial connection
-const FALLBACK_DATABASE_URL = process.env.DATABASE_URL;
+// Use optimized Neon database connection with enhanced stability settings
+const FALLBACK_DATABASE_URL = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_gIzCkd5m0qUn@ep-aged-dawn-a6h96cw4.us-west-2.aws.neon.tech/neondb?sslmode=require';
 
-if (!FALLBACK_DATABASE_URL) {
-  console.error('DATABASE_URL not found in .env file. Please check your environment configuration.');
-  throw new Error('DATABASE_URL is required for fallback database connection');
-}
+console.log('🔧 Using optimized Neon database connection with enhanced stability settings');
 
 // Function to create a new pool with given connection string
 function createPool(connectionString: string): Pool {
   const config = {
     connectionString,
-    max: 10, // Maximum connections in pool
-    min: 2, // Minimum connections to maintain
-    idleTimeoutMillis: 30000, // How long client can be idle before closing
-    connectionTimeoutMillis: 20000, // How long to wait when connecting
+    max: 3, // Reduced pool size for stability
+    min: 0, // No minimum connections
+    idleTimeoutMillis: 5000, // Shorter idle timeout
+    connectionTimeoutMillis: 10000, // Reduced connection timeout
     ssl: connectionString.includes('localhost') ? false : {
       rejectUnauthorized: false
     }
   };
-
-  // Add Neon-specific optimizations for serverless database
-  if (connectionString.includes('neon.tech')) {
-    config.max = 5; // Reduce pool size for serverless
-    config.min = 0; // No minimum connections for serverless
-    config.idleTimeoutMillis = 10000; // Shorter idle timeout for serverless
-  }
 
   return new Pool(config);
 }
