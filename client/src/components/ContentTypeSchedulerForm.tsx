@@ -54,6 +54,72 @@ export function ContentTypeSchedulerForm({
   const [customVariables, setCustomVariables] = useState<any[]>([]);
   const { toast } = useToast();
 
+  // Helper function to get selected content name
+  const getSelectedContentName = () => {
+    if (formData.contentType === 'template' && formData.templateId) {
+      const selectedTemplate = templates.find(t => t.id === formData.templateId);
+      return selectedTemplate?.name || selectedTemplate?.title || 'Selected Template';
+    }
+    if (formData.contentType === 'report' && formData.presentationId) {
+      const selectedPresentation = presentations.find(p => p.id === formData.presentationId);
+      return selectedPresentation?.title || 'Selected Report';
+    }
+    return 'Your Report';
+  };
+
+  // Helper function to process email template variables
+  const processEmailTemplate = (template: string, variables: Record<string, string>) => {
+    let processed = template;
+    Object.entries(variables).forEach(([key, value]) => {
+      const regex = new RegExp(`\\{${key}\\}`, 'g');
+      processed = processed.replace(regex, value);
+    });
+    return processed;
+  };
+
+  // Helper function to generate HTML preview
+  const generateEmailPreviewHTML = (content: string, variables: Record<string, string>) => {
+    let processedContent = processEmailTemplate(content, variables);
+    
+    // Convert line breaks to HTML
+    processedContent = processedContent.replace(/\n/g, '<br>');
+    
+    // Convert URLs to clickable links
+    processedContent = processedContent.replace(
+      /https?:\/\/[^\s]+/g,
+      '<a href="$&" class="text-blue-600 underline" target="_blank">$&</a>'
+    );
+    
+    // Style download links specially
+    processedContent = processedContent.replace(
+      /#download-link/g,
+      '<a href="#" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">📄 Download PDF Report</a>'
+    );
+    
+    // Style dashboard links
+    processedContent = processedContent.replace(
+      /#dashboard-link/g,
+      '<a href="#" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">📊 View Dashboard</a>'
+    );
+
+    // If no content, show default template
+    if (!processedContent.trim()) {
+      return `
+        <div class="space-y-4">
+          <p>Dear <strong>${variables.recipient_name}</strong>,</p>
+          <p>Your <strong>${variables.report_name}</strong> report for <strong>${variables.date}</strong> is ready.</p>
+          <div class="my-4">
+            <a href="${variables.pdf_download_url}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">📄 Download PDF Report</a>
+          </div>
+          <p>You can also <a href="${variables.dashboard_url}" class="text-blue-600 underline">view the dashboard online</a>.</p>
+          <p>Best regards,<br><strong>${variables.company_name}</strong></p>
+        </div>
+      `;
+    }
+    
+    return `<div class="space-y-3">${processedContent}</div>`;
+  };
+
   // Initialize form data
   useEffect(() => {
     if (!formData.contentType) {
@@ -157,7 +223,7 @@ export function ContentTypeSchedulerForm({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
@@ -387,43 +453,102 @@ export function ContentTypeSchedulerForm({
             </CardContent>
           </Card>
 
-          {/* Email Template */}
+          {/* Email Template with Live Preview */}
           <Card>
             <CardHeader>
-              <CardTitle>Email Template</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-4 w-4" />
+                Email Template & Live Preview
+              </CardTitle>
+              <CardDescription>
+                Design your email template and see a live preview of how it will look
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="subject">Email Subject</Label>
-                <Input
-                  id="subject"
-                  value={formData.emailTemplate?.subject || ''}
-                  onChange={(e) => onFormDataChange({
-                    ...formData,
-                    emailTemplate: {
-                      ...formData.emailTemplate,
-                      subject: e.target.value
-                    }
-                  })}
-                  placeholder="Enter email subject"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="content">Email Content</Label>
-                <Textarea
-                  id="content"
-                  value={formData.emailTemplate?.customContent || ''}
-                  onChange={(e) => onFormDataChange({
-                    ...formData,
-                    emailTemplate: {
-                      ...formData.emailTemplate,
-                      customContent: e.target.value
-                    }
-                  })}
-                  placeholder="Enter email content..."
-                  rows={4}
-                />
+            <CardContent>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Email Template Editor */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="subject">Email Subject</Label>
+                    <Input
+                      id="subject"
+                      value={formData.emailTemplate?.subject || ''}
+                      onChange={(e) => onFormDataChange({
+                        ...formData,
+                        emailTemplate: {
+                          ...formData.emailTemplate,
+                          subject: e.target.value
+                        }
+                      })}
+                      placeholder="Enter email subject"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="content">Email Content</Label>
+                    <Textarea
+                      id="content"
+                      value={formData.emailTemplate?.customContent || ''}
+                      onChange={(e) => onFormDataChange({
+                        ...formData,
+                        emailTemplate: {
+                          ...formData.emailTemplate,
+                          customContent: e.target.value
+                        }
+                      })}
+                      placeholder="Enter email content with variables like {report_name}, {date}, {pdf_download_url}..."
+                      rows={8}
+                      className="font-mono text-sm"
+                    />
+                  </div>
+
+                  {/* Template Variables Help */}
+                  <div className="p-3 bg-muted rounded-lg">
+                    <h4 className="text-sm font-medium mb-2">Available Variables:</h4>
+                    <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
+                      <div>• {`{report_name}`}</div>
+                      <div>• {`{date}`}</div>
+                      <div>• {`{pdf_download_url}`}</div>
+                      <div>• {`{dashboard_url}`}</div>
+                      <div>• {`{recipient_name}`}</div>
+                      <div>• {`{company_name}`}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live Email Preview */}
+                <div className="space-y-2">
+                  <Label>Live Preview</Label>
+                  <div className="border rounded-lg bg-white p-4 min-h-[400px] max-h-[500px] overflow-y-auto">
+                    <div className="bg-gray-50 p-3 border-b mb-4">
+                      <div className="text-sm text-gray-600 mb-1">Subject:</div>
+                      <div className="font-medium">
+                        {processEmailTemplate(formData.emailTemplate?.subject || 'Your Report', {
+                          report_name: getSelectedContentName(),
+                          date: new Date().toLocaleDateString(),
+                          recipient_name: 'John Doe'
+                        })}
+                      </div>
+                    </div>
+                    
+                    <div 
+                      className="prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{
+                        __html: generateEmailPreviewHTML(
+                          formData.emailTemplate?.customContent || '',
+                          {
+                            report_name: getSelectedContentName(),
+                            date: new Date().toLocaleDateString(),
+                            pdf_download_url: '#download-link',
+                            dashboard_url: '#dashboard-link',
+                            recipient_name: 'John Doe',
+                            company_name: '4Sale Analytics'
+                          }
+                        )
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
