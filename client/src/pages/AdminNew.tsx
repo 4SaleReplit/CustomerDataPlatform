@@ -239,6 +239,20 @@ export default function AdminNew() {
         { key: 'fromName', label: 'From Name', type: 'text', placeholder: 'Your App' }
       ]
     },
+    smtp: {
+      name: 'SMTP Email Server',
+      description: 'Custom SMTP server for sending emails with email and app password authentication',
+      category: 'Communication',
+      color: 'blue',
+      fields: [
+        { key: 'host', label: 'SMTP Host', type: 'text', placeholder: 'smtp.gmail.com', required: true },
+        { key: 'port', label: 'SMTP Port', type: 'text', placeholder: '587', required: true },
+        { key: 'secure', label: 'Use SSL/TLS', type: 'select', options: ['true', 'false'], placeholder: 'true', required: true },
+        { key: 'email', label: 'Email Address', type: 'email', placeholder: 'your-email@gmail.com', required: true },
+        { key: 'password', label: 'App Password', type: 'password', required: true },
+        { key: 'fromName', label: 'From Name', type: 'text', placeholder: 'Your Platform Name' }
+      ]
+    },
     mailchimp: {
       name: 'Mailchimp',
       description: 'Email marketing platform for campaigns and automation',
