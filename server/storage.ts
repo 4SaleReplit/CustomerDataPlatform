@@ -1056,47 +1056,32 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async updateSentEmail(id: string, updates: any): Promise<any | undefined> {
-    const client = await this.getConnection();
-    try {
-      const result = await client.query(`
-        UPDATE sent_emails 
-        SET status = $2, delivery_status = $3, error_message = $4, updated_at = NOW()
-        WHERE id = $1
-        RETURNING *
-      `, [id, updates.status, updates.deliveryStatus, updates.errorMessage]);
-      return result.rows[0] || undefined;
-    } finally {
-      this.releaseConnection(client);
-    }
+  async updateSentEmail(id: string, updates: Partial<SentEmail>): Promise<SentEmail | undefined> {
+    const [result] = await db.update(sentEmails)
+      .set(updates)
+      .where(eq(sentEmails.id, id))
+      .returning();
+    return result || undefined;
   }
 
-  async getSentEmailsByType(emailType: string): Promise<any[]> {
-    const client = await this.getConnection();
-    try {
-      const result = await client.query(`
-        SELECT * FROM sent_emails 
-        WHERE email_type = $1 
-        ORDER BY sent_at DESC
-      `, [emailType]);
-      return result.rows;
-    } finally {
-      this.releaseConnection(client);
-    }
+  async getSentEmailsByType(emailType: string): Promise<SentEmail[]> {
+    const result = await db.select().from(sentEmails)
+      .where(eq(sentEmails.emailType, emailType))
+      .orderBy(desc(sentEmails.createdAt));
+    return result;
   }
 
-  async getSentEmailsByRecipient(email: string): Promise<any[]> {
-    const client = await this.getConnection();
-    try {
-      const result = await client.query(`
-        SELECT * FROM sent_emails 
-        WHERE recipients::text LIKE $1
-        ORDER BY sent_at DESC
-      `, [`%"${email}"%`]);
-      return result.rows;
-    } finally {
-      this.releaseConnection(client);
-    }
+  async getSentEmailsByRecipient(email: string): Promise<SentEmail[]> {
+    // For JSONB field search, we need to use SQL-like patterns
+    const result = await db.select().from(sentEmails)
+      .orderBy(desc(sentEmails.createdAt));
+    // Filter in memory for now - could be optimized with raw SQL if needed
+    return result.filter(sentEmail => {
+      const recipients = Array.isArray(sentEmail.recipients) ? 
+        sentEmail.recipients : 
+        JSON.parse(sentEmail.recipients as string);
+      return recipients.includes(email);
+    });
   }
 }
 

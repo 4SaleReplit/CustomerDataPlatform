@@ -557,7 +557,16 @@ export const sentEmails = pgTable("sent_emails", {
   errorMessage: text("error_message"), // Error details if failed
   deliveredAt: timestamp("delivered_at", { withTimezone: true }),
   sentBy: uuid("sent_by").references(() => team.id, { onDelete: 'set null' }),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  // Additional fields that exist in the database
+  reportName: varchar("report_name", { length: 255 }),
+  emailSubject: varchar("email_subject", { length: 500 }),
+  emailTemplateId: uuid("email_template_id"),
+  emailTemplateName: varchar("email_template_name", { length: 255 }),
+  deliveryStatus: varchar("delivery_status", { length: 50 }),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  emailContent: text("email_content"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
 });
 
 // Mailing Lists Management

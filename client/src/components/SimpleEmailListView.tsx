@@ -11,25 +11,23 @@ import { Calendar, Clock, Mail, MoreVertical, Copy, Edit, Trash2, Play, Pause, C
 
 interface SentEmail {
   id: string;
-  report_name: string;
-  report_id: string | null;
-  email_subject: string;
-  email_type: string;
+  templateId: string | null;
+  presentationId: string | null;
+  scheduledReportId: string | null;
+  subject: string;
   recipients: any;
-  cc_recipients: any;
-  bcc_recipients: any;
-  email_template_id: string | null;
-  email_template_name: string | null;
-  pdf_download_url: string | null;
+  ccRecipients: any;
+  bccRecipients: any;
+  emailType: string;
   status: string;
-  delivery_status: string | null;
-  error_message: string | null;
-  sent_by: string | null;
-  sent_at: string | null;
-  scheduled_report_id: string | null;
-  email_content: string | null;
-  created_at: string;
-  updated_at: string;
+  pdfDownloadUrl: string | null;
+  emailHtml: string | null;
+  emailText: string | null;
+  messageId: string | null;
+  errorMessage: string | null;
+  deliveredAt: string | null;
+  sentBy: string | null;
+  createdAt: string;
 }
 
 interface ScheduledReport {
@@ -95,7 +93,7 @@ export function SimpleEmailListView({
   });
 
   // Use sent emails for one-time mode, reports for scheduled mode
-  const dataToDisplay = mode === 'one-time' ? sentEmails : reports;
+  const dataToDisplay: (SentEmail | ScheduledReport)[] = mode === 'one-time' ? sentEmails : reports;
   
   const filteredReports = dataToDisplay.filter((item: any) => {
     if (mode === 'one-time') {
@@ -105,8 +103,7 @@ export function SimpleEmailListView({
         (typeof sentEmail.recipients === 'string' ? JSON.parse(sentEmail.recipients) : []);
       
       const matchesSearch = searchTerm === "" || 
-        sentEmail.email_subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        sentEmail.report_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        sentEmail.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
         recipientsList.some((r: string) => r.toLowerCase().includes(searchTerm.toLowerCase()));
       
       const matchesStatus = statusFilter === "all" || 
@@ -211,17 +208,16 @@ export function SimpleEmailListView({
               const sentEmail = item as SentEmail;
               const recipientsList = Array.isArray(sentEmail.recipients) ? sentEmail.recipients : 
                 (typeof sentEmail.recipients === 'string' ? JSON.parse(sentEmail.recipients) : []);
-              const ccList = sentEmail.cc_recipients ? JSON.parse(sentEmail.cc_recipients || '[]') : [];
+              const ccList = sentEmail.ccRecipients ? 
+                (Array.isArray(sentEmail.ccRecipients) ? sentEmail.ccRecipients : JSON.parse(sentEmail.ccRecipients || '[]')) : [];
               
               return (
                 <Card key={sentEmail.id}>
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
-                        <CardTitle className="text-lg">{sentEmail.email_subject}</CardTitle>
+                        <CardTitle className="text-lg">{sentEmail.subject}</CardTitle>
                         <CardDescription>
-                          Report: {sentEmail.report_name}
-                          <br />
                           To: {recipientsList.join(', ')}
                           {ccList.length > 0 && (
                             <span> • CC: {ccList.join(', ')}</span>
@@ -230,21 +226,21 @@ export function SimpleEmailListView({
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Mail className="h-4 w-4" />
                           <span>{recipientsList.length} recipient(s)</span>
-                          {sentEmail.sent_at && (
+                          {sentEmail.createdAt && (
                             <>
                               <Clock className="h-4 w-4 ml-2" />
-                              <span>{formatDateTime(sentEmail.sent_at)}</span>
+                              <span>{formatDateTime(sentEmail.createdAt)}</span>
                             </>
                           )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         {getStatusBadge(sentEmail)}
-                        {sentEmail.pdf_download_url && (
+                        {sentEmail.pdfDownloadUrl && (
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => window.open(sentEmail.pdf_download_url!, '_blank')}
+                            onClick={() => window.open(sentEmail.pdfDownloadUrl!, '_blank')}
                           >
                             <Download className="h-4 w-4 mr-2" />
                             PDF
