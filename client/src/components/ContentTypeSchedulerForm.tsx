@@ -19,6 +19,17 @@ interface Template {
   lastRefreshed?: string;
 }
 
+interface EmailTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  subject: string;
+  bodyHtml: string;
+  bodyText?: string;
+  templateType: string;
+  availablePlaceholders?: string[];
+}
+
 interface Presentation {
   id: string;
   title: string;
@@ -33,6 +44,7 @@ interface ContentTypeSchedulerFormProps {
   onFormDataChange: (data: any) => void;
   presentations: Presentation[];
   templates: Template[];
+  emailTemplates?: EmailTemplate[];
   isLoading?: boolean;
   mode: 'create' | 'edit';
   title: string;
@@ -46,6 +58,7 @@ export function ContentTypeSchedulerForm({
   onFormDataChange,
   presentations = [],
   templates = [],
+  emailTemplates = [],
   isLoading = false,
   mode,
   title
@@ -118,6 +131,23 @@ export function ContentTypeSchedulerForm({
     }
     
     return `<div class="space-y-3">${processedContent}</div>`;
+  };
+
+  // Helper function to generate email template preview with HTML template
+  const generateTemplateEmailPreview = (emailTemplate: EmailTemplate | null, variables: Record<string, string>) => {
+    if (!emailTemplate) {
+      return generateEmailPreviewHTML('', variables);
+    }
+
+    let processedHtml = processEmailTemplate(emailTemplate.bodyHtml, variables);
+    
+    // Apply variable substitution to the HTML template
+    Object.entries(variables).forEach(([key, value]) => {
+      const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g');
+      processedHtml = processedHtml.replace(regex, value);
+    });
+
+    return processedHtml;
   };
 
   // Initialize form data
@@ -468,6 +498,48 @@ export function ContentTypeSchedulerForm({
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Email Template Editor */}
                 <div className="space-y-4">
+                  {/* Email Template Selector */}
+                  <div className="space-y-2">
+                    <Label>Email Template</Label>
+                    <Select
+                      value={formData.emailTemplate?.templateId || ''}
+                      onValueChange={(value) => {
+                        const selectedTemplate = emailTemplates.find(t => t.id === value);
+                        onFormDataChange({
+                          ...formData,
+                          emailTemplate: {
+                            ...formData.emailTemplate,
+                            templateId: value,
+                            subject: selectedTemplate?.subject || formData.emailTemplate?.subject || '',
+                            customContent: selectedTemplate?.bodyHtml || formData.emailTemplate?.customContent || ''
+                          }
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose an email template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">
+                          <div className="flex flex-col items-start">
+                            <div className="font-medium">Custom Template</div>
+                            <div className="text-xs text-muted-foreground">Create your own email content</div>
+                          </div>
+                        </SelectItem>
+                        {emailTemplates.map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            <div className="flex flex-col items-start">
+                              <div className="font-medium">{template.name}</div>
+                              {template.description && (
+                                <div className="text-xs text-muted-foreground">{template.description}</div>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="subject">Email Subject</Label>
                     <Input
@@ -534,17 +606,26 @@ export function ContentTypeSchedulerForm({
                     <div 
                       className="prose prose-sm max-w-none"
                       dangerouslySetInnerHTML={{
-                        __html: generateEmailPreviewHTML(
-                          formData.emailTemplate?.customContent || '',
-                          {
+                        __html: (() => {
+                          const selectedTemplate = emailTemplates.find(t => t.id === formData.emailTemplate?.templateId);
+                          const variables = {
                             report_name: getSelectedContentName(),
                             date: new Date().toLocaleDateString(),
                             pdf_download_url: '#download-link',
                             dashboard_url: '#dashboard-link',
                             recipient_name: 'John Doe',
                             company_name: '4Sale Analytics'
+                          };
+
+                          if (selectedTemplate) {
+                            return generateTemplateEmailPreview(selectedTemplate, variables);
+                          } else {
+                            return generateEmailPreviewHTML(
+                              formData.emailTemplate?.customContent || '',
+                              variables
+                            );
                           }
-                        )
+                        })()
                       }}
                     />
                   </div>

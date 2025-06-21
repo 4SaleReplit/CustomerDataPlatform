@@ -22,7 +22,9 @@ function createPool(connectionString: string): Pool {
     max: 10,
     min: 2,
     idleTimeoutMillis: 60000,
-    connectionTimeoutMillis: 10000,
+    connectionTimeoutMillis: 60000,
+    query_timeout: 60000,
+    statement_timeout: 60000,
     ssl: connectionString.includes('localhost') ? false : {
       rejectUnauthorized: false
     }
