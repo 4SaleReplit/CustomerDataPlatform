@@ -115,6 +115,8 @@ export default function AdminNew() {
   const [editingEndpoint, setEditingEndpoint] = useState<any>(null);
   const [endpointFormData, setEndpointFormData] = useState<any>({});
   const [testingEndpoints, setTestingEndpoints] = useState<string[]>([]);
+  const [expandedEndpoints, setExpandedEndpoints] = useState<string[]>([]);
+  const [endpointTestResults, setEndpointTestResults] = useState<Map<string, any>>(new Map());
 
   // Comprehensive integration templates organized by category
   const integrationTemplates: Record<string, any> = {
@@ -1178,6 +1180,10 @@ export default function AdminNew() {
     onSuccess: (data: any, endpointId: string) => {
       queryClient.invalidateQueries({ queryKey: ['/api/endpoints'] });
       setTestingEndpoints(prev => prev.filter(id => id !== endpointId));
+      
+      // Store detailed test results for expandable view
+      setEndpointTestResults(prev => new Map(prev.set(endpointId, data)));
+      
       toast({
         title: "Endpoint Test Complete",
         description: `Status: ${data.status} - Response time: ${data.responseTime}ms`
@@ -1196,6 +1202,14 @@ export default function AdminNew() {
   const handleTestEndpoint = async (endpointId: string) => {
     setTestingEndpoints(prev => [...prev, endpointId]);
     testEndpointMutation.mutate(endpointId);
+  };
+
+  const toggleEndpointExpansion = (endpointId: string) => {
+    setExpandedEndpoints(prev => 
+      prev.includes(endpointId) 
+        ? prev.filter(id => id !== endpointId)
+        : [...prev, endpointId]
+    );
   };
 
   const handleAddEndpoint = () => {

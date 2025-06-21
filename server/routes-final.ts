@@ -34,7 +34,7 @@ async function testEndpointHealth(endpoint: any): Promise<{ status: number; resp
   
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second max timeout
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
     
     const response = await fetch(endpoint.url, {
       method: endpoint.method || 'GET',
@@ -44,6 +44,152 @@ async function testEndpointHealth(endpoint: any): Promise<{ status: number; resp
         'Accept': 'application/json, text/plain, */*',
         'Cache-Control': 'no-cache'
       }
+    });
+    
+    clearTimeout(timeoutId);
+    const responseTime = Date.now() - startTime;
+
+    return {
+      status: response.status,
+      responseTime,
+      error: response.ok ? undefined : `HTTP ${response.status}: ${response.statusText}`
+    };
+  } catch (error) {
+    const responseTime = Date.now() - startTime;
+    return {
+      status: 0,
+      responseTime,
+      error: error instanceof Error ? error.message : 'Network error'
+    };
+  }
+}
+
+// Complete the detailed testing function
+async function testEndpointHealthDetailed(endpoint: any): Promise<{ 
+  status: number; 
+  responseTime: number; 
+  error?: string;
+  requestDetails: any;
+  responseDetails: any;
+}> {
+  const startTime = Date.now();
+  
+  const requestDetails = {
+    url: endpoint.url,
+    method: endpoint.method || 'GET',
+    headers: {
+      'User-Agent': '4Sale CDP Monitor/1.0',
+      'Accept': 'application/json, text/plain, */*',
+      'Cache-Control': 'no-cache'
+    },
+    timestamp: new Date().toISOString()
+  };
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch(endpoint.url, {
+      method: endpoint.method || 'GET',
+      signal: controller.signal,
+      headers: requestDetails.headers
+    });
+    
+    clearTimeout(timeoutId);
+    const responseTime = Date.now() - startTime;
+
+    // Capture response details
+    let responseBody;
+    let responseHeaders = {};
+    
+    try {
+      response.headers.forEach((value, key) => {
+        responseHeaders[key] = value;
+      });
+      
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const text = await response.text();
+        responseBody = text.length > 5000 ? text.substring(0, 5000) + '...' : text;
+        try {
+          responseBody = JSON.parse(responseBody);
+        } catch {
+          // Keep as text if not valid JSON
+        }
+      } else if (contentType.includes('text/')) {
+        responseBody = await response.text();
+        if (responseBody.length > 1000) {
+          responseBody = responseBody.substring(0, 1000) + '...';
+        }
+      } else {
+        responseBody = `[${contentType || 'binary data'}] - ${response.headers.get('content-length') || 'unknown'} bytes`;
+      }
+    } catch (error) {
+      responseBody = 'Failed to read response body';
+    }
+
+    const responseDetails = {
+      status: response.status,
+      statusText: response.statusText,
+      headers: responseHeaders,
+      body: responseBody,
+      timestamp: new Date().toISOString()
+    };
+
+    return {
+      status: response.status,
+      responseTime,
+      error: response.ok ? undefined : `HTTP ${response.status}: ${response.statusText}`,
+      requestDetails,
+      responseDetails
+    };
+  } catch (error) {
+    const responseTime = Date.now() - startTime;
+    return {
+      status: 0,
+      responseTime,
+      error: error instanceof Error ? error.message : 'Network error',
+      requestDetails,
+      responseDetails: {
+        status: 0,
+        statusText: 'Connection Failed',
+        headers: {},
+        body: error instanceof Error ? error.message : 'Network error',
+        timestamp: new Date().toISOString()
+      }
+    };
+  }
+}
+
+// Detailed endpoint testing with request/response capture
+async function testEndpointHealthDetailed(endpoint: any): Promise<{ 
+  status: number; 
+  responseTime: number; 
+  error?: string;
+  requestDetails: any;
+  responseDetails: any;
+}> {
+  const startTime = Date.now();
+  
+  const requestDetails = {
+    url: endpoint.url,
+    method: endpoint.method || 'GET',
+    headers: {
+      'User-Agent': '4Sale CDP Monitor/1.0',
+      'Accept': 'application/json, text/plain, */*',
+      'Cache-Control': 'no-cache'
+    },
+    timestamp: new Date().toISOString()
+  };
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch(endpoint.url, {
+      method: endpoint.method || 'GET',
+      signal: controller.signal,
+      headers: requestDetails.headers
     });
     
     clearTimeout(timeoutId);
@@ -4887,15 +5033,18 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
 
   app.post("/api/endpoints/:id/test", async (req: Request, res: Response) => {
     try {
-      const endpoint = await storage.getMonitoredEndpoint(req.params.id);
+      // Use in-memory endpoint data to avoid database timeout
+      const endpoints = await storage.getMonitoredEndpoints();
+      const endpoint = endpoints.find(ep => ep.id === req.params.id);
+      
       if (!endpoint) {
         return res.status(404).json({ error: "Endpoint not found" });
       }
 
-      // Fast endpoint test without database updates during testing
-      const result = await testEndpointHealth(endpoint);
+      // Fast endpoint test with detailed response capture
+      const result = await testEndpointHealthDetailed(endpoint);
       
-      // Return result immediately for fast testing
+      // Return comprehensive result immediately
       res.json({
         ...result,
         endpoint: endpoint.name,
