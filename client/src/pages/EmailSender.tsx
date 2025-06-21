@@ -78,7 +78,9 @@ export function EmailSender() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
+    contentType: 'report' as 'template' | 'report',
     presentationId: "",
+    templateId: "",
     cronExpression: "",
     timezone: "Africa/Cairo",
     recipientList: [] as string[],
@@ -115,6 +117,11 @@ export function EmailSender() {
   const { data: mailingLists, isLoading: mailingListsLoading } = useQuery({
     queryKey: ['/api/mailing-lists'],
     queryFn: () => apiRequest('/api/mailing-lists')
+  });
+
+  const { data: templates, isLoading: templatesLoading } = useQuery({
+    queryKey: ['/api/templates'],
+    queryFn: () => apiRequest('/api/templates')
   });
 
   // Mutations
@@ -184,7 +191,9 @@ export function EmailSender() {
     setFormData({
       name: "",
       description: "",
+      contentType: 'report',
       presentationId: "",
+      templateId: "",
       cronExpression: "",
       timezone: "Africa/Cairo",
       recipientList: [],
@@ -206,12 +215,33 @@ export function EmailSender() {
     setCustomVariables([]);
   };
 
-  const handleCreateReport = (data: any) => {
+  const handleCreateReport = async (data: any) => {
+    // Handle template refresh before sending if content type is template
+    if (data.contentType === 'template' && data.templateId) {
+      try {
+        // Refresh template data before sending
+        await apiRequest(`/api/templates/${data.templateId}/refresh`, { method: 'POST' });
+        toast({
+          title: "Template refreshed",
+          description: "Template data has been refreshed before sending.",
+        });
+      } catch (error) {
+        console.error('Failed to refresh template:', error);
+        toast({
+          title: "Warning",
+          description: "Failed to refresh template, continuing with existing data.",
+          variant: "destructive",
+        });
+      }
+    }
+
     // Clean the data to ensure it's JSON serializable
     const sanitizedData = {
       name: data.name || '',
       description: data.description || '',
+      contentType: data.contentType || 'report',
       presentationId: data.presentationId || '',
+      templateId: data.templateId || '',
       cronExpression: data.cronExpression || '',
       timezone: data.timezone || 'Africa/Cairo',
       recipientList: Array.isArray(data.recipientList) ? data.recipientList : [],
@@ -268,7 +298,9 @@ export function EmailSender() {
     setFormData({
       name: duplicatedData.name,
       description: duplicatedData.description,
+      contentType: 'report',
       presentationId: duplicatedData.presentationId,
+      templateId: "",
       cronExpression: duplicatedData.cronExpression || "",
       timezone: duplicatedData.timezone,
       recipientList: duplicatedData.recipientList,
