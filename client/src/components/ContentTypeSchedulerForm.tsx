@@ -560,7 +560,13 @@ export function ContentTypeSchedulerForm({
                     <Label htmlFor="content">Email Body</Label>
                     <Textarea
                       id="content"
-                      value={formData.emailTemplate?.customContent || ''}
+                      value={(() => {
+                        const selectedTemplate = emailTemplates.find(t => t.id === formData.emailTemplate?.templateId);
+                        if (selectedTemplate && formData.emailTemplate?.templateId !== 'custom') {
+                          return selectedTemplate.bodyText || selectedTemplate.bodyHtml?.replace(/<[^>]*>/g, '') || '';
+                        }
+                        return formData.emailTemplate?.customContent || '';
+                      })()}
                       onChange={(e) => onFormDataChange({
                         ...formData,
                         emailTemplate: {
@@ -568,10 +574,16 @@ export function ContentTypeSchedulerForm({
                           customContent: e.target.value
                         }
                       })}
-                      placeholder="Enter your email message. Use variables like {report_name}, {recipient_name}, etc. in your text..."
-                      rows={6}
+                      placeholder="Enter your email message as plain text. Variables will be replaced automatically in the preview."
+                      rows={8}
                       className="text-sm"
+                      readOnly={formData.emailTemplate?.templateId && formData.emailTemplate?.templateId !== 'custom'}
                     />
+                    {formData.emailTemplate?.templateId && formData.emailTemplate?.templateId !== 'custom' && (
+                      <p className="text-xs text-muted-foreground">
+                        This is the template's default text. Switch to "Custom Template" to edit the email body.
+                      </p>
+                    )}
                   </div>
 
                   {/* Editable Template Variables */}
@@ -579,31 +591,80 @@ export function ContentTypeSchedulerForm({
                     <Label className="text-sm font-medium">Template Variables</Label>
                     <div className="space-y-3 p-4 bg-muted rounded-lg">
                       {(() => {
-                        const selectedTemplate = emailTemplates.find(t => t.id === formData.emailTemplate?.templateId);
-                        const availableVariables = selectedTemplate?.availablePlaceholders || [
+                        const currentTemplateVar = emailTemplates.find(t => t.id === formData.emailTemplate?.templateId);
+                        const availableVariables = currentTemplateVar?.availablePlaceholders || [
                           'report_name', 'recipient_name', 'date', 'pdf_download_url', 'dashboard_url', 'company_name'
                         ];
                         
-                        return availableVariables.map((variable) => (
-                          <div key={variable} className="grid grid-cols-3 gap-3 items-center">
-                            <Label className="text-xs font-medium">{`{${variable}}`}</Label>
-                            <Input
-                              placeholder="Enter value or SQL query"
-                              value={formData.emailTemplate?.templateVariables?.[variable] || ''}
-                              onChange={(e) => onFormDataChange({
-                                ...formData,
-                                emailTemplate: {
-                                  ...formData.emailTemplate,
-                                  templateVariables: {
-                                    ...formData.emailTemplate?.templateVariables,
-                                    [variable]: e.target.value
+                        return availableVariables.map((variable) => {
+                          const getPlaceholder = (varName: string) => {
+                            switch (varName) {
+                              case 'report_name':
+                              case 'report_title':
+                                return 'Analytics Dashboard Report';
+                              case 'recipient_name':
+                                return 'John Doe';
+                              case 'company_name':
+                                return '4Sale Analytics';
+                              case 'date':
+                              case 'generation_date':
+                              case 'report_period':
+                              case 'dashboard_period':
+                                return new Date().toLocaleDateString();
+                              case 'generation_time':
+                              case 'alert_time':
+                                return new Date().toLocaleTimeString();
+                              case 'email_content':
+                              case 'dashboard_content':
+                                return 'Your report is ready for review with key insights and metrics.';
+                              case 'alert_title':
+                                return 'System Alert';
+                              case 'alert_message':
+                                return 'Important notification from your dashboard';
+                              case 'dashboard_name':
+                                return 'Analytics Dashboard';
+                              case 'metric_1_value':
+                                return '1,234';
+                              case 'metric_1_label':
+                                return 'Total Users';
+                              case 'metric_2_value':
+                                return '567';
+                              case 'metric_2_label':
+                                return 'Active Sessions';
+                              case 'metric_3_value':
+                                return '89%';
+                              case 'metric_3_label':
+                                return 'Success Rate';
+                              case 'pdf_download_url':
+                                return 'https://dashboard.4sale.tech/reports/download';
+                              case 'dashboard_url':
+                                return 'https://dashboard.4sale.tech';
+                              default:
+                                return 'Enter value or SQL query';
+                            }
+                          };
+
+                          return (
+                            <div key={variable} className="grid grid-cols-3 gap-3 items-center">
+                              <Label className="text-xs font-medium">{`{${variable}}`}</Label>
+                              <Input
+                                placeholder={getPlaceholder(variable)}
+                                value={formData.emailTemplate?.templateVariables?.[variable] || ''}
+                                onChange={(e) => onFormDataChange({
+                                  ...formData,
+                                  emailTemplate: {
+                                    ...formData.emailTemplate,
+                                    templateVariables: {
+                                      ...formData.emailTemplate?.templateVariables,
+                                      [variable]: e.target.value
+                                    }
                                   }
-                                }
-                              })}
-                              className="text-xs col-span-2"
-                            />
-                          </div>
-                        ));
+                                })}
+                                className="text-xs col-span-2"
+                              />
+                            </div>
+                          );
+                        });
                       })()}
                     </div>
                   </div>
@@ -644,45 +705,76 @@ export function ContentTypeSchedulerForm({
                         className="w-full min-h-[400px] border-0"
                         style={{ backgroundColor: 'white' }}
                         srcDoc={(() => {
-                          const selectedTemplate = emailTemplates.find(t => t.id === formData.emailTemplate?.templateId);
+                          const currentTemplate = emailTemplates.find(t => t.id === formData.emailTemplate?.templateId);
                           
-                          // Use user-defined variables with fallbacks
+                          // Use user-defined variables with meaningful fallbacks
                           const userVariables = formData.emailTemplate?.templateVariables || {};
-                          const defaultVariables = {
-                            report_name: getSelectedContentName(),
-                            date: new Date().toLocaleDateString(),
-                            pdf_download_url: '#download-link',
-                            dashboard_url: '#dashboard-link',
-                            recipient_name: 'John Doe',
-                            company_name: '4Sale Analytics',
-                            report_title: getSelectedContentName(),
-                            report_period: new Date().toLocaleDateString(),
-                            email_content: 'Your automated report is ready for review.',
-                            generation_date: new Date().toLocaleDateString(),
-                            generation_time: new Date().toLocaleTimeString(),
-                            alert_title: 'System Alert',
-                            alert_message: 'Important notification from your dashboard',
-                            alert_time: new Date().toLocaleTimeString(),
-                            dashboard_name: 'Analytics Dashboard',
-                            dashboard_period: new Date().toLocaleDateString(),
-                            dashboard_content: 'Key metrics and insights from your data.',
-                            metric_1_value: '1,234',
-                            metric_1_label: 'Total Users',
-                            metric_2_value: '567',
-                            metric_2_label: 'Active Sessions',
-                            metric_3_value: '89%',
-                            metric_3_label: 'Success Rate'
+                          const getDefaultValue = (varName: string) => {
+                            switch (varName) {
+                              case 'report_name':
+                              case 'report_title':
+                                return 'Analytics Dashboard Report';
+                              case 'recipient_name':
+                                return 'John Doe';
+                              case 'company_name':
+                                return '4Sale Analytics';
+                              case 'date':
+                              case 'generation_date':
+                              case 'report_period':
+                              case 'dashboard_period':
+                                return new Date().toLocaleDateString();
+                              case 'generation_time':
+                              case 'alert_time':
+                                return new Date().toLocaleTimeString();
+                              case 'email_content':
+                              case 'dashboard_content':
+                                return 'Your report is ready for review with key insights and metrics.';
+                              case 'alert_title':
+                                return 'System Alert';
+                              case 'alert_message':
+                                return 'Important notification from your dashboard';
+                              case 'dashboard_name':
+                                return 'Analytics Dashboard';
+                              case 'metric_1_value':
+                                return '1,234';
+                              case 'metric_1_label':
+                                return 'Total Users';
+                              case 'metric_2_value':
+                                return '567';
+                              case 'metric_2_label':
+                                return 'Active Sessions';
+                              case 'metric_3_value':
+                                return '89%';
+                              case 'metric_3_label':
+                                return 'Success Rate';
+                              case 'pdf_download_url':
+                                return 'https://dashboard.4sale.tech/reports/download';
+                              case 'dashboard_url':
+                                return 'https://dashboard.4sale.tech';
+                              default:
+                                return varName;
+                            }
                           };
 
-                          // Merge user variables with defaults
-                          const variables = { ...defaultVariables, ...userVariables };
+                          // Create variables object with user values or meaningful defaults
+                          const variables: Record<string, string> = {};
+                          const availableVariables = currentTemplate?.availablePlaceholders || [
+                            'report_name', 'recipient_name', 'date', 'pdf_download_url', 'dashboard_url', 'company_name'
+                          ];
 
-                          if (selectedTemplate) {
-                            return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="margin: 0; padding: 20px; font-family: Arial, sans-serif;">${processEmailTemplate(selectedTemplate.bodyHtml || '', variables)}</body></html>`;
+                          availableVariables.forEach(varName => {
+                            variables[varName] = userVariables[varName] || getDefaultValue(varName);
+                          });
+
+                          if (currentTemplate) {
+                            // Use template HTML but replace variables with actual values (no tags)
+                            const processedHtml = processEmailTemplate(currentTemplate.bodyHtml || '', variables);
+                            return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="margin: 0; padding: 20px; font-family: Arial, sans-serif;">${processedHtml}</body></html>`;
                           } else {
-                            const customContent = formData.emailTemplate?.customContent || 'Please select an email template or enter your email message.';
+                            // For custom content, create a simple styled email
+                            const customContent = formData.emailTemplate?.customContent || 'Please enter your email message.';
                             const processedContent = processEmailTemplate(customContent, variables);
-                            return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="margin: 20px; padding: 20px; font-family: Arial, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"><div style="background: #667eea; color: white; padding: 20px; text-align: center;"><h1 style="margin: 0; font-size: 24px;">${variables.report_title || getSelectedContentName()}</h1></div><div style="padding: 30px;"><div style="white-space: pre-wrap;">${processedContent.replace(/\n/g, '<br>')}</div></div><div style="background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px;"><p style="margin: 0;">Best regards,<br>${variables.company_name || '4Sale Analytics'} Team</p></div></div></body></html>`;
+                            return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="margin: 20px; padding: 20px; font-family: Arial, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"><div style="background: #667eea; color: white; padding: 20px; text-align: center;"><h1 style="margin: 0; font-size: 24px;">${variables.report_title || variables.report_name || 'Your Report'}</h1></div><div style="padding: 30px;"><div style="white-space: pre-wrap; line-height: 1.6;">${processedContent.replace(/\n/g, '<br>')}</div></div><div style="background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px;"><p style="margin: 0;">Best regards,<br>${variables.company_name || '4Sale Analytics'} Team</p></div></div></body></html>`;
                           }
                         })()}
                         title="Email Preview"
