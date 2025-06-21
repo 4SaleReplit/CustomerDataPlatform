@@ -109,6 +109,13 @@ export default function AdminNew() {
   const [integrationSearchTerm, setIntegrationSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
+  // Endpoint monitoring state
+  const [showAddEndpointModal, setShowAddEndpointModal] = useState(false);
+  const [showEditEndpointModal, setShowEditEndpointModal] = useState(false);
+  const [editingEndpoint, setEditingEndpoint] = useState<any>(null);
+  const [endpointFormData, setEndpointFormData] = useState<any>({});
+  const [testingEndpoints, setTestingEndpoints] = useState<string[]>([]);
+
   // Comprehensive integration templates organized by category
   const integrationTemplates: Record<string, any> = {
     // Database Integrations
@@ -529,6 +536,14 @@ export default function AdminNew() {
   const { data: migrationHistory = [], isLoading: isLoadingMigrations } = useQuery({
     queryKey: ['/api/migration-history'],
     queryFn: () => apiRequest('/api/migration-history'),
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: false
+  });
+
+  // Fetch monitored endpoints
+  const { data: monitoredEndpoints = [], isLoading: endpointsLoading } = useQuery({
+    queryKey: ['/api/endpoints'],
+    queryFn: () => apiRequest('/api/endpoints'),
     staleTime: 30 * 1000,
     refetchOnWindowFocus: false
   });
@@ -1011,6 +1026,89 @@ export default function AdminNew() {
     return ['All', ...Array.from(categories).sort()];
   };
 
+  // Endpoint monitoring mutations
+  const createEndpointMutation = useMutation({
+    mutationFn: (data: any) => apiRequest('/api/endpoints', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { 'Content-Type': 'application/json' }
+    }),
+    onSuccess: () => {
+      toast({
+        title: "Endpoint Added",
+        description: "Endpoint monitoring has been configured"
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/endpoints'] });
+      setShowAddEndpointModal(false);
+      setEndpointFormData({});
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Add Endpoint",
+        description: error.message || "Failed to configure endpoint monitoring",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const testEndpointMutation = useMutation({
+    mutationFn: (endpointId: string) => apiRequest(`/api/endpoints/${endpointId}/test`, {
+      method: 'POST'
+    }),
+    onSuccess: (data: any, endpointId: string) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/endpoints'] });
+      setTestingEndpoints(prev => prev.filter(id => id !== endpointId));
+      toast({
+        title: "Endpoint Test Complete",
+        description: `Status: ${data.status} - Response time: ${data.responseTime}ms`
+      });
+    },
+    onError: (error: any, endpointId: string) => {
+      setTestingEndpoints(prev => prev.filter(id => id !== endpointId));
+      toast({
+        title: "Endpoint Test Failed",
+        description: error.message || "Failed to test endpoint",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleTestEndpoint = async (endpointId: string) => {
+    setTestingEndpoints(prev => [...prev, endpointId]);
+    testEndpointMutation.mutate(endpointId);
+  };
+
+  const handleAddEndpoint = () => {
+    setEndpointFormData({
+      name: '',
+      url: '',
+      method: 'GET',
+      expectedStatus: 200,
+      checkInterval: 300,
+      timeout: 30,
+      alertEmail: true,
+      alertSlack: false,
+      isActive: true
+    });
+    setShowAddEndpointModal(true);
+  };
+
+  const handleSubmitEndpoint = () => {
+    const requiredFields = ['name', 'url'];
+    const missingFields = requiredFields.filter(field => !endpointFormData[field]);
+
+    if (missingFields.length > 0) {
+      toast({
+        title: "Missing Required Fields",
+        description: `Please fill in: ${missingFields.join(', ')}`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    createEndpointMutation.mutate(endpointFormData);
+  };
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 bg-gradient-to-br from-gray-50 to-white min-h-screen">
       <div className="flex items-center justify-between">
@@ -1243,7 +1341,7 @@ export default function AdminNew() {
       </Dialog>
 
       <Tabs defaultValue="team" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="team" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Team Management
@@ -1255,6 +1353,10 @@ export default function AdminNew() {
           <TabsTrigger value="integrations" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
             Integrations
+          </TabsTrigger>
+          <TabsTrigger value="monitoring" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Endpoint Monitoring
           </TabsTrigger>
           <TabsTrigger value="migrations" className="flex items-center gap-2">
             <Target className="h-4 w-4" />
@@ -1532,6 +1634,242 @@ export default function AdminNew() {
                 <Plus className="h-4 w-4 mr-2" />
                 Add Integration
               </Button>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="monitoring" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Endpoint Monitoring</h2>
+              <p className="text-sm text-muted-foreground">Monitor API endpoints, track uptime, and receive alerts when services go down</p>
+            </div>
+            <div className="flex space-x-3">
+              <Button variant="outline" onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/endpoints'] })}>
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Refresh Status
+              </Button>
+              <Button onClick={handleAddEndpoint} className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Endpoint
+              </Button>
+            </div>
+          </div>
+
+          {/* Monitoring Overview Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Total Endpoints</p>
+                    <p className="text-2xl font-bold">{monitoredEndpoints.length}</p>
+                  </div>
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <BarChart3 className="h-5 w-5 text-blue-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Healthy</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {monitoredEndpoints.filter((e: any) => e.lastStatus >= 200 && e.lastStatus < 300).length}
+                    </p>
+                  </div>
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Down</p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {monitoredEndpoints.filter((e: any) => e.lastStatus >= 400 || e.lastStatus === 0).length}
+                    </p>
+                  </div>
+                  <div className="p-2 bg-red-100 rounded-lg">
+                    <XCircle className="h-5 w-5 text-red-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Avg Response</p>
+                    <p className="text-2xl font-bold">
+                      {monitoredEndpoints.length > 0 
+                        ? Math.round(monitoredEndpoints.reduce((acc: number, e: any) => acc + (e.lastResponseTime || 0), 0) / monitoredEndpoints.length)
+                        : 0}ms
+                    </p>
+                  </div>
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <Clock className="h-5 w-5 text-orange-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Endpoints List */}
+          {endpointsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              <span className="ml-2 text-gray-500">Loading endpoints...</span>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {monitoredEndpoints.map((endpoint: any) => (
+                <Card key={endpoint.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="flex-shrink-0">
+                          {endpoint.lastStatus >= 200 && endpoint.lastStatus < 300 ? (
+                            <div className="p-2 bg-green-100 rounded-lg">
+                              <CheckCircle className="h-5 w-5 text-green-600" />
+                            </div>
+                          ) : endpoint.lastStatus >= 400 || endpoint.lastStatus === 0 ? (
+                            <div className="p-2 bg-red-100 rounded-lg">
+                              <XCircle className="h-5 w-5 text-red-600" />
+                            </div>
+                          ) : (
+                            <div className="p-2 bg-yellow-100 rounded-lg">
+                              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-lg font-medium text-gray-900">{endpoint.name}</h3>
+                          <p className="text-sm text-gray-500 truncate">{endpoint.url}</p>
+                          <div className="flex items-center space-x-4 mt-2">
+                            <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                              {endpoint.method}
+                            </span>
+                            {endpoint.lastStatus && (
+                              <Badge 
+                                className={`${
+                                  endpoint.lastStatus >= 200 && endpoint.lastStatus < 300 
+                                    ? 'bg-green-100 text-green-800 border-green-200' 
+                                    : endpoint.lastStatus >= 400 
+                                    ? 'bg-red-100 text-red-800 border-red-200'
+                                    : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                }`}
+                              >
+                                {endpoint.lastStatus}
+                              </Badge>
+                            )}
+                            {endpoint.lastResponseTime && (
+                              <span className="text-xs text-gray-500">
+                                {endpoint.lastResponseTime}ms
+                              </span>
+                            )}
+                            {endpoint.lastCheckedAt && (
+                              <span className="text-xs text-gray-500">
+                                Last checked: {new Date(endpoint.lastCheckedAt).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Switch 
+                          checked={endpoint.isActive}
+                          // onCheckedChange={(checked) => handleToggleEndpoint(endpoint.id, checked)}
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleTestEndpoint(endpoint.id)}
+                          disabled={testingEndpoints.includes(endpoint.id)}
+                        >
+                          {testingEndpoints.includes(endpoint.id) ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                              Testing...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Test Now
+                            </>
+                          )}
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => {
+                              setEditingEndpoint(endpoint);
+                              setShowEditEndpointModal(true);
+                            }}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View History
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-red-600">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+
+                    {/* Alert Configuration Display */}
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <div className="flex items-center space-x-4 text-sm text-gray-500">
+                        <span>Check every {endpoint.checkInterval}s</span>
+                        <span>Timeout: {endpoint.timeout}s</span>
+                        {endpoint.alertEmail && (
+                          <span className="flex items-center">
+                            <Mail className="h-3 w-3 mr-1" />
+                            Email alerts
+                          </span>
+                        )}
+                        {endpoint.alertSlack && (
+                          <span className="flex items-center">
+                            <MessageSquare className="h-3 w-3 mr-1" />
+                            Slack alerts
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {monitoredEndpoints.length === 0 && (
+                <div className="text-center py-12">
+                  <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No endpoints configured</h3>
+                  <p className="text-gray-500 mb-4">Add your first endpoint to start monitoring your API health.</p>
+                  <Button onClick={handleAddEndpoint}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Endpoint
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </TabsContent>
@@ -2450,6 +2788,183 @@ export default function AdminNew() {
               </div>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Endpoint Modal */}
+      <Dialog open={showAddEndpointModal} onOpenChange={setShowAddEndpointModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add Endpoint Monitor</DialogTitle>
+            <DialogDescription>
+              Configure a new endpoint to monitor for uptime and performance
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Basic Configuration */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-gray-900">Basic Configuration</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Monitor Name *
+                  </label>
+                  <Input
+                    value={endpointFormData.name || ''}
+                    onChange={(e) => setEndpointFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g., User API, Payment Gateway"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    HTTP Method
+                  </label>
+                  <Select 
+                    value={endpointFormData.method || 'GET'} 
+                    onValueChange={(value) => setEndpointFormData(prev => ({ ...prev, method: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="GET">GET</SelectItem>
+                      <SelectItem value="POST">POST</SelectItem>
+                      <SelectItem value="PUT">PUT</SelectItem>
+                      <SelectItem value="DELETE">DELETE</SelectItem>
+                      <SelectItem value="PATCH">PATCH</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Endpoint URL *
+                </label>
+                <Input
+                  value={endpointFormData.url || ''}
+                  onChange={(e) => setEndpointFormData(prev => ({ ...prev, url: e.target.value }))}
+                  placeholder="https://api.example.com/health"
+                />
+              </div>
+            </div>
+
+            {/* Monitoring Configuration */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-gray-900">Monitoring Settings</h3>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Expected Status Code
+                  </label>
+                  <Input
+                    type="number"
+                    value={endpointFormData.expectedStatus || 200}
+                    onChange={(e) => setEndpointFormData(prev => ({ ...prev, expectedStatus: parseInt(e.target.value) }))}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Check Interval (seconds)
+                  </label>
+                  <Select 
+                    value={String(endpointFormData.checkInterval || 300)} 
+                    onValueChange={(value) => setEndpointFormData(prev => ({ ...prev, checkInterval: parseInt(value) }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="60">1 minute</SelectItem>
+                      <SelectItem value="300">5 minutes</SelectItem>
+                      <SelectItem value="600">10 minutes</SelectItem>
+                      <SelectItem value="1800">30 minutes</SelectItem>
+                      <SelectItem value="3600">1 hour</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Timeout (seconds)
+                  </label>
+                  <Input
+                    type="number"
+                    value={endpointFormData.timeout || 30}
+                    onChange={(e) => setEndpointFormData(prev => ({ ...prev, timeout: parseInt(e.target.value) }))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Alert Configuration */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-gray-900">Alert Settings</h3>
+              
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <Switch
+                    checked={endpointFormData.alertEmail || false}
+                    onCheckedChange={(checked) => setEndpointFormData(prev => ({ ...prev, alertEmail: checked }))}
+                  />
+                  <div>
+                    <div className="text-sm font-medium">Email Alerts</div>
+                    <div className="text-xs text-gray-500">Send email notifications when endpoint goes down</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <Switch
+                    checked={endpointFormData.alertSlack || false}
+                    onCheckedChange={(checked) => setEndpointFormData(prev => ({ ...prev, alertSlack: checked }))}
+                  />
+                  <div>
+                    <div className="text-sm font-medium">Slack Alerts</div>
+                    <div className="text-xs text-gray-500">Send Slack messages when endpoint goes down</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <Switch
+                    checked={endpointFormData.isActive !== false}
+                    onCheckedChange={(checked) => setEndpointFormData(prev => ({ ...prev, isActive: checked }))}
+                  />
+                  <div>
+                    <div className="text-sm font-medium">Enable Monitoring</div>
+                    <div className="text-xs text-gray-500">Start monitoring this endpoint immediately</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddEndpointModal(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmitEndpoint}
+              disabled={createEndpointMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {createEndpointMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Endpoint
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
