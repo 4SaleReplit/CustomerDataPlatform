@@ -96,7 +96,7 @@ export const pool = new Proxy({} as Pool, {
 });
 
 // Handle pool errors gracefully with reconnection
-pool.on('error', (err) => {
+currentPool.on('error', (err) => {
   console.error('Database pool error:', err);
   // Pool will automatically attempt to reconnect
 });

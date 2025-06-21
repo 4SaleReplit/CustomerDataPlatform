@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Eye, Edit, Trash2, UserPlus, Shield, Key, Copy, MoreHorizontal, Mail, Send, Crown, Users, Settings, Lock, Database, Server, Cloud, Target, CheckCircle, XCircle, Clock, AlertTriangle, Loader2, BarChart3, MessageSquare, Save } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, UserPlus, Shield, Key, Copy, MoreHorizontal, Mail, Send, Crown, Users, Settings, Lock, Database, Server, Cloud, Target, CheckCircle, XCircle, Clock, AlertTriangle, Loader2, BarChart3, MessageSquare, Save, ChevronDown, ChevronUp, Activity } from 'lucide-react';
 import { SimpleMigrationModal } from '@/components/migration/SimpleMigrationModal';
 import { ConsoleLogModal } from '@/components/migration/ConsoleLogModal';
 import { Button } from '@/components/ui/button';
@@ -1918,144 +1918,292 @@ export default function AdminNew() {
             </div>
           ) : (
             <div className="grid gap-4">
-              {monitoredEndpoints.map((endpoint: any) => (
-                <Card key={endpoint.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="flex-shrink-0">
-                          {endpoint.lastStatus >= 200 && endpoint.lastStatus < 300 ? (
-                            <div className="p-2 bg-green-100 rounded-lg">
-                              <CheckCircle className="h-5 w-5 text-green-600" />
-                            </div>
-                          ) : endpoint.lastStatus >= 400 || endpoint.lastStatus === 0 ? (
-                            <div className="p-2 bg-red-100 rounded-lg">
-                              <XCircle className="h-5 w-5 text-red-600" />
-                            </div>
-                          ) : (
-                            <div className="p-2 bg-yellow-100 rounded-lg">
-                              <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-lg font-medium text-gray-900">{endpoint.name}</h3>
-                          <p className="text-sm text-gray-500 truncate">{endpoint.url}</p>
-                          <div className="flex items-center space-x-4 mt-2">
-                            <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                              {endpoint.method}
-                            </span>
-                            {endpoint.lastStatus && (
-                              <Badge 
-                                className={`${
-                                  endpoint.lastStatus >= 200 && endpoint.lastStatus < 300 
-                                    ? 'bg-green-100 text-green-800 border-green-200' 
-                                    : endpoint.lastStatus >= 400 
-                                    ? 'bg-red-100 text-red-800 border-red-200'
-                                    : 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                                }`}
-                              >
-                                {endpoint.lastStatus}
-                              </Badge>
-                            )}
-                            {endpoint.lastResponseTime && (
-                              <span className="text-xs text-gray-500">
-                                {endpoint.lastResponseTime}ms
-                              </span>
-                            )}
-                            {endpoint.lastCheckedAt && (
-                              <span className="text-xs text-gray-500">
-                                Last checked: {new Date(endpoint.lastCheckedAt).toLocaleDateString()}
-                              </span>
+              {monitoredEndpoints.map((endpoint: any) => {
+                const [isExpanded, setIsExpanded] = React.useState(false);
+                const [lastTestResult, setLastTestResult] = React.useState(null);
+                
+                return (
+                  <Card key={endpoint.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="flex-shrink-0">
+                            {endpoint.lastStatus >= 200 && endpoint.lastStatus < 300 ? (
+                              <div className="p-2 bg-green-100 rounded-lg">
+                                <CheckCircle className="h-5 w-5 text-green-600" />
+                              </div>
+                            ) : endpoint.lastStatus >= 400 || endpoint.lastStatus === 0 ? (
+                              <div className="p-2 bg-red-100 rounded-lg">
+                                <XCircle className="h-5 w-5 text-red-600" />
+                              </div>
+                            ) : (
+                              <div className="p-2 bg-yellow-100 rounded-lg">
+                                <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                              </div>
                             )}
                           </div>
+                          
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-lg font-medium text-gray-900">{endpoint.name}</h3>
+                            <p className="text-sm text-gray-500 truncate">{endpoint.url}</p>
+                            <div className="flex items-center space-x-4 mt-2">
+                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                                {endpoint.method}
+                              </span>
+                              {endpoint.lastStatus && (
+                                <Badge 
+                                  className={`${
+                                    endpoint.lastStatus >= 200 && endpoint.lastStatus < 300 
+                                      ? 'bg-green-100 text-green-800 border-green-200' 
+                                      : endpoint.lastStatus >= 400 
+                                      ? 'bg-red-100 text-red-800 border-red-200'
+                                      : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                  }`}
+                                >
+                                  {endpoint.lastStatus}
+                                </Badge>
+                              )}
+                              {endpoint.lastResponseTime && (
+                                <span className="text-xs text-gray-500">
+                                  {endpoint.lastResponseTime}ms
+                                </span>
+                              )}
+                              {endpoint.lastCheckedAt && (
+                                <span className="text-xs text-gray-500">
+                                  Last checked: {new Date(endpoint.lastCheckedAt).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setIsExpanded(!isExpanded)}
+                            className="text-gray-500 hover:text-gray-700"
+                          >
+                            {isExpanded ? (
+                              <>
+                                <ChevronUp className="h-4 w-4 mr-1" />
+                                Collapse
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="h-4 w-4 mr-1" />
+                                Details
+                              </>
+                            )}
+                          </Button>
+                          <Switch 
+                            checked={endpoint.isActive}
+                            onCheckedChange={(checked) => handleToggleEndpoint(endpoint.id, checked)}
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              if (!testingEndpoints.includes(endpoint.id)) {
+                                setTestingEndpoints(prev => [...prev, endpoint.id]);
+                                try {
+                                  const response = await fetch(`/api/endpoints/${endpoint.id}/test`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' }
+                                  });
+                                  const result = await response.json();
+                                  setLastTestResult(result);
+                                  if (!isExpanded) setIsExpanded(true);
+                                } catch (error) {
+                                  console.error('Test failed:', error);
+                                } finally {
+                                  setTestingEndpoints(prev => prev.filter(id => id !== endpoint.id));
+                                }
+                              }
+                            }}
+                            disabled={testingEndpoints.includes(endpoint.id)}
+                          >
+                            {testingEndpoints.includes(endpoint.id) ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                Testing...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Test Now
+                              </>
+                            )}
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => {
+                                setEditingEndpoint(endpoint);
+                                setEndpointFormData({
+                                  name: endpoint.name,
+                                  url: endpoint.url,
+                                  method: endpoint.method,
+                                  expectedStatus: endpoint.expectedStatus || 200,
+                                  checkInterval: endpoint.checkInterval || 300,
+                                  timeout: endpoint.timeout || 30,
+                                  alertEmail: endpoint.alertEmail || false,
+                                  alertSlack: endpoint.alertSlack || false,
+                                  isActive: endpoint.isActive
+                                });
+                                setShowEditEndpointModal(true);
+                              }}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Eye className="h-4 w-4 mr-2" />
+                                View History
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-red-600">
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
+                      
+                      {/* Expandable Details Section */}
+                      {isExpanded && (
+                        <div className="mt-6 pt-4 border-t border-gray-100 space-y-4">
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Request Details */}
+                            <div>
+                              <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                                <Send className="h-4 w-4 mr-2 text-blue-600" />
+                                Request Details
+                              </h4>
+                              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                                <div>
+                                  <span className="text-xs font-medium text-gray-500 uppercase">Method</span>
+                                  <p className="text-sm font-mono bg-white px-2 py-1 rounded border mt-1">{endpoint.method}</p>
+                                </div>
+                                <div>
+                                  <span className="text-xs font-medium text-gray-500 uppercase">URL</span>
+                                  <p className="text-sm font-mono bg-white px-2 py-1 rounded border mt-1 break-all">{endpoint.url}</p>
+                                </div>
+                                <div>
+                                  <span className="text-xs font-medium text-gray-500 uppercase">Headers</span>
+                                  <div className="bg-white rounded border mt-1 p-2">
+                                    <pre className="text-xs text-gray-700 whitespace-pre-wrap">{JSON.stringify({
+                                      'User-Agent': '4Sale CDP Monitor/1.0',
+                                      'Accept': 'application/json, text/plain, */*',
+                                      'Cache-Control': 'no-cache'
+                                    }, null, 2)}</pre>
+                                  </div>
+                                </div>
+                                {lastTestResult?.requestDetails && (
+                                  <div>
+                                    <span className="text-xs font-medium text-gray-500 uppercase">Last Request Timestamp</span>
+                                    <p className="text-sm bg-white px-2 py-1 rounded border mt-1">{lastTestResult.requestDetails.timestamp}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
 
-                      <div className="flex items-center space-x-2">
-                        <Switch 
-                          checked={endpoint.isActive}
-                          onCheckedChange={(checked) => handleToggleEndpoint(endpoint.id, checked)}
-                        />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleTestEndpoint(endpoint.id)}
-                          disabled={testingEndpoints.includes(endpoint.id)}
-                        >
-                          {testingEndpoints.includes(endpoint.id) ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                              Testing...
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              Test Now
-                            </>
+                            {/* Response Details */}
+                            <div>
+                              <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                                <Database className="h-4 w-4 mr-2 text-green-600" />
+                                Response Details
+                              </h4>
+                              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                                {lastTestResult?.responseDetails ? (
+                                  <>
+                                    <div>
+                                      <span className="text-xs font-medium text-gray-500 uppercase">Status</span>
+                                      <p className={`text-sm font-mono px-2 py-1 rounded border mt-1 ${
+                                        lastTestResult.responseDetails.status >= 200 && lastTestResult.responseDetails.status < 300 
+                                          ? 'bg-green-50 text-green-800 border-green-200' 
+                                          : 'bg-red-50 text-red-800 border-red-200'
+                                      }`}>
+                                        {lastTestResult.responseDetails.status} {lastTestResult.responseDetails.statusText}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <span className="text-xs font-medium text-gray-500 uppercase">Response Time</span>
+                                      <p className="text-sm bg-white px-2 py-1 rounded border mt-1">{lastTestResult.responseTime}ms</p>
+                                    </div>
+                                    <div>
+                                      <span className="text-xs font-medium text-gray-500 uppercase">Headers</span>
+                                      <div className="bg-white rounded border mt-1 p-2 max-h-32 overflow-y-auto">
+                                        <pre className="text-xs text-gray-700 whitespace-pre-wrap">
+                                          {JSON.stringify(lastTestResult.responseDetails.headers || {}, null, 2)}
+                                        </pre>
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <span className="text-xs font-medium text-gray-500 uppercase">Response Body</span>
+                                      <div className="bg-white rounded border mt-1 p-2 max-h-40 overflow-y-auto">
+                                        <pre className="text-xs text-gray-700 whitespace-pre-wrap">
+                                          {typeof lastTestResult.responseDetails.body === 'object' 
+                                            ? JSON.stringify(lastTestResult.responseDetails.body, null, 2)
+                                            : lastTestResult.responseDetails.body
+                                          }
+                                        </pre>
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <span className="text-xs font-medium text-gray-500 uppercase">Timestamp</span>
+                                      <p className="text-sm bg-white px-2 py-1 rounded border mt-1">{lastTestResult.responseDetails.timestamp}</p>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="text-center py-8">
+                                    <Activity className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                                    <p className="text-sm text-gray-500">Click "Test Now" to see response details</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Error Information */}
+                          {lastTestResult?.error && (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                              <h4 className="text-sm font-semibold text-red-800 mb-2 flex items-center">
+                                <AlertTriangle className="h-4 w-4 mr-2" />
+                                Error Details
+                              </h4>
+                              <p className="text-sm text-red-700">{lastTestResult.error}</p>
+                            </div>
                           )}
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => {
-                              setEditingEndpoint(endpoint);
-                              setEndpointFormData({
-                                name: endpoint.name,
-                                url: endpoint.url,
-                                method: endpoint.method,
-                                expectedStatus: endpoint.expectedStatus || 200,
-                                checkInterval: endpoint.checkInterval || 300,
-                                timeout: endpoint.timeout || 30,
-                                alertEmail: endpoint.alertEmail || false,
-                                alertSlack: endpoint.alertSlack || false,
-                                isActive: endpoint.isActive
-                              });
-                              setShowEditEndpointModal(true);
-                            }}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View History
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
+                        </div>
+                      )}
 
-                    {/* Alert Configuration Display */}
-                    <div className="mt-4 pt-4 border-t border-gray-100">
-                      <div className="flex items-center space-x-4 text-sm text-gray-500">
-                        <span>Check every {endpoint.checkInterval}s</span>
-                        <span>Timeout: {endpoint.timeout}s</span>
-                        {endpoint.alertEmail && (
-                          <span className="flex items-center">
-                            <Mail className="h-3 w-3 mr-1" />
-                            Email alerts
-                          </span>
-                        )}
-                        {endpoint.alertSlack && (
-                          <span className="flex items-center">
-                            <MessageSquare className="h-3 w-3 mr-1" />
-                            Slack alerts
-                          </span>
-                        )}
+                      {/* Alert Configuration Display */}
+                      <div className="mt-4 pt-4 border-t border-gray-100">
+                        <div className="flex items-center space-x-4 text-sm text-gray-500">
+                          <span>Check every {endpoint.checkInterval}s</span>
+                          <span>Timeout: {endpoint.timeout}s</span>
+                          {endpoint.alertEmail && (
+                            <span className="flex items-center">
+                              <Mail className="h-3 w-3 mr-1" />
+                              Email alerts
+                            </span>
+                          )}
+                          {endpoint.alertSlack && (
+                            <span className="flex items-center">
+                              <MessageSquare className="h-3 w-3 mr-1" />
+                              Slack alerts
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
 
               {monitoredEndpoints.length === 0 && (
                 <div className="text-center py-12">
