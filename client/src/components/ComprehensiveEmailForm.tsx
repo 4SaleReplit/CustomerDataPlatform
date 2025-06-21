@@ -313,6 +313,48 @@ export function ComprehensiveEmailForm({
                           ))}
                         </SelectContent>
                       </Select>
+                      
+                      {/* Template Preview */}
+                      {formData.templateId && (
+                        <div className="mt-3 p-3 border rounded-lg bg-gray-50">
+                          <div className="space-y-2">
+                            <div className="font-medium text-sm">
+                              {templates?.find(t => t.id === formData.templateId)?.name || 'Selected Template'}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {templates?.find(t => t.id === formData.templateId)?.description || 'Template description'}
+                            </div>
+                            {templates?.find(t => t.id === formData.templateId)?.slides && (
+                              <div className="mt-2">
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  {JSON.parse(templates?.find(t => t.id === formData.templateId)?.slides || '[]').length} slides
+                                </div>
+                                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300">
+                                  {JSON.parse(templates?.find(t => t.id === formData.templateId)?.slides || '[]').slice(0, 4).map((slide: any, index: number) => (
+                                    <div key={index} className="flex-shrink-0 w-24 h-16 bg-gray-100 rounded border hover:border-blue-300 transition-colors">
+                                      {slide.elements?.find((el: any) => el.type === 'image' && (el.content || el.uploadedImageId)) ? (
+                                        <img 
+                                          src={slide.elements.find((el: any) => el.type === 'image' && (el.content || el.uploadedImageId))?.content || `/api/images/${slide.elements.find((el: any) => el.type === 'image' && el.uploadedImageId)?.uploadedImageId}`}
+                                          alt={`Slide ${index + 1}`}
+                                          className="w-full h-full object-cover rounded"
+                                          onError={(e) => {
+                                            e.currentTarget.style.display = 'none';
+                                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                            if (fallback) fallback.style.display = 'flex';
+                                          }}
+                                        />
+                                      ) : null}
+                                      <div className="w-full h-full flex items-center justify-center text-xs text-gray-500" style={{ display: slide.elements?.find((el: any) => el.type === 'image') ? 'none' : 'flex' }}>
+                                        Slide {index + 1}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </CardContent>
