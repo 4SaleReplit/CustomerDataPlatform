@@ -362,31 +362,34 @@ export function NewEmailSenderForm({
                   </div>
 
                   <div>
-                    <Label>Recipients (To)</Label>
+                    <Label>Send To (Recipients)</Label>
                     <Input
                       value={recipientList}
                       onChange={(e) => setRecipientList(e.target.value)}
-                      placeholder="email1@domain.com, email2@domain.com"
+                      placeholder="john@company.com, jane@company.com, team@company.com"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">Enter multiple email addresses separated by commas</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label>CC (Optional)</Label>
+                      <Label>CC Recipients (Optional)</Label>
                       <Input
                         value={ccList}
                         onChange={(e) => setCcList(e.target.value)}
-                        placeholder="cc@domain.com"
+                        placeholder="manager@company.com, admin@company.com"
                       />
+                      <p className="text-xs text-muted-foreground mt-1">Comma-separated CC recipients</p>
                     </div>
 
                     <div>
-                      <Label>BCC (Optional)</Label>
+                      <Label>BCC Recipients (Optional)</Label>
                       <Input
                         value={bccList}
                         onChange={(e) => setBccList(e.target.value)}
-                        placeholder="bcc@domain.com"
+                        placeholder="archive@company.com, backup@company.com"
                       />
+                      <p className="text-xs text-muted-foreground mt-1">Comma-separated BCC recipients</p>
                     </div>
                   </div>
 
@@ -485,18 +488,16 @@ export function NewEmailSenderForm({
                           <div className="text-sm space-y-1">
                             <div className="flex items-center gap-2">
                               <span className="font-medium">Subject:</span>
-                              <span>{emailSubject || 'No subject'}</span>
+                              <span>{emailSubject || 'Sample Subject Line'}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="font-medium">To:</span>
-                              <span className="text-blue-600">{recipientList || 'No recipients'}</span>
+                              <span className="text-blue-600">recipient@example.com</span>
                             </div>
-                            {ccList && (
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">CC:</span>
-                                <span className="text-blue-600">{ccList}</span>
-                              </div>
-                            )}
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">From:</span>
+                              <span className="text-gray-600">4Sale Analytics &lt;noreply@4sale.tech&gt;</span>
+                            </div>
                           </div>
                         </div>
                         {/* Email Content */}
@@ -548,14 +549,6 @@ export function NewEmailSenderForm({
               ) : (
                 mode === 'one-time' ? 'Send Email' : 'Schedule Email'
               )}
-            </Button>
-          </div>
-          <div className="flex justify-end gap-3 flex-shrink-0">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Processing...' : mode === 'one-time' ? 'Send Email' : 'Schedule Email'}
             </Button>
           </div>
         </form>
