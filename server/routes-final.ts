@@ -798,9 +798,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             if (emailTemplate) {
               console.log('Found email template:', emailTemplate.name);
-              // Use the database template
-              const templateVariables = reportData.emailTemplate.templateVariables || {};
-              console.log('Template variables from UI:', templateVariables);
+              
+              // Generate PDF URL for the presentation
+              let pdfDownloadUrl = '#';
+              if (presentation.pdfUrl) {
+                pdfDownloadUrl = presentation.pdfUrl;
+              } else {
+                // Generate PDF if not exists
+                const domain = process.env.REPLIT_DEV_DOMAIN ? 
+                  `https://${process.env.REPLIT_DEV_DOMAIN}` : 
+                  'https://analytics.4sale.tech';
+                pdfDownloadUrl = `${domain}/api/reports/pdf/${presentation.id}`;
+              }
+              
+              // Use the database template with proper PDF URL
+              const templateVariables = {
+                ...reportData.emailTemplate.templateVariables,
+                pdf_download_url: pdfDownloadUrl,
+                report_url: pdfDownloadUrl,
+                generation_date: new Date().toLocaleDateString(),
+                generation_time: new Date().toLocaleTimeString()
+              };
+              
+              console.log('Template variables with PDF URL:', templateVariables);
               
               // Start with the template HTML
               emailHtml = emailTemplate.bodyHtml;
@@ -811,24 +831,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 emailHtml = emailHtml.replace(regex, value || '');
               });
               
-              // Add default values for missing variables
-              const defaultVariables = {
-                generation_date: new Date().toLocaleDateString(),
-                generation_time: new Date().toLocaleTimeString()
-              };
-              
-              Object.entries(defaultVariables).forEach(([key, value]) => {
-                const regex = new RegExp(`{{${key}}}`, 'g');
-                emailHtml = emailHtml.replace(regex, value);
-              });
-              
             } else {
               console.log(`Template ${reportData.emailTemplate.templateId} not found, using fallback`);
-              emailHtml = `<html><body><h1>Analytics Report</h1><p>Your report is ready for review.</p><p>PDF Download: ${reportData.emailTemplate.templateVariables?.pdf_download_url || '#'}</p></body></html>`;
+              emailHtml = `<html><body><h1>Analytics Report</h1><p>Your report is ready for review.</p></body></html>`;
             }
           } catch (error) {
             console.error('Error fetching email template:', error);
-            emailHtml = `<html><body><h1>Analytics Report</h1><p>Your report is ready for review.</p><p>PDF Download: ${reportData.emailTemplate.templateVariables?.pdf_download_url || '#'}</p></body></html>`;
+            emailHtml = `<html><body><h1>Analytics Report</h1><p>Your report is ready for review.</p></body></html>`;
           }
         } else {
           // Enhanced business-legitimate email content with spam filter optimization

@@ -17,6 +17,7 @@ import {
   reportExecutions,
   templates,
   emailTemplates,
+  sentEmails,
   monitoredEndpoints,
   endpointMonitoringHistory,
   type User, 
@@ -68,7 +69,9 @@ import {
   type Template,
   type InsertTemplate,
   type EmailTemplate,
-  type InsertEmailTemplate
+  type InsertEmailTemplate,
+  type SentEmail,
+  type InsertSentEmail
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, or, and, desc } from "drizzle-orm";
@@ -213,6 +216,13 @@ export interface IStorage {
   createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate>;
   updateEmailTemplate(id: string, updates: Partial<InsertEmailTemplate>): Promise<EmailTemplate | undefined>;
   deleteEmailTemplate(id: string): Promise<boolean>;
+  
+  // Sent Emails management
+  getSentEmails(): Promise<SentEmail[]>;
+  getSentEmail(id: string): Promise<SentEmail | undefined>;
+  createSentEmail(sentEmail: InsertSentEmail): Promise<SentEmail>;
+  getSentEmailsByRecipient(email: string): Promise<SentEmail[]>;
+  getSentEmailsByType(emailType: string): Promise<SentEmail[]>;
 
   // Endpoint monitoring management
   getMonitoredEndpoints(): Promise<MonitoredEndpoint[]>;
@@ -1028,6 +1038,33 @@ export class DatabaseStorage implements IStorage {
   async createEndpointMonitoringHistory(history: InsertEndpointMonitoringHistory): Promise<EndpointMonitoringHistory> {
     const [newHistory] = await db.insert(endpointMonitoringHistory).values(history).returning();
     return newHistory;
+  }
+
+  // Sent Emails management methods
+  async getSentEmails(): Promise<SentEmail[]> {
+    return await db.select().from(sentEmails).orderBy(desc(sentEmails.createdAt));
+  }
+
+  async getSentEmail(id: string): Promise<SentEmail | undefined> {
+    const [sentEmail] = await db.select().from(sentEmails).where(eq(sentEmails.id, id));
+    return sentEmail || undefined;
+  }
+
+  async createSentEmail(sentEmail: InsertSentEmail): Promise<SentEmail> {
+    const [newSentEmail] = await db.insert(sentEmails).values(sentEmail).returning();
+    return newSentEmail;
+  }
+
+  async getSentEmailsByRecipient(email: string): Promise<SentEmail[]> {
+    return await db.select().from(sentEmails)
+      .where(eq(sentEmails.recipients, JSON.stringify([email])))
+      .orderBy(desc(sentEmails.createdAt));
+  }
+
+  async getSentEmailsByType(emailType: string): Promise<SentEmail[]> {
+    return await db.select().from(sentEmails)
+      .where(eq(sentEmails.emailType, emailType))
+      .orderBy(desc(sentEmails.createdAt));
   }
 }
 
