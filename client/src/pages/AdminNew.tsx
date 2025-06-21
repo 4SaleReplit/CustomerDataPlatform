@@ -1968,27 +1968,29 @@ export default function AdminNew() {
                               const testResult = lastTestResult;
                               const currentStatus = testResult?.status || endpoint.lastStatus;
                               
+
+                              
                               // Show proper status based on current or stored status
-                              if (currentStatus && currentStatus >= 200 && currentStatus < 300) {
+                              if (currentStatus >= 200 && currentStatus < 300) {
                                 return (
                                   <div className="p-2 bg-green-100 rounded-lg">
                                     <CheckCircle className="h-5 w-5 text-green-600" />
                                   </div>
                                 );
-                              } else if (currentStatus && (currentStatus >= 400 || currentStatus === 0)) {
+                              } else if (currentStatus >= 400 || currentStatus === 0) {
                                 return (
                                   <div className="p-2 bg-red-100 rounded-lg">
                                     <XCircle className="h-5 w-5 text-red-600" />
                                   </div>
                                 );
-                              } else if (currentStatus && currentStatus >= 300 && currentStatus < 400) {
+                              } else if (currentStatus >= 300 && currentStatus < 400) {
                                 return (
                                   <div className="p-2 bg-yellow-100 rounded-lg">
                                     <AlertTriangle className="h-5 w-5 text-yellow-600" />
                                   </div>
                                 );
                               } else {
-                                // No status available yet
+                                // No status available yet or null/undefined
                                 return (
                                   <div className="p-2 bg-gray-100 rounded-lg">
                                     <Clock className="h-5 w-5 text-gray-600" />
