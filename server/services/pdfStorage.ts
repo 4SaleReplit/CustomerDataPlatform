@@ -63,7 +63,6 @@ export class PDFStorageService {
         Body: pdfBuffer,
         ContentType: 'application/pdf',
         CacheControl: 'max-age=31536000', // 1 year cache
-        ACL: 'public-read', // Make PDFs publicly accessible
         ServerSideEncryption: 'AES256',
         Metadata: {
           'presentation-id': presentationId,
