@@ -1236,6 +1236,17 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     }
   });
 
+  // Email Templates API Endpoints
+  app.get("/api/email-templates", async (req: Request, res: Response) => {
+    try {
+      const emailTemplates = await storage.getEmailTemplates();
+      res.json(emailTemplates);
+    } catch (error) {
+      console.error("Error fetching email templates:", error);
+      res.status(500).json({ error: "Failed to fetch email templates" });
+    }
+  });
+
   // Report Executions API
   app.get("/api/scheduled-reports/:id/executions", async (req: Request, res: Response) => {
     try {

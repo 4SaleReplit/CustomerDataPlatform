@@ -16,6 +16,7 @@ import {
   mailingLists,
   reportExecutions,
   templates,
+  emailTemplates,
   monitoredEndpoints,
   endpointMonitoringHistory,
   type User, 
@@ -65,7 +66,9 @@ import {
   type ReportExecution,
   type InsertReportExecution,
   type Template,
-  type InsertTemplate
+  type InsertTemplate,
+  type EmailTemplate,
+  type InsertEmailTemplate
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, or, and, desc } from "drizzle-orm";
@@ -203,6 +206,13 @@ export interface IStorage {
   createTemplate(template: InsertTemplate): Promise<Template>;
   updateTemplate(id: string, updates: Partial<InsertTemplate>): Promise<Template | undefined>;
   deleteTemplate(id: string): Promise<boolean>;
+  
+  // Email Templates management
+  getEmailTemplates(): Promise<EmailTemplate[]>;
+  getEmailTemplate(id: string): Promise<EmailTemplate | undefined>;
+  createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate>;
+  updateEmailTemplate(id: string, updates: Partial<InsertEmailTemplate>): Promise<EmailTemplate | undefined>;
+  deleteEmailTemplate(id: string): Promise<boolean>;
 
   // Endpoint monitoring management
   getMonitoredEndpoints(): Promise<MonitoredEndpoint[]>;
@@ -945,6 +955,35 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTemplate(id: string): Promise<boolean> {
     const result = await db.delete(templates).where(eq(templates.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Email Templates management methods
+  async getEmailTemplates(): Promise<EmailTemplate[]> {
+    return await db.select().from(emailTemplates).orderBy(desc(emailTemplates.createdAt));
+  }
+
+  async getEmailTemplate(id: string): Promise<EmailTemplate | undefined> {
+    const [template] = await db.select().from(emailTemplates).where(eq(emailTemplates.id, id));
+    return template || undefined;
+  }
+
+  async createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate> {
+    const [newTemplate] = await db.insert(emailTemplates).values(template).returning();
+    return newTemplate;
+  }
+
+  async updateEmailTemplate(id: string, updates: Partial<InsertEmailTemplate>): Promise<EmailTemplate | undefined> {
+    const [template] = await db
+      .update(emailTemplates)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(emailTemplates.id, id))
+      .returning();
+    return template || undefined;
+  }
+
+  async deleteEmailTemplate(id: string): Promise<boolean> {
+    const result = await db.delete(emailTemplates).where(eq(emailTemplates.id, id));
     return result.rowCount !== null && result.rowCount > 0;
   }
 
