@@ -3017,7 +3017,11 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
           addLog(`Source integration: ${sourceIntegration[0].name}`);
           addLog(`Target integration: ${targetIntegration[0].name}`);
 
-          if (type === 'postgresql') {
+          // Auto-detect migration type if not provided
+          const detectedType = type || sourceIntegration[0].type;
+          addLog(`Migration type: ${detectedType}`);
+
+          if (detectedType === 'postgresql') {
             const { Pool } = await import('pg');
             
             // Use actual integration credentials
