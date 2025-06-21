@@ -98,6 +98,14 @@ export default function AdminNew() {
     { id: 'production', name: 'Production', status: 'inactive', databases: {} }
   ]);
 
+  // Integration management state
+  const [showCreateIntegrationModal, setShowCreateIntegrationModal] = useState(false);
+  const [showEditIntegrationModal, setShowEditIntegrationModal] = useState(false);
+  const [editingIntegration, setEditingIntegration] = useState<any>(null);
+  const [testingIntegrations, setTestingIntegrations] = useState<string[]>([]);
+
+
+
   // Load existing environment configurations on component mount
   useEffect(() => {
     const loadEnvironmentConfigurations = async () => {
@@ -219,7 +227,7 @@ export default function AdminNew() {
     refetchOnWindowFocus: false
   });
 
-  // Fetch integrations for migrations
+  // Fetch integrations for migrations and integrations tab
   const { data: integrations = [], isLoading: integrationsLoading } = useQuery({
     queryKey: ['/api/integrations'],
     queryFn: () => apiRequest('/api/integrations'),
@@ -764,7 +772,7 @@ export default function AdminNew() {
       </Dialog>
 
       <Tabs defaultValue="team" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="team" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Team Management
@@ -773,8 +781,12 @@ export default function AdminNew() {
             <Shield className="h-4 w-4" />
             Roles & Permissions
           </TabsTrigger>
-          <TabsTrigger value="migrations" className="flex items-center gap-2">
+          <TabsTrigger value="integrations" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
+            Integrations
+          </TabsTrigger>
+          <TabsTrigger value="migrations" className="flex items-center gap-2">
+            <Target className="h-4 w-4" />
             Migrations
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
@@ -849,6 +861,208 @@ export default function AdminNew() {
 
         <TabsContent value="roles" className="space-y-6">
           <RoleManagement />
+        </TabsContent>
+
+        <TabsContent value="integrations" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Integration Management</h2>
+              <p className="text-sm text-muted-foreground">Manage external service connections and data source integrations</p>
+            </div>
+            <div className="flex space-x-3">
+              <Button variant="outline" onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/integrations'] })}>
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Refresh All
+              </Button>
+              <Button onClick={() => setShowCreateIntegrationModal(true)} className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Integration
+              </Button>
+            </div>
+          </div>
+
+          {/* Integration Statistics Display */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start">
+                <Database className="h-5 w-5 text-blue-600 mt-0.5 mr-2" />
+                <div className="text-sm w-full">
+                  <p className="font-medium text-blue-800">Integration Overview</p>
+                  <p className="text-blue-700 mb-3">Connected services and data sources:</p>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="text-lg font-semibold text-blue-900">
+                        {integrations?.filter(i => i.status === 'connected').length || 0}
+                      </div>
+                      <div className="text-xs text-blue-600">Connected</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-semibold text-blue-900">
+                        {integrations?.filter(i => i.status === 'disconnected').length || 0}
+                      </div>
+                      <div className="text-xs text-blue-600">Disconnected</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-semibold text-blue-900">
+                        {integrations?.filter(i => i.type === 'postgresql').length || 0}
+                      </div>
+                      <div className="text-xs text-blue-600">Databases</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-semibold text-blue-900">
+                        {integrations?.filter(i => ['snowflake', 'amplitude', 'braze', 's3'].includes(i.type)).length || 0}
+                      </div>
+                      <div className="text-xs text-blue-600">Services</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Integrations Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {integrations?.map((integration: any) => (
+              <Card key={integration.id} className="group hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-gray-300">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className={`p-2 rounded-lg ${
+                        integration.type === 'postgresql' ? 'bg-green-100' :
+                        integration.type === 'snowflake' ? 'bg-blue-100' :
+                        integration.type === 's3' ? 'bg-purple-100' :
+                        'bg-gray-100'
+                      }`}>
+                        <Database className={`h-5 w-5 ${
+                          integration.type === 'postgresql' ? 'text-green-600' :
+                          integration.type === 'snowflake' ? 'text-blue-600' :
+                          integration.type === 's3' ? 'text-purple-600' :
+                          'text-gray-600'
+                        }`} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-lg font-semibold break-words">{integration.name}</CardTitle>
+                        <p className="text-sm text-muted-foreground mt-0.5 capitalize">{integration.type}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      {integration.status === 'connected' ? (
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-red-600" />
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Status</span>
+                      <Badge className={
+                        integration.status === 'connected' 
+                          ? 'bg-green-100 text-green-800 border-green-200' 
+                          : 'bg-red-100 text-red-800 border-red-200'
+                      }>
+                        {integration.status}
+                      </Badge>
+                    </div>
+
+                    {integration.metadata && (
+                      <div className="space-y-2">
+                        {integration.type === 'postgresql' && (
+                          <div className="grid grid-cols-2 gap-2 p-2 bg-green-50 rounded border border-green-100">
+                            <div className="text-center">
+                              <div className="text-sm font-semibold text-green-900">
+                                {integration.metadata.tables || 0}
+                              </div>
+                              <div className="text-xs text-green-600">Tables</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-sm font-semibold text-green-900">
+                                {integration.metadata.size || 'N/A'}
+                              </div>
+                              <div className="text-xs text-green-600">Size</div>
+                            </div>
+                          </div>
+                        )}
+                        {integration.type === 'snowflake' && (
+                          <div className="grid grid-cols-2 gap-2 p-2 bg-blue-50 rounded border border-blue-100">
+                            <div className="text-center">
+                              <div className="text-sm font-semibold text-blue-900">
+                                {integration.metadata.tables || 0}
+                              </div>
+                              <div className="text-xs text-blue-600">Tables</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-sm font-semibold text-blue-900">
+                                {integration.metadata.schemas || 0}
+                              </div>
+                              <div className="text-xs text-blue-600">Schemas</div>
+                            </div>
+                          </div>
+                        )}
+                        {integration.type === 's3' && (
+                          <div className="grid grid-cols-2 gap-2 p-2 bg-purple-50 rounded border border-purple-100">
+                            <div className="text-center">
+                              <div className="text-sm font-semibold text-purple-900">
+                                {integration.metadata.objectCount || 0}
+                              </div>
+                              <div className="text-xs text-purple-600">Objects</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-sm font-semibold text-purple-900">
+                                {integration.metadata.region || 'N/A'}
+                              </div>
+                              <div className="text-xs text-purple-600">Region</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex space-x-2 mt-4">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleTestIntegrationConnection(integration.id)}
+                        disabled={testingIntegrations.includes(integration.id)}
+                        className="flex-1 text-xs font-medium hover:bg-green-50 hover:border-green-300 hover:text-green-700"
+                      >
+                        {testingIntegrations.includes(integration.id) ? (
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        ) : (
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                        )}
+                        {testingIntegrations.includes(integration.id) ? 'Testing...' : 'Test'}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleEditIntegration(integration)}
+                        className="flex-1 text-xs font-medium hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
+                      >
+                        <Settings className="h-3 w-3 mr-1" />
+                        Edit
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {integrations?.length === 0 && (
+            <div className="text-center py-12">
+              <Database className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No integrations configured</h3>
+              <p className="text-gray-500 mb-4">Add your first integration to get started with data connections.</p>
+              <Button onClick={() => setShowCreateIntegrationModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Integration
+              </Button>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="migrations" className="space-y-6">

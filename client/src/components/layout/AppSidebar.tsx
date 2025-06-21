@@ -81,7 +81,6 @@ const navigation = [
       { name: 'Upselling Campaigns', href: '/campaigns', icon: Megaphone }
     ]
   },
-  { name: 'Integrations', href: '/integrations', icon: Cable },
   { name: 'Admin', href: '/admin', icon: Settings },
 ];
 
