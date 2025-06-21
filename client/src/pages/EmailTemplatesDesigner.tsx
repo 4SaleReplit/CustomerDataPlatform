@@ -174,7 +174,7 @@ export function EmailTemplatesDesigner() {
   };
 
   const handleCreateTemplate = () => {
-    if (!editingTemplate || !editingTemplate.name || !editingTemplate.html) {
+    if (!editingTemplate || !editingTemplate.name || !editingTemplate.bodyHtml) {
       toast({ title: "Please fill in all required fields", variant: "destructive" });
       return;
     }
@@ -182,15 +182,19 @@ export function EmailTemplatesDesigner() {
     const templateData = {
       name: editingTemplate.name,
       description: editingTemplate.description,
-      html: editingTemplate.html,
-      variables: editingTemplate.variables
+      templateType: editingTemplate.templateType || 'report',
+      subject: editingTemplate.subject || '{{report_name}} - Report Ready',
+      bodyHtml: editingTemplate.bodyHtml,
+      availablePlaceholders: editingTemplate.availablePlaceholders,
+      isSystemTemplate: false,
+      isActive: true
     };
 
     createTemplateMutation.mutate(templateData);
   };
 
   const handleUpdateTemplate = () => {
-    if (!editingTemplate || !editingTemplate.name || !editingTemplate.html) {
+    if (!editingTemplate || !editingTemplate.name || !editingTemplate.bodyHtml) {
       toast({ title: "Please fill in all required fields", variant: "destructive" });
       return;
     }
@@ -198,8 +202,10 @@ export function EmailTemplatesDesigner() {
     const templateData = {
       name: editingTemplate.name,
       description: editingTemplate.description,
-      html: editingTemplate.html,
-      variables: editingTemplate.variables
+      templateType: editingTemplate.templateType || 'report',
+      subject: editingTemplate.subject || '{{report_name}} - Report Ready',
+      bodyHtml: editingTemplate.bodyHtml,
+      availablePlaceholders: editingTemplate.availablePlaceholders
     };
 
     updateTemplateMutation.mutate({ id: editingTemplate.id, data: templateData });
@@ -209,8 +215,12 @@ export function EmailTemplatesDesigner() {
     const templateData = {
       name: `${template.name} (Copy)`,
       description: template.description,
-      html: template.html,
-      variables: template.variables
+      templateType: template.templateType || 'report',
+      subject: template.subject || '{{report_name}} - Report Ready',
+      bodyHtml: template.bodyHtml,
+      availablePlaceholders: template.availablePlaceholders,
+      isSystemTemplate: false,
+      isActive: true
     };
     
     createTemplateMutation.mutate(templateData);
@@ -277,7 +287,7 @@ export function EmailTemplatesDesigner() {
                         <p className="text-sm text-muted-foreground">
                           {template.description}
                         </p>
-                        {template.isSystem && (
+                        {template.isSystemTemplate && (
                           <Badge variant="secondary" className="mt-1">
                             System
                           </Badge>
@@ -409,10 +419,10 @@ export function EmailTemplatesDesigner() {
                 <Label htmlFor="template-html">HTML Content</Label>
                 <Textarea
                   id="template-html"
-                  value={editingTemplate.html}
+                  value={editingTemplate.bodyHtml}
                   onChange={(e) => setEditingTemplate({
                     ...editingTemplate,
-                    html: e.target.value
+                    bodyHtml: e.target.value
                   })}
                   className="h-64 font-mono text-sm"
                   placeholder="Enter HTML content"
@@ -481,10 +491,10 @@ export function EmailTemplatesDesigner() {
                 <Label htmlFor="edit-template-html">HTML Content</Label>
                 <Textarea
                   id="edit-template-html"
-                  value={editingTemplate.html}
+                  value={editingTemplate.bodyHtml}
                   onChange={(e) => setEditingTemplate({
                     ...editingTemplate,
-                    html: e.target.value
+                    bodyHtml: e.target.value
                   })}
                   className="h-64 font-mono text-sm"
                   placeholder="Enter HTML content"
