@@ -155,7 +155,7 @@ export function SimpleEmailListView({
                     <CardDescription>{report.description}</CardDescription>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Mail className="h-4 w-4" />
-                      <span>{report.recipientList.length} recipient(s)</span>
+                      <span>{(report.recipientList || []).length} recipient(s)</span>
                       {report.cronExpression && (
                         <>
                           <Clock className="h-4 w-4 ml-2" />
