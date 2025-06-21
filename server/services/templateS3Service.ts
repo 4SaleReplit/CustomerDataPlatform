@@ -273,7 +273,7 @@ export class TemplateS3Service {
             // Update database with S3 key using the update method
             await storage.updateTemplate(template.id, { 
               s3Key, 
-              lastSyncedAt: new Date().toISOString()
+              lastSyncedAt: new Date()
             } as any);
             synced++;
           } else {

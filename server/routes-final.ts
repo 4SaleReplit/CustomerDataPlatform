@@ -4504,7 +4504,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
           // Update database with S3 key for perfect sync
           await storage.updateTemplate(template.id, { 
             s3Key, 
-            lastSyncedAt: new Date().toISOString() 
+            lastSyncedAt: new Date() 
           } as any);
           console.log(`✅ Template synchronized to S3: ${s3Key}`);
         }
@@ -4550,6 +4550,36 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     } catch (error) {
       console.error('Error creating template:', error);
       res.status(500).json({ error: "Failed to create template" });
+    }
+  });
+
+  // S3 template status endpoint (must come before :id route)
+  app.get("/api/templates/s3-status", async (req: Request, res: Response) => {
+    try {
+      const status = await templateS3Service.getStatus();
+      res.json(status);
+    } catch (error) {
+      console.error('Error getting S3 template status:', error);
+      res.status(500).json({ error: "Failed to get S3 template status" });
+    }
+  });
+
+  // Bulk S3 synchronization endpoint (must come before :id route)
+  app.post("/api/templates/sync-s3", async (req: Request, res: Response) => {
+    try {
+      await templateS3Service.initialize();
+      const result = await templateS3Service.syncAllTemplatesToS3();
+      
+      res.json({
+        success: true,
+        message: `Template S3 synchronization completed`,
+        synced: result.synced,
+        errors: result.errors,
+        details: `${result.synced} templates synchronized to S3 /templates folder`
+      });
+    } catch (error) {
+      console.error('Error synchronizing templates to S3:', error);
+      res.status(500).json({ error: "Failed to synchronize templates to S3" });
     }
   });
 
@@ -4599,7 +4629,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         // Update database with new S3 key for perfect sync
         await storage.updateTemplate(template.id, { 
           s3Key, 
-          lastSyncedAt: new Date().toISOString() 
+          lastSyncedAt: new Date() 
         } as any);
         console.log(`✅ Template updated and synchronized to S3: ${s3Key}`);
       }
@@ -4701,35 +4731,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     }
   });
 
-  // Bulk S3 synchronization endpoint for existing templates
-  app.post("/api/templates/sync-s3", async (req: Request, res: Response) => {
-    try {
-      await templateS3Service.initialize();
-      const result = await templateS3Service.syncAllTemplatesToS3();
-      
-      res.json({
-        success: true,
-        message: `Template S3 synchronization completed`,
-        synced: result.synced,
-        errors: result.errors,
-        details: `${result.synced} templates synchronized to S3 /templates folder`
-      });
-    } catch (error) {
-      console.error('Error synchronizing templates to S3:', error);
-      res.status(500).json({ error: "Failed to synchronize templates to S3" });
-    }
-  });
 
-  // S3 template status endpoint
-  app.get("/api/templates/s3-status", async (req: Request, res: Response) => {
-    try {
-      const status = await templateS3Service.getStatus();
-      res.json(status);
-    } catch (error) {
-      console.error('Error getting S3 template status:', error);
-      res.status(500).json({ error: "Failed to get S3 template status" });
-    }
-  });
 
   // Scheduled Reports API (new template-based system)
   app.get("/api/scheduled-reports-new", async (req: Request, res: Response) => {
