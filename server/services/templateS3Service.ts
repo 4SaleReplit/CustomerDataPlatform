@@ -274,7 +274,7 @@ export class TemplateS3Service {
             await storage.updateTemplate(template.id, { 
               s3Key, 
               lastSyncedAt: new Date().toISOString()
-            });
+            } as any);
             synced++;
           } else {
             errors++;

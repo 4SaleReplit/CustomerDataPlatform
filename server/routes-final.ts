@@ -4590,17 +4590,17 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         description: template.description || '',
         slides: template.slideIds || [],
         metadata: {},
-        createdAt: template.createdAt || new Date().toISOString(),
-        updatedAt: template.updatedAt || new Date().toISOString()
+        createdAt: template.createdAt ? (template.createdAt instanceof Date ? template.createdAt.toISOString() : template.createdAt) : new Date().toISOString(),
+        updatedAt: template.updatedAt ? (template.updatedAt instanceof Date ? template.updatedAt.toISOString() : template.updatedAt) : new Date().toISOString()
       };
       
-      const s3Key = await templateS3Service.updateTemplate(templateData, existingTemplate.s3Key);
+      const s3Key = await templateS3Service.updateTemplate(templateData, existingTemplate.s3Key || undefined);
       if (s3Key) {
         // Update database with new S3 key for perfect sync
         await storage.updateTemplate(template.id, { 
           s3Key, 
           lastSyncedAt: new Date().toISOString() 
-        });
+        } as any);
         console.log(`✅ Template updated and synchronized to S3: ${s3Key}`);
       }
       
@@ -4614,12 +4614,120 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
   app.delete("/api/templates/:id", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
+      
+      // Get template before deletion for S3 cleanup
+      const template = await storage.getTemplate(id);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      
+      // Delete from S3 first if S3 key exists
+      if (template.s3Key) {
+        await templateS3Service.initialize();
+        const s3Deleted = await templateS3Service.deleteTemplate(template.s3Key);
+        if (s3Deleted) {
+          console.log(`✅ Template deleted from S3: ${template.s3Key}`);
+        }
+      }
+      
+      // Delete from database
       const { templateService } = await import('./services/templateService');
       await templateService.deleteTemplate(id);
+      
+      console.log(`✅ Template deleted from database and S3: ${template.name}`);
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting template:', error);
       res.status(500).json({ error: "Failed to delete template" });
+    }
+  });
+
+  // Template clone endpoint with S3 synchronization
+  app.post("/api/templates/:id/clone", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { name, description } = req.body;
+      
+      // Get original template
+      const originalTemplate = await storage.getTemplate(id);
+      if (!originalTemplate) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      
+      // Create cloned template in database
+      const clonedTemplateData = {
+        name: name || `${originalTemplate.name} - Copy`,
+        description: description || originalTemplate.description,
+        content: originalTemplate.content,
+        category: originalTemplate.category,
+        tags: originalTemplate.tags,
+        slideIds: originalTemplate.slideIds,
+        createdBy: 'admin'
+      };
+      
+      const clonedTemplate = await storage.createTemplate(clonedTemplateData);
+      
+      // Sync cloned template to S3 with template name-based key
+      await templateS3Service.initialize();
+      const originalTemplateData = {
+        id: originalTemplate.id,
+        name: originalTemplate.name,
+        description: originalTemplate.description || '',
+        slides: originalTemplate.slideIds || [],
+        metadata: {},
+        createdAt: originalTemplate.createdAt ? (originalTemplate.createdAt instanceof Date ? originalTemplate.createdAt.toISOString() : originalTemplate.createdAt) : new Date().toISOString(),
+        updatedAt: originalTemplate.updatedAt ? (originalTemplate.updatedAt instanceof Date ? originalTemplate.updatedAt.toISOString() : originalTemplate.updatedAt) : new Date().toISOString()
+      };
+      
+      const s3Key = await templateS3Service.cloneTemplate(
+        originalTemplateData, 
+        clonedTemplate.id, 
+        clonedTemplate.name
+      );
+      
+      if (s3Key) {
+        // Update database with S3 key for perfect sync
+        await storage.updateTemplate(clonedTemplate.id, { 
+          s3Key, 
+          lastSyncedAt: new Date().toISOString() 
+        } as any);
+        console.log(`✅ Template cloned and synchronized to S3: ${s3Key}`);
+      }
+      
+      res.status(201).json(clonedTemplate);
+    } catch (error) {
+      console.error('Error cloning template:', error);
+      res.status(500).json({ error: "Failed to clone template" });
+    }
+  });
+
+  // Bulk S3 synchronization endpoint for existing templates
+  app.post("/api/templates/sync-s3", async (req: Request, res: Response) => {
+    try {
+      await templateS3Service.initialize();
+      const result = await templateS3Service.syncAllTemplatesToS3();
+      
+      res.json({
+        success: true,
+        message: `Template S3 synchronization completed`,
+        synced: result.synced,
+        errors: result.errors,
+        details: `${result.synced} templates synchronized to S3 /templates folder`
+      });
+    } catch (error) {
+      console.error('Error synchronizing templates to S3:', error);
+      res.status(500).json({ error: "Failed to synchronize templates to S3" });
+    }
+  });
+
+  // S3 template status endpoint
+  app.get("/api/templates/s3-status", async (req: Request, res: Response) => {
+    try {
+      const status = await templateS3Service.getStatus();
+      res.json(status);
+    } catch (error) {
+      console.error('Error getting S3 template status:', error);
+      res.status(500).json({ error: "Failed to get S3 template status" });
     }
   });
 
