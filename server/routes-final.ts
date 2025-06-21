@@ -49,10 +49,17 @@ async function testEndpointHealth(endpoint: any): Promise<{ status: number; resp
     clearTimeout(timeoutId);
     const responseTime = Date.now() - startTime;
     
+    // Handle both single status and array of expected statuses
+    const expectedStatuses = Array.isArray(endpoint.expectedStatus) 
+      ? endpoint.expectedStatus 
+      : [endpoint.expectedStatus || 200];
+    
+    const isExpectedStatus = expectedStatuses.includes(response.status);
+    
     return {
       status: response.status,
       responseTime,
-      error: response.status !== (endpoint.expectedStatus || 200) ? `Expected ${endpoint.expectedStatus || 200}, got ${response.status}` : undefined
+      error: !isExpectedStatus ? `Expected one of [${expectedStatuses.join(', ')}], got ${response.status}` : undefined
     };
   } catch (error: any) {
     const responseTime = Date.now() - startTime;
@@ -4706,56 +4713,106 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     }
   });
 
+  // Dynamic route discovery function that scans all registered Express routes
+  function discoverAllRoutes(app: any): any[] {
+    const routes: any[] = [];
+    
+    // Function to extract routes from router layers
+    function extractRoutes(stack: any[], basePath = '') {
+      stack.forEach((layer: any) => {
+        if (layer.route) {
+          // Direct route
+          const methods = Object.keys(layer.route.methods);
+          methods.forEach(method => {
+            if (method !== '_all') {
+              routes.push({
+                method: method.toUpperCase(),
+                path: basePath + layer.route.path,
+                name: `${method.toUpperCase()} ${basePath + layer.route.path}`
+              });
+            }
+          });
+        } else if (layer.name === 'router' && layer.handle.stack) {
+          // Nested router
+          const routerPath = layer.regexp.source
+            .replace('\\', '')
+            .replace('(?=\\/|$)', '')
+            .replace('^', '')
+            .replace('$', '');
+          extractRoutes(layer.handle.stack, basePath + routerPath);
+        }
+      });
+    }
+
+    // Extract routes from main app
+    if (app._router && app._router.stack) {
+      extractRoutes(app._router.stack);
+    }
+
+    return routes;
+  }
+
   app.post("/api/endpoints/auto-discover", async (req: Request, res: Response) => {
     try {
-      console.log("🔍 Starting fast endpoint auto-discovery...");
+      console.log("🔍 Starting comprehensive endpoint auto-discovery...");
       
-      // Define all system endpoints to monitor
-      const systemEndpoints = [
-        { name: "Dashboard API", url: `${req.protocol}://${req.get('host')}/api/dashboard/tiles`, method: "GET" },
-        { name: "Users API", url: `${req.protocol}://${req.get('host')}/api/users/all`, method: "GET" },
-        { name: "Segments API", url: `${req.protocol}://${req.get('host')}/api/segments`, method: "GET" },
-        { name: "Cohorts API", url: `${req.protocol}://${req.get('host')}/api/cohorts`, method: "GET" },
-        { name: "Integrations API", url: `${req.protocol}://${req.get('host')}/api/integrations`, method: "GET" },
-        { name: "Templates API", url: `${req.protocol}://${req.get('host')}/api/templates`, method: "GET" },
-        { name: "Reports API", url: `${req.protocol}://${req.get('host')}/api/presentations`, method: "GET" },
-        { name: "Team API", url: `${req.protocol}://${req.get('host')}/api/team`, method: "GET" },
-        { name: "Roles API", url: `${req.protocol}://${req.get('host')}/api/roles`, method: "GET" },
-        { name: "Calendar API", url: `${req.protocol}://${req.get('host')}/api/scheduled-reports`, method: "GET" },
-        { name: "Email Templates API", url: `${req.protocol}://${req.get('host')}/api/email-templates`, method: "GET" },
-        { name: "S3 Bucket API", url: `${req.protocol}://${req.get('host')}/api/s3/list`, method: "GET" },
-        { name: "Amplitude Config", url: `${req.protocol}://${req.get('host')}/api/amplitude/config`, method: "GET" },
-        { name: "Health Check", url: `${req.protocol}://${req.get('host')}/api/health`, method: "GET" }
-      ];
+      // Discover all routes dynamically from Express app
+      const allRoutes = discoverAllRoutes(app);
+      console.log(`📋 Found ${allRoutes.length} total routes in application`);
 
-      // Get existing endpoints once to minimize database calls
-      const existing = await storage.getMonitoredEndpoints();
-      const existingUrls = new Set(existing.map(e => e.url));
+      // Filter for API routes only and create monitoring endpoints
+      const apiRoutes = allRoutes.filter(route => 
+        route.path.startsWith('/api/') && 
+        !route.path.includes(':') && // Skip parameterized routes for now
+        !route.path.includes('*') && // Skip wildcard routes
+        route.method !== 'OPTIONS' && // Skip OPTIONS methods
+        !route.path.includes('/endpoints/') // Skip endpoint monitoring routes to avoid recursion
+      );
 
-      const discoveredEndpoints = [];
-      const errors = [];
+      console.log(`🎯 Filtered to ${apiRoutes.length} API routes for monitoring`);
 
-      // Test and add endpoints in batch
-      const endpointsToAdd = systemEndpoints.filter(endpoint => !existingUrls.has(endpoint.url));
-      
-      for (const endpoint of endpointsToAdd) {
+      const discoveredEndpoints: any[] = [];
+      const errors: any[] = [];
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+      // Test each API route without database dependency
+      for (const route of apiRoutes) {
+        const fullUrl = baseUrl + route.path;
+
         try {
-          // Test endpoint quickly
-          const testResult = await testEndpointHealth({
-            ...endpoint,
-            expectedStatus: endpoint.url.includes('/amplitude/') ? 404 : 200
-          });
+          // Test endpoint based on method type
+          let testResult;
+          let expectedStatus = 200;
+
+          if (route.method === 'GET') {
+            // Test GET endpoints normally
+            testResult = await testEndpointHealth({
+              url: fullUrl,
+              method: route.method,
+              expectedStatus: route.path.includes('/amplitude/') ? 404 : 200
+            });
+            expectedStatus = route.path.includes('/amplitude/') ? 404 : 200;
+          } else {
+            // For POST/PUT/DELETE endpoints, expect 400/401/422 (bad request/unauthorized) instead of 200
+            // since we're not sending proper data
+            testResult = await testEndpointHealth({
+              url: fullUrl,
+              method: route.method,
+              expectedStatus: [400, 401, 422, 405] // Method not allowed, bad request, unauthorized, validation error
+            });
+            expectedStatus = 400; // Default expected for POST/PUT/DELETE without data
+          }
 
           // Create endpoint data
           const endpointData = {
-            name: endpoint.name,
-            url: endpoint.url,
-            method: endpoint.method,
-            expectedStatus: endpoint.url.includes('/amplitude/') ? 404 : 200,
+            name: `${route.method} ${route.path}`,
+            url: fullUrl,
+            method: route.method,
+            expectedStatus: expectedStatus,
             timeout: 30,
-            checkInterval: 300, // 5 minutes
-            isActive: true,
-            alertEmail: true,
+            checkInterval: 600, // 10 minutes for non-GET endpoints
+            isActive: route.method === 'GET', // Only monitor GET endpoints by default
+            alertEmail: route.method === 'GET', // Only alert for GET endpoints
             alertSlack: false
           };
 
@@ -4764,40 +4821,57 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
             testResult
           });
 
-          console.log(`✅ Discovered: ${endpoint.name} - ${testResult.status} (${testResult.responseTime}ms)`);
+          console.log(`✅ Discovered: ${route.method} ${route.path} - ${testResult.status} (${testResult.responseTime}ms)`);
         } catch (error: any) {
-          console.error(`❌ Error testing ${endpoint.name}:`, error.message);
+          console.error(`❌ Error testing ${route.method} ${route.path}:`, error.message);
           errors.push({
-            endpoint: endpoint.name,
+            endpoint: `${route.method} ${route.path}`,
             error: error.message
           });
         }
       }
 
-      // Add endpoints to database in background
-      setImmediate(async () => {
-        for (const endpoint of discoveredEndpoints) {
-          try {
-            const { testResult, ...endpointData } = endpoint;
-            await storage.createMonitoredEndpoint(endpointData);
-          } catch (dbError) {
-            console.error(`Background DB creation failed for ${endpoint.name}:`, dbError);
-          }
-        }
-      });
-
-      console.log(`🎉 Auto-discovery complete: ${discoveredEndpoints.length} new endpoints found`);
-
+      // Respond immediately with discovery results
       res.json({
         success: true,
         discovered: discoveredEndpoints.length,
         errors: errors.length,
+        totalRoutes: allRoutes.length,
+        apiRoutes: apiRoutes.length,
         endpoints: discoveredEndpoints,
         errorDetails: errors
       });
 
+      // Add endpoints to database in background after response
+      setImmediate(async () => {
+        try {
+          const existing = await storage.getMonitoredEndpoints();
+          const existingUrls = new Set(existing.map(e => `${e.method}:${e.url}`));
+
+          for (const endpoint of discoveredEndpoints) {
+            try {
+              const routeKey = `${endpoint.method}:${endpoint.url}`;
+              if (!existingUrls.has(routeKey)) {
+                const { testResult, ...endpointData } = endpoint;
+                await storage.createMonitoredEndpoint(endpointData);
+                console.log(`💾 Stored: ${endpoint.name}`);
+              }
+            } catch (dbError) {
+              console.error(`Background DB creation failed for ${endpoint.name}:`, dbError);
+            }
+          }
+          console.log(`🎉 Background storage complete`);
+        } catch (dbError) {
+          console.error("Background database operations failed:", dbError);
+        }
+      });
+
+      console.log(`🎉 Comprehensive auto-discovery complete:`);
+      console.log(`   - ${discoveredEndpoints.length} new endpoints discovered`);
+      console.log(`   - ${errors.length} endpoints failed testing`);
+
     } catch (error: any) {
-      console.error("Error in endpoint auto-discovery:", error);
+      console.error("Error in comprehensive endpoint auto-discovery:", error);
       res.status(500).json({ error: "Failed to auto-discover endpoints" });
     }
   });
