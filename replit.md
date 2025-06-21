@@ -111,6 +111,19 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 21, 2025**: Complete Email Template Selector System with Database Integration
+  - Created email_templates database table with proper schema and constraints
+  - Implemented comprehensive email template storage methods with full CRUD operations
+  - Added email template types (EmailTemplate, InsertEmailTemplate) to shared schema
+  - Fixed SelectItem validation error by removing empty string values from dropdown components
+  - Created /api/email-templates endpoint returning authentic database templates
+  - Enhanced ContentTypeSchedulerForm with working email template selector dropdown
+  - Added three professional system email templates: Professional Report, Simple Alert, Dashboard Summary
+  - Integrated live email preview functionality with real template content and variable substitution
+  - Complete end-to-end testing confirmed email template selector loads and displays database templates
+  - System now supports custom templates alongside database-stored professional templates
+  - Email template selector shows template names, descriptions, and available placeholder variables
+
 - **June 21, 2025**: Complete S3 Template Synchronization System with `/templates` Folder Structure
   - Implemented comprehensive TemplateS3Service for automatic template storage and retrieval from S3
   - Created `/templates` folder structure in S3 bucket with template names matching S3 file names for discoverability

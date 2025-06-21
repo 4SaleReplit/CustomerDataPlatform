@@ -520,7 +520,7 @@ export function ContentTypeSchedulerForm({
                         <SelectValue placeholder="Choose an email template" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">
+                        <SelectItem value="custom">
                           <div className="flex flex-col items-start">
                             <div className="font-medium">Custom Template</div>
                             <div className="text-xs text-muted-foreground">Create your own email content</div>
