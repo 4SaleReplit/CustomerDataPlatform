@@ -865,19 +865,10 @@ export function ContentTypeSchedulerForm({
             
             ${sections.showMetrics ? `
             <div class="metrics-section">
-                <h3>Key Metrics</h3>
-                <div class="metric-card">
-                    <div class="metric-value">1,234</div>
-                    <div>Total Users</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value">89.5%</div>
-                    <div>Success Rate</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value">567</div>
-                    <div>Active Sessions</div>
-                </div>
+                <h3>Report Metrics</h3>
+                <p style="color: #666; font-size: 14px;">
+                    Report generated successfully with latest data from your analytics dashboard.
+                </p>
             </div>
             ` : ''}
             
