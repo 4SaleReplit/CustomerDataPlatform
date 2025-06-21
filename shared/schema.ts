@@ -245,6 +245,8 @@ export const endpointMonitoringHistory = pgTable("endpoint_monitoring_history", 
   checkedAt: timestamp("checked_at", { withTimezone: true }).defaultNow()
 });
 
+
+
 // Uploaded images for presentations
 export const uploadedImages = pgTable("uploaded_images", {
   id: uuid("id").primaryKey().defaultRandom(),
