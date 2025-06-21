@@ -114,12 +114,27 @@ export function PDFSlideViewer({ presentationId, templateId, className }: PDFSli
   return (
     <div className={`border rounded-lg overflow-hidden ${className}`}>
       {/* Slide Content */}
-      <div className="h-64 bg-white flex items-center justify-center p-4">
+      <div className="h-64 bg-white flex items-center justify-center p-2 relative">
         {currentSlideData?.content ? (
-          <div 
-            className="w-full h-full flex items-center justify-center"
-            dangerouslySetInnerHTML={{ __html: currentSlideData.content }}
-          />
+          <div className="w-full h-full flex items-center justify-center overflow-hidden rounded">
+            {currentSlideData.content.includes('<img') || currentSlideData.content.includes('uploads/') ? (
+              <div 
+                className="w-full h-full object-contain"
+                dangerouslySetInnerHTML={{ __html: currentSlideData.content }}
+              />
+            ) : currentSlideData.content.startsWith('uploads/') ? (
+              <img 
+                src={`/${currentSlideData.content}`}
+                alt={`Slide ${currentSlide + 1}`}
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <div 
+                className="w-full h-full flex items-center justify-center text-center"
+                dangerouslySetInnerHTML={{ __html: currentSlideData.content }}
+              />
+            )}
+          </div>
         ) : (
           <div className="text-center text-muted-foreground">
             <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
