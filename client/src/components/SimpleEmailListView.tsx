@@ -28,6 +28,15 @@ interface SentEmail {
   deliveredAt: string | null;
   sentBy: string | null;
   createdAt: string;
+  // Additional fields that exist in the database
+  reportName?: string | null;
+  emailSubject?: string | null;
+  emailTemplateId?: string | null;
+  emailTemplateName?: string | null;
+  deliveryStatus?: string | null;
+  sentAt?: string | null;
+  emailContent?: string | null;
+  updatedAt?: string | null;
 }
 
 interface ScheduledReport {
@@ -87,13 +96,13 @@ export function SimpleEmailListView({
   const [statusFilter, setStatusFilter] = useState("all");
 
   // Fetch sent emails for one-time mode
-  const { data: sentEmails = [], isLoading } = useQuery({
+  const { data: sentEmails = [], isLoading } = useQuery<SentEmail[]>({
     queryKey: ['/api/sent-emails'],
     enabled: mode === 'one-time'
   });
 
   // Use sent emails for one-time mode, reports for scheduled mode
-  const dataToDisplay: (SentEmail | ScheduledReport)[] = mode === 'one-time' ? sentEmails : reports;
+  const dataToDisplay = mode === 'one-time' ? sentEmails : reports;
   
   const filteredReports = dataToDisplay.filter((item: any) => {
     if (mode === 'one-time') {
