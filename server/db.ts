@@ -19,10 +19,11 @@ console.log('🔧 Using optimized database connection with enhanced pooling');
 function createPool(connectionString: string): Pool {
   return new Pool({
     connectionString,
-    max: 5,
-    min: 1,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 3000,
+    max: 10,
+    min: 2,
+    idleTimeoutMillis: 60000,
+    connectionTimeoutMillis: 10000,
+    acquireTimeoutMillis: 10000,
     ssl: connectionString.includes('localhost') ? false : {
       rejectUnauthorized: false
     }

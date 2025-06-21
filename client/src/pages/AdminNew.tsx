@@ -65,9 +65,10 @@ interface EndpointTestResult {
     headers: Record<string, string>;
   };
   responseDetails?: {
+    status: number;
+    statusText: string;
     headers: Record<string, string>;
     body: any;
-    statusText: string;
   };
 }
 
@@ -1962,19 +1963,32 @@ export default function AdminNew() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                           <div className="flex-shrink-0">
-                            {endpoint.lastStatus >= 200 && endpoint.lastStatus < 300 ? (
-                              <div className="p-2 bg-green-100 rounded-lg">
-                                <CheckCircle className="h-5 w-5 text-green-600" />
-                              </div>
-                            ) : endpoint.lastStatus >= 400 || endpoint.lastStatus === 0 ? (
-                              <div className="p-2 bg-red-100 rounded-lg">
-                                <XCircle className="h-5 w-5 text-red-600" />
-                              </div>
-                            ) : (
-                              <div className="p-2 bg-yellow-100 rounded-lg">
-                                <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                              </div>
-                            )}
+                            {(() => {
+                              // Check test result first, then fallback to stored status
+                              const testResult = lastTestResult;
+                              const currentStatus = testResult?.status || endpoint.lastStatus;
+                              
+                              if (currentStatus >= 200 && currentStatus < 300) {
+                                return (
+                                  <div className="p-2 bg-green-100 rounded-lg">
+                                    <CheckCircle className="h-5 w-5 text-green-600" />
+                                  </div>
+                                );
+                              } else if (currentStatus >= 400 || currentStatus === 0) {
+                                return (
+                                  <div className="p-2 bg-red-100 rounded-lg">
+                                    <XCircle className="h-5 w-5 text-red-600" />
+                                  </div>
+                                );
+                              } else {
+                                // Unknown status or no test yet
+                                return (
+                                  <div className="p-2 bg-gray-100 rounded-lg">
+                                    <Clock className="h-5 w-5 text-gray-600" />
+                                  </div>
+                                );
+                              }
+                            })()}
                           </div>
                           
                           <div className="min-w-0 flex-1">
@@ -1984,24 +1998,35 @@ export default function AdminNew() {
                               <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
                                 {endpoint.method}
                               </span>
-                              {endpoint.lastStatus && (
-                                <Badge 
-                                  className={`${
-                                    endpoint.lastStatus >= 200 && endpoint.lastStatus < 300 
-                                      ? 'bg-green-100 text-green-800 border-green-200' 
-                                      : endpoint.lastStatus >= 400 
-                                      ? 'bg-red-100 text-red-800 border-red-200'
-                                      : 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                                  }`}
-                                >
-                                  {endpoint.lastStatus}
-                                </Badge>
-                              )}
-                              {endpoint.lastResponseTime && (
-                                <span className="text-xs text-gray-500">
-                                  {endpoint.lastResponseTime}ms
-                                </span>
-                              )}
+                              {(() => {
+                                const testResult = lastTestResult;
+                                const currentStatus = testResult?.status || endpoint.lastStatus;
+                                const responseTime = testResult?.responseTime || endpoint.lastResponseTime;
+                                
+                                if (currentStatus) {
+                                  return (
+                                    <>
+                                      <Badge 
+                                        className={`${
+                                          currentStatus >= 200 && currentStatus < 300 
+                                            ? 'bg-green-100 text-green-800 border-green-200' 
+                                            : currentStatus >= 400 
+                                            ? 'bg-red-100 text-red-800 border-red-200'
+                                            : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                        }`}
+                                      >
+                                        {currentStatus}
+                                      </Badge>
+                                      {responseTime && (
+                                        <span className="text-xs text-gray-500">
+                                          {responseTime}ms
+                                        </span>
+                                      )}
+                                    </>
+                                  );
+                                }
+                                return null;
+                              })()}
                               {endpoint.lastCheckedAt && (
                                 <span className="text-xs text-gray-500">
                                   Last checked: {new Date(endpoint.lastCheckedAt).toLocaleDateString()}
