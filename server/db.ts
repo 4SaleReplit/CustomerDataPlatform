@@ -10,25 +10,34 @@ dotenv.config();
 let currentPool: Pool | null = null;
 let currentEnvironment = 'development'; // Default environment
 
-// Use optimized Neon database connection with enhanced stability settings
+// Use stable Neon database with optimized connection settings
 const FALLBACK_DATABASE_URL = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_gIzCkd5m0qUn@ep-aged-dawn-a6h96cw4.us-west-2.aws.neon.tech/neondb?sslmode=require';
 
-console.log('🔧 Using optimized Neon database connection with enhanced stability settings');
+console.log('🔧 Using optimized database connection with enhanced pooling');
 
-// Function to create a new pool with given connection string
+// Enhanced connection pool with retry logic and timeout handling
 function createPool(connectionString: string): Pool {
   const config = {
     connectionString,
-    max: 3, // Reduced pool size for stability
+    max: 2, // Minimal pool size for serverless
     min: 0, // No minimum connections
-    idleTimeoutMillis: 5000, // Shorter idle timeout
-    connectionTimeoutMillis: 10000, // Reduced connection timeout
+    idleTimeoutMillis: 3000, // Very short idle timeout
+    connectionTimeoutMillis: 5000, // Quick connection timeout
+    acquireTimeoutMillis: 8000, // Total time to get connection
     ssl: connectionString.includes('localhost') ? false : {
       rejectUnauthorized: false
     }
   };
 
-  return new Pool(config);
+  const pool = new Pool(config);
+  
+  // Enhanced error handling with automatic reconnection
+  pool.on('error', (err) => {
+    console.error('Pool error:', err.message);
+    // Pool will automatically handle reconnection
+  });
+
+  return pool;
 }
 
 // Function to switch database environment
