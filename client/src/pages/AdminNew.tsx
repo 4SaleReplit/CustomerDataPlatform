@@ -103,6 +103,76 @@ export default function AdminNew() {
   const [showEditIntegrationModal, setShowEditIntegrationModal] = useState(false);
   const [editingIntegration, setEditingIntegration] = useState<any>(null);
   const [testingIntegrations, setTestingIntegrations] = useState<string[]>([]);
+  const [selectedIntegrationType, setSelectedIntegrationType] = useState('');
+  const [integrationFormData, setIntegrationFormData] = useState<any>({});
+  const [showIntegrationTypeSelector, setShowIntegrationTypeSelector] = useState(false);
+
+  // Integration templates
+  const integrationTemplates: Record<string, any> = {
+    postgresql: {
+      name: 'PostgreSQL Database',
+      description: 'Connect to PostgreSQL database for data storage and queries',
+      category: 'Database',
+      color: 'blue',
+      fields: [
+        { 
+          key: 'connectionString', 
+          label: 'Connection String', 
+          type: 'text', 
+          placeholder: 'postgresql://username:password@host:5432/database?sslmode=require',
+          required: true
+        }
+      ]
+    },
+    snowflake: {
+      name: 'Snowflake Data Warehouse',
+      description: 'Connect to Snowflake for analytics and data warehousing',
+      category: 'Analytics',
+      color: 'blue',
+      fields: [
+        { key: 'account', label: 'Account', type: 'text', placeholder: 'your-account', required: true },
+        { key: 'username', label: 'Username', type: 'text', required: true },
+        { key: 'password', label: 'Password', type: 'password', required: true },
+        { key: 'database', label: 'Database', type: 'text', required: true },
+        { key: 'schema', label: 'Schema', type: 'text', placeholder: 'PUBLIC' },
+        { key: 'warehouse', label: 'Warehouse', type: 'text', required: true }
+      ]
+    },
+    amplitude: {
+      name: 'Amplitude Analytics',
+      description: 'Track user behavior and analytics with Amplitude',
+      category: 'Analytics',
+      color: 'purple',
+      fields: [
+        { key: 'apiKey', label: 'API Key', type: 'password', required: true },
+        { key: 'secretKey', label: 'Secret Key', type: 'password', required: true },
+        { key: 'serverZone', label: 'Server Zone', type: 'select', options: ['US', 'EU'], placeholder: 'US' }
+      ]
+    },
+    braze: {
+      name: 'Braze Marketing',
+      description: 'Customer engagement platform for targeted campaigns',
+      category: 'Marketing',
+      color: 'pink',
+      fields: [
+        { key: 'apiKey', label: 'API Key', type: 'password', required: true },
+        { key: 'restEndpoint', label: 'REST Endpoint', type: 'url', placeholder: 'https://rest.iad-01.braze.com', required: true },
+        { key: 'appId', label: 'App ID', type: 'text', required: true }
+      ]
+    },
+    s3: {
+      name: 'AWS S3 Storage',
+      description: 'Amazon S3 cloud storage for file uploads and static assets',
+      category: 'Storage',
+      color: 'green',
+      fields: [
+        { key: 'accessKeyId', label: 'Access Key ID', type: 'text', required: true },
+        { key: 'secretAccessKey', label: 'Secret Access Key', type: 'password', required: true },
+        { key: 'region', label: 'AWS Region', type: 'select', options: ['us-east-1', 'us-west-2', 'eu-west-1', 'ap-southeast-1'], placeholder: 'us-east-1', required: true },
+        { key: 'bucketName', label: 'Bucket Name', type: 'text', placeholder: 'my-app-storage', required: true }
+      ]
+    }
+  };
 
 
 
@@ -572,6 +642,125 @@ export default function AdminNew() {
     setShowEditIntegrationModal(true);
   };
 
+  // Integration creation mutation
+  const createIntegrationMutation = useMutation({
+    mutationFn: (data: any) => apiRequest('/api/integrations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { 'Content-Type': 'application/json' }
+    }),
+    onSuccess: () => {
+      toast({
+        title: "Integration Created",
+        description: "Integration has been successfully created"
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
+      setShowCreateIntegrationModal(false);
+      setSelectedIntegrationType('');
+      setIntegrationFormData({});
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Creation Failed",
+        description: error.message || "Failed to create integration",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleCreateIntegration = () => {
+    setShowIntegrationTypeSelector(true);
+  };
+
+  const handleSelectIntegrationType = (type: string) => {
+    setSelectedIntegrationType(type);
+    setIntegrationFormData({ integrationName: '' });
+    setShowIntegrationTypeSelector(false);
+    setShowCreateIntegrationModal(true);
+  };
+
+  const handleSubmitIntegration = () => {
+    const template = integrationTemplates[selectedIntegrationType];
+    if (!template) return;
+
+    // Validate required fields
+    const missingFields = template.fields
+      .filter((field: any) => field.required && !integrationFormData[field.key])
+      .map((field: any) => field.label);
+
+    if (!integrationFormData.integrationName) {
+      missingFields.unshift('Integration Name');
+    }
+
+    if (missingFields.length > 0) {
+      toast({
+        title: "Missing Required Fields",
+        description: `Please fill in: ${missingFields.join(', ')}`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Prepare credentials data
+    const credentials = Object.entries(integrationFormData)
+      .filter(([key]) => key !== 'integrationName')
+      .reduce((acc, [key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as Record<string, any>);
+
+    createIntegrationMutation.mutate({
+      name: integrationFormData.integrationName.trim(),
+      type: selectedIntegrationType,
+      description: template.description,
+      credentials,
+      status: 'disconnected'
+    });
+  };
+
+  const renderIntegrationField = (field: any) => {
+    const value = integrationFormData[field.key] || '';
+    
+    switch (field.type) {
+      case 'select':
+        return (
+          <Select 
+            value={value} 
+            onValueChange={(newValue) => setIntegrationFormData(prev => ({ ...prev, [field.key]: newValue }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={field.placeholder} />
+            </SelectTrigger>
+            <SelectContent>
+              {field.options?.map((option: string) => (
+                <SelectItem key={option} value={option}>{option}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      case 'password':
+        return (
+          <Input
+            type="password"
+            value={value}
+            onChange={(e) => setIntegrationFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
+            placeholder={field.placeholder}
+          />
+        );
+      default:
+        return (
+          <Input
+            type={field.type}
+            value={value}
+            onChange={(e) => setIntegrationFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
+            placeholder={field.placeholder}
+          />
+        );
+    }
+  };
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 bg-gradient-to-br from-gray-50 to-white min-h-screen">
       <div className="flex items-center justify-between">
@@ -906,7 +1095,7 @@ export default function AdminNew() {
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Refresh All
               </Button>
-              <Button onClick={() => setShowCreateIntegrationModal(true)} className="bg-blue-600 hover:bg-blue-700">
+              <Button onClick={handleCreateIntegration} className="bg-blue-600 hover:bg-blue-700">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Integration
               </Button>
@@ -1766,37 +1955,102 @@ export default function AdminNew() {
         </DialogContent>
       </Dialog>
 
+      {/* Integration Type Selector Modal */}
+      <Dialog open={showIntegrationTypeSelector} onOpenChange={setShowIntegrationTypeSelector}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Choose Integration Type
+            </DialogTitle>
+            <DialogDescription>
+              Select the type of integration you want to add
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 py-4">
+            {Object.entries(integrationTemplates).map(([type, template]) => (
+              <Card 
+                key={type} 
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => handleSelectIntegrationType(type)}
+              >
+                <CardContent className="p-4 text-center">
+                  <div className={`p-3 rounded-lg bg-${template.color}-100 mx-auto w-fit mb-3`}>
+                    <Database className={`h-6 w-6 text-${template.color}-600`} />
+                  </div>
+                  <h3 className="font-medium mb-2">{template.name}</h3>
+                  <p className="text-sm text-gray-500">{template.description}</p>
+                  <Badge variant="outline" className="mt-2">{template.category}</Badge>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Create Integration Modal */}
       <Dialog open={showCreateIntegrationModal} onOpenChange={setShowCreateIntegrationModal}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="h-5 w-5" />
-              Add New Integration
+              Create {integrationTemplates[selectedIntegrationType]?.name}
             </DialogTitle>
             <DialogDescription>
-              Connect a new data source or service to your platform
+              Configure your {integrationTemplates[selectedIntegrationType]?.name} integration
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="text-center py-8">
-              <Database className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Integration Creation</h3>
-              <p className="text-gray-500 mb-4">
-                Use the dedicated Integrations page for full integration management with templates and configuration options.
-              </p>
+          <form onSubmit={(e) => { e.preventDefault(); handleSubmitIntegration(); }} className="space-y-4">
+            <div>
+              <Label htmlFor="integrationName">Integration Name</Label>
+              <Input
+                id="integrationName"
+                value={integrationFormData.integrationName || ''}
+                onChange={(e) => setIntegrationFormData(prev => ({ ...prev, integrationName: e.target.value }))}
+                placeholder="Enter a unique name for this integration"
+                required
+              />
+            </div>
+
+            {integrationTemplates[selectedIntegrationType]?.fields.map((field: any) => (
+              <div key={field.key}>
+                <Label htmlFor={field.key}>
+                  {field.label} {field.required && <span className="text-red-500">*</span>}
+                </Label>
+                {renderIntegrationField(field)}
+                {field.description && (
+                  <p className="text-xs text-gray-500 mt-1">{field.description}</p>
+                )}
+              </div>
+            ))}
+
+            <div className="flex justify-end space-x-2 pt-4">
               <Button 
-                onClick={() => {
-                  setShowCreateIntegrationModal(false);
-                  window.location.href = '/integrations';
-                }}
+                type="button" 
+                variant="outline" 
+                onClick={() => setShowCreateIntegrationModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={createIntegrationMutation.isPending}
                 className="bg-blue-600 hover:bg-blue-700"
               >
-                <Database className="h-4 w-4 mr-2" />
-                Go to Integrations Page
+                {createIntegrationMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Integration
+                  </>
+                )}
               </Button>
             </div>
-          </div>
+          </form>
         </DialogContent>
       </Dialog>
 
@@ -1812,25 +2066,74 @@ export default function AdminNew() {
               Modify integration settings and test connection
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="text-center py-8">
-              <Settings className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Advanced Configuration</h3>
-              <p className="text-gray-500 mb-4">
-                Use the dedicated Integrations page for complete integration configuration and credential management.
-              </p>
-              <Button 
-                onClick={() => {
-                  setShowEditIntegrationModal(false);
-                  window.location.href = '/integrations';
-                }}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Go to Integrations Page
-              </Button>
-            </div>
-          </div>
+          {editingIntegration && (
+            <form onSubmit={(e) => { e.preventDefault(); /* TODO: Implement edit functionality */ }} className="space-y-4">
+              <div>
+                <Label htmlFor="editIntegrationName">Integration Name</Label>
+                <Input
+                  id="editIntegrationName"
+                  defaultValue={editingIntegration.name}
+                  placeholder="Enter integration name"
+                  disabled
+                />
+                <p className="text-xs text-gray-500 mt-1">Integration name cannot be changed</p>
+              </div>
+
+              <div>
+                <Label>Integration Type</Label>
+                <Input
+                  value={integrationTemplates[editingIntegration.type]?.name || editingIntegration.type}
+                  disabled
+                />
+                <p className="text-xs text-gray-500 mt-1">Integration type cannot be changed</p>
+              </div>
+
+              <div>
+                <Label>Status</Label>
+                <div className="flex items-center space-x-2">
+                  {editingIntegration.status === 'connected' ? (
+                    <Badge className="status-connected">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Connected
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline">
+                      <XCircle className="h-3 w-3 mr-1" />
+                      Disconnected
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setShowEditIntegrationModal(false)}
+                >
+                  Close
+                </Button>
+                <Button 
+                  type="button"
+                  onClick={() => handleTestConnection(editingIntegration.id)}
+                  disabled={testingIntegrations.includes(editingIntegration.id)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {testingIntegrations.includes(editingIntegration.id) ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Testing...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Test Connection
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
 
