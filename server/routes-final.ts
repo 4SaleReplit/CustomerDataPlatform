@@ -64,7 +64,7 @@ async function testEndpointHealth(endpoint: any): Promise<{ status: number; resp
   }
 }
 
-// Complete the detailed testing function
+// Enhanced detailed endpoint testing with request/response capture
 async function testEndpointHealthDetailed(endpoint: any): Promise<{ 
   status: number; 
   responseTime: number; 
@@ -87,7 +87,7 @@ async function testEndpointHealthDetailed(endpoint: any): Promise<{
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
     
     const response = await fetch(endpoint.url, {
       method: endpoint.method || 'GET',
@@ -98,7 +98,7 @@ async function testEndpointHealthDetailed(endpoint: any): Promise<{
     clearTimeout(timeoutId);
     const responseTime = Date.now() - startTime;
 
-    // Capture response details
+    // Capture response details safely
     let responseBody;
     let responseHeaders = {};
     
@@ -110,7 +110,7 @@ async function testEndpointHealthDetailed(endpoint: any): Promise<{
       const contentType = response.headers.get('content-type') || '';
       if (contentType.includes('application/json')) {
         const text = await response.text();
-        responseBody = text.length > 5000 ? text.substring(0, 5000) + '...' : text;
+        responseBody = text.length > 2000 ? text.substring(0, 2000) + '...' : text;
         try {
           responseBody = JSON.parse(responseBody);
         } catch {
@@ -118,8 +118,8 @@ async function testEndpointHealthDetailed(endpoint: any): Promise<{
         }
       } else if (contentType.includes('text/')) {
         responseBody = await response.text();
-        if (responseBody.length > 1000) {
-          responseBody = responseBody.substring(0, 1000) + '...';
+        if (responseBody.length > 500) {
+          responseBody = responseBody.substring(0, 500) + '...';
         }
       } else {
         responseBody = `[${contentType || 'binary data'}] - ${response.headers.get('content-length') || 'unknown'} bytes`;
@@ -136,15 +136,39 @@ async function testEndpointHealthDetailed(endpoint: any): Promise<{
       timestamp: new Date().toISOString()
     };
 
+    // Handle both single status and array of expected statuses
+    const expectedStatuses = Array.isArray(endpoint.expectedStatus) 
+      ? endpoint.expectedStatus 
+      : [endpoint.expectedStatus || 200];
+    
+    const isExpectedStatus = expectedStatuses.includes(response.status);
+
     return {
       status: response.status,
       responseTime,
-      error: response.ok ? undefined : `HTTP ${response.status}: ${response.statusText}`,
+      error: !isExpectedStatus ? `Expected one of [${expectedStatuses.join(', ')}], got ${response.status}` : undefined,
       requestDetails,
       responseDetails
     };
   } catch (error) {
     const responseTime = Date.now() - startTime;
+    
+    if (error instanceof Error && error.name === 'AbortError') {
+      return {
+        status: 0,
+        responseTime,
+        error: 'Request timeout after 3s',
+        requestDetails,
+        responseDetails: {
+          status: 0,
+          statusText: 'Request Timeout',
+          headers: {},
+          body: 'Request timeout after 3 seconds',
+          timestamp: new Date().toISOString()
+        }
+      };
+    }
+    
     return {
       status: 0,
       responseTime,
@@ -157,71 +181,6 @@ async function testEndpointHealthDetailed(endpoint: any): Promise<{
         body: error instanceof Error ? error.message : 'Network error',
         timestamp: new Date().toISOString()
       }
-    };
-  }
-}
-
-// Detailed endpoint testing with request/response capture
-async function testEndpointHealthDetailed(endpoint: any): Promise<{ 
-  status: number; 
-  responseTime: number; 
-  error?: string;
-  requestDetails: any;
-  responseDetails: any;
-}> {
-  const startTime = Date.now();
-  
-  const requestDetails = {
-    url: endpoint.url,
-    method: endpoint.method || 'GET',
-    headers: {
-      'User-Agent': '4Sale CDP Monitor/1.0',
-      'Accept': 'application/json, text/plain, */*',
-      'Cache-Control': 'no-cache'
-    },
-    timestamp: new Date().toISOString()
-  };
-
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-    
-    const response = await fetch(endpoint.url, {
-      method: endpoint.method || 'GET',
-      signal: controller.signal,
-      headers: requestDetails.headers
-    });
-    
-    clearTimeout(timeoutId);
-    const responseTime = Date.now() - startTime;
-    
-    // Handle both single status and array of expected statuses
-    const expectedStatuses = Array.isArray(endpoint.expectedStatus) 
-      ? endpoint.expectedStatus 
-      : [endpoint.expectedStatus || 200];
-    
-    const isExpectedStatus = expectedStatuses.includes(response.status);
-    
-    return {
-      status: response.status,
-      responseTime,
-      error: !isExpectedStatus ? `Expected one of [${expectedStatuses.join(', ')}], got ${response.status}` : undefined
-    };
-  } catch (error: any) {
-    const responseTime = Date.now() - startTime;
-    
-    if (error.name === 'AbortError') {
-      return {
-        status: 0,
-        responseTime,
-        error: 'Request timeout after 3s'
-      };
-    }
-    
-    return {
-      status: 0,
-      responseTime,
-      error: error.message || 'Network error'
     };
   }
 }
