@@ -4486,6 +4486,29 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         // Create template from existing presentation
         const { templateService } = await import('./services/templateService');
         const template = await templateService.createTemplateFromPresentation(presentationId, name, description);
+        
+        // Sync new template to S3 with template name-based key
+        await templateS3Service.initialize();
+        const templateData = {
+          id: template.id,
+          name: template.name,
+          description: template.description || '',
+          slides: template.slideIds || [],
+          metadata: {},
+          createdAt: template.createdAt ? (template.createdAt instanceof Date ? template.createdAt.toISOString() : template.createdAt) : new Date().toISOString(),
+          updatedAt: template.updatedAt ? (template.updatedAt instanceof Date ? template.updatedAt.toISOString() : template.updatedAt) : new Date().toISOString()
+        };
+        
+        const s3Key = await templateS3Service.saveTemplate(templateData);
+        if (s3Key) {
+          // Update database with S3 key for perfect sync
+          await storage.updateTemplate(template.id, { 
+            s3Key, 
+            lastSyncedAt: new Date().toISOString() 
+          } as any);
+          console.log(`✅ Template synchronized to S3: ${s3Key}`);
+        }
+        
         res.json(template);
       } else {
         // Create template directly with content (from Design Studio)
@@ -4499,6 +4522,29 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         };
 
         const result = await storage.createTemplate(templateData);
+        
+        // Sync new template to S3 with template name-based key
+        await templateS3Service.initialize();
+        const s3TemplateData = {
+          id: result.id,
+          name: result.name,
+          description: result.description || '',
+          slides: result.slideIds || [],
+          metadata: {},
+          createdAt: result.createdAt ? (result.createdAt instanceof Date ? result.createdAt.toISOString() : result.createdAt) : new Date().toISOString(),
+          updatedAt: result.updatedAt ? (result.updatedAt instanceof Date ? result.updatedAt.toISOString() : result.updatedAt) : new Date().toISOString()
+        };
+        
+        const s3Key = await templateS3Service.saveTemplate(s3TemplateData);
+        if (s3Key) {
+          // Update database with S3 key for perfect sync
+          await storage.updateTemplate(result.id, { 
+            s3Key, 
+            lastSyncedAt: new Date().toISOString() 
+          } as any);
+          console.log(`✅ Template synchronized to S3: ${s3Key}`);
+        }
+        
         res.status(201).json(result);
       }
     } catch (error) {
@@ -4526,8 +4572,38 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     try {
       const { id } = req.params;
       const updates = req.body;
+      
+      // Get existing template for S3 sync
+      const existingTemplate = await storage.getTemplate(id);
+      if (!existingTemplate) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      
       const { templateService } = await import('./services/templateService');
       const template = await templateService.updateTemplate(id, updates);
+      
+      // Sync updated template to S3 with template name-based key
+      await templateS3Service.initialize();
+      const templateData = {
+        id: template.id,
+        name: template.name,
+        description: template.description || '',
+        slides: template.slideIds || [],
+        metadata: {},
+        createdAt: template.createdAt || new Date().toISOString(),
+        updatedAt: template.updatedAt || new Date().toISOString()
+      };
+      
+      const s3Key = await templateS3Service.updateTemplate(templateData, existingTemplate.s3Key);
+      if (s3Key) {
+        // Update database with new S3 key for perfect sync
+        await storage.updateTemplate(template.id, { 
+          s3Key, 
+          lastSyncedAt: new Date().toISOString() 
+        });
+        console.log(`✅ Template updated and synchronized to S3: ${s3Key}`);
+      }
+      
       res.json(template);
     } catch (error) {
       console.error('Error updating template:', error);
