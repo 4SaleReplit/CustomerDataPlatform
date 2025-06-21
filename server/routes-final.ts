@@ -3185,9 +3185,62 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
               
               // For tables with foreign key constraints, create without constraints first
               if (table === 'scheduled_reports' || table === 'report_executions') {
-                // Remove foreign key constraints from table creation
-                const columnsWithoutFKs = columns.replace(/,\s*CONSTRAINT[^,]+/g, '');
-                await targetClient.query(`CREATE TABLE "${table}" (${columnsWithoutFKs})`);
+                addLog(`Creating ${table} table without foreign key constraints to prevent dependency issues`);
+                
+                // Get column definitions without constraints
+                const columnDefsResult = await sourceClient.query(`
+                  SELECT 
+                    column_name,
+                    data_type,
+                    character_maximum_length,
+                    is_nullable,
+                    column_default,
+                    udt_name
+                  FROM information_schema.columns 
+                  WHERE table_name = $1 AND table_schema = 'public'
+                  ORDER BY ordinal_position
+                `, [table]);
+                
+                const columnDefs = columnDefsResult.rows.map(col => {
+                  let colDef = `"${col.column_name}"`;
+                  
+                  // Handle data types
+                  if (col.data_type === 'character varying') {
+                    colDef += col.character_maximum_length ? ` varchar(${col.character_maximum_length})` : ' varchar';
+                  } else if (col.data_type === 'USER-DEFINED' && col.udt_name === 'uuid') {
+                    colDef += ' uuid';
+                  } else if (col.data_type === 'timestamp with time zone') {
+                    colDef += ' timestamp with time zone';
+                  } else if (col.data_type === 'jsonb') {
+                    colDef += ' jsonb';
+                  } else if (col.data_type === 'boolean') {
+                    colDef += ' boolean';
+                  } else if (col.data_type === 'integer') {
+                    colDef += ' integer';
+                  } else if (col.data_type === 'text') {
+                    colDef += ' text';
+                  } else {
+                    colDef += ` ${col.data_type}`;
+                  }
+                  
+                  // Handle nullable
+                  if (col.is_nullable === 'NO') {
+                    colDef += ' NOT NULL';
+                  }
+                  
+                  // Handle defaults (excluding foreign key defaults)
+                  if (col.column_default && !col.column_default.includes('nextval')) {
+                    if (col.column_name === 'id' && col.column_default.includes('gen_random_uuid')) {
+                      colDef += ' PRIMARY KEY DEFAULT gen_random_uuid()';
+                    } else if (col.column_default) {
+                      colDef += ` DEFAULT ${col.column_default}`;
+                    }
+                  }
+                  
+                  return colDef;
+                }).join(', ');
+                
+                await targetClient.query(`CREATE TABLE "${table}" (${columnDefs})`);
                 addLog(`Created table ${table} without foreign key constraints`);
               } else {
                 await targetClient.query(`CREATE TABLE "${table}" (${columns})`);
