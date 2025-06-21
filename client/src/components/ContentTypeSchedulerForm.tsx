@@ -13,7 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 
 interface Template {
   id: string;
-  title: string;
+  name: string;
+  title?: string;
   description?: string;
   lastRefreshed?: string;
 }
@@ -278,7 +279,7 @@ export function ContentTypeSchedulerForm({
                       {templates.map((template) => (
                         <SelectItem key={template.id} value={template.id}>
                           <div className="flex flex-col items-start">
-                            <div className="font-medium">{template.title}</div>
+                            <div className="font-medium">{template.name || template.title}</div>
                             {template.description && (
                               <div className="text-xs text-muted-foreground">{template.description}</div>
                             )}

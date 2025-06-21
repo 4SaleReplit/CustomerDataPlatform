@@ -4921,13 +4921,12 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       
       // Update template with refreshed content
       const updatedTemplate = await storage.updateTemplate(id, {
-        content: refreshedContent,
-        lastRefreshed: new Date().toISOString()
+        content: refreshedContent
       });
       
       // Sync refreshed template to S3
       try {
-        await templateS3Service.storeTemplate(updatedTemplate);
+        await templateS3Service.saveTemplate(updatedTemplate);
       } catch (s3Error) {
         console.warn('Failed to sync refreshed template to S3:', s3Error);
       }
