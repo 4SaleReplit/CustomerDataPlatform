@@ -4540,7 +4540,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
           // Update database with S3 key for perfect sync
           await storage.updateTemplate(result.id, { 
             s3Key, 
-            lastSyncedAt: new Date().toISOString() 
+            lastSyncedAt: new Date() 
           } as any);
           console.log(`✅ Template synchronized to S3: ${s3Key}`);
         }
@@ -4719,7 +4719,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         // Update database with S3 key for perfect sync
         await storage.updateTemplate(clonedTemplate.id, { 
           s3Key, 
-          lastSyncedAt: new Date().toISOString() 
+          lastSyncedAt: new Date() 
         } as any);
         console.log(`✅ Template cloned and synchronized to S3: ${s3Key}`);
       }
