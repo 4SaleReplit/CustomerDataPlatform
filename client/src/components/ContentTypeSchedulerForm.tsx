@@ -483,7 +483,7 @@ export function ContentTypeSchedulerForm({
             </CardContent>
           </Card>
 
-          {/* Email Template with Live Preview */}
+          {/* Email Template & Live Preview */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -491,48 +491,34 @@ export function ContentTypeSchedulerForm({
                 Email Template & Live Preview
               </CardTitle>
               <CardDescription>
-                Design your email template and see a live preview of how it will look
+                Select an email template and configure the subject with date parameters
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Email Template Editor */}
+                {/* Left Panel - Template Selection */}
                 <div className="space-y-4">
-                  {/* Email Template Selector */}
                   <div className="space-y-2">
                     <Label>Email Template</Label>
                     <Select
                       value={formData.emailTemplate?.templateId || ''}
-                      onValueChange={(value) => {
-                        const selectedTemplate = emailTemplates.find(t => t.id === value);
-                        onFormDataChange({
-                          ...formData,
-                          emailTemplate: {
-                            ...formData.emailTemplate,
-                            templateId: value,
-                            subject: selectedTemplate?.subject || formData.emailTemplate?.subject || '',
-                            customContent: selectedTemplate?.bodyHtml || formData.emailTemplate?.customContent || ''
-                          }
-                        });
-                      }}
+                      onValueChange={(value) => onFormDataChange({
+                        ...formData,
+                        emailTemplate: {
+                          ...formData.emailTemplate,
+                          templateId: value
+                        }
+                      })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Choose an email template" />
+                        <SelectValue placeholder="Select an email template" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="custom">
-                          <div className="flex flex-col items-start">
-                            <div className="font-medium">Custom Template</div>
-                            <div className="text-xs text-muted-foreground">Create your own email content</div>
-                          </div>
-                        </SelectItem>
                         {emailTemplates.map((template) => (
                           <SelectItem key={template.id} value={template.id}>
-                            <div className="flex flex-col items-start">
+                            <div>
                               <div className="font-medium">{template.name}</div>
-                              {template.description && (
-                                <div className="text-xs text-muted-foreground">{template.description}</div>
-                              )}
+                              <div className="text-xs text-muted-foreground">{template.description}</div>
                             </div>
                           </SelectItem>
                         ))}
@@ -552,120 +538,53 @@ export function ContentTypeSchedulerForm({
                           subject: e.target.value
                         }
                       })}
-                      placeholder="Enter email subject"
+                      placeholder="e.g., Weekly Report - {week_start} to {week_end}"
                     />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="content">Email Body</Label>
-                    <Textarea
-                      id="content"
-                      value={(() => {
-                        const selectedTemplate = emailTemplates.find(t => t.id === formData.emailTemplate?.templateId);
-                        if (selectedTemplate && formData.emailTemplate?.templateId !== 'custom') {
-                          return selectedTemplate.bodyText || selectedTemplate.bodyHtml?.replace(/<[^>]*>/g, '') || '';
-                        }
-                        return formData.emailTemplate?.customContent || '';
-                      })()}
-                      onChange={(e) => onFormDataChange({
-                        ...formData,
-                        emailTemplate: {
-                          ...formData.emailTemplate,
-                          customContent: e.target.value
-                        }
-                      })}
-                      placeholder="Enter your email message as plain text. Variables will be replaced automatically in the preview."
-                      rows={8}
-                      className="text-sm"
-                      readOnly={formData.emailTemplate?.templateId && formData.emailTemplate?.templateId !== 'custom'}
-                    />
-                    {formData.emailTemplate?.templateId && formData.emailTemplate?.templateId !== 'custom' && (
-                      <p className="text-xs text-muted-foreground">
-                        This is the template's default text. Switch to "Custom Template" to edit the email body.
-                      </p>
-                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Use {`{week_start}`} and {`{week_end}`} for dynamic date ranges
+                    </p>
                   </div>
 
-                  {/* Editable Template Variables */}
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">Template Variables</Label>
-                    <div className="space-y-3 p-4 bg-muted rounded-lg">
-                      {(() => {
-                        const currentTemplateVar = emailTemplates.find(t => t.id === formData.emailTemplate?.templateId);
-                        const availableVariables = currentTemplateVar?.availablePlaceholders || [
-                          'report_name', 'recipient_name', 'date', 'pdf_download_url', 'dashboard_url', 'company_name'
-                        ];
-                        
-                        return availableVariables.map((variable) => {
-                          const getPlaceholder = (varName: string) => {
-                            switch (varName) {
-                              case 'report_name':
-                              case 'report_title':
-                                return 'Analytics Dashboard Report';
-                              case 'recipient_name':
-                                return 'John Doe';
-                              case 'company_name':
-                                return '4Sale Analytics';
-                              case 'date':
-                              case 'generation_date':
-                              case 'report_period':
-                              case 'dashboard_period':
-                                return new Date().toLocaleDateString();
-                              case 'generation_time':
-                              case 'alert_time':
-                                return new Date().toLocaleTimeString();
-                              case 'email_content':
-                              case 'dashboard_content':
-                                return 'Your report is ready for review with key insights and metrics.';
-                              case 'alert_title':
-                                return 'System Alert';
-                              case 'alert_message':
-                                return 'Important notification from your dashboard';
-                              case 'dashboard_name':
-                                return 'Analytics Dashboard';
-                              case 'metric_1_value':
-                                return '1,234';
-                              case 'metric_1_label':
-                                return 'Total Users';
-                              case 'metric_2_value':
-                                return '567';
-                              case 'metric_2_label':
-                                return 'Active Sessions';
-                              case 'metric_3_value':
-                                return '89%';
-                              case 'metric_3_label':
-                                return 'Success Rate';
-                              case 'pdf_download_url':
-                                return 'https://dashboard.4sale.tech/reports/download';
-                              case 'dashboard_url':
-                                return 'https://dashboard.4sale.tech';
-                              default:
-                                return 'Enter value or SQL query';
+                  {/* Date Configuration for Subject */}
+                  <div className="space-y-3 p-4 bg-muted rounded-lg">
+                    <Label className="text-sm font-medium">Subject Date Parameters</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">{`{week_start}`}</Label>
+                        <Input
+                          placeholder="June 15, 2025"
+                          value={formData.emailTemplate?.subjectVariables?.week_start || ''}
+                          onChange={(e) => onFormDataChange({
+                            ...formData,
+                            emailTemplate: {
+                              ...formData.emailTemplate,
+                              subjectVariables: {
+                                ...formData.emailTemplate?.subjectVariables,
+                                week_start: e.target.value
+                              }
                             }
-                          };
-
-                          return (
-                            <div key={variable} className="grid grid-cols-3 gap-3 items-center">
-                              <Label className="text-xs font-medium">{`{${variable}}`}</Label>
-                              <Input
-                                placeholder={getPlaceholder(variable)}
-                                value={formData.emailTemplate?.templateVariables?.[variable] || ''}
-                                onChange={(e) => onFormDataChange({
-                                  ...formData,
-                                  emailTemplate: {
-                                    ...formData.emailTemplate,
-                                    templateVariables: {
-                                      ...formData.emailTemplate?.templateVariables,
-                                      [variable]: e.target.value
-                                    }
-                                  }
-                                })}
-                                className="text-xs col-span-2"
-                              />
-                            </div>
-                          );
-                        });
-                      })()}
+                          })}
+                          className="text-xs"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">{`{week_end}`}</Label>
+                        <Input
+                          placeholder="June 21, 2025"
+                          value={formData.emailTemplate?.subjectVariables?.week_end || ''}
+                          onChange={(e) => onFormDataChange({
+                            ...formData,
+                            emailTemplate: {
+                              ...formData.emailTemplate,
+                              subjectVariables: {
+                                ...formData.emailTemplate?.subjectVariables,
+                                week_end: e.target.value
+                              }
+                            }
+                          })}
+                          className="text-xs"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
