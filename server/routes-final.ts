@@ -798,6 +798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             if (emailTemplate) {
               console.log('Found email template:', emailTemplate.name);
+              console.log('Template HTML preview:', emailTemplate.bodyHtml.substring(0, 200) + '...');
               
               // Generate PDF URL for the presentation - always use the endpoint to ensure fresh signed URLs
               const domain = process.env.REPLIT_DEV_DOMAIN ? 
@@ -821,6 +822,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Use the database template with proper PDF URL - override any incorrect URLs from frontend
               const templateVariables = {
                 report_name: reportData.emailTemplate.templateVariables?.report_name || reportData.name || 'Analytics Report',
+                report_download_url: pdfDownloadUrl, // This matches the template variable
                 pdf_download_url: pdfDownloadUrl,
                 report_url: pdfDownloadUrl,
                 generation_date: new Date().toLocaleDateString(),
@@ -828,15 +830,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
               };
               
               console.log('Template variables with PDF URL:', templateVariables);
+              console.log('Original template HTML length:', emailTemplate.bodyHtml.length);
               
               // Start with the template HTML
               emailHtml = emailTemplate.bodyHtml;
               
-              // Replace template variables
+              // Replace template variables with proper escaping
               Object.entries(templateVariables).forEach(([key, value]) => {
                 const regex = new RegExp(`{{${key}}}`, 'g');
-                emailHtml = emailHtml.replace(regex, value || '');
+                emailHtml = emailHtml.replace(regex, String(value || ''));
               });
+              
+              console.log('Final processed email HTML length:', emailHtml.length);
               
             } else {
               console.log(`Template ${reportData.emailTemplate.templateId} not found, using fallback`);
