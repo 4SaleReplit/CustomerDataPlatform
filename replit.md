@@ -127,6 +127,8 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
   - **Completed expandable endpoint cards showing actual request/response JSON data with headers, status codes, and timing**
   - **Fixed database connection pool issues preventing dashboard tile loading and API functionality**
   - **Auto-discovery system finds all 44+ API endpoints across entire application codebase instantly**
+  - **Fixed endpoint status display logic to properly show green check marks for 200 status codes**
+  - **Corrected POST /api/templates expected status code from 201 to 200 to eliminate false error alerts**
   - Admin dashboard now provides complete Pingdom-like endpoint monitoring with detailed request/response inspection
 
 - **June 21, 2025**: Enhanced Integration Management System with Comprehensive Catalog
