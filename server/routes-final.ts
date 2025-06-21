@@ -80,10 +80,85 @@ async function testEndpointHealth(endpoint: any): Promise<{ status: number; resp
   }
 }
 
-// Schedule endpoint monitoring with cron (disabled for now to fix database issues)
+// Schedule endpoint monitoring with cron
 async function scheduleEndpointMonitoring(endpoint: any) {
-  console.log(`⏸️ Monitoring scheduled for ${endpoint.name} (currently disabled for performance)`);
-  // Monitoring temporarily disabled to resolve database connection issues
+  try {
+    // Stop existing monitoring if any
+    if (endpointMonitoringJobs.has(endpoint.id)) {
+      endpointMonitoringJobs.get(endpoint.id).stop();
+      endpointMonitoringJobs.delete(endpoint.id);
+    }
+
+    if (!endpoint.isActive) {
+      console.log(`⏸️ Monitoring not scheduled for ${endpoint.name} (inactive)`);
+      return;
+    }
+
+    // Convert interval from seconds to cron expression
+    const intervalMinutes = Math.max(1, Math.floor(endpoint.checkInterval / 60));
+    const cronExpression = `*/${intervalMinutes} * * * *`; // Every N minutes
+    
+    console.log(`🕐 Scheduling monitoring for ${endpoint.name} every ${intervalMinutes} minutes`);
+
+    // Create cron job for endpoint monitoring
+    const cron = require('node-cron');
+    const task = cron.schedule(cronExpression, async () => {
+      try {
+        console.log(`🔍 Checking endpoint: ${endpoint.name}`);
+        
+        // Test the endpoint
+        const result = await testEndpointHealth(endpoint);
+        
+        // Update endpoint status in background to avoid blocking
+        setImmediate(async () => {
+          try {
+            const isSuccess = result.status >= 200 && result.status < 300 && !result.error;
+            const consecutiveFailures = isSuccess ? 0 : (endpoint.consecutiveFailures || 0) + 1;
+            
+            await storage.updateMonitoredEndpoint(endpoint.id, {
+              lastStatus: result.status,
+              lastResponseTime: result.responseTime,
+              lastCheckedAt: new Date(),
+              ...(isSuccess 
+                ? { lastSuccessAt: new Date(), consecutiveFailures: 0 }
+                : { lastFailureAt: new Date(), consecutiveFailures }
+              )
+            });
+
+            // Create monitoring history record
+            await storage.createEndpointMonitoringHistory({
+              endpointId: endpoint.id,
+              status: result.status,
+              responseTime: result.responseTime,
+              errorMessage: result.error
+            });
+
+            // Send alerts if endpoint is failing
+            if (!isSuccess && consecutiveFailures >= 2) {
+              await sendEndpointAlerts({...endpoint, consecutiveFailures}, result);
+            }
+
+            console.log(`✅ ${endpoint.name}: ${result.status} (${result.responseTime}ms) - ${isSuccess ? 'OK' : 'FAILED'}`);
+          } catch (dbError) {
+            console.error(`Database update failed for ${endpoint.name}:`, dbError);
+          }
+        });
+        
+      } catch (error) {
+        console.error(`Error monitoring ${endpoint.name}:`, error);
+      }
+    }, {
+      scheduled: false // Don't start immediately
+    });
+
+    // Store the task and start it
+    endpointMonitoringJobs.set(endpoint.id, task);
+    task.start();
+    
+    console.log(`✅ Monitoring started for ${endpoint.name}`);
+  } catch (error) {
+    console.error(`Failed to schedule monitoring for ${endpoint.name}:`, error);
+  }
 }
 
 // Unschedule endpoint monitoring
@@ -4641,6 +4716,105 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     }
   });
 
+  app.post("/api/endpoints/refresh-all", async (req: Request, res: Response) => {
+    try {
+      console.log("🔄 Starting comprehensive endpoint refresh...");
+      
+      const endpoints = await storage.getMonitoredEndpoints();
+      const testResults = [];
+      
+      console.log(`Testing ${endpoints.length} monitored endpoints...`);
+      
+      // Test all endpoints and collect results
+      for (const endpoint of endpoints) {
+        try {
+          const startTime = Date.now();
+          const result = await testEndpointHealth(endpoint);
+          const testDuration = Date.now() - startTime;
+          
+          const isSuccess = result.status >= 200 && result.status < 300 && !result.error;
+          
+          testResults.push({
+            id: endpoint.id,
+            name: endpoint.name,
+            url: endpoint.url,
+            method: endpoint.method,
+            status: result.status,
+            responseTime: result.responseTime,
+            isHealthy: isSuccess,
+            error: result.error,
+            lastChecked: new Date().toISOString(),
+            isActive: endpoint.isActive
+          });
+          
+          // Update endpoint status in background
+          setImmediate(async () => {
+            try {
+              const consecutiveFailures = isSuccess ? 0 : (endpoint.consecutiveFailures || 0) + 1;
+              
+              await storage.updateMonitoredEndpoint(endpoint.id, {
+                lastStatus: result.status,
+                lastResponseTime: result.responseTime,
+                lastCheckedAt: new Date(),
+                ...(isSuccess 
+                  ? { lastSuccessAt: new Date(), consecutiveFailures: 0 }
+                  : { lastFailureAt: new Date(), consecutiveFailures }
+                )
+              });
+
+              await storage.createEndpointMonitoringHistory({
+                endpointId: endpoint.id,
+                status: result.status,
+                responseTime: result.responseTime,
+                errorMessage: result.error
+              });
+            } catch (dbError) {
+              console.error(`Background update failed for ${endpoint.name}:`, dbError);
+            }
+          });
+          
+          console.log(`✅ ${endpoint.name}: ${result.status} (${result.responseTime}ms) - ${isSuccess ? 'HEALTHY' : 'FAILED'}`);
+        } catch (error) {
+          console.error(`Error testing ${endpoint.name}:`, error);
+          testResults.push({
+            id: endpoint.id,
+            name: endpoint.name,
+            url: endpoint.url,
+            method: endpoint.method,
+            status: 0,
+            responseTime: 0,
+            isHealthy: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            lastChecked: new Date().toISOString(),
+            isActive: endpoint.isActive
+          });
+        }
+      }
+      
+      const healthyCount = testResults.filter(r => r.isHealthy).length;
+      const unhealthyCount = testResults.length - healthyCount;
+      const avgResponseTime = testResults.reduce((sum, r) => sum + r.responseTime, 0) / testResults.length;
+      
+      console.log(`🎉 Endpoint refresh complete: ${healthyCount} healthy, ${unhealthyCount} unhealthy`);
+      
+      res.json({
+        success: true,
+        timestamp: new Date().toISOString(),
+        summary: {
+          total: testResults.length,
+          healthy: healthyCount,
+          unhealthy: unhealthyCount,
+          averageResponseTime: Math.round(avgResponseTime)
+        },
+        results: testResults
+      });
+      
+    } catch (error: any) {
+      console.error("Error in endpoint refresh:", error);
+      res.status(500).json({ error: "Failed to refresh endpoints" });
+    }
+  });
+
   app.post("/api/endpoints", async (req: Request, res: Response) => {
     try {
       const validation = insertMonitoredEndpointSchema.safeParse(req.body);
@@ -4662,6 +4836,52 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     } catch (error: any) {
       console.error("Error creating monitored endpoint:", error);
       res.status(500).json({ error: "Failed to create monitored endpoint" });
+    }
+  });
+
+  app.patch("/api/endpoints/:id", async (req: Request, res: Response) => {
+    try {
+      const validation = updateMonitoredEndpointSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          error: "Invalid endpoint data", 
+          details: validation.error.issues 
+        });
+      }
+
+      const endpoint = await storage.updateMonitoredEndpoint(req.params.id, validation.data);
+      if (!endpoint) {
+        return res.status(404).json({ error: "Endpoint not found" });
+      }
+
+      // Update monitoring based on new settings
+      if (endpoint.isActive) {
+        await scheduleEndpointMonitoring(endpoint);
+      } else {
+        await unscheduleEndpointMonitoring(endpoint.id);
+      }
+
+      res.json(endpoint);
+    } catch (error: any) {
+      console.error("Error updating monitored endpoint:", error);
+      res.status(500).json({ error: "Failed to update monitored endpoint" });
+    }
+  });
+
+  app.delete("/api/endpoints/:id", async (req: Request, res: Response) => {
+    try {
+      // Stop monitoring first
+      await unscheduleEndpointMonitoring(req.params.id);
+      
+      const deleted = await storage.deleteMonitoredEndpoint(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Endpoint not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting monitored endpoint:", error);
+      res.status(500).json({ error: "Failed to delete monitored endpoint" });
     }
   });
 
