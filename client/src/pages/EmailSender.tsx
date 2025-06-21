@@ -10,8 +10,8 @@ import { Calendar, Clock, Mail, Send, Play, Pause, Trash2, Plus, Users, Database
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ComprehensiveEmailForm } from "@/components/ComprehensiveEmailForm";
-import { EmailListView } from "@/components/EmailListView";
+import { NewEmailSenderForm } from "@/components/NewEmailSenderForm";
+import { SimpleEmailListView } from "@/components/SimpleEmailListView";
 
 interface ScheduledReport {
   id: string;
@@ -442,34 +442,25 @@ export function EmailSender() {
                   Send New Email
                 </Button>
               </DialogTrigger>
-              <ComprehensiveEmailForm
+              <NewEmailSenderForm
                 isOpen={isCreateDialogOpen}
                 onClose={() => setIsCreateDialogOpen(false)}
                 onSubmit={handleCreateReport}
-                formData={formData}
-                onFormDataChange={setFormData}
                 isLoading={createReportMutation.isPending}
-                mode="create"
+                mode="one-time"
                 title="Send One-Time Email"
               />
             </Dialog>
           </div>
 
-          <EmailListView
+          <SimpleEmailListView
             reports={filteredReports}
-            presentations={presentations}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            statusFilter={statusFilter}
-            onStatusFilterChange={setStatusFilter}
-            isLoading={reportsLoading}
-            emptyMessage="No one-time emails sent yet"
-            emptyDescription="Send your first email report"
-            onDuplicate={handleDuplicateReport}
+            mode="one-time"
             onEdit={openEditDialog}
+            onDuplicate={handleDuplicateReport}
             onDelete={handleDeleteReport}
             onToggleActive={() => {}}
-            isOneTime={true}
+            presentations={presentations}
           />
         </TabsContent>
 
@@ -486,14 +477,12 @@ export function EmailSender() {
                   Schedule New Report
                 </Button>
               </DialogTrigger>
-              <ComprehensiveEmailForm
+              <NewEmailSenderForm
                 isOpen={isCreateDialogOpen}
                 onClose={() => setIsCreateDialogOpen(false)}
                 onSubmit={handleCreateReport}
-                formData={formData}
-                onFormDataChange={setFormData}
                 isLoading={createReportMutation.isPending}
-                mode="create"
+                mode="scheduled"
                 title="Schedule New Report"
               />
             </Dialog>

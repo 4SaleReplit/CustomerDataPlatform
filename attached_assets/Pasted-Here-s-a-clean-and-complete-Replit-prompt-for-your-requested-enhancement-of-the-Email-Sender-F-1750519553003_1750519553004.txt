@@ -1,0 +1,70 @@
+Here’s a **clean and complete Replit prompt** for your requested enhancement of the **Email Sender Form** feature, with clear structure, deletion instruction, and a step-by-step breakdown of the new implementation:
+
+---
+
+### 🛠 Replit Prompt: Email Sender Form – Full Redesign & Replacement
+
+---
+
+### ❌ **Delete the Existing Email Sender Form**
+
+* **Completely remove** the current implementation of the Email Sender Form from the codebase.
+* Delete all related files and components **without keeping any fallback or root reference**.
+* Rationale: The current version is fundamentally incorrect, buggy, and not maintainable.
+
+---
+
+### ✅ **Rebuild the Email Sender Form – Correctly & Cleanly**
+
+---
+
+#### **1. Section One: Report Selection & Preview**
+
+* Add a **dropdown** to choose between:
+
+  * "Existing Report"
+  * "Template Report"
+
+* Based on the selection:
+
+  * Show a **second dropdown** with actual reports or templates **fetched from the database**.
+  * **Do not use mock data**. Fetch from `/reports` and `/templates` tables or APIs.
+
+* To the **right** of the dropdowns:
+
+  * Show a **PDF previewer box**.
+  * Preview the selected report/template PDF by loading its **actual S3 URL**.
+  * Allow **swiping or navigation across pages** of the PDF.
+
+---
+
+#### **2. Section Two: Email Template Selection & Final Preview**
+
+* Show a **dropdown** of available **email templates** stored in the database.
+
+  * Load from the real `email_templates` source, no static data.
+
+* When a template is selected:
+
+  * On the **right side**, render a **final email preview**.
+  * Use the **exact style of Gmail's inbox view** (as seen in the Gmail mobile app or web client).
+  * The preview should render the **selected report inside the email**, as if the recipient is viewing the email they received.
+
+---
+
+### 🎯 Deliverables
+
+* ✅ Old form **deleted entirely**
+* ✅ New form with:
+
+  * Two main sections as described
+  * Dynamic dropdowns connected to DB
+  * Live PDF preview from S3
+  * Final styled email preview
+* ✅ Fully functional and tested
+* ✅ No mockups or placeholder data used
+* ✅ Push code with clean commit messages and share preview
+
+---
+
+Please confirm once each sub-task is complete before moving to the next.
