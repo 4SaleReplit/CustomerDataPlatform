@@ -536,6 +536,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if it's a team member login
       const teamMember = await storage.getTeamMemberByEmail(username);
       if (teamMember) {
+        // First check temporary password (plain text)
+        if (teamMember.temporaryPassword && password === teamMember.temporaryPassword) {
+          return res.json({
+            id: teamMember.id,
+            username: teamMember.email,
+            email: teamMember.email,
+            role: teamMember.role,
+            firstName: teamMember.firstName,
+            lastName: teamMember.lastName,
+            tempPassword: teamMember.temporaryPassword,
+            mustChangePassword: teamMember.mustChangePassword
+          });
+        }
+        
+        // Then check hashed password
         const isValid = await bcrypt.compare(password, teamMember.passwordHash);
         if (isValid) {
           return res.json({

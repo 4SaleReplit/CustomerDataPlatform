@@ -111,6 +111,13 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 21, 2025**: Fixed Authentication System for Real User Login
+  - Enhanced authentication to properly handle temporary passwords stored in plain text
+  - Fixed login endpoint to check temporary_password field before hashed password validation
+  - Users can now login with both temporary passwords and permanent hashed passwords
+  - Authentication system prioritizes temporary passwords for initial login, then falls back to hashed passwords
+  - Login credentials working: ahmed.abdqader@4sale.tech / Admin123! and ahmed.hawary@4sale.tech / dlsHA1chwas=@1
+
 - **June 21, 2025**: Complete Email Template Processing Fix with Working PDF Downloads
   - Fixed empty email issue by properly matching template variables ({{report_download_url}})
   - Enhanced email template processing to use complete database-stored HTML templates
