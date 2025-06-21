@@ -588,25 +588,36 @@ export function ContentTypeSchedulerForm({
                   </div>
                 </div>
 
-                {/* Live Email Preview */}
+                {/* Rich Email Preview */}
                 <div className="space-y-2">
-                  <Label>Live Preview</Label>
-                  <div className="border rounded-lg bg-white p-4 min-h-[400px] max-h-[500px] overflow-y-auto">
-                    <div className="bg-gray-50 p-3 border-b mb-4">
-                      <div className="text-sm text-gray-600 mb-1">Subject:</div>
-                      <div className="font-medium">
+                  <Label>Email Preview</Label>
+                  <div className="border rounded-lg bg-gray-100 p-4 min-h-[500px] max-h-[600px] overflow-y-auto">
+                    {/* Email Header */}
+                    <div className="bg-white border border-gray-200 rounded-t-lg p-4 mb-0">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="text-sm text-gray-500">From: 4Sale Analytics &lt;reports@4sale.tech&gt;</div>
+                        <div className="text-sm text-gray-500">{new Date().toLocaleDateString()}</div>
+                      </div>
+                      <div className="text-sm text-gray-500 mb-1">To: recipient@example.com</div>
+                      <div className="font-semibold text-lg">
                         {processEmailTemplate(formData.emailTemplate?.subject || 'Your Report', {
                           report_name: getSelectedContentName(),
                           date: new Date().toLocaleDateString(),
-                          recipient_name: 'John Doe'
+                          recipient_name: 'John Doe',
+                          report_title: getSelectedContentName(),
+                          report_period: new Date().toLocaleDateString(),
+                          alert_title: 'System Alert',
+                          dashboard_name: 'Analytics Dashboard'
                         })}
                       </div>
                     </div>
                     
-                    <div 
-                      className="prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{
-                        __html: (() => {
+                    {/* Email Body with Rich Styling */}
+                    <div className="bg-white border-x border-b border-gray-200 rounded-b-lg">
+                      <iframe
+                        className="w-full min-h-[400px] border-0"
+                        style={{ backgroundColor: 'white' }}
+                        srcDoc={(() => {
                           const selectedTemplate = emailTemplates.find(t => t.id === formData.emailTemplate?.templateId);
                           const variables = {
                             report_name: getSelectedContentName(),
@@ -617,15 +628,15 @@ export function ContentTypeSchedulerForm({
                             company_name: '4Sale Analytics',
                             report_title: getSelectedContentName(),
                             report_period: new Date().toLocaleDateString(),
-                            email_content: 'Your automated report is ready for review.',
+                            email_content: 'Your automated report is ready for review. Click the link below to access your personalized analytics dashboard.',
                             generation_date: new Date().toLocaleDateString(),
                             generation_time: new Date().toLocaleTimeString(),
                             alert_title: 'System Alert',
-                            alert_message: 'Important notification from your dashboard',
+                            alert_message: 'Important notification from your dashboard - please review the latest metrics and insights.',
                             alert_time: new Date().toLocaleTimeString(),
                             dashboard_name: 'Analytics Dashboard',
                             dashboard_period: new Date().toLocaleDateString(),
-                            dashboard_content: 'Key metrics and insights from your data.',
+                            dashboard_content: 'Key metrics and insights from your data analysis are now available. Review performance indicators, user engagement statistics, and revenue trends.',
                             metric_1_value: '1,234',
                             metric_1_label: 'Total Users',
                             metric_2_value: '567',
@@ -635,16 +646,16 @@ export function ContentTypeSchedulerForm({
                           };
 
                           if (selectedTemplate) {
-                            return processEmailTemplate(selectedTemplate.bodyHtml || '', variables);
+                            return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="margin: 0; padding: 20px; font-family: Arial, sans-serif;">${processEmailTemplate(selectedTemplate.bodyHtml || '', variables)}</body></html>`;
                           } else {
-                            return generateEmailPreviewHTML(
-                              formData.emailTemplate?.customContent || 'Please select an email template or enter custom content.',
-                              variables
-                            );
+                            const customContent = formData.emailTemplate?.customContent || 'Please select an email template or enter custom content.';
+                            const processedContent = processEmailTemplate(customContent, variables);
+                            return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="margin: 20px; padding: 20px; font-family: Arial, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"><div style="background: #667eea; color: white; padding: 20px; text-align: center;"><h1 style="margin: 0; font-size: 24px;">${getSelectedContentName()}</h1></div><div style="padding: 30px;"><div style="white-space: pre-wrap;">${processedContent.replace(/\n/g, '<br>')}</div></div><div style="background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px;"><p style="margin: 0;">Best regards,<br>4Sale Analytics Team</p></div></div></body></html>`;
                           }
-                        })()
-                      }}
-                    />
+                        })()}
+                        title="Email Preview"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
