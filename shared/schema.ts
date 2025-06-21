@@ -471,8 +471,12 @@ export type InsertScheduledReport = z.infer<typeof insertScheduledReportSchema>;
 export type ScheduledReport = typeof scheduledReports.$inferSelect;
 export type InsertEmailTemplate = z.infer<typeof insertEmailTemplateSchema>;
 export type EmailTemplate = typeof emailTemplates.$inferSelect;
+export type InsertSentEmail = z.infer<typeof insertSentEmailSchema>;
+export type SentEmail = typeof sentEmails.$inferSelect;
 export type InsertMailingList = z.infer<typeof insertMailingListSchema>;
 export type MailingList = typeof mailingLists.$inferSelect;
+
+
 export type InsertReportExecution = z.infer<typeof insertReportExecutionSchema>;
 export type ReportExecution = typeof reportExecutions.$inferSelect;
 export type InsertAirflowConfiguration = z.infer<typeof insertAirflowConfigurationSchema>;
@@ -530,6 +534,28 @@ export const emailTemplates = pgTable("email_templates", {
   createdBy: uuid("created_by").references(() => team.id, { onDelete: 'set null' }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
+// Sent Emails Log - track all sent emails
+export const sentEmails = pgTable("sent_emails", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  templateId: uuid("template_id").references(() => emailTemplates.id, { onDelete: 'set null' }),
+  presentationId: uuid("presentation_id").references(() => presentations.id, { onDelete: 'set null' }),
+  scheduledReportId: uuid("scheduled_report_id").references(() => scheduledReports.id, { onDelete: 'set null' }),
+  subject: text("subject").notNull(),
+  recipients: jsonb("recipients").notNull(), // Array of email addresses
+  ccRecipients: jsonb("cc_recipients").default('[]'),
+  bccRecipients: jsonb("bcc_recipients").default('[]'),
+  emailType: varchar("email_type", { length: 50 }).notNull(), // 'one_time', 'scheduled'
+  status: varchar("status", { length: 20 }).default('sent'), // 'sent', 'failed', 'pending'
+  pdfDownloadUrl: text("pdf_download_url"), // S3 URL for PDF download
+  emailHtml: text("email_html"), // Complete HTML content sent
+  emailText: text("email_text"), // Plain text version
+  messageId: text("message_id"), // Email service message ID
+  errorMessage: text("error_message"), // Error details if failed
+  deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+  sentBy: uuid("sent_by").references(() => team.id, { onDelete: 'set null' }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
 });
 
 // Mailing Lists Management
@@ -608,6 +634,11 @@ export const insertEmailTemplateSchema = createInsertSchema(emailTemplates).omit
   id: true,
   createdAt: true,
   updatedAt: true,
+});
+
+export const insertSentEmailSchema = createInsertSchema(sentEmails).omit({
+  id: true,
+  createdAt: true,
 });
 
 export const insertMailingListSchema = createInsertSchema(mailingLists).omit({
