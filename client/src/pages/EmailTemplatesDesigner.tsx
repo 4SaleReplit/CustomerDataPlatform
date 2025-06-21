@@ -531,19 +531,20 @@ export function EmailTemplatesDesigner() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Template Dialog */}
+      {/* Edit Template Dialog - Full Side-by-Side Editor */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-7xl h-[95vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Edit Email Template</DialogTitle>
             <DialogDescription>
-              Modify the template content and settings
+              Modify the template content and preview changes in real-time
             </DialogDescription>
           </DialogHeader>
           
           {editingTemplate && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="flex-1 flex flex-col space-y-4 overflow-hidden">
+              {/* Template Info Section */}
+              <div className="grid grid-cols-4 gap-4 flex-shrink-0">
                 <div>
                   <Label htmlFor="edit-template-name">Template Name</Label>
                   <Input
@@ -553,7 +554,19 @@ export function EmailTemplatesDesigner() {
                       ...editingTemplate,
                       name: e.target.value
                     })}
-                    placeholder="Enter template name"
+                    placeholder="Template name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-template-type">Template Type</Label>
+                  <Input
+                    id="edit-template-type"
+                    value={editingTemplate.templateType || 'report'}
+                    onChange={(e) => setEditingTemplate({
+                      ...editingTemplate,
+                      templateType: e.target.value
+                    })}
+                    placeholder="Template type"
                   />
                 </div>
                 <div>
@@ -565,41 +578,80 @@ export function EmailTemplatesDesigner() {
                       ...editingTemplate,
                       description: e.target.value
                     })}
-                    placeholder="Enter template description"
+                    placeholder="Template description"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-template-subject">Email Subject</Label>
+                  <Input
+                    id="edit-template-subject"
+                    value={editingTemplate.subject || ''}
+                    onChange={(e) => setEditingTemplate({
+                      ...editingTemplate,
+                      subject: e.target.value
+                    })}
+                    placeholder="Email subject line"
                   />
                 </div>
               </div>
               
-              <div>
-                <Label htmlFor="edit-template-html">HTML Content</Label>
-                <Textarea
-                  id="edit-template-html"
-                  value={editingTemplate.bodyHtml}
-                  onChange={(e) => setEditingTemplate({
-                    ...editingTemplate,
-                    bodyHtml: e.target.value
-                  })}
-                  className="h-64 font-mono text-sm"
-                  placeholder="Enter HTML content"
-                />
+              {/* Side-by-Side Editor and Preview */}
+              <div className="grid grid-cols-2 gap-4 flex-1 overflow-hidden">
+                {/* HTML Code Editor */}
+                <div className="flex flex-col space-y-2">
+                  <Label>HTML Code</Label>
+                  <Textarea
+                    value={editingTemplate.bodyHtml}
+                    onChange={(e) => {
+                      const updatedTemplate = {
+                        ...editingTemplate,
+                        bodyHtml: e.target.value
+                      };
+                      setEditingTemplate(updatedTemplate);
+                      // Update preview in real-time
+                      let html = e.target.value;
+                      const sampleData = {
+                        report_name: reportName || 'Sample Analytics Report',
+                        report_download_url: '#download-report'
+                      };
+                      Object.entries(sampleData).forEach(([key, value]) => {
+                        const regex = new RegExp(`{{${key}}}`, 'g');
+                        html = html.replace(regex, value);
+                      });
+                      setPreviewHtml(html);
+                    }}
+                    className="flex-1 font-mono text-sm resize-none"
+                    placeholder="Enter HTML content"
+                  />
+                </div>
+                
+                {/* Live Preview */}
+                <div className="flex flex-col space-y-2">
+                  <Label>Live Preview</Label>
+                  <div className="border rounded-lg overflow-hidden flex-1">
+                    <iframe
+                      srcDoc={previewHtml}
+                      className="w-full h-full border-0"
+                      title="Live Email Preview"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 flex-shrink-0">
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleUpdateTemplate}
+                  disabled={updateTemplateMutation.isPending}
+                >
+                  {updateTemplateMutation.isPending ? 'Saving...' : 'Save Template'}
+                </Button>
               </div>
             </div>
           )}
-          
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsEditDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleUpdateTemplate}
-              disabled={updateTemplateMutation.isPending}
-            >
-              {updateTemplateMutation.isPending ? 'Saving...' : 'Save Template'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

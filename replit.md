@@ -111,6 +111,16 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 21, 2025**: Complete Email Template Editor with Side-by-Side HTML Editor & Live Preview
+  - Enhanced Edit Email Template dialog with full side-by-side HTML editor interface
+  - HTML code editor on left with monospace font and syntax highlighting for professional editing
+  - Live preview panel on right showing real-time changes as you type in the HTML editor
+  - Full-height dialog using 95% viewport height for maximum editing space
+  - Template metadata fields (name, type, description, subject) in compact header row
+  - Real-time variable substitution in preview showing actual rendered email appearance
+  - Save functionality persists all changes directly to database with proper validation
+  - Completely database-driven templates with no mock or hardcoded content
+
 - **June 21, 2025**: Final Email Sender UI Enhancement - Database-Only Templates & Full-Height Preview
   - Fixed email template dropdown to read exclusively from database templates (removed all mock data)
   - Enhanced email preview to use full available vertical space without scrolling constraints
