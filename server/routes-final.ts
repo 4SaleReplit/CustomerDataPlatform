@@ -2088,7 +2088,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       '{year}': new Date().getFullYear().toString(),
       '{quarter}': `Q${Math.floor((new Date().getMonth() + 3) / 3)}`,
       '{pdf_download_url}': data.pdf_download_url || '#',
-      '{report_url}': data.report_url || '#',
+      '{report_url}': data.report_url || data.pdf_download_url || '#',
       '{dashboard_url}': data.dashboard_url || '#'
     };
 
