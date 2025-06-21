@@ -589,115 +589,65 @@ export function ContentTypeSchedulerForm({
                   </div>
                 </div>
 
-                {/* Rich Email Preview */}
-                <div className="space-y-2">
-                  <Label>Email Preview</Label>
-                  <div className="border rounded-lg bg-gray-100 p-4 min-h-[500px] max-h-[600px] overflow-y-auto">
-                    {/* Email Header */}
-                    <div className="bg-white border border-gray-200 rounded-t-lg p-4 mb-0">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="text-sm text-gray-500">From: 4Sale Analytics &lt;reports@4sale.tech&gt;</div>
-                        <div className="text-sm text-gray-500">{new Date().toLocaleDateString()}</div>
+                {/* Right Panel - Text-Only Preview */}
+                <div className="space-y-4">
+                  <div className="bg-gray-50 p-4 rounded-lg border">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center text-sm text-gray-600">
+                        <span>From: 4Sale Analytics &lt;reports@4sale.tech&gt;</span>
+                        <span>{new Date().toLocaleDateString()}</span>
                       </div>
-                      <div className="text-sm text-gray-500 mb-1">To: recipient@example.com</div>
-                      <div className="font-semibold text-lg">
-                        {(() => {
-                          const userVariables = formData.emailTemplate?.templateVariables || {};
-                          const defaultVariables = {
-                            report_name: getSelectedContentName(),
-                            date: new Date().toLocaleDateString(),
-                            recipient_name: 'John Doe',
-                            report_title: getSelectedContentName(),
-                            report_period: new Date().toLocaleDateString(),
-                            alert_title: 'System Alert',
-                            dashboard_name: 'Analytics Dashboard'
-                          };
-                          const variables = { ...defaultVariables, ...userVariables };
-                          return processEmailTemplate(formData.emailTemplate?.subject || 'Your Report', variables);
+                      <div className="text-sm text-gray-600">
+                        To: recipient@example.com
+                      </div>
+                      <div className="font-medium text-gray-900 border-b pb-2">
+                        Subject: {(() => {
+                          const subject = formData.emailTemplate?.subject || 'Email Subject';
+                          const subjectVars = formData.emailTemplate?.subjectVariables || {};
+                          let processedSubject = subject;
+                          
+                          // Replace subject variables
+                          Object.entries(subjectVars).forEach(([key, value]) => {
+                            if (value) {
+                              processedSubject = processedSubject.replace(new RegExp(`{${key}}`, 'g'), value as string);
+                            }
+                          });
+                          
+                          return processedSubject;
                         })()}
                       </div>
-                    </div>
-                    
-                    {/* Email Body with Rich Styling */}
-                    <div className="bg-white border-x border-b border-gray-200 rounded-b-lg">
-                      <iframe
-                        className="w-full min-h-[400px] border-0"
-                        style={{ backgroundColor: 'white' }}
-                        srcDoc={(() => {
-                          const currentTemplate = emailTemplates.find(t => t.id === formData.emailTemplate?.templateId);
-                          
-                          // Use user-defined variables with meaningful fallbacks
-                          const userVariables = formData.emailTemplate?.templateVariables || {};
-                          const getDefaultValue = (varName: string) => {
-                            switch (varName) {
-                              case 'report_name':
-                              case 'report_title':
-                                return 'Analytics Dashboard Report';
-                              case 'recipient_name':
-                                return 'John Doe';
-                              case 'company_name':
-                                return '4Sale Analytics';
-                              case 'date':
-                              case 'generation_date':
-                              case 'report_period':
-                              case 'dashboard_period':
-                                return new Date().toLocaleDateString();
-                              case 'generation_time':
-                              case 'alert_time':
-                                return new Date().toLocaleTimeString();
-                              case 'email_content':
-                              case 'dashboard_content':
-                                return 'Your report is ready for review with key insights and metrics.';
-                              case 'alert_title':
-                                return 'System Alert';
-                              case 'alert_message':
-                                return 'Important notification from your dashboard';
-                              case 'dashboard_name':
-                                return 'Analytics Dashboard';
-                              case 'metric_1_value':
-                                return '1,234';
-                              case 'metric_1_label':
-                                return 'Total Users';
-                              case 'metric_2_value':
-                                return '567';
-                              case 'metric_2_label':
-                                return 'Active Sessions';
-                              case 'metric_3_value':
-                                return '89%';
-                              case 'metric_3_label':
-                                return 'Success Rate';
-                              case 'pdf_download_url':
-                                return 'https://dashboard.4sale.tech/reports/download';
-                              case 'dashboard_url':
-                                return 'https://dashboard.4sale.tech';
-                              default:
-                                return varName;
-                            }
-                          };
-
-                          // Create variables object with user values or meaningful defaults
-                          const variables: Record<string, string> = {};
-                          const availableVariables = currentTemplate?.availablePlaceholders || [
-                            'report_name', 'recipient_name', 'date', 'pdf_download_url', 'dashboard_url', 'company_name'
-                          ];
-
-                          availableVariables.forEach(varName => {
-                            variables[varName] = userVariables[varName] || getDefaultValue(varName);
-                          });
-
-                          if (currentTemplate) {
-                            // Use template HTML but replace variables with actual values (no tags)
-                            const processedHtml = processEmailTemplate(currentTemplate.bodyHtml || '', variables);
-                            return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="margin: 0; padding: 20px; font-family: Arial, sans-serif;">${processedHtml}</body></html>`;
+                      
+                      {/* Text-Only Email Body Preview */}
+                      <div className="mt-4 p-4 bg-white rounded border min-h-[350px] text-sm leading-relaxed">
+                        {(() => {
+                          const selectedTemplate = emailTemplates.find(t => t.id === formData.emailTemplate?.templateId);
+                          if (selectedTemplate) {
+                            // Convert HTML to plain text for display
+                            const htmlContent = selectedTemplate.bodyHtml || '';
+                            const textContent = htmlContent
+                              .replace(/<br\s*\/?>/gi, '\n')
+                              .replace(/<\/p>/gi, '\n\n')
+                              .replace(/<[^>]*>/g, '')
+                              .replace(/&nbsp;/g, ' ')
+                              .replace(/&amp;/g, '&')
+                              .replace(/&lt;/g, '<')
+                              .replace(/&gt;/g, '>')
+                              .trim();
+                            
+                            return (
+                              <div className="whitespace-pre-wrap">
+                                {textContent || 'No content available for this template'}
+                              </div>
+                            );
                           } else {
-                            // For custom content, create a simple styled email
-                            const customContent = formData.emailTemplate?.customContent || 'Please enter your email message.';
-                            const processedContent = processEmailTemplate(customContent, variables);
-                            return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="margin: 20px; padding: 20px; font-family: Arial, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"><div style="background: #667eea; color: white; padding: 20px; text-align: center;"><h1 style="margin: 0; font-size: 24px;">${variables.report_title || variables.report_name || 'Your Report'}</h1></div><div style="padding: 30px;"><div style="white-space: pre-wrap; line-height: 1.6;">${processedContent.replace(/\n/g, '<br>')}</div></div><div style="background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px;"><p style="margin: 0;">Best regards,<br>${variables.company_name || '4Sale Analytics'} Team</p></div></div></body></html>`;
+                            return (
+                              <div className="text-gray-500 italic">
+                                Please select an email template to see the preview
+                              </div>
+                            );
                           }
                         })()}
-                        title="Email Preview"
-                      />
+                      </div>
                     </div>
                   </div>
                 </div>
