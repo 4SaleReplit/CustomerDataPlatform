@@ -13,6 +13,7 @@ interface PDFSlideViewerProps {
 interface Slide {
   id: string;
   content: string;
+  elements?: any[];
   slideNumber: number;
 }
 
@@ -22,22 +23,8 @@ export function PDFSlideViewer({ presentationId, templateId, className }: PDFSli
 
   const contentId = presentationId || templateId;
 
-  // Fetch slides for the selected content
-  const { data: slidesData, isLoading } = useQuery({
-    queryKey: ['/api/presentations', contentId],
-    queryFn: () => {
-      if (presentationId) {
-        return apiRequest(`/api/presentations/${presentationId}`);
-      } else if (templateId) {
-        return apiRequest(`/api/templates/${templateId}`);
-      }
-      return null;
-    },
-    enabled: !!contentId
-  });
-
-  // Fetch presentation/template data for PDF URL
-  const { data: contentData } = useQuery({
+  // Fetch presentation/template data to get slideIds
+  const { data: contentData, isLoading: contentLoading } = useQuery({
     queryKey: presentationId ? ['/api/presentations', presentationId] : ['/api/templates', templateId],
     queryFn: () => {
       if (presentationId) {
@@ -50,19 +37,43 @@ export function PDFSlideViewer({ presentationId, templateId, className }: PDFSli
     enabled: !!(presentationId || templateId)
   });
 
+  // Fetch individual slides using slideIds
+  const { data: slidesArray = [], isLoading: slidesLoading } = useQuery({
+    queryKey: ['/api/slides', contentData?.slideIds],
+    queryFn: async () => {
+      if (!contentData?.slideIds?.length) return [];
+      
+      const slidePromises = contentData.slideIds.map(async (slideId: string) => {
+        const response = await fetch(`/api/slides/${slideId}`);
+        if (!response.ok) throw new Error(`Failed to fetch slide ${slideId}`);
+        return response.json();
+      });
+      
+      return Promise.all(slidePromises);
+    },
+    enabled: !!contentData?.slideIds?.length
+  });
+
+  const isLoading = contentLoading || slidesLoading;
+
   useEffect(() => {
-    if (slidesData?.slides) {
-      const sortedSlides = slidesData.slides
+    console.log('PDFSlideViewer - slidesArray:', slidesArray);
+    console.log('PDFSlideViewer - contentData:', contentData);
+    
+    if (slidesArray?.length) {
+      const sortedSlides = slidesArray
         .map((slide: any, index: number) => ({
           id: slide.id,
           content: slide.content,
+          elements: slide.elements,
           slideNumber: slide.slideNumber || index + 1
         }))
         .sort((a: Slide, b: Slide) => a.slideNumber - b.slideNumber);
+      console.log('PDFSlideViewer - sortedSlides:', sortedSlides);
       setSlides(sortedSlides);
       setCurrentSlide(0);
     }
-  }, [slidesData]);
+  }, [slidesArray]);
 
   const nextSlide = () => {
     if (currentSlide < slides.length - 1) {
@@ -115,25 +126,59 @@ export function PDFSlideViewer({ presentationId, templateId, className }: PDFSli
     <div className={`border rounded-lg overflow-hidden ${className}`}>
       {/* Slide Content */}
       <div className="h-64 bg-white flex items-center justify-center p-2 relative">
-        {currentSlideData?.content ? (
-          <div className="w-full h-full flex items-center justify-center overflow-hidden rounded">
-            {currentSlideData.content.includes('<img') || currentSlideData.content.includes('uploads/') ? (
-              <div 
-                className="w-full h-full object-contain"
-                dangerouslySetInnerHTML={{ __html: currentSlideData.content }}
-              />
-            ) : currentSlideData.content.startsWith('uploads/') ? (
-              <img 
-                src={`/${currentSlideData.content}`}
-                alt={`Slide ${currentSlide + 1}`}
-                className="w-full h-full object-contain"
-              />
-            ) : (
-              <div 
-                className="w-full h-full flex items-center justify-center text-center"
-                dangerouslySetInnerHTML={{ __html: currentSlideData.content }}
-              />
-            )}
+        {currentSlideData ? (
+          <div className="w-full h-full relative bg-white rounded overflow-hidden" style={{ aspectRatio: '16/9' }}>
+            {(currentSlideData as any).elements?.map((element: any) => {
+              const style = {
+                position: 'absolute' as const,
+                left: `${(element.x / 1920) * 100}%`,
+                top: `${(element.y / 1080) * 100}%`,
+                width: element.width ? `${(element.width / 1920) * 100}%` : 'auto',
+                height: element.height ? `${(element.height / 1080) * 100}%` : 'auto',
+                fontSize: element.fontSize ? `${element.fontSize * 0.5}px` : '7px', // Scale down for preview
+                fontFamily: element.fontFamily || 'Inter',
+                fontWeight: element.fontWeight || 'normal',
+                color: element.color || '#000000',
+                textAlign: element.textAlign || 'left',
+                zIndex: element.zIndex || 1
+              };
+
+              if (element.type === 'image') {
+                const imageSrc = element.content || (element.uploadedImageId ? `/uploads/${element.uploadedImageId}` : null);
+                if (imageSrc) {
+                  return (
+                    <img
+                      key={element.id}
+                      src={imageSrc}
+                      alt="Slide element"
+                      style={style}
+                      className="object-contain"
+                    />
+                  );
+                }
+              } else if (element.type === 'text') {
+                return (
+                  <div
+                    key={element.id}
+                    style={style}
+                    className="overflow-hidden"
+                  >
+                    {element.content}
+                  </div>
+                );
+              } else if (element.type === 'chart') {
+                return (
+                  <div
+                    key={element.id}
+                    style={style}
+                    className="bg-gray-100 border border-gray-300 flex items-center justify-center text-xs text-gray-500"
+                  >
+                    Chart
+                  </div>
+                );
+              }
+              return null;
+            })}
           </div>
         ) : (
           <div className="text-center text-muted-foreground">
