@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Eye, Edit, Trash2, UserPlus, Shield, Key, Copy, MoreHorizontal, Mail, Send, Crown, Users, Settings, Lock, Database, Server, Cloud, Target, CheckCircle, XCircle, Clock, AlertTriangle, Loader2, BarChart3 } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, UserPlus, Shield, Key, Copy, MoreHorizontal, Mail, Send, Crown, Users, Settings, Lock, Database, Server, Cloud, Target, CheckCircle, XCircle, Clock, AlertTriangle, Loader2, BarChart3, MessageSquare } from 'lucide-react';
 import { SimpleMigrationModal } from '@/components/migration/SimpleMigrationModal';
 import { ConsoleLogModal } from '@/components/migration/ConsoleLogModal';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
@@ -1107,6 +1107,28 @@ export default function AdminNew() {
     }
 
     createEndpointMutation.mutate(endpointFormData);
+  };
+
+  const handleTestConnection = async (integrationId: string) => {
+    setTestingIntegrations(prev => [...prev, integrationId]);
+    try {
+      const response = await apiRequest(`/api/integrations/${integrationId}/test`, {
+        method: 'POST'
+      });
+      toast({
+        title: "Connection Test Complete",
+        description: response.message || "Connection test completed successfully"
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
+    } catch (error: any) {
+      toast({
+        title: "Connection Test Failed",
+        description: error.message || "Failed to test connection",
+        variant: "destructive"
+      });
+    } finally {
+      setTestingIntegrations(prev => prev.filter(id => id !== integrationId));
+    }
   };
 
   return (

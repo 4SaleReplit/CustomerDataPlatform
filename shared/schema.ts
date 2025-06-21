@@ -211,6 +211,40 @@ export const integrations = pgTable("integrations", {
   lastUsedAt: timestamp("last_used_at", { withTimezone: true })
 });
 
+// Monitored endpoints table for endpoint monitoring like Pingdom
+export const monitoredEndpoints = pgTable("monitored_endpoints", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  url: text("url").notNull(),
+  method: varchar("method", { length: 10 }).notNull().default('GET'),
+  expectedStatus: integer("expected_status").notNull().default(200),
+  checkInterval: integer("check_interval").notNull().default(300), // seconds
+  timeout: integer("timeout").notNull().default(30), // seconds
+  alertEmail: boolean("alert_email").default(true),
+  alertSlack: boolean("alert_slack").default(false),
+  isActive: boolean("is_active").default(true),
+  lastStatus: integer("last_status"),
+  lastResponseTime: integer("last_response_time"), // milliseconds
+  lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+  lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+  lastFailureAt: timestamp("last_failure_at", { withTimezone: true }),
+  consecutiveFailures: integer("consecutive_failures").default(0),
+  uptimePercentage: decimal("uptime_percentage", { precision: 5, scale: 2 }),
+  createdBy: uuid("created_by").references(() => team.id, { onDelete: 'set null' }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
+// Endpoint monitoring history for tracking checks over time
+export const endpointMonitoringHistory = pgTable("endpoint_monitoring_history", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  endpointId: uuid("endpoint_id").references(() => monitoredEndpoints.id, { onDelete: 'cascade' }).notNull(),
+  status: integer("status").notNull(),
+  responseTime: integer("response_time"), // milliseconds
+  errorMessage: text("error_message"),
+  checkedAt: timestamp("checked_at", { withTimezone: true }).defaultNow()
+});
+
 // Uploaded images for presentations
 export const uploadedImages = pgTable("uploaded_images", {
   id: uuid("id").primaryKey().defaultRandom(),
