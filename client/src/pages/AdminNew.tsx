@@ -540,6 +540,38 @@ export default function AdminNew() {
     return <Users className="h-4 w-4 text-gray-500" />;
   };
 
+  // Integration management handlers
+  const handleTestIntegrationConnection = async (integrationId: string) => {
+    setTestingIntegrations(prev => [...prev, integrationId]);
+    
+    try {
+      const response = await apiRequest(`/api/integrations/${integrationId}/test`, {
+        method: 'POST'
+      });
+      
+      toast({
+        title: "Connection Test Successful",
+        description: "Integration is working properly"
+      });
+      
+      // Refresh integrations data to update status
+      queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
+    } catch (error: any) {
+      toast({
+        title: "Connection Test Failed",
+        description: error.message || "Failed to test integration connection",
+        variant: "destructive"
+      });
+    } finally {
+      setTestingIntegrations(prev => prev.filter(id => id !== integrationId));
+    }
+  };
+
+  const handleEditIntegration = (integration: any) => {
+    setEditingIntegration(integration);
+    setShowEditIntegrationModal(true);
+  };
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 bg-gradient-to-br from-gray-50 to-white min-h-screen">
       <div className="flex items-center justify-between">
@@ -1728,6 +1760,74 @@ export default function AdminNew() {
                 setShowEnvConfigModal(false);
               }}>
                 Save Configuration
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Integration Modal */}
+      <Dialog open={showCreateIntegrationModal} onOpenChange={setShowCreateIntegrationModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Add New Integration
+            </DialogTitle>
+            <DialogDescription>
+              Connect a new data source or service to your platform
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-center py-8">
+              <Database className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Integration Creation</h3>
+              <p className="text-gray-500 mb-4">
+                Use the dedicated Integrations page for full integration management with templates and configuration options.
+              </p>
+              <Button 
+                onClick={() => {
+                  setShowCreateIntegrationModal(false);
+                  window.location.href = '/integrations';
+                }}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Database className="h-4 w-4 mr-2" />
+                Go to Integrations Page
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Integration Modal */}
+      <Dialog open={showEditIntegrationModal} onOpenChange={setShowEditIntegrationModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Edit Integration: {editingIntegration?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Modify integration settings and test connection
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-center py-8">
+              <Settings className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Advanced Configuration</h3>
+              <p className="text-gray-500 mb-4">
+                Use the dedicated Integrations page for complete integration configuration and credential management.
+              </p>
+              <Button 
+                onClick={() => {
+                  setShowEditIntegrationModal(false);
+                  window.location.href = '/integrations';
+                }}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Go to Integrations Page
               </Button>
             </div>
           </div>
