@@ -48,6 +48,11 @@ export function ComprehensiveEmailForm({
     queryFn: () => apiRequest('/api/email-templates')
   });
 
+  // Debug logging
+  useEffect(() => {
+    console.log('Email templates loaded:', emailTemplates);
+  }, [emailTemplates]);
+
   const { data: templates } = useQuery({
     queryKey: ['/api/templates'],
     queryFn: () => apiRequest('/api/templates')
@@ -260,6 +265,29 @@ export function ComprehensiveEmailForm({
                           ))}
                         </SelectContent>
                       </Select>
+                      
+                      {/* Report Preview */}
+                      {formData.presentationId && (
+                        <div className="mt-3 p-3 border rounded-lg bg-gray-50">
+                          <div className="space-y-2">
+                            <div className="font-medium text-sm">
+                              {presentations?.find(p => p.id === formData.presentationId)?.title || 'Selected Report'}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {presentations?.find(p => p.id === formData.presentationId)?.description || 'Report description'}
+                            </div>
+                            {presentations?.find(p => p.id === formData.presentationId)?.previewImageUrl && (
+                              <div className="mt-2">
+                                <img 
+                                  src={presentations?.find(p => p.id === formData.presentationId)?.previewImageUrl} 
+                                  alt="Report preview"
+                                  className="w-full max-w-48 rounded border"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -317,11 +345,17 @@ export function ComprehensiveEmailForm({
                         <SelectValue placeholder="Choose email template..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {emailTemplates?.map((template) => (
-                          <SelectItem key={template.id} value={template.id}>
-                            {template.name}
+                        {emailTemplates && emailTemplates.length > 0 ? (
+                          emailTemplates.map((template) => (
+                            <SelectItem key={template.id} value={template.id}>
+                              {template.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-templates" disabled>
+                            No email templates available
                           </SelectItem>
-                        ))}
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
