@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Eye, Code, Plus, Edit, Trash2, Copy, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 interface EmailTemplate {
   id: string;
@@ -19,83 +21,9 @@ interface EmailTemplate {
   isSystem?: boolean;
 }
 
-const INITIAL_TEMPLATES: EmailTemplate[] = [
-  {
-    id: 'professional',
-    name: 'Professional Report',
-    description: 'Clean, corporate design suitable for business reports',
-    html: `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Professional Report</title>
-  <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
-    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
-    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
-    .header h1 { margin: 0; font-size: 28px; font-weight: 300; }
-    .content { padding: 40px 30px; }
-    .download-btn { display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
-    .footer { background-color: #f8f9fa; padding: 20px 30px; text-align: center; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>{{report_name}}</h1>
-    </div>
-    <div class="content">
-      <p>Your report is ready for review.</p>
-      <p>Click the button below to download your report:</p>
-      <a href="{{report_download_url}}" class="download-btn">Download Report</a>
-    </div>
-    <div class="footer">
-      <p>© 2025 4Sale Analytics Platform</p>
-    </div>
-  </div>
-</body>
-</html>`,
-    variables: ['report_name', 'report_download_url'],
-    isSystem: true
-  },
-  {
-    id: 'minimal',
-    name: 'Minimal Clean',
-    description: 'Simple, minimalist design focused on content',
-    html: `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Minimal Report</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background-color: #ffffff; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; }
-    .header { border-bottom: 2px solid #f0f0f0; padding-bottom: 20px; margin-bottom: 30px; }
-    .header h1 { margin: 0; font-size: 24px; color: #2c3e50; }
-    .download-btn { display: inline-block; background-color: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 3px; margin: 15px 0; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>{{report_name}}</h1>
-    </div>
-    <div class="content">
-      <p>Your minimal report is ready.</p>
-      <a href="{{report_download_url}}" class="download-btn">Download Report</a>
-    </div>
-  </div>
-</body>
-</html>`,
-    variables: ['report_name', 'report_download_url'],
-    isSystem: true
-  }
-];
+// All templates now come from database - no hardcoded templates
 
 export function EmailTemplatesDesigner() {
-  const [templates, setTemplates] = useState<EmailTemplate[]>(INITIAL_TEMPLATES);
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -104,10 +32,63 @@ export function EmailTemplatesDesigner() {
   const [reportName, setReportName] = useState('Sample Analytics Report');
   
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch email templates from database
+  const { data: templates, isLoading } = useQuery({
+    queryKey: ['/api/email-templates'],
+    queryFn: () => apiRequest('/api/email-templates')
+  });
+
+  // Create template mutation
+  const createTemplateMutation = useMutation({
+    mutationFn: (templateData: any) => apiRequest('/api/email-templates', {
+      method: 'POST',
+      body: JSON.stringify(templateData)
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/email-templates'] });
+      toast({ title: "Template created successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to create template", variant: "destructive" });
+    }
+  });
+
+  // Update template mutation
+  const updateTemplateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest(`/api/email-templates/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/email-templates'] });
+      toast({ title: "Template updated successfully" });
+      setIsEditDialogOpen(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to update template", variant: "destructive" });
+    }
+  });
+
+  // Delete template mutation
+  const deleteTemplateMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/email-templates/${id}`, {
+      method: 'DELETE'
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/email-templates'] });
+      toast({ title: "Template deleted successfully" });
+      setSelectedTemplate(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to delete template", variant: "destructive" });
+    }
+  });
 
   // Initialize selected template
   useEffect(() => {
-    if (templates.length > 0 && !selectedTemplate) {
+    if (templates && templates.length > 0 && !selectedTemplate) {
       setSelectedTemplate(templates[0]);
     }
   }, [templates, selectedTemplate]);
@@ -120,7 +101,7 @@ export function EmailTemplatesDesigner() {
   }, [selectedTemplate, reportName]);
 
   const generatePreview = () => {
-    if (!selectedTemplate) return;
+    if (!selectedTemplate || !selectedTemplate.html) return;
     
     let html = selectedTemplate.html;
     
