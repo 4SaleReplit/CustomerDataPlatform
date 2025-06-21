@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Mail, FileText, Calendar, Clock, Send, Users } from "lucide-react";
+import { EmailTagInput } from "./EmailTagInput";
 
 interface NewEmailSenderFormProps {
   isOpen: boolean;
@@ -63,9 +64,9 @@ export function NewEmailSenderForm({
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [selectedEmailTemplateId, setSelectedEmailTemplateId] = useState('');
   const [emailSubject, setEmailSubject] = useState('');
-  const [recipientList, setRecipientList] = useState('');
-  const [ccList, setCcList] = useState('');
-  const [bccList, setBccList] = useState('');
+  const [recipientList, setRecipientList] = useState<string[]>([]);
+  const [ccList, setCcList] = useState<string[]>([]);
+  const [bccList, setBccList] = useState<string[]>([]);
   const [reportName, setReportName] = useState('');
   
   // Scheduling state (only for scheduled mode)
@@ -206,9 +207,9 @@ export function NewEmailSenderForm({
         customContent: '',
         templateVariables: {}
       },
-      recipientList: recipientList.split(',').map(email => email.trim()).filter(Boolean),
-      ccList: ccList.split(',').map(email => email.trim()).filter(Boolean),
-      bccList: bccList.split(',').map(email => email.trim()).filter(Boolean),
+      recipientList: recipientList,
+      ccList: ccList,
+      bccList: bccList,
       cronExpression: mode === 'scheduled' ? cronExpression : null,
       timezone: mode === 'scheduled' ? timezone : 'Africa/Cairo',
       isActive: true,
@@ -363,33 +364,33 @@ export function NewEmailSenderForm({
 
                   <div>
                     <Label>Send To (Recipients)</Label>
-                    <Input
+                    <EmailTagInput
                       value={recipientList}
-                      onChange={(e) => setRecipientList(e.target.value)}
-                      placeholder="john@company.com, jane@company.com, team@company.com"
+                      onChange={setRecipientList}
+                      placeholder="Type email addresses and press comma or tab"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">Enter multiple email addresses separated by commas</p>
+                    <p className="text-xs text-muted-foreground mt-1">Type email addresses and press comma, tab, or enter to add them as tags</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>CC Recipients (Optional)</Label>
-                      <Input
+                      <EmailTagInput
                         value={ccList}
-                        onChange={(e) => setCcList(e.target.value)}
-                        placeholder="manager@company.com, admin@company.com"
+                        onChange={setCcList}
+                        placeholder="Type CC email addresses"
                       />
-                      <p className="text-xs text-muted-foreground mt-1">Comma-separated CC recipients</p>
+                      <p className="text-xs text-muted-foreground mt-1">CC recipients as tags</p>
                     </div>
 
                     <div>
                       <Label>BCC Recipients (Optional)</Label>
-                      <Input
+                      <EmailTagInput
                         value={bccList}
-                        onChange={(e) => setBccList(e.target.value)}
-                        placeholder="archive@company.com, backup@company.com"
+                        onChange={setBccList}
+                        placeholder="Type BCC email addresses"
                       />
-                      <p className="text-xs text-muted-foreground mt-1">Comma-separated BCC recipients</p>
+                      <p className="text-xs text-muted-foreground mt-1">BCC recipients as tags</p>
                     </div>
                   </div>
 
