@@ -333,90 +333,19 @@ export function NewEmailSenderForm({
               <CardDescription>Configure email settings and preview final result</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col space-y-4 overflow-hidden">
-              {/* Email Configuration */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-shrink-0">
-                <div>
-                  <Label>Email Template</Label>
-                  <Select value={selectedEmailTemplateId} onValueChange={setSelectedEmailTemplateId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose email template" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {emailTemplates?.map((template: EmailTemplate) => (
-                        <SelectItem key={template.id} value={template.id}>
-                          {template.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>Email Subject</Label>
-                  <Input
-                    value={emailSubject}
-                    onChange={(e) => setEmailSubject(e.target.value)}
-                    placeholder="Email subject"
-                  />
-                </div>
-
-                <div>
-                  <Label>Recipients (To)</Label>
-                  <Input
-                    value={recipientList}
-                    onChange={(e) => setRecipientList(e.target.value)}
-                    placeholder="email1@domain.com, email2@domain.com"
-                  />
-                </div>
-
-                <div>
-                  <Label>CC (Optional)</Label>
-                  <Input
-                    value={ccList}
-                    onChange={(e) => setCcList(e.target.value)}
-                    placeholder="cc@domain.com"
-                  />
-                </div>
-
-                <div>
-                  <Label>BCC (Optional)</Label>
-                  <Input
-                    value={bccList}
-                    onChange={(e) => setBccList(e.target.value)}
-                    placeholder="bcc@domain.com"
-                  />
-                </div>
-
-                {mode === 'scheduled' && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1">
+                {/* Left: Email Configuration */}
+                <div className="space-y-4">
                   <div>
-                    <Label>Schedule Frequency</Label>
-                    <Select value={frequency} onValueChange={setFrequency}>
+                    <Label>Email Template</Label>
+                    <Select value={selectedEmailTemplateId} onValueChange={setSelectedEmailTemplateId}>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Choose email template" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="daily">Daily</SelectItem>
-                        <SelectItem value="weekly">Weekly</SelectItem>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-
-              {/* Scheduling Configuration (only for scheduled mode) */}
-              {mode === 'scheduled' && (
-                <div className="grid grid-cols-4 gap-4 flex-shrink-0">
-                  <div>
-                    <Label>Hour</Label>
-                    <Select value={hour} onValueChange={setHour}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 24 }, (_, i) => (
-                          <SelectItem key={i} value={i.toString().padStart(2, '0')}>
-                            {i.toString().padStart(2, '0')}:00
+                        {emailTemplates?.map((template: EmailTemplate) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            {template.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -424,95 +353,180 @@ export function NewEmailSenderForm({
                   </div>
 
                   <div>
-                    <Label>Minute</Label>
-                    <Select value={minute} onValueChange={setMinute}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {['00', '15', '30', '45'].map(min => (
-                          <SelectItem key={min} value={min}>:{min}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label>Email Subject</Label>
+                    <Input
+                      value={emailSubject}
+                      onChange={(e) => setEmailSubject(e.target.value)}
+                      placeholder="Email subject"
+                    />
                   </div>
 
-                  {frequency === 'weekly' && (
+                  <div>
+                    <Label>Recipients (To)</Label>
+                    <Input
+                      value={recipientList}
+                      onChange={(e) => setRecipientList(e.target.value)}
+                      placeholder="email1@domain.com, email2@domain.com"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label>Day of Week</Label>
-                      <Select value={dayOfWeek} onValueChange={setDayOfWeek}>
+                      <Label>CC (Optional)</Label>
+                      <Input
+                        value={ccList}
+                        onChange={(e) => setCcList(e.target.value)}
+                        placeholder="cc@domain.com"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>BCC (Optional)</Label>
+                      <Input
+                        value={bccList}
+                        onChange={(e) => setBccList(e.target.value)}
+                        placeholder="bcc@domain.com"
+                      />
+                    </div>
+                  </div>
+
+                  {mode === 'scheduled' && (
+                    <div>
+                      <Label>Schedule Frequency</Label>
+                      <Select value={frequency} onValueChange={setFrequency}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="1">Monday</SelectItem>
-                          <SelectItem value="2">Tuesday</SelectItem>
-                          <SelectItem value="3">Wednesday</SelectItem>
-                          <SelectItem value="4">Thursday</SelectItem>
-                          <SelectItem value="5">Friday</SelectItem>
-                          <SelectItem value="6">Saturday</SelectItem>
-                          <SelectItem value="0">Sunday</SelectItem>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   )}
 
-                  <div>
-                    <Label>Timezone</Label>
-                    <Select value={timezone} onValueChange={setTimezone}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Africa/Cairo">Cairo (GMT+2)</SelectItem>
-                        <SelectItem value="Asia/Kuwait">Kuwait (GMT+3)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              )}
+                  {mode === 'scheduled' && (
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label>Hour</Label>
+                        <Select value={hour} onValueChange={setHour}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 24 }, (_, i) => (
+                              <SelectItem key={i} value={i.toString().padStart(2, '0')}>
+                                {i.toString().padStart(2, '0')}:00
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-              {/* Gmail-Style Email Preview */}
-              <div className="flex-1 overflow-hidden">
-                <Label className="text-base font-medium">Final Email Preview</Label>
-                <div className="mt-2 border rounded-lg overflow-hidden h-full bg-white">
-                  {emailPreviewHtml ? (
-                    <div className="h-full flex flex-col">
-                      {/* Gmail Header Simulation */}
-                      <div className="bg-gray-50 border-b p-3 flex-shrink-0">
-                        <div className="text-sm space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">Subject:</span>
-                            <span>{emailSubject}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">To:</span>
-                            <span className="text-blue-600">{recipientList}</span>
-                          </div>
-                          {ccList && (
+                      <div>
+                        <Label>Minute</Label>
+                        <Select value={minute} onValueChange={setMinute}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {['00', '15', '30', '45'].map(min => (
+                              <SelectItem key={min} value={min}>:{min}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {frequency === 'weekly' && (
+                        <div>
+                          <Label>Day of Week</Label>
+                          <Select value={dayOfWeek} onValueChange={setDayOfWeek}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1">Monday</SelectItem>
+                              <SelectItem value="2">Tuesday</SelectItem>
+                              <SelectItem value="3">Wednesday</SelectItem>
+                              <SelectItem value="4">Thursday</SelectItem>
+                              <SelectItem value="5">Friday</SelectItem>
+                              <SelectItem value="6">Saturday</SelectItem>
+                              <SelectItem value="0">Sunday</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      <div>
+                        <Label>Timezone</Label>
+                        <Select value={timezone} onValueChange={setTimezone}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Africa/Cairo">Cairo (GMT+2)</SelectItem>
+                            <SelectItem value="Asia/Kuwait">Kuwait (GMT+3)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right: Gmail-Style Email Preview */}
+                <div className="space-y-2">
+                  <Label className="text-base font-medium">Gmail-Style Email Preview</Label>
+                  <div className="border rounded-lg overflow-hidden h-96 bg-white">
+                    {selectedEmailTemplateId ? (
+                      <div className="h-full flex flex-col">
+                        {/* Gmail Header Simulation */}
+                        <div className="bg-gray-50 border-b p-3 flex-shrink-0">
+                          <div className="text-sm space-y-1">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium">CC:</span>
-                              <span className="text-blue-600">{ccList}</span>
+                              <span className="font-medium">Subject:</span>
+                              <span>{emailSubject || 'No subject'}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">To:</span>
+                              <span className="text-blue-600">{recipientList || 'No recipients'}</span>
+                            </div>
+                            {ccList && (
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">CC:</span>
+                                <span className="text-blue-600">{ccList}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {/* Email Content */}
+                        <div className="flex-1 overflow-auto">
+                          {emailPreviewHtml ? (
+                            <iframe
+                              srcDoc={emailPreviewHtml}
+                              className="w-full h-full border-0"
+                              title="Gmail Email Preview"
+                            />
+                          ) : (
+                            <div className="p-4 text-muted-foreground">
+                              Loading email template content...
                             </div>
                           )}
                         </div>
                       </div>
-                      {/* Email Content */}
-                      <div className="flex-1 overflow-auto">
-                        <iframe
-                          srcDoc={emailPreviewHtml}
-                          className="w-full h-full border-0"
-                          title="Gmail Email Preview"
-                        />
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-muted-foreground">
+                        <div className="text-center">
+                          <Mail className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                          <p>Select an email template to preview final email</p>
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="h-full flex items-center justify-center text-muted-foreground">
-                      Select an email template to preview final email
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
+
+
             </CardContent>
           </Card>
 
