@@ -1055,6 +1055,15 @@ export class DatabaseStorage implements IStorage {
     return newSentEmail;
   }
 
+  async updateSentEmail(id: string, updates: Partial<InsertSentEmail>): Promise<SentEmail | undefined> {
+    const [updatedEmail] = await db
+      .update(sentEmails)
+      .set(updates)
+      .where(eq(sentEmails.id, id))
+      .returning();
+    return updatedEmail || undefined;
+  }
+
   async getSentEmailsByRecipient(email: string): Promise<SentEmail[]> {
     return await db.select().from(sentEmails)
       .where(eq(sentEmails.recipients, JSON.stringify([email])))

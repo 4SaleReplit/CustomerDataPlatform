@@ -63,6 +63,7 @@ export class PDFStorageService {
         Body: pdfBuffer,
         ContentType: 'application/pdf',
         CacheControl: 'max-age=31536000', // 1 year cache
+        ACL: 'public-read', // Make PDFs publicly accessible
         ServerSideEncryption: 'AES256',
         Metadata: {
           'presentation-id': presentationId,
@@ -73,14 +74,14 @@ export class PDFStorageService {
 
       await this.s3Client.send(command);
       
-      // Generate a long-lived signed URL (7 days) for public access
-      const signedUrl = await this.getSignedDownloadUrl(s3Key, 604800); // 7 days
+      // Generate public URL for public-read objects
+      const publicUrl = `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${s3Key}`;
       
-      console.log(`✅ PDF uploaded to S3: ${s3Key}`);
+      console.log(`✅ PDF uploaded to S3 with public access: ${s3Key}`);
       
       return {
         s3Key,
-        publicUrl: signedUrl,
+        publicUrl,
         filename
       };
     } catch (error) {
