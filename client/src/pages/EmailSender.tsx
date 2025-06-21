@@ -488,37 +488,26 @@ export function EmailSender() {
             </Dialog>
           </div>
 
-          <EmailListView
+          <SimpleEmailListView
             reports={filteredReports}
-            presentations={presentations}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            statusFilter={statusFilter}
-            onStatusFilterChange={setStatusFilter}
-            typeFilter={typeFilter}
-            onTypeFilterChange={setTypeFilter}
-            isLoading={reportsLoading}
-            emptyMessage="No scheduled reports yet"
-            emptyDescription="Create your first automated report"
-            onDuplicate={handleDuplicateReport}
+            mode="scheduled"
             onEdit={openEditDialog}
+            onDuplicate={handleDuplicateReport}
             onDelete={handleDeleteReport}
-            onToggleActive={(report) => handleToggleActive(report.id, report.isActive)}
-            isOneTime={false}
+            onToggleActive={(id, isActive) => handleToggleActive(id, isActive)}
+            presentations={presentations}
           />
         </TabsContent>
       </Tabs>
 
       {/* Edit Dialog */}
-      <ComprehensiveEmailForm
+      <NewEmailSenderForm
         isOpen={isEditDialogOpen}
         onClose={() => setIsEditDialogOpen(false)}
         onSubmit={handleUpdateReport}
-        formData={formData}
-        onFormDataChange={setFormData}
         isLoading={updateReportMutation.isPending}
-        mode="edit"
-        title="Edit Email Template"
+        mode={selectedReport?.cronExpression ? "scheduled" : "one-time"}
+        title="Edit Email"
       />
     </div>
   );

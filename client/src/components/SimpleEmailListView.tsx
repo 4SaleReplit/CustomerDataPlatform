@@ -16,6 +16,7 @@ interface ScheduledReport {
   cronExpression: string | null;
   timezone: string;
   emailSubject: string;
+  emailBody: string;
   recipientList: string[];
   ccList: string[];
   bccList: string[];
@@ -30,6 +31,15 @@ interface ScheduledReport {
   updatedAt: string;
   sentImmediately?: boolean;
   sentAt?: string;
+  emailTemplate?: {
+    templateId: string;
+    subject: string;
+    customContent: string;
+    templateVariables: Record<string, string>;
+  };
+  pdfDeliveryUrl?: string;
+  placeholderConfig?: Record<string, any>;
+  formatSettings?: { format: string; includeCharts: boolean };
 }
 
 interface SimpleEmailListViewProps {
@@ -54,7 +64,7 @@ export function SimpleEmailListView({
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const filteredReports = reports.filter(report => {
+  const filteredReports = (reports || []).filter(report => {
     const matchesSearch = searchTerm === "" || 
       report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       report.description.toLowerCase().includes(searchTerm.toLowerCase());
