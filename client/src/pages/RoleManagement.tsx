@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, memo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -281,6 +281,116 @@ export default function RoleManagement() {
     });
   }, [roles, activeTab]);
 
+  // Memoized callbacks for performance
+  const handleCreateRole = useCallback(() => setShowCreateModal(true), []);
+  const handleCloseCreateModal = useCallback(() => {
+    setShowCreateModal(false);
+    resetForm();
+  }, []);
+  
+  const handleEditRole = useCallback((role: Role) => {
+    setSelectedRole(role);
+    setFormData({
+      name: role.name,
+      displayName: role.displayName,
+      description: role.description || '',
+      color: role.color,
+      hierarchyLevel: role.hierarchyLevel,
+      canManageRoles: role.canManageRoles,
+      maxTeamMembers: role.maxTeamMembers,
+      isActive: role.isActive,
+      selectedPermissions: Object.keys(role.permissions || {}),
+      allowedFeatures: role.allowedFeatures || [],
+      restrictions: role.restrictions || {
+        ipWhitelist: [],
+        timeRestrictions: {
+          enabled: false,
+          allowedHours: { start: '09:00', end: '17:00' },
+          allowedDays: [1, 2, 3, 4, 5]
+        },
+        dataAccessLimits: {
+          maxRecords: undefined,
+          allowedDataSources: []
+        }
+      }
+    });
+    setShowEditModal(true);
+  }, []);
+
+  const handleTabChange = useCallback((value: string) => {
+    setActiveTab(value);
+  }, []);
+
+// Memoized RoleCard component for optimized rendering
+const RoleCard = memo(({ role, onEdit }: { role: Role; onEdit: (role: Role) => void }) => {
+  const handleEdit = useCallback(() => onEdit(role), [role, onEdit]);
+  
+  return (
+    <Card className="h-full hover:shadow-md transition-shadow duration-200">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div 
+              className="w-4 h-4 rounded-full flex-shrink-0" 
+              style={{ backgroundColor: role.color }}
+            />
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-lg font-semibold truncate">
+                {role.displayName}
+              </CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
+                {role.name}
+              </CardDescription>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2 flex-shrink-0">
+            {role.isSystemRole && (
+              <Badge variant="secondary" className="text-xs">
+                <Shield className="w-3 h-3 mr-1" />
+                System
+              </Badge>
+            )}
+            <Badge variant={role.isActive ? "default" : "secondary"} className="text-xs">
+              {role.isActive ? "Active" : "Inactive"}
+            </Badge>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {role.description && (
+          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+            {role.description}
+          </p>
+        )}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+            <span className="flex items-center">
+              <Users className="w-4 h-4 mr-1" />
+              Level {role.hierarchyLevel}
+            </span>
+            {role.maxTeamMembers && (
+              <span className="flex items-center">
+                <UserCheck className="w-4 h-4 mr-1" />
+                Max {role.maxTeamMembers}
+              </span>
+            )}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleEdit}
+            className="h-8 w-8 p-0"
+          >
+            <Edit className="w-4 h-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+});
+
+RoleCard.displayName = "RoleCard";
+
   // Create role mutation
   const createRoleMutation = useMutation({
     mutationFn: async ({ selectedPermissions, ...data }: any) => {
@@ -554,58 +664,34 @@ export default function RoleManagement() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {roles.map((role) => (
-            <Card key={role.id} className="group hover:shadow-xl transition-all duration-300 border-l-4" style={{ borderLeftColor: role.color }}>
-              <CardHeader className="pb-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    {getRoleIcon(role.hierarchyLevel)}
-                    <div>
-                      <CardTitle className="text-xl font-semibold group-hover:text-blue-600 transition-colors">
-                        {role.displayName}
-                      </CardTitle>
-                      <CardDescription className="text-sm text-muted-foreground">
-                        Level {role.hierarchyLevel} • {role.name}
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant={role.isActive ? "default" : "secondary"}>
-                      {role.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                    {role.isSystemRole && (
-                      <Badge variant="outline" className="text-orange-600 border-orange-200">
-                        System
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {role.description && (
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {role.description}
-                  </p>
-                )}
-                
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Max Members:</span>
-                    <span className="font-medium">
-                      {role.maxTeamMembers ? role.maxTeamMembers.toLocaleString() : 'Unlimited'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Features:</span>
-                    <span className="font-medium">{role.allowedFeatures.length}</span>
-                  </div>
-                  {role.canManageRoles && (
-                    <div className="flex items-center text-sm text-amber-600">
-                      <Key className="h-3 w-3 mr-1" />
-                      <span>Can manage roles</span>
-                    </div>
-                  )}
-                </div>
+          {filteredRoles.map((role) => (
+            <RoleCard key={role.id} role={role} onEdit={handleEditRole} />
+          ))}
+        </div>
+      )}
+      
+      {/* Edit Role Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <RoleFormModal
+          open={showEditModal}
+          onOpenChange={setShowEditModal}
+          title="Edit Role"
+          description="Modify role permissions and settings"
+          formData={formData}
+          setFormData={setFormData}
+          onSubmit={handleSubmit}
+          isLoading={updateRoleMutation.isPending}
+          permissionsByCategory={permissionsByCategory}
+          roleTemplates={ROLE_TEMPLATES}
+          availableFeatures={AVAILABLE_FEATURES}
+          onApplyTemplate={applyTemplate}
+          resetForm={resetForm}
+          isEditMode={true}
+        />
+      </Dialog>
+    </div>
+  );
+}
 
                 <div className="flex space-x-2 pt-2">
                   <Button 
