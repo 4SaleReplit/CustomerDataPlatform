@@ -15,29 +15,18 @@ const FALLBACK_DATABASE_URL = process.env.DATABASE_URL || 'postgresql://neondb_o
 
 console.log('🔧 Using optimized database connection with enhanced pooling');
 
-// Enhanced connection pool with retry logic and timeout handling
+// Simplified direct connection approach
 function createPool(connectionString: string): Pool {
-  const config = {
+  return new Pool({
     connectionString,
-    max: 2, // Minimal pool size for serverless
-    min: 0, // No minimum connections
-    idleTimeoutMillis: 3000, // Very short idle timeout
-    connectionTimeoutMillis: 5000, // Quick connection timeout
-    acquireTimeoutMillis: 8000, // Total time to get connection
+    max: 20,
+    min: 5,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 60000,
     ssl: connectionString.includes('localhost') ? false : {
       rejectUnauthorized: false
     }
-  };
-
-  const pool = new Pool(config);
-  
-  // Enhanced error handling with automatic reconnection
-  pool.on('error', (err) => {
-    console.error('Pool error:', err.message);
-    // Pool will automatically handle reconnection
   });
-
-  return pool;
 }
 
 // Function to switch database environment
@@ -124,34 +113,32 @@ pool.on('remove', (client) => {
   console.log('🔌 Database connection removed from pool');
 });
 
-// Enhanced connection test with retry logic
-async function testDatabaseConnection(retries = 3) {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const client = await pool.connect();
-      const result = await client.query('SELECT NOW()');
-      client.release();
-      
-      console.log('✅ Successfully connected to database');
-      console.log('🕐 Database time:', result.rows[0]?.now);
-      return true;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      console.error(`❌ Connection attempt ${attempt}/${retries} failed:`, errorMessage);
-      
-      if (attempt < retries) {
-        const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
-        console.log(`⏳ Retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
+// Simplified connection test with immediate feedback
+async function testDatabaseConnection() {
+  try {
+    const client = await pool.connect();
+    const result = await client.query('SELECT NOW()');
+    client.release();
+    
+    console.log('✅ Database connection successful');
+    console.log('🕐 Database time:', result.rows[0]?.now);
+    return true;
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error(`❌ Database connection failed:`, errorMessage);
+    
+    // Force recreation of pool on failure
+    if (currentPool) {
+      await currentPool.end();
+      currentPool = createPool(FALLBACK_DATABASE_URL);
+      console.log('🔄 Database pool recreated');
     }
+    
+    return false;
   }
-  
-  console.error('❌ Failed to connect after all retries');
-  return false;
 }
 
-// Test connection on startup
+// Test connection immediately
 testDatabaseConnection();
 
 export const db = drizzle(pool, { schema });
