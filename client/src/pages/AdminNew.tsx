@@ -1072,8 +1072,33 @@ export default function AdminNew() {
     }
   });
 
+  const refreshAllMutation = useMutation({
+    mutationFn: () => apiRequest('/api/endpoints/refresh-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    }),
+    onSuccess: (data: any) => {
+      toast({
+        title: "Status Refresh Complete",
+        description: `Tested ${data.summary?.total || 0} endpoints. ${data.summary?.healthy || 0} healthy, ${data.summary?.unhealthy || 0} down. Avg response: ${data.summary?.averageResponseTime || 0}ms`
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/endpoints'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Status Refresh Failed",
+        description: error.message || "Failed to refresh endpoint status",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleAutoDiscoverEndpoints = () => {
     autoDiscoverMutation.mutate();
+  };
+
+  const handleRefreshAllEndpoints = () => {
+    refreshAllMutation.mutate();
   };
 
   const testEndpointMutation = useMutation({
@@ -1692,9 +1717,22 @@ export default function AdminNew() {
               <p className="text-sm text-muted-foreground">Monitor API endpoints, track uptime, and receive alerts when services go down</p>
             </div>
             <div className="flex space-x-3">
-              <Button variant="outline" onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/endpoints'] })}>
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Refresh Status
+              <Button 
+                variant="outline" 
+                onClick={handleRefreshAllEndpoints}
+                disabled={refreshAllMutation.isPending}
+              >
+                {refreshAllMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Testing...
+                  </>
+                ) : (
+                  <>
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Refresh Status
+                  </>
+                )}
               </Button>
               <Button 
                 onClick={handleAutoDiscoverEndpoints}
