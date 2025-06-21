@@ -86,30 +86,57 @@ export function SimpleEmailListView({
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const filteredReports = (reports || []).filter(report => {
-    const matchesSearch = searchTerm === "" || 
-      report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.description.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" || 
-      (statusFilter === "active" && report.isActive) ||
-      (statusFilter === "paused" && !report.isActive) ||
-      (statusFilter === "sent" && report.sentImmediately) ||
-      (statusFilter === "error" && report.lastError);
-    
-    return matchesSearch && matchesStatus;
+  // Fetch sent emails for one-time mode
+  const { data: sentEmails = [], isLoading } = useQuery({
+    queryKey: ['/api/sent-emails'],
+    enabled: mode === 'one-time'
   });
 
-  const getStatusBadge = (report: ScheduledReport) => {
+  // Use sent emails for one-time mode, reports for scheduled mode
+  const dataToDisplay = mode === 'one-time' ? (sentEmails || []) : (reports || []);
+  
+  const filteredReports = dataToDisplay.filter(item => {
     if (mode === 'one-time') {
-      if (report.lastError) {
+      // Filter sent emails
+      const sentEmail = item as SentEmail;
+      const matchesSearch = searchTerm === "" || 
+        sentEmail.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        sentEmail.recipients.some(r => r.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesStatus = statusFilter === "all" || 
+        (statusFilter === "sent" && sentEmail.status === 'sent') ||
+        (statusFilter === "failed" && sentEmail.status === 'failed');
+      
+      return matchesSearch && matchesStatus;
+    } else {
+      // Filter scheduled reports
+      const report = item as ScheduledReport;
+      const matchesSearch = searchTerm === "" || 
+        report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        report.description.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = statusFilter === "all" || 
+        (statusFilter === "active" && report.isActive) ||
+        (statusFilter === "paused" && !report.isActive) ||
+        (statusFilter === "sent" && report.sentImmediately) ||
+        (statusFilter === "error" && report.lastError);
+      
+      return matchesSearch && matchesStatus;
+    }
+  });
+
+  const getStatusBadge = (item: ScheduledReport | SentEmail) => {
+    if (mode === 'one-time') {
+      const sentEmail = item as SentEmail;
+      if (sentEmail.status === 'failed') {
         return <Badge variant="destructive">Failed</Badge>;
       }
-      if (report.sentImmediately) {
+      if (sentEmail.status === 'sent') {
         return <Badge variant="default" className="bg-green-500">Sent</Badge>;
       }
       return <Badge variant="secondary">Pending</Badge>;
     } else {
+      const report = item as ScheduledReport;
       if (report.isActive) {
         return <Badge variant="default" className="bg-green-500">Active</Badge>;
       }

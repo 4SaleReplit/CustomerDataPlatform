@@ -811,9 +811,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 pdfDownloadUrl = `${domain}/api/reports/pdf/${presentation.id}`;
               }
               
-              // Use the database template with proper PDF URL
+              // Use the database template with proper PDF URL - override any incorrect URLs from frontend
               const templateVariables = {
-                ...reportData.emailTemplate.templateVariables,
+                report_name: reportData.emailTemplate.templateVariables?.report_name || reportData.name || 'Analytics Report',
                 pdf_download_url: pdfDownloadUrl,
                 report_url: pdfDownloadUrl,
                 generation_date: new Date().toLocaleDateString(),
