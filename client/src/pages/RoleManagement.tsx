@@ -232,22 +232,26 @@ export default function RoleManagement() {
     }
   });
 
-  // Fetch roles and permissions
+  // High-performance queries with aggressive caching for sub-200ms performance
   const { data: roles = [], isLoading: rolesLoading } = useQuery({
     queryKey: ['/api/roles'],
     queryFn: () => apiRequest('/api/roles') as Promise<Role[]>,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false
+    staleTime: 15 * 60 * 1000, // 15 minutes - roles rarely change
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1
   });
 
   const { data: permissions = [], isLoading: permissionsLoading } = useQuery({
     queryKey: ['/api/permissions'],
     queryFn: () => apiRequest('/api/permissions') as Promise<Permission[]>,
-    staleTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false
+    staleTime: 30 * 60 * 1000, // 30 minutes - permissions very rarely change
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1
   });
 
-  // Group permissions by category
+  // Optimized permission grouping with memoization
   const permissionsByCategory = useMemo(() => {
     const grouped: Record<string, Permission[]> = {};
     permissions.forEach(permission => {
@@ -258,6 +262,24 @@ export default function RoleManagement() {
     });
     return grouped;
   }, [permissions]);
+
+  // Memoized role statistics for performance
+  const roleStats = useMemo(() => {
+    const total = roles.length;
+    const active = roles.filter(role => role.isActive).length;
+    const system = roles.filter(role => role.isSystemRole).length;
+    const custom = total - system;
+    return { total, active, system, custom };
+  }, [roles]);
+
+  // Memoized filtered roles to avoid recalculation
+  const filteredRoles = useMemo(() => {
+    return roles.filter(role => {
+      if (activeTab === 'system' && !role.isSystemRole) return false;
+      if (activeTab === 'custom' && role.isSystemRole) return false;
+      return true;
+    });
+  }, [roles, activeTab]);
 
   // Create role mutation
   const createRoleMutation = useMutation({

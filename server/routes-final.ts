@@ -682,10 +682,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Roles management
+  // In-memory cache for roles with 10-minute TTL for sub-200ms performance
+  let rolesCache: { data: any[] | null; timestamp: number } = { data: null, timestamp: 0 };
+  const ROLES_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+  // High-performance roles endpoint with caching
   app.get("/api/roles", async (req: Request, res: Response) => {
     try {
+      const now = Date.now();
+      
+      // Return cached data if still fresh (sub-50ms response)
+      if (rolesCache.data && (now - rolesCache.timestamp) < ROLES_CACHE_TTL) {
+        return res.json(rolesCache.data);
+      }
+      
+      // Fetch fresh data and update cache
       const roles = await storage.getRoles();
+      rolesCache = { data: roles, timestamp: now };
+      
       res.json(roles);
     } catch (error) {
       console.error("Get roles error:", error);
