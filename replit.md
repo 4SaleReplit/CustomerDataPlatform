@@ -111,6 +111,21 @@ This is a comprehensive Customer Data Platform (CDP) built for advanced analytic
 
 ## Recent Changes
 
+- **June 21, 2025**: Comprehensive Endpoint Monitoring System Implementation (Pingdom-like functionality)
+  - Added dedicated "Endpoint Monitoring" tab to Admin dashboard for platform health oversight
+  - Implemented comprehensive endpoint health checking with status codes, response times, and error tracking
+  - Created database schema with monitored_endpoints and endpoint_monitoring_history tables
+  - Built automated cron job scheduling for regular endpoint health checks at configurable intervals
+  - Added real-time alerting system with email and Slack notifications when endpoints go down
+  - Developed monitoring dashboard with overview statistics: total endpoints, healthy count, down count, average response time
+  - Created endpoint management interface with add/edit/delete functionality and test-now capabilities
+  - Implemented monitoring history tracking with detailed logs of all endpoint checks over time
+  - Added configurable monitoring settings: check intervals, timeouts, expected status codes, alert preferences
+  - Built comprehensive API endpoints for CRUD operations on monitored endpoints with health testing
+  - Integrated Slack Web API for structured alert messages when services experience downtime
+  - Enhanced storage layer with full endpoint monitoring data persistence and retrieval methods
+  - Admin dashboard now provides 6-tab layout including comprehensive endpoint monitoring capabilities
+
 - **June 21, 2025**: Enhanced Integration Management System with Comprehensive Catalog
   - Moved Integrations section from main navigation to Admin dashboard as dedicated tab
   - Expanded integration catalog to 20+ integration types across 5 categories

@@ -26,6 +26,201 @@ import * as cron from "node-cron";
 import { cronJobService } from "./services/cronJobService";
 
 const activeCronJobs = new Map<string, any>();
+const endpointMonitoringJobs = new Map<string, any>();
+
+// Endpoint health checking service
+async function testEndpointHealth(endpoint: any): Promise<{ status: number; responseTime: number; error?: string }> {
+  const startTime = Date.now();
+  
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), endpoint.timeout * 1000);
+    
+    const response = await fetch(endpoint.url, {
+      method: endpoint.method,
+      signal: controller.signal,
+      headers: {
+        'User-Agent': '4Sale CDP Monitor/1.0',
+        'Accept': 'application/json, text/plain, */*'
+      }
+    });
+    
+    clearTimeout(timeoutId);
+    const responseTime = Date.now() - startTime;
+    
+    return {
+      status: response.status,
+      responseTime,
+      error: response.status !== endpoint.expectedStatus ? `Expected ${endpoint.expectedStatus}, got ${response.status}` : undefined
+    };
+  } catch (error: any) {
+    const responseTime = Date.now() - startTime;
+    
+    if (error.name === 'AbortError') {
+      return {
+        status: 0,
+        responseTime,
+        error: `Request timeout after ${endpoint.timeout}s`
+      };
+    }
+    
+    return {
+      status: 0,
+      responseTime,
+      error: error.message || 'Network error'
+    };
+  }
+}
+
+// Schedule endpoint monitoring with cron
+async function scheduleEndpointMonitoring(endpoint: any) {
+  const cronExpression = `*/${Math.floor(endpoint.checkInterval / 60)} * * * *`; // Convert seconds to minutes
+  
+  // Cancel existing job if it exists
+  if (endpointMonitoringJobs.has(endpoint.id)) {
+    endpointMonitoringJobs.get(endpoint.id).stop();
+  }
+  
+  const job = cron.schedule(cronExpression, async () => {
+    console.log(`🔍 Checking endpoint: ${endpoint.name} (${endpoint.url})`);
+    
+    try {
+      const result = await testEndpointHealth(endpoint);
+      const isHealthy = result.status >= 200 && result.status < 300;
+      
+      // Update endpoint status
+      await storage.updateMonitoredEndpoint(endpoint.id, {
+        lastStatus: result.status,
+        lastResponseTime: result.responseTime,
+        lastCheckedAt: new Date(),
+        ...(isHealthy
+          ? { lastSuccessAt: new Date(), consecutiveFailures: 0 }
+          : { lastFailureAt: new Date(), consecutiveFailures: (endpoint.consecutiveFailures || 0) + 1 }
+        )
+      });
+      
+      // Store monitoring history
+      await storage.createEndpointMonitoringHistory({
+        endpointId: endpoint.id,
+        status: result.status,
+        responseTime: result.responseTime,
+        errorMessage: result.error
+      });
+      
+      // Send alerts if endpoint is down
+      if (!isHealthy) {
+        await sendEndpointAlerts(endpoint, result);
+      }
+      
+      console.log(`✅ Endpoint check complete: ${endpoint.name} - Status: ${result.status}, Response: ${result.responseTime}ms`);
+    } catch (error) {
+      console.error(`❌ Error checking endpoint ${endpoint.name}:`, error);
+    }
+  }, {
+    scheduled: true,
+    timezone: 'UTC'
+  });
+  
+  endpointMonitoringJobs.set(endpoint.id, job);
+  console.log(`📅 Scheduled monitoring for ${endpoint.name} every ${Math.floor(endpoint.checkInterval / 60)} minutes`);
+}
+
+// Unschedule endpoint monitoring
+async function unscheduleEndpointMonitoring(endpointId: string) {
+  if (endpointMonitoringJobs.has(endpointId)) {
+    endpointMonitoringJobs.get(endpointId).stop();
+    endpointMonitoringJobs.delete(endpointId);
+    console.log(`🛑 Stopped monitoring for endpoint: ${endpointId}`);
+  }
+}
+
+// Send alerts when endpoints go down
+async function sendEndpointAlerts(endpoint: any, result: any) {
+  const alertMessage = `🚨 Endpoint Alert: ${endpoint.name} is down!\n\nURL: ${endpoint.url}\nStatus: ${result.status}\nError: ${result.error || 'Unknown error'}\nResponse Time: ${result.responseTime}ms\nConsecutive Failures: ${(endpoint.consecutiveFailures || 0) + 1}`;
+  
+  try {
+    // Send email alert if enabled
+    if (endpoint.alertEmail) {
+      await emailService.sendEmail({
+        to: 'admin@4sale.tech', // Should be configurable
+        subject: `🚨 Endpoint Down: ${endpoint.name}`,
+        text: alertMessage,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px;">
+            <h2 style="color: #dc2626;">🚨 Endpoint Alert</h2>
+            <p><strong>${endpoint.name}</strong> is experiencing issues:</p>
+            <ul>
+              <li><strong>URL:</strong> ${endpoint.url}</li>
+              <li><strong>Status:</strong> ${result.status}</li>
+              <li><strong>Error:</strong> ${result.error || 'Unknown error'}</li>
+              <li><strong>Response Time:</strong> ${result.responseTime}ms</li>
+              <li><strong>Consecutive Failures:</strong> ${(endpoint.consecutiveFailures || 0) + 1}</li>
+            </ul>
+            <p>Please check the endpoint and resolve the issue.</p>
+          </div>
+        `
+      });
+    }
+    
+    // Send Slack alert if enabled and configured
+    if (endpoint.alertSlack) {
+      await sendSlackAlert(endpoint, result);
+    }
+  } catch (error) {
+    console.error('Error sending endpoint alerts:', error);
+  }
+}
+
+// Send Slack alert notification
+async function sendSlackAlert(endpoint: any, result: any) {
+  try {
+    const { sendSlackMessage } = await import('./services/slack');
+    
+    await sendSlackMessage({
+      channel: process.env.SLACK_CHANNEL_ID || '#alerts',
+      blocks: [
+        {
+          type: 'header',
+          text: {
+            type: 'plain_text',
+            text: '🚨 Endpoint Down Alert'
+          }
+        },
+        {
+          type: 'section',
+          fields: [
+            {
+              type: 'mrkdwn',
+              text: `*Endpoint:* ${endpoint.name}`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*URL:* ${endpoint.url}`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Status:* ${result.status}`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Response Time:* ${result.responseTime}ms`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Error:* ${result.error || 'Unknown error'}`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Consecutive Failures:* ${(endpoint.consecutiveFailures || 0) + 1}`
+            }
+          ]
+        }
+      ]
+    });
+  } catch (error) {
+    console.error('Error sending Slack alert:', error);
+  }
+}
 
 // Configure multer for image uploads
 const storage_multer = multer.diskStorage({
@@ -4471,6 +4666,76 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     } catch (error) {
       console.error('Error deleting S3 object:', error);
       res.status(500).json({ error: "Failed to delete file" });
+    }
+  });
+
+  // Endpoint Monitoring endpoints
+  app.get("/api/endpoints", async (req: Request, res: Response) => {
+    try {
+      const endpoints = await storage.getMonitoredEndpoints();
+      res.json(endpoints);
+    } catch (error: any) {
+      console.error("Error fetching monitored endpoints:", error);
+      res.status(500).json({ error: "Failed to fetch monitored endpoints" });
+    }
+  });
+
+  app.post("/api/endpoints", async (req: Request, res: Response) => {
+    try {
+      const validation = insertMonitoredEndpointSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          error: "Invalid endpoint data", 
+          details: validation.error.issues 
+        });
+      }
+
+      const endpoint = await storage.createMonitoredEndpoint(validation.data);
+      
+      // Schedule monitoring job if endpoint is active
+      if (endpoint.isActive) {
+        await scheduleEndpointMonitoring(endpoint);
+      }
+
+      res.status(201).json(endpoint);
+    } catch (error: any) {
+      console.error("Error creating monitored endpoint:", error);
+      res.status(500).json({ error: "Failed to create monitored endpoint" });
+    }
+  });
+
+  app.post("/api/endpoints/:id/test", async (req: Request, res: Response) => {
+    try {
+      const endpoint = await storage.getMonitoredEndpoint(req.params.id);
+      if (!endpoint) {
+        return res.status(404).json({ error: "Endpoint not found" });
+      }
+
+      const result = await testEndpointHealth(endpoint);
+      
+      // Update endpoint with test results
+      await storage.updateMonitoredEndpoint(endpoint.id, {
+        lastStatus: result.status,
+        lastResponseTime: result.responseTime,
+        lastCheckedAt: new Date(),
+        ...(result.status >= 200 && result.status < 300 
+          ? { lastSuccessAt: new Date(), consecutiveFailures: 0 }
+          : { lastFailureAt: new Date(), consecutiveFailures: (endpoint.consecutiveFailures || 0) + 1 }
+        )
+      });
+
+      // Store monitoring history
+      await storage.createEndpointMonitoringHistory({
+        endpointId: endpoint.id,
+        status: result.status,
+        responseTime: result.responseTime,
+        errorMessage: result.error
+      });
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error testing endpoint:", error);
+      res.status(500).json({ error: "Failed to test endpoint" });
     }
   });
 
