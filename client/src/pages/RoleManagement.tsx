@@ -301,14 +301,14 @@ export default function RoleManagement() {
       isActive: role.isActive,
       selectedPermissions: Object.keys(role.permissions || {}),
       allowedFeatures: role.allowedFeatures || [],
-      restrictions: role.restrictions || {
-        ipWhitelist: [],
-        timeRestrictions: {
+      restrictions: {
+        ipWhitelist: role.restrictions?.ipWhitelist || [],
+        timeRestrictions: role.restrictions?.timeRestrictions || {
           enabled: false,
           allowedHours: { start: '09:00', end: '17:00' },
           allowedDays: [1, 2, 3, 4, 5]
         },
-        dataAccessLimits: {
+        dataAccessLimits: role.restrictions?.dataAccessLimits || {
           maxRecords: undefined,
           allowedDataSources: []
         }
@@ -670,55 +670,6 @@ RoleCard.displayName = "RoleCard";
         </div>
       )}
       
-      {/* Edit Role Modal */}
-      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <RoleFormModal
-          open={showEditModal}
-          onOpenChange={setShowEditModal}
-          title="Edit Role"
-          description="Modify role permissions and settings"
-          formData={formData}
-          setFormData={setFormData}
-          onSubmit={handleSubmit}
-          isLoading={updateRoleMutation.isPending}
-          permissionsByCategory={permissionsByCategory}
-          roleTemplates={ROLE_TEMPLATES}
-          availableFeatures={AVAILABLE_FEATURES}
-          onApplyTemplate={applyTemplate}
-          resetForm={resetForm}
-          isEditMode={true}
-        />
-      </Dialog>
-    </div>
-  );
-}
-
-                <div className="flex space-x-2 pt-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => startEdit(role)}
-                    className="flex-1 hover:bg-blue-50 hover:border-blue-200"
-                  >
-                    <Edit className="h-3 w-3 mr-1" />
-                    Edit
-                  </Button>
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={() => deleteRoleMutation.mutate(role.id)}
-                    disabled={deleteRoleMutation.isPending}
-                    className="hover:bg-red-600"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
       {/* Edit Role Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
         <RoleFormModal
