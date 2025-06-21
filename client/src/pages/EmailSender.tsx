@@ -10,7 +10,7 @@ import { Calendar, Clock, Mail, Send, Play, Pause, Trash2, Plus, Users, Database
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { EnhancedSchedulerForm } from "@/components/EnhancedSchedulerForm";
+import { ContentTypeSchedulerForm } from "@/components/ContentTypeSchedulerForm";
 import { EmailListView } from "@/components/EmailListView";
 
 interface ScheduledReport {
@@ -328,7 +328,9 @@ export function EmailSender() {
     setFormData({
       name: report.name,
       description: report.description,
+      contentType: 'report',
       presentationId: report.presentationId,
+      templateId: "",
       cronExpression: report.cronExpression || "",
       timezone: report.timezone,
       recipientList: report.recipientList,
@@ -435,26 +437,18 @@ export function EmailSender() {
                   Send New Email
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Send One-Time Email</DialogTitle>
-                  <DialogDescription>
-                    Send an immediate email report with custom content and recipients
-                  </DialogDescription>
-                </DialogHeader>
-                <EnhancedSchedulerForm
-                  formData={formData}
-                  setFormData={setFormData}
-                  presentations={presentations}
-                  presentationsLoading={presentationsLoading}
-                  mailingLists={mailingLists as MailingList[]}
-                  onSubmit={handleCreateReport}
-                  onCancel={() => setIsCreateDialogOpen(false)}
-                  isLoading={createReportMutation.isPending}
-                  updateEmailTemplate={updateEmailTemplate}
-                  mode="one-time"
-                />
-              </DialogContent>
+              <ContentTypeSchedulerForm
+                isOpen={isCreateDialogOpen}
+                onClose={() => setIsCreateDialogOpen(false)}
+                onSubmit={handleCreateReport}
+                formData={formData}
+                onFormDataChange={setFormData}
+                presentations={presentations || []}
+                templates={templates || []}
+                isLoading={createReportMutation.isPending}
+                mode="create"
+                title="Send One-Time Email"
+              />
             </Dialog>
           </div>
 
@@ -489,26 +483,18 @@ export function EmailSender() {
                   Schedule New Report
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Schedule New Report</DialogTitle>
-                  <DialogDescription>
-                    Configure automated report delivery with custom variables and live email preview
-                  </DialogDescription>
-                </DialogHeader>
-                <EnhancedSchedulerForm
-                  formData={formData}
-                  setFormData={setFormData}
-                  presentations={presentations}
-                  presentationsLoading={presentationsLoading}
-                  mailingLists={mailingLists as MailingList[]}
-                  onSubmit={handleCreateReport}
-                  onCancel={() => setIsCreateDialogOpen(false)}
-                  isLoading={createReportMutation.isPending}
-                  updateEmailTemplate={updateEmailTemplate}
-                  mode="scheduled"
-                />
-              </DialogContent>
+              <ContentTypeSchedulerForm
+                isOpen={isCreateDialogOpen}
+                onClose={() => setIsCreateDialogOpen(false)}
+                onSubmit={handleCreateReport}
+                formData={formData}
+                onFormDataChange={setFormData}
+                presentations={presentations || []}
+                templates={templates || []}
+                isLoading={createReportMutation.isPending}
+                mode="create"
+                title="Schedule New Report"
+              />
             </Dialog>
           </div>
 
@@ -534,28 +520,18 @@ export function EmailSender() {
       </Tabs>
 
       {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Scheduled Report</DialogTitle>
-            <DialogDescription>
-              Update your scheduled report configuration
-            </DialogDescription>
-          </DialogHeader>
-          <EnhancedSchedulerForm
-            formData={formData}
-            setFormData={setFormData}
-            presentations={presentations}
-            presentationsLoading={presentationsLoading}
-            mailingLists={mailingLists as MailingList[]}
-            onSubmit={handleUpdateReport}
-            onCancel={() => setIsEditDialogOpen(false)}
-            isLoading={updateReportMutation.isPending}
-            updateEmailTemplate={updateEmailTemplate}
-            mode="scheduled"
-          />
-        </DialogContent>
-      </Dialog>
+      <ContentTypeSchedulerForm
+        isOpen={isEditDialogOpen}
+        onClose={() => setIsEditDialogOpen(false)}
+        onSubmit={handleUpdateReport}
+        formData={formData}
+        onFormDataChange={setFormData}
+        presentations={presentations || []}
+        templates={templates || []}
+        isLoading={updateReportMutation.isPending}
+        mode="edit"
+        title="Edit Scheduled Report"
+      />
     </div>
   );
 }
