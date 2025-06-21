@@ -469,6 +469,8 @@ export type Presentation = typeof presentations.$inferSelect;
 // Scheduler type exports
 export type InsertScheduledReport = z.infer<typeof insertScheduledReportSchema>;
 export type ScheduledReport = typeof scheduledReports.$inferSelect;
+export type InsertEmailTemplate = z.infer<typeof insertEmailTemplateSchema>;
+export type EmailTemplate = typeof emailTemplates.$inferSelect;
 export type InsertMailingList = z.infer<typeof insertMailingListSchema>;
 export type MailingList = typeof mailingLists.$inferSelect;
 export type InsertReportExecution = z.infer<typeof insertReportExecutionSchema>;
@@ -601,6 +603,12 @@ export const updateScheduledReportSchema = createInsertSchema(scheduledReports).
   updatedAt: true,
   templateId: true,
 }).partial();
+
+export const insertEmailTemplateSchema = createInsertSchema(emailTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
 
 export const insertMailingListSchema = createInsertSchema(mailingLists).omit({
   id: true,
