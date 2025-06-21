@@ -4793,14 +4793,26 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
             });
             expectedStatus = route.path.includes('/amplitude/') ? 404 : 200;
           } else {
-            // For POST/PUT/DELETE endpoints, expect 400/401/422 (bad request/unauthorized) instead of 200
-            // since we're not sending proper data
+            // For POST/PUT/DELETE endpoints, expect validation errors or success based on endpoint type
+            let expectedStatuses = [400, 401, 422, 405]; // validation error, unauthorized, bad request, method not allowed
+            
+            // Special cases for endpoints that might return different status codes
+            if (route.path.includes('/test-connection') || route.path.includes('/clear-cache')) {
+              expectedStatuses = [200, 400, 401]; // These might succeed without data
+            }
+            if (route.path.includes('/login') || route.path.includes('/auth')) {
+              expectedStatuses = [400, 401, 422]; // Auth endpoints expect validation errors
+            }
+            if (route.path.includes('/templates') && route.method === 'POST') {
+              expectedStatuses = [201, 400, 422]; // Template creation might succeed with empty data
+            }
+            
             testResult = await testEndpointHealth({
               url: fullUrl,
               method: route.method,
-              expectedStatus: [400, 401, 422, 405] // Method not allowed, bad request, unauthorized, validation error
+              expectedStatus: expectedStatuses
             });
-            expectedStatus = 400; // Default expected for POST/PUT/DELETE without data
+            expectedStatus = expectedStatuses[0]; // Use first expected status as default
           }
 
           // Create endpoint data
