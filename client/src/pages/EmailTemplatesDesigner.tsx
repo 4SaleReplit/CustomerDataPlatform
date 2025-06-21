@@ -401,7 +401,6 @@ export function EmailTemplatesDesigner() {
                         name: e.target.value
                       })}
                       className="mt-1"
-                      disabled={editingTemplate.isSystem}
                     />
                   </div>
                   <div>
@@ -414,7 +413,6 @@ export function EmailTemplatesDesigner() {
                         description: e.target.value
                       })}
                       className="mt-1"
-                      disabled={editingTemplate.isSystem}
                     />
                   </div>
                   <div className="flex-1">
@@ -432,9 +430,9 @@ export function EmailTemplatesDesigner() {
                         // Update preview in real-time
                         generateEditPreview(e.target.value);
                       }}
-                      className="mt-1 h-80 font-mono text-sm"
-                      disabled={editingTemplate.isSystem}
+                      className="mt-1 h-80 font-mono text-sm border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       placeholder="Enter your HTML template content here..."
+                      spellCheck={false}
                     />
                   </div>
                 </div>
