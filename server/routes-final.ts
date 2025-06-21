@@ -3183,11 +3183,63 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
 
               addLog(`Creating table schema: ${table}`);
               
-              // For tables with foreign key constraints, create without constraints first
-              if (table === 'scheduled_reports' || table === 'report_executions') {
+              // For scheduled_reports table, use minimal safe creation approach
+              if (table === 'scheduled_reports') {
+                addLog(`Creating ${table} with minimal safe approach to prevent database termination`);
+                
+                // Create minimal scheduled_reports table structure that works
+                const minimalScheduledReportsSQL = `
+                  CREATE TABLE "scheduled_reports" (
+                    "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+                    "name" varchar(255) NOT NULL,
+                    "description" text,
+                    "presentation_id" uuid,
+                    "template_id" uuid NOT NULL,
+                    "cron_expression" varchar(100),
+                    "timezone" varchar(50) DEFAULT 'UTC',
+                    "email_body" text,
+                    "recipient_list" jsonb DEFAULT '[]',
+                    "cc_list" jsonb DEFAULT '[]',
+                    "bcc_list" jsonb DEFAULT '[]',
+                    "is_active" boolean DEFAULT true,
+                    "status" varchar(20) DEFAULT 'active',
+                    "created_by" uuid,
+                    "created_at" timestamp with time zone DEFAULT now(),
+                    "updated_at" timestamp with time zone DEFAULT now(),
+                    "last_executed" timestamp with time zone,
+                    "next_execution" timestamp with time zone,
+                    "execution_count" integer DEFAULT 0,
+                    "error_count" integer DEFAULT 0,
+                    "success_count" integer DEFAULT 0,
+                    "last_error" text,
+                    "last_run_at" timestamp with time zone,
+                    "next_run_at" timestamp with time zone,
+                    "sent_immediately" boolean DEFAULT false,
+                    "sent_at" timestamp with time zone,
+                    "sending_status" varchar(20) DEFAULT 'draft',
+                    "last_execution_at" timestamp with time zone,
+                    "placeholder_config" jsonb DEFAULT '{}',
+                    "format_settings" jsonb DEFAULT '{}',
+                    "airflow_configuration" jsonb DEFAULT '{}',
+                    "airflow_dag_id" varchar(255),
+                    "airflow_task_id" varchar(255),
+                    "pdf_delivery_url" text,
+                    "last_generated_pdf_url" text,
+                    "last_generated_s3_key" text
+                  )
+                `;
+                
+                try {
+                  await targetClient.query(minimalScheduledReportsSQL);
+                  addLog(`✓ Created scheduled_reports table with minimal safe approach`);
+                } catch (sqlError: any) {
+                  addLog(`❌ SQL Error for scheduled_reports: ${sqlError.message}`);
+                  throw sqlError;
+                }
+              } else if (table === 'report_executions') {
+                // Handle report_executions with dynamic column approach
                 addLog(`Creating ${table} table without foreign key constraints to prevent dependency issues`);
                 
-                // Get column definitions without constraints
                 const columnDefsResult = await sourceClient.query(`
                   SELECT 
                     column_name,
@@ -3204,7 +3256,6 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
                 const columnDefs = columnDefsResult.rows.map(col => {
                   let colDef = `"${col.column_name}"`;
                   
-                  // Handle data types
                   if (col.data_type === 'character varying') {
                     colDef += col.character_maximum_length ? ` varchar(${col.character_maximum_length})` : ' varchar';
                   } else if (col.data_type === 'USER-DEFINED' && col.udt_name === 'uuid') {
@@ -3223,12 +3274,10 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
                     colDef += ` ${col.data_type}`;
                   }
                   
-                  // Handle nullable
                   if (col.is_nullable === 'NO') {
                     colDef += ' NOT NULL';
                   }
                   
-                  // Handle defaults (excluding foreign key defaults)
                   if (col.column_default && !col.column_default.includes('nextval')) {
                     if (col.column_name === 'id' && col.column_default.includes('gen_random_uuid')) {
                       colDef += ' PRIMARY KEY DEFAULT gen_random_uuid()';
@@ -3241,7 +3290,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
                 }).join(', ');
                 
                 await targetClient.query(`CREATE TABLE "${table}" (${columnDefs})`);
-                addLog(`Created table ${table} without foreign key constraints`);
+                addLog(`✓ Created table ${table} without foreign key constraints`);
               } else {
                 await targetClient.query(`CREATE TABLE "${table}" (${columns})`);
               }
