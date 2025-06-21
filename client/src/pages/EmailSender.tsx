@@ -10,7 +10,7 @@ import { Calendar, Clock, Mail, Send, Play, Pause, Trash2, Plus, Users, Database
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { SimpleEmailTemplateForm } from "@/components/SimpleEmailTemplateForm";
+import { ComprehensiveEmailForm } from "@/components/ComprehensiveEmailForm";
 import { EmailListView } from "@/components/EmailListView";
 
 interface ScheduledReport {
@@ -442,7 +442,7 @@ export function EmailSender() {
                   Send New Email
                 </Button>
               </DialogTrigger>
-              <SimpleEmailTemplateForm
+              <ComprehensiveEmailForm
                 isOpen={isCreateDialogOpen}
                 onClose={() => setIsCreateDialogOpen(false)}
                 onSubmit={handleCreateReport}
@@ -486,7 +486,7 @@ export function EmailSender() {
                   Schedule New Report
                 </Button>
               </DialogTrigger>
-              <SimpleEmailTemplateForm
+              <ComprehensiveEmailForm
                 isOpen={isCreateDialogOpen}
                 onClose={() => setIsCreateDialogOpen(false)}
                 onSubmit={handleCreateReport}
@@ -521,7 +521,7 @@ export function EmailSender() {
       </Tabs>
 
       {/* Edit Dialog */}
-      <SimpleEmailTemplateForm
+      <ComprehensiveEmailForm
         isOpen={isEditDialogOpen}
         onClose={() => setIsEditDialogOpen(false)}
         onSubmit={handleUpdateReport}
