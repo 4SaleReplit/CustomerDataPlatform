@@ -106,28 +106,59 @@ export default function AdminNew() {
   const [selectedIntegrationType, setSelectedIntegrationType] = useState('');
   const [integrationFormData, setIntegrationFormData] = useState<any>({});
   const [showIntegrationTypeSelector, setShowIntegrationTypeSelector] = useState(false);
+  const [integrationSearchTerm, setIntegrationSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
 
-  // Integration templates
+  // Comprehensive integration templates organized by category
   const integrationTemplates: Record<string, any> = {
+    // Database Integrations
     postgresql: {
-      name: 'PostgreSQL Database',
+      name: 'PostgreSQL',
       description: 'Connect to PostgreSQL database for data storage and queries',
       category: 'Database',
       color: 'blue',
       fields: [
-        { 
-          key: 'connectionString', 
-          label: 'Connection String', 
-          type: 'text', 
-          placeholder: 'postgresql://username:password@host:5432/database?sslmode=require',
-          required: true
-        }
+        { key: 'connectionString', label: 'Connection String', type: 'text', placeholder: 'postgresql://username:password@host:5432/database?sslmode=require', required: true }
+      ]
+    },
+    mysql: {
+      name: 'MySQL',
+      description: 'Connect to MySQL database for data storage and queries',
+      category: 'Database',
+      color: 'orange',
+      fields: [
+        { key: 'host', label: 'Host', type: 'text', placeholder: 'localhost', required: true },
+        { key: 'port', label: 'Port', type: 'text', placeholder: '3306', required: true },
+        { key: 'database', label: 'Database Name', type: 'text', required: true },
+        { key: 'username', label: 'Username', type: 'text', required: true },
+        { key: 'password', label: 'Password', type: 'password', required: true }
+      ]
+    },
+    mongodb: {
+      name: 'MongoDB',
+      description: 'Connect to MongoDB for document-based data storage',
+      category: 'Database',
+      color: 'green',
+      fields: [
+        { key: 'connectionString', label: 'Connection String', type: 'text', placeholder: 'mongodb://username:password@host:27017/database', required: true }
+      ]
+    },
+    redis: {
+      name: 'Redis',
+      description: 'Connect to Redis for caching and session management',
+      category: 'Database',
+      color: 'red',
+      fields: [
+        { key: 'host', label: 'Host', type: 'text', placeholder: 'localhost', required: true },
+        { key: 'port', label: 'Port', type: 'text', placeholder: '6379', required: true },
+        { key: 'password', label: 'Password', type: 'password' },
+        { key: 'database', label: 'Database Index', type: 'text', placeholder: '0' }
       ]
     },
     snowflake: {
-      name: 'Snowflake Data Warehouse',
+      name: 'Snowflake',
       description: 'Connect to Snowflake for analytics and data warehousing',
-      category: 'Analytics',
+      category: 'Database',
       color: 'blue',
       fields: [
         { key: 'account', label: 'Account', type: 'text', placeholder: 'your-account', required: true },
@@ -138,8 +169,10 @@ export default function AdminNew() {
         { key: 'warehouse', label: 'Warehouse', type: 'text', required: true }
       ]
     },
+
+    // Analytics Tools
     amplitude: {
-      name: 'Amplitude Analytics',
+      name: 'Amplitude',
       description: 'Track user behavior and analytics with Amplitude',
       category: 'Analytics',
       color: 'purple',
@@ -149,8 +182,43 @@ export default function AdminNew() {
         { key: 'serverZone', label: 'Server Zone', type: 'select', options: ['US', 'EU'], placeholder: 'US' }
       ]
     },
+    mixpanel: {
+      name: 'Mixpanel',
+      description: 'Product analytics to track user interactions and events',
+      category: 'Analytics',
+      color: 'blue',
+      fields: [
+        { key: 'projectToken', label: 'Project Token', type: 'password', required: true },
+        { key: 'apiSecret', label: 'API Secret', type: 'password', required: true },
+        { key: 'projectId', label: 'Project ID', type: 'text', required: true }
+      ]
+    },
+    googleAnalytics: {
+      name: 'Google Analytics',
+      description: 'Web analytics service to track website traffic and user behavior',
+      category: 'Analytics',
+      color: 'orange',
+      fields: [
+        { key: 'measurementId', label: 'Measurement ID', type: 'text', placeholder: 'G-XXXXXXXXXX', required: true },
+        { key: 'apiSecret', label: 'API Secret', type: 'password', required: true },
+        { key: 'propertyId', label: 'Property ID', type: 'text', required: true }
+      ]
+    },
+    segment: {
+      name: 'Segment',
+      description: 'Customer data platform for collecting and routing analytics data',
+      category: 'Analytics',
+      color: 'green',
+      fields: [
+        { key: 'writeKey', label: 'Write Key', type: 'password', required: true },
+        { key: 'sourceId', label: 'Source ID', type: 'text', required: true },
+        { key: 'workspaceId', label: 'Workspace ID', type: 'text', required: true }
+      ]
+    },
+
+    // Marketing Tools
     braze: {
-      name: 'Braze Marketing',
+      name: 'Braze',
       description: 'Customer engagement platform for targeted campaigns',
       category: 'Marketing',
       color: 'pink',
@@ -160,16 +228,154 @@ export default function AdminNew() {
         { key: 'appId', label: 'App ID', type: 'text', required: true }
       ]
     },
+    sendgrid: {
+      name: 'SendGrid',
+      description: 'Email delivery service for transactional emails',
+      category: 'Marketing',
+      color: 'blue',
+      fields: [
+        { key: 'apiKey', label: 'API Key', type: 'password', required: true },
+        { key: 'fromEmail', label: 'From Email', type: 'email', placeholder: 'noreply@yourapp.com', required: true },
+        { key: 'fromName', label: 'From Name', type: 'text', placeholder: 'Your App' }
+      ]
+    },
+    mailchimp: {
+      name: 'Mailchimp',
+      description: 'Email marketing platform for campaigns and automation',
+      category: 'Marketing',
+      color: 'yellow',
+      fields: [
+        { key: 'apiKey', label: 'API Key', type: 'password', required: true },
+        { key: 'serverPrefix', label: 'Server Prefix', type: 'text', placeholder: 'us1', required: true },
+        { key: 'listId', label: 'List ID', type: 'text', required: true }
+      ]
+    },
+    hubspot: {
+      name: 'HubSpot',
+      description: 'CRM and marketing automation platform',
+      category: 'Marketing',
+      color: 'orange',
+      fields: [
+        { key: 'apiKey', label: 'API Key', type: 'password', required: true },
+        { key: 'portalId', label: 'Portal ID', type: 'text', required: true }
+      ]
+    },
+    salesforce: {
+      name: 'Salesforce',
+      description: 'Customer relationship management platform',
+      category: 'Marketing',
+      color: 'blue',
+      fields: [
+        { key: 'username', label: 'Username', type: 'text', required: true },
+        { key: 'password', label: 'Password', type: 'password', required: true },
+        { key: 'securityToken', label: 'Security Token', type: 'password', required: true },
+        { key: 'instanceUrl', label: 'Instance URL', type: 'url', placeholder: 'https://your-instance.salesforce.com', required: true }
+      ]
+    },
+    facebook: {
+      name: 'Facebook Ads',
+      description: 'Facebook advertising platform for campaign management',
+      category: 'Marketing',
+      color: 'blue',
+      fields: [
+        { key: 'accessToken', label: 'Access Token', type: 'password', required: true },
+        { key: 'adAccountId', label: 'Ad Account ID', type: 'text', required: true },
+        { key: 'appId', label: 'App ID', type: 'text', required: true },
+        { key: 'appSecret', label: 'App Secret', type: 'password', required: true }
+      ]
+    },
+    google: {
+      name: 'Google Ads',
+      description: 'Google advertising platform for search and display campaigns',
+      category: 'Marketing',
+      color: 'green',
+      fields: [
+        { key: 'customerId', label: 'Customer ID', type: 'text', required: true },
+        { key: 'developerToken', label: 'Developer Token', type: 'password', required: true },
+        { key: 'clientId', label: 'Client ID', type: 'text', required: true },
+        { key: 'clientSecret', label: 'Client Secret', type: 'password', required: true },
+        { key: 'refreshToken', label: 'Refresh Token', type: 'password', required: true }
+      ]
+    },
+
+    // Communication Tools
+    intercom: {
+      name: 'Intercom',
+      description: 'Customer messaging platform for support and engagement',
+      category: 'Communication',
+      color: 'blue',
+      fields: [
+        { key: 'accessToken', label: 'Access Token', type: 'password', required: true },
+        { key: 'appId', label: 'App ID', type: 'text', required: true }
+      ]
+    },
+    zendesk: {
+      name: 'Zendesk',
+      description: 'Customer service platform for support ticket management',
+      category: 'Communication',
+      color: 'green',
+      fields: [
+        { key: 'subdomain', label: 'Subdomain', type: 'text', placeholder: 'your-company', required: true },
+        { key: 'email', label: 'Email', type: 'email', required: true },
+        { key: 'apiToken', label: 'API Token', type: 'password', required: true }
+      ]
+    },
+    slack: {
+      name: 'Slack',
+      description: 'Team communication platform for notifications and alerts',
+      category: 'Communication',
+      color: 'purple',
+      fields: [
+        { key: 'botToken', label: 'Bot Token', type: 'password', required: true },
+        { key: 'channel', label: 'Default Channel', type: 'text', placeholder: '#general', required: true },
+        { key: 'signingSecret', label: 'Signing Secret', type: 'password', required: true }
+      ]
+    },
+    twillio: {
+      name: 'Twilio',
+      description: 'Cloud communications platform for SMS and voice',
+      category: 'Communication',
+      color: 'red',
+      fields: [
+        { key: 'accountSid', label: 'Account SID', type: 'text', required: true },
+        { key: 'authToken', label: 'Auth Token', type: 'password', required: true },
+        { key: 'phoneNumber', label: 'Phone Number', type: 'text', placeholder: '+1234567890', required: true }
+      ]
+    },
+
+    // Storage & Infrastructure
     s3: {
-      name: 'AWS S3 Storage',
+      name: 'AWS S3',
       description: 'Amazon S3 cloud storage for file uploads and static assets',
       category: 'Storage',
-      color: 'green',
+      color: 'orange',
       fields: [
         { key: 'accessKeyId', label: 'Access Key ID', type: 'text', required: true },
         { key: 'secretAccessKey', label: 'Secret Access Key', type: 'password', required: true },
         { key: 'region', label: 'AWS Region', type: 'select', options: ['us-east-1', 'us-west-2', 'eu-west-1', 'ap-southeast-1'], placeholder: 'us-east-1', required: true },
         { key: 'bucketName', label: 'Bucket Name', type: 'text', placeholder: 'my-app-storage', required: true }
+      ]
+    },
+    gcs: {
+      name: 'Google Cloud Storage',
+      description: 'Google Cloud Storage for file uploads and static assets',
+      category: 'Storage',
+      color: 'blue',
+      fields: [
+        { key: 'projectId', label: 'Project ID', type: 'text', required: true },
+        { key: 'keyFile', label: 'Service Account Key (JSON)', type: 'textarea', required: true },
+        { key: 'bucketName', label: 'Bucket Name', type: 'text', required: true }
+      ]
+    },
+    azure: {
+      name: 'Azure Blob Storage',
+      description: 'Microsoft Azure Blob Storage for file uploads',
+      category: 'Storage',
+      color: 'blue',
+      fields: [
+        { key: 'accountName', label: 'Account Name', type: 'text', required: true },
+        { key: 'accountKey', label: 'Account Key', type: 'password', required: true },
+        { key: 'containerName', label: 'Container Name', type: 'text', required: true }
       ]
     }
   };
@@ -749,6 +955,15 @@ export default function AdminNew() {
             placeholder={field.placeholder}
           />
         );
+      case 'textarea':
+        return (
+          <Textarea
+            value={value}
+            onChange={(e) => setIntegrationFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
+            placeholder={field.placeholder}
+            rows={4}
+          />
+        );
       default:
         return (
           <Input
@@ -759,6 +974,27 @@ export default function AdminNew() {
           />
         );
     }
+  };
+
+  // Filter integrations based on search and category
+  const getFilteredIntegrations = () => {
+    const allIntegrations = Object.entries(integrationTemplates);
+    
+    return allIntegrations.filter(([key, template]) => {
+      const matchesSearch = integrationSearchTerm === '' || 
+        template.name.toLowerCase().includes(integrationSearchTerm.toLowerCase()) ||
+        template.description.toLowerCase().includes(integrationSearchTerm.toLowerCase());
+      
+      const matchesCategory = selectedCategory === 'All' || template.category === selectedCategory;
+      
+      return matchesSearch && matchesCategory;
+    });
+  };
+
+  // Get unique categories
+  const getCategories = () => {
+    const categories = new Set(Object.values(integrationTemplates).map((template: any) => template.category));
+    return ['All', ...Array.from(categories).sort()];
   };
 
   return (
@@ -1957,33 +2193,99 @@ export default function AdminNew() {
 
       {/* Integration Type Selector Modal */}
       <Dialog open={showIntegrationTypeSelector} onOpenChange={setShowIntegrationTypeSelector}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="h-5 w-5" />
               Choose Integration Type
             </DialogTitle>
             <DialogDescription>
-              Select the type of integration you want to add
+              Select the type of integration you want to add from our comprehensive catalog
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 py-4">
-            {Object.entries(integrationTemplates).map(([type, template]) => (
-              <Card 
-                key={type} 
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => handleSelectIntegrationType(type)}
-              >
-                <CardContent className="p-4 text-center">
-                  <div className={`p-3 rounded-lg bg-${template.color}-100 mx-auto w-fit mb-3`}>
-                    <Database className={`h-6 w-6 text-${template.color}-600`} />
+          
+          {/* Search and Filter Bar */}
+          <div className="flex flex-col sm:flex-row gap-4 py-4 border-b">
+            <div className="flex-1">
+              <Input
+                placeholder="Search integrations..."
+                value={integrationSearchTerm}
+                onChange={(e) => setIntegrationSearchTerm(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {getCategories().map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category} {category !== 'All' && `(${Object.values(integrationTemplates).filter((t: any) => t.category === category).length})`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Category Tabs */}
+          <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="All">All</TabsTrigger>
+              <TabsTrigger value="Database">Database</TabsTrigger>
+              <TabsTrigger value="Analytics">Analytics</TabsTrigger>
+              <TabsTrigger value="Marketing">Marketing</TabsTrigger>
+              <TabsTrigger value="Communication">Communication</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value={selectedCategory} className="mt-4">
+              <div className="max-h-96 overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {getFilteredIntegrations().map(([type, template]) => (
+                    <Card 
+                      key={type} 
+                      className="cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200 border-2 hover:border-blue-300"
+                      onClick={() => handleSelectIntegrationType(type)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <div className={`p-2 rounded-lg bg-${template.color}-100 flex-shrink-0`}>
+                            <Database className={`h-5 w-5 text-${template.color}-600`} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-sm mb-1 truncate">{template.name}</h3>
+                            <p className="text-xs text-gray-500 mb-2 line-clamp-2">{template.description}</p>
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs bg-${template.color}-50 text-${template.color}-700 border-${template.color}-200`}
+                            >
+                              {template.category}
+                            </Badge>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                
+                {getFilteredIntegrations().length === 0 && (
+                  <div className="text-center py-8">
+                    <Database className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-600 mb-2">No integrations found</h3>
+                    <p className="text-gray-500">Try adjusting your search or category filter</p>
                   </div>
-                  <h3 className="font-medium mb-2">{template.name}</h3>
-                  <p className="text-sm text-gray-500">{template.description}</p>
-                  <Badge variant="outline" className="mt-2">{template.category}</Badge>
-                </CardContent>
-              </Card>
-            ))}
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <div className="flex justify-between items-center pt-4 border-t">
+            <div className="text-sm text-gray-500">
+              Showing {getFilteredIntegrations().length} of {Object.keys(integrationTemplates).length} integrations
+            </div>
+            <Button variant="outline" onClick={() => setShowIntegrationTypeSelector(false)}>
+              Cancel
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
