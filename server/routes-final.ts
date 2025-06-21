@@ -4861,6 +4861,91 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     }
   });
 
+  // Refresh template data before sending
+  app.post("/api/templates/:id/refresh", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      // Get the template to verify it exists
+      const template = await storage.getTemplate(id);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      
+      // Parse template content to refresh data queries
+      let refreshedContent = template.content;
+      
+      if (template.content) {
+        try {
+          const templateContent = JSON.parse(template.content);
+          
+          if (templateContent.slides && Array.isArray(templateContent.slides)) {
+            // Refresh data queries in template slides
+            for (let slide of templateContent.slides) {
+              if (slide.elements && Array.isArray(slide.elements)) {
+                for (let element of slide.elements) {
+                  // If element has a data query, refresh it
+                  if (element.type === 'chart' || element.type === 'table') {
+                    if (element.dataSource && element.dataSource.query) {
+                      try {
+                        // Execute the query to refresh data
+                        const { getDynamicSnowflakeService } = await import('./services/snowflake');
+                        const dynamicService = await getDynamicSnowflakeService();
+                        
+                        if (dynamicService) {
+                          const result = await dynamicService.executeQuery(element.dataSource.query);
+                          if (result.success) {
+                            // Update element with fresh data
+                            element.data = {
+                              columns: result.columns,
+                              rows: result.rows,
+                              lastRefreshed: new Date().toISOString()
+                            };
+                          }
+                        }
+                      } catch (queryError) {
+                        console.warn(`Failed to refresh data for element in template ${id}:`, queryError);
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            
+            refreshedContent = JSON.stringify(templateContent);
+          }
+        } catch (parseError) {
+          console.warn(`Failed to parse template content for refresh:`, parseError);
+        }
+      }
+      
+      // Update template with refreshed content
+      const updatedTemplate = await storage.updateTemplate(id, {
+        content: refreshedContent,
+        lastRefreshed: new Date().toISOString()
+      });
+      
+      // Sync refreshed template to S3
+      try {
+        await templateS3Service.storeTemplate(updatedTemplate);
+      } catch (s3Error) {
+        console.warn('Failed to sync refreshed template to S3:', s3Error);
+      }
+      
+      res.json({
+        success: true,
+        message: "Template data refreshed successfully",
+        lastRefreshed: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error("Template refresh error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to refresh template" 
+      });
+    }
+  });
+
   // Execute template immediately to create report
   app.post("/api/templates/:id/execute", async (req: Request, res: Response) => {
     try {
