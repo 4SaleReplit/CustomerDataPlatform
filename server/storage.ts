@@ -16,6 +16,8 @@ import {
   mailingLists,
   reportExecutions,
   templates,
+  monitoredEndpoints,
+  endpointMonitoringHistory,
   type User, 
   type InsertUser, 
   type Team, 
@@ -48,6 +50,11 @@ import {
   type UpdateSlide,
   type Presentation,
   type InsertPresentation,
+  type MonitoredEndpoint,
+  type InsertMonitoredEndpoint,
+  type UpdateMonitoredEndpoint,
+  type EndpointMonitoringHistory,
+  type InsertEndpointMonitoringHistory,
   type MigrationHistory,
   type InsertMigrationHistory,
   type UpdateMigrationHistory,
@@ -196,6 +203,15 @@ export interface IStorage {
   createTemplate(template: InsertTemplate): Promise<Template>;
   updateTemplate(id: string, updates: Partial<InsertTemplate>): Promise<Template | undefined>;
   deleteTemplate(id: string): Promise<boolean>;
+
+  // Endpoint monitoring management
+  getMonitoredEndpoints(): Promise<MonitoredEndpoint[]>;
+  getMonitoredEndpoint(id: string): Promise<MonitoredEndpoint | undefined>;
+  createMonitoredEndpoint(endpoint: InsertMonitoredEndpoint): Promise<MonitoredEndpoint>;
+  updateMonitoredEndpoint(id: string, updates: UpdateMonitoredEndpoint): Promise<MonitoredEndpoint | undefined>;
+  deleteMonitoredEndpoint(id: string): Promise<boolean>;
+  getEndpointMonitoringHistory(endpointId: string): Promise<EndpointMonitoringHistory[]>;
+  createEndpointMonitoringHistory(history: InsertEndpointMonitoringHistory): Promise<EndpointMonitoringHistory>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -930,6 +946,49 @@ export class DatabaseStorage implements IStorage {
   async deleteTemplate(id: string): Promise<boolean> {
     const result = await db.delete(templates).where(eq(templates.id, id));
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Endpoint monitoring management methods
+  async getMonitoredEndpoints(): Promise<MonitoredEndpoint[]> {
+    return await db.select().from(monitoredEndpoints).orderBy(desc(monitoredEndpoints.createdAt));
+  }
+
+  async getMonitoredEndpoint(id: string): Promise<MonitoredEndpoint | undefined> {
+    const [endpoint] = await db.select().from(monitoredEndpoints).where(eq(monitoredEndpoints.id, id));
+    return endpoint || undefined;
+  }
+
+  async createMonitoredEndpoint(endpoint: InsertMonitoredEndpoint): Promise<MonitoredEndpoint> {
+    const [newEndpoint] = await db.insert(monitoredEndpoints).values(endpoint).returning();
+    return newEndpoint;
+  }
+
+  async updateMonitoredEndpoint(id: string, updates: UpdateMonitoredEndpoint): Promise<MonitoredEndpoint | undefined> {
+    const [endpoint] = await db
+      .update(monitoredEndpoints)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(monitoredEndpoints.id, id))
+      .returning();
+    return endpoint || undefined;
+  }
+
+  async deleteMonitoredEndpoint(id: string): Promise<boolean> {
+    const result = await db.delete(monitoredEndpoints).where(eq(monitoredEndpoints.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getEndpointMonitoringHistory(endpointId: string): Promise<EndpointMonitoringHistory[]> {
+    return await db
+      .select()
+      .from(endpointMonitoringHistory)
+      .where(eq(endpointMonitoringHistory.endpointId, endpointId))
+      .orderBy(desc(endpointMonitoringHistory.checkedAt))
+      .limit(100);
+  }
+
+  async createEndpointMonitoringHistory(history: InsertEndpointMonitoringHistory): Promise<EndpointMonitoringHistory> {
+    const [newHistory] = await db.insert(endpointMonitoringHistory).values(history).returning();
+    return newHistory;
   }
 }
 

@@ -682,3 +682,28 @@ export const updateMigrationHistorySchema = createInsertSchema(migrationHistory)
 export type InsertMigrationHistory = z.infer<typeof insertMigrationHistorySchema>;
 export type UpdateMigrationHistory = z.infer<typeof updateMigrationHistorySchema>;
 export type MigrationHistory = typeof migrationHistory.$inferSelect;
+
+// Endpoint monitoring schemas
+export const insertMonitoredEndpointSchema = createInsertSchema(monitoredEndpoints).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateMonitoredEndpointSchema = createInsertSchema(monitoredEndpoints).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
+export const insertEndpointMonitoringHistorySchema = createInsertSchema(endpointMonitoringHistory).omit({
+  id: true,
+  checkedAt: true,
+});
+
+// Endpoint monitoring types
+export type InsertMonitoredEndpoint = z.infer<typeof insertMonitoredEndpointSchema>;
+export type UpdateMonitoredEndpoint = z.infer<typeof updateMonitoredEndpointSchema>;
+export type MonitoredEndpoint = typeof monitoredEndpoints.$inferSelect;
+export type InsertEndpointMonitoringHistory = z.infer<typeof insertEndpointMonitoringHistorySchema>;
+export type EndpointMonitoringHistory = typeof endpointMonitoringHistory.$inferSelect;

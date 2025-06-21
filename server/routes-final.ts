@@ -14,7 +14,8 @@ import {
   insertRoleSchema, updateRoleSchema, insertPermissionSchema, insertRolePermissionSchema,
   insertUploadedImageSchema, insertSlideSchema, updateSlideSchema, insertPresentationSchema,
   environmentConfigurations, insertEnvironmentConfigurationSchema,
-  scheduledReports, mailingLists, reportExecutions
+  scheduledReports, mailingLists, reportExecutions,
+  insertMonitoredEndpointSchema, updateMonitoredEndpointSchema
 } from "@shared/schema";
 import multer from "multer";
 import path from "path";
