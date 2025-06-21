@@ -242,54 +242,87 @@ export function EmailTemplatesDesigner() {
   }, [selectedTemplate, previewVariables]);
 
   const generatePreview = (template: EmailTemplate) => {
-    let html = template.html;
-    
-    // Default preview variables
-    const defaultVars = {
-      report_title: 'Weekly Analytics Report',
-      recipient_name: 'John Doe',
-      email_content: 'This is a preview of your email template. Your custom content will appear here.',
-      report_name: 'Sales Dashboard Report',
-      report_period: 'Last 7 days',
-      generation_date: new Date().toLocaleDateString(),
-      generation_time: new Date().toLocaleTimeString(),
-      next_execution: 'Next Monday at 9:00 AM',
-      dashboard_url: '#',
-      metric_1_value: '12.5K',
-      metric_1_label: 'Total Users',
-      metric_2_value: '85%',
-      metric_2_label: 'Engagement',
-      metric_3_value: '$45.2K',
-      metric_3_label: 'Revenue'
-    };
+    try {
+      let html = template.html;
+      
+      // Default preview variables
+      const defaultVars = {
+        report_title: 'Weekly Analytics Report',
+        recipient_name: 'John Doe',
+        email_content: 'This is a preview of your email template. Your custom content will appear here.',
+        report_name: 'Sales Dashboard Report',
+        report_period: 'Last 7 days',
+        generation_date: new Date().toLocaleDateString(),
+        generation_time: new Date().toLocaleTimeString(),
+        next_execution: 'Next Monday at 9:00 AM',
+        dashboard_url: '#',
+        metric_1_value: '12.5K',
+        metric_1_label: 'Total Users',
+        metric_2_value: '85%',
+        metric_2_label: 'Engagement',
+        metric_3_value: '$45.2K',
+        metric_3_label: 'Revenue'
+      };
 
-    const vars = { ...defaultVars, ...previewVariables };
-    
-    template.variables.forEach(variable => {
-      const regex = new RegExp(`{{${variable}}}`, 'g');
-      html = html.replace(regex, vars[variable] || `[${variable}]`);
-    });
-    
-    setPreviewHtml(html);
+      const vars = { ...defaultVars, ...previewVariables };
+      
+      if (template.variables && Array.isArray(template.variables)) {
+        template.variables.forEach(variable => {
+          try {
+            const regex = new RegExp(`{{${variable}}}`, 'g');
+            html = html.replace(regex, vars[variable] || `[${variable}]`);
+          } catch (regexError) {
+            console.warn('Error processing variable:', variable, regexError);
+          }
+        });
+      }
+      
+      setPreviewHtml(html);
+    } catch (error) {
+      console.error('Error generating preview:', error);
+      setPreviewHtml('<div style="padding: 20px; color: red;">Error generating preview</div>');
+    }
   };
 
   const handleEditTemplate = (template: EmailTemplate) => {
-    setEditingTemplate({ ...template });
+    try {
+      console.log('Edit template clicked:', template);
+      setEditingTemplate({ ...template });
+    } catch (error) {
+      console.error('Error in handleEditTemplate:', error);
+      toast({ 
+        title: "Error opening template editor", 
+        description: "Please try again or contact support if the issue persists.",
+        variant: "destructive" 
+      });
+    }
   };
 
   const handleSaveTemplate = () => {
-    if (!editingTemplate) return;
-    
-    setTemplates(prev => 
-      prev.map(t => t.id === editingTemplate.id ? editingTemplate : t)
-    );
-    
-    if (selectedTemplate?.id === editingTemplate.id) {
-      setSelectedTemplate(editingTemplate);
+    try {
+      if (!editingTemplate) {
+        toast({ title: "No template to save", variant: "destructive" });
+        return;
+      }
+      
+      setTemplates(prev => 
+        prev.map(t => t.id === editingTemplate.id ? editingTemplate : t)
+      );
+      
+      if (selectedTemplate?.id === editingTemplate.id) {
+        setSelectedTemplate(editingTemplate);
+      }
+      
+      setEditingTemplate(null);
+      toast({ title: "Template saved successfully" });
+    } catch (error) {
+      console.error('Error saving template:', error);
+      toast({ 
+        title: "Error saving template", 
+        description: "Please try again or contact support if the issue persists.",
+        variant: "destructive" 
+      });
     }
-    
-    setEditingTemplate(null);
-    toast({ title: "Template saved successfully" });
   };
 
   const handleDuplicateTemplate = (template: EmailTemplate) => {
@@ -377,8 +410,21 @@ export function EmailTemplatesDesigner() {
                         size="sm"
                         variant="ghost"
                         onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditTemplate(template);
+                          try {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            console.log('Edit button clicked for template:', template.id);
+                            
+                            // Validate template object before proceeding
+                            if (!template || typeof template !== 'object') {
+                              console.error('Invalid template object:', template);
+                              return;
+                            }
+                            
+                            handleEditTemplate(template);
+                          } catch (error) {
+                            console.error('Error in edit button click handler:', error);
+                          }
                         }}
                       >
                         <Edit className="h-3 w-3" />
@@ -498,57 +544,81 @@ export function EmailTemplatesDesigner() {
         <Dialog open={!!editingTemplate} onOpenChange={() => setEditingTemplate(null)}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Edit Template - {editingTemplate.name}</DialogTitle>
+              <DialogTitle>Edit Template - {editingTemplate?.name || 'Unknown Template'}</DialogTitle>
               <DialogDescription>
                 Modify the template name, description, and HTML content
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            {editingTemplate ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="template-name">Template Name</Label>
+                    <Input
+                      id="template-name"
+                      value={editingTemplate.name || ''}
+                      onChange={(e) => {
+                        try {
+                          setEditingTemplate(prev => prev ? {...prev, name: e.target.value} : null);
+                        } catch (error) {
+                          console.error('Error updating template name:', error);
+                        }
+                      }}
+                      disabled={editingTemplate.isSystem}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="template-description">Description</Label>
+                    <Input
+                      id="template-description"
+                      value={editingTemplate.description || ''}
+                      onChange={(e) => {
+                        try {
+                          setEditingTemplate(prev => prev ? {...prev, description: e.target.value} : null);
+                        } catch (error) {
+                          console.error('Error updating template description:', error);
+                        }
+                      }}
+                      disabled={editingTemplate.isSystem}
+                    />
+                  </div>
+                </div>
+                
                 <div>
-                  <Label htmlFor="template-name">Template Name</Label>
-                  <Input
-                    id="template-name"
-                    value={editingTemplate.name}
-                    onChange={(e) => setEditingTemplate(prev => prev ? {...prev, name: e.target.value} : null)}
+                  <Label htmlFor="template-html">HTML Content</Label>
+                  <Textarea
+                    id="template-html"
+                    value={editingTemplate.html || ''}
+                    onChange={(e) => {
+                      try {
+                        setEditingTemplate(prev => prev ? {...prev, html: e.target.value} : null);
+                      } catch (error) {
+                        console.error('Error updating template HTML:', error);
+                      }
+                    }}
+                    rows={20}
+                    className="font-mono text-sm"
                     disabled={editingTemplate.isSystem}
                   />
                 </div>
-                <div>
-                  <Label htmlFor="template-description">Description</Label>
-                  <Input
-                    id="template-description"
-                    value={editingTemplate.description}
-                    onChange={(e) => setEditingTemplate(prev => prev ? {...prev, description: e.target.value} : null)}
-                    disabled={editingTemplate.isSystem}
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="template-html">HTML Content</Label>
-                <Textarea
-                  id="template-html"
-                  value={editingTemplate.html}
-                  onChange={(e) => setEditingTemplate(prev => prev ? {...prev, html: e.target.value} : null)}
-                  rows={20}
-                  className="font-mono text-sm"
-                  disabled={editingTemplate.isSystem}
-                />
-              </div>
-              
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setEditingTemplate(null)}>
-                  Cancel
-                </Button>
-                {!editingTemplate.isSystem && (
-                  <Button onClick={handleSaveTemplate}>
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Changes
+                
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setEditingTemplate(null)}>
+                    Cancel
                   </Button>
-                )}
+                  {!editingTemplate.isSystem && (
+                    <Button onClick={handleSaveTemplate}>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Changes
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="p-4 text-center text-red-500">
+                Error: Template data is not available
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       )}
