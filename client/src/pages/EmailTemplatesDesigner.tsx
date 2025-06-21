@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Eye, Code, Plus, Edit, Trash2, Copy, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -100,6 +100,7 @@ export function EmailTemplatesDesigner() {
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState('');
+  const [editPreviewHtml, setEditPreviewHtml] = useState('');
   const [reportName, setReportName] = useState('Sample Analytics Report');
   
   const { toast } = useToast();
@@ -140,6 +141,25 @@ export function EmailTemplatesDesigner() {
   const openEditDialog = (template: EmailTemplate) => {
     setEditingTemplate({ ...template });
     setIsEditDialogOpen(true);
+    
+    // Initialize edit preview
+    generateEditPreview(template.html || '');
+  };
+
+  const generateEditPreview = (htmlContent: string) => {
+    let html = htmlContent;
+    
+    const sampleData = {
+      report_name: reportName,
+      report_download_url: '#download-report'
+    };
+    
+    Object.entries(sampleData).forEach(([key, value]) => {
+      const regex = new RegExp(`{{${key}}}`, 'g');
+      html = html.replace(regex, value);
+    });
+    
+    setEditPreviewHtml(html);
   };
 
   const closeEditDialog = () => {
@@ -359,70 +379,97 @@ export function EmailTemplatesDesigner() {
 
       {/* Edit Template Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Edit Template - {editingTemplate?.name}</DialogTitle>
             <DialogDescription>
-              Modify the template name, description, and HTML content
+              Modify the template name, description, and HTML content with live preview
             </DialogDescription>
           </DialogHeader>
           {editingTemplate && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="template-name">Template Name</Label>
-                  <Input
-                    id="template-name"
-                    value={editingTemplate.name}
-                    onChange={(e) => setEditingTemplate({
-                      ...editingTemplate,
-                      name: e.target.value
-                    })}
-                    disabled={editingTemplate.isSystem}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="template-description">Description</Label>
-                  <Input
-                    id="template-description"
-                    value={editingTemplate.description}
-                    onChange={(e) => setEditingTemplate({
-                      ...editingTemplate,
-                      description: e.target.value
-                    })}
-                    disabled={editingTemplate.isSystem}
-                  />
+            <div className="grid grid-cols-2 gap-6 h-[70vh]">
+              {/* Left Panel - HTML Editor */}
+              <div className="space-y-4 overflow-y-auto">
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="edit-name">Template Name</Label>
+                    <Input
+                      id="edit-name"
+                      value={editingTemplate.name}
+                      onChange={(e) => setEditingTemplate({
+                        ...editingTemplate,
+                        name: e.target.value
+                      })}
+                      className="mt-1"
+                      disabled={editingTemplate.isSystem}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-description">Description</Label>
+                    <Input
+                      id="edit-description"
+                      value={editingTemplate.description || ''}
+                      onChange={(e) => setEditingTemplate({
+                        ...editingTemplate,
+                        description: e.target.value
+                      })}
+                      className="mt-1"
+                      disabled={editingTemplate.isSystem}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Label htmlFor="edit-html">HTML Content</Label>
+                    <Textarea
+                      id="edit-html"
+                      value={editingTemplate.html || ''}
+                      onChange={(e) => {
+                        const updatedTemplate = {
+                          ...editingTemplate,
+                          html: e.target.value
+                        };
+                        setEditingTemplate(updatedTemplate);
+                        
+                        // Update preview in real-time
+                        generateEditPreview(e.target.value);
+                      }}
+                      className="mt-1 h-80 font-mono text-sm"
+                      disabled={editingTemplate.isSystem}
+                      placeholder="Enter your HTML template content here..."
+                    />
+                  </div>
                 </div>
               </div>
-              
-              <div>
-                <Label htmlFor="template-html">HTML Content</Label>
-                <Textarea
-                  id="template-html"
-                  value={editingTemplate.html}
-                  onChange={(e) => setEditingTemplate({
-                    ...editingTemplate,
-                    html: e.target.value
-                  })}
-                  rows={20}
-                  className="font-mono text-sm"
-                  disabled={editingTemplate.isSystem}
-                />
-              </div>
-              
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={closeEditDialog}>
-                  Cancel
-                </Button>
-                {!editingTemplate.isSystem && (
-                  <Button onClick={saveTemplate}>
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Changes
-                  </Button>
-                )}
+
+              {/* Right Panel - Live Preview */}
+              <div className="border rounded-lg overflow-hidden bg-white">
+                <div className="bg-gray-100 px-4 py-2 border-b">
+                  <h3 className="font-medium text-gray-700">{reportName}</h3>
+                </div>
+                <div className="h-full overflow-auto">
+                  <iframe
+                    srcDoc={editPreviewHtml}
+                    className="w-full h-full border-0"
+                    title="Template Edit Preview"
+                    style={{ minHeight: '400px' }}
+                  />
+                </div>
               </div>
             </div>
           )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            {!editingTemplate?.isSystem && (
+              <Button onClick={saveTemplate}>
+                <Save className="h-4 w-4 mr-2" />
+                Save Template
+              </Button>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
