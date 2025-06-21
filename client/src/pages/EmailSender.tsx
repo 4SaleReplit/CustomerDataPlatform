@@ -10,7 +10,7 @@ import { Calendar, Clock, Mail, Send, Play, Pause, Trash2, Plus, Users, Database
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ContentTypeSchedulerForm } from "@/components/ContentTypeSchedulerForm";
+import { SimpleEmailTemplateForm } from "@/components/SimpleEmailTemplateForm";
 import { EmailListView } from "@/components/EmailListView";
 
 interface ScheduledReport {
@@ -442,15 +442,12 @@ export function EmailSender() {
                   Send New Email
                 </Button>
               </DialogTrigger>
-              <ContentTypeSchedulerForm
+              <SimpleEmailTemplateForm
                 isOpen={isCreateDialogOpen}
                 onClose={() => setIsCreateDialogOpen(false)}
                 onSubmit={handleCreateReport}
                 formData={formData}
                 onFormDataChange={setFormData}
-                presentations={presentations || []}
-                templates={templates || []}
-                emailTemplates={emailTemplates || []}
                 isLoading={createReportMutation.isPending}
                 mode="create"
                 title="Send One-Time Email"
@@ -489,15 +486,12 @@ export function EmailSender() {
                   Schedule New Report
                 </Button>
               </DialogTrigger>
-              <ContentTypeSchedulerForm
+              <SimpleEmailTemplateForm
                 isOpen={isCreateDialogOpen}
                 onClose={() => setIsCreateDialogOpen(false)}
                 onSubmit={handleCreateReport}
                 formData={formData}
                 onFormDataChange={setFormData}
-                presentations={presentations || []}
-                templates={templates || []}
-                emailTemplates={emailTemplates || []}
                 isLoading={createReportMutation.isPending}
                 mode="create"
                 title="Schedule New Report"
@@ -527,18 +521,15 @@ export function EmailSender() {
       </Tabs>
 
       {/* Edit Dialog */}
-      <ContentTypeSchedulerForm
+      <SimpleEmailTemplateForm
         isOpen={isEditDialogOpen}
         onClose={() => setIsEditDialogOpen(false)}
         onSubmit={handleUpdateReport}
         formData={formData}
         onFormDataChange={setFormData}
-        presentations={presentations || []}
-        templates={templates || []}
-        emailTemplates={emailTemplates || []}
         isLoading={updateReportMutation.isPending}
         mode="edit"
-        title="Edit Scheduled Report"
+        title="Edit Email Template"
       />
     </div>
   );
