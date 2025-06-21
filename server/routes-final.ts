@@ -792,32 +792,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let emailHtml;
         
         if (reportData.emailTemplate?.templateId) {
-          // Use the Email Template Builder templates with template variables from UI
-          const emailTemplates = await import('./services/emailTemplates');
-          
-          // Merge template variables from UI with custom variables
-          const templateVariables = reportData.emailTemplate.templateVariables || {};
-          const customVars = reportData.customVariables || [];
-          
-          console.log('Template variables from UI:', templateVariables);
-          console.log('Custom variables from UI:', customVars);
-          
-          // Use the enhanced template generation with UI variables
+          // Fetch the actual email template from database
           try {
-            emailHtml = emailTemplates.generateEmailFromTemplateWithVariables(
-              reportData.emailTemplate.templateId,
-              reportData.emailTemplate.customContent || 'Your report is ready.',
-              templateVariables,
-              customVars
-            );
+            const emailTemplate = await storage.getEmailTemplate(reportData.emailTemplate.templateId);
+            
+            if (emailTemplate) {
+              console.log('Found email template:', emailTemplate.name);
+              // Use the database template
+              const templateVariables = reportData.emailTemplate.templateVariables || {};
+              console.log('Template variables from UI:', templateVariables);
+              
+              // Start with the template HTML
+              emailHtml = emailTemplate.bodyHtml;
+              
+              // Replace template variables
+              Object.entries(templateVariables).forEach(([key, value]) => {
+                const regex = new RegExp(`{{${key}}}`, 'g');
+                emailHtml = emailHtml.replace(regex, value || '');
+              });
+              
+              // Add default values for missing variables
+              const defaultVariables = {
+                generation_date: new Date().toLocaleDateString(),
+                generation_time: new Date().toLocaleTimeString()
+              };
+              
+              Object.entries(defaultVariables).forEach(([key, value]) => {
+                const regex = new RegExp(`{{${key}}}`, 'g');
+                emailHtml = emailHtml.replace(regex, value);
+              });
+              
+            } else {
+              console.log(`Template ${reportData.emailTemplate.templateId} not found, using fallback`);
+              emailHtml = `<html><body><h1>Analytics Report</h1><p>Your report is ready for review.</p><p>PDF Download: ${reportData.emailTemplate.templateVariables?.pdf_download_url || '#'}</p></body></html>`;
+            }
           } catch (error) {
-            console.error('Template generation error:', error);
-            // Fallback to original function
-            emailHtml = emailTemplates.generateEmailFromTemplate(
-              reportData.emailTemplate.templateId,
-              reportData.emailTemplate.customContent || 'Your report is ready.',
-              customVars
-            );
+            console.error('Error fetching email template:', error);
+            emailHtml = `<html><body><h1>Analytics Report</h1><p>Your report is ready for review.</p><p>PDF Download: ${reportData.emailTemplate.templateVariables?.pdf_download_url || '#'}</p></body></html>`;
           }
         } else {
           // Enhanced business-legitimate email content with spam filter optimization
@@ -1000,26 +1011,14 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
           
           console.log('Email sent successfully to:', emailData.to);
           
-          // Create a one-time report record for tracking with success status
-          const reportInsertData = {
-            name: reportData.name,
-            description: reportData.description || null,
-            templateId: reportData.presentationId, // Use presentation as template
-            cronExpression: '0 0 * * *', // Default daily schedule
-            timezone: reportData.timezone || 'Africa/Cairo',
-            status: 'paused', // One-time sends are paused schedules
-            emailSubject: emailData.subject,
-            emailTemplate: emailHtml,
-            recipients: JSON.stringify(reportData.recipientList || []),
-            createdBy: (req as any).session?.user?.id || null
-          };
-
-          const scheduledReport = await storage.createScheduledReport(reportInsertData);
-          
-          return res.status(201).json({
-            ...scheduledReport,
+          // For one-time emails, just return success without creating scheduled report record
+          return res.status(200).json({
+            success: true,
+            message: 'Email sent successfully',
             sentImmediately: true,
-            sentAt: new Date().toISOString()
+            sentAt: new Date().toISOString(),
+            recipients: emailData.to,
+            subject: emailData.subject
           });
           
         } catch (emailError) {
