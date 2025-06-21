@@ -24,6 +24,7 @@ import fs from "fs";
 import { nanoid } from "nanoid";
 import * as cron from "node-cron";
 import { cronJobService } from "./services/cronJobService";
+import { templateS3Service } from "./services/templateS3Service";
 
 const activeCronJobs = new Map<string, any>();
 const endpointMonitoringJobs = new Map<string, any>();

@@ -303,6 +303,9 @@ export const templates = pgTable("templates", {
   pdfS3Key: text("pdf_s3_key"), // S3 key for PDF preview
   editableUrl: text("editable_url"), // S3 public URL for editable format
   pdfUrl: text("pdf_url"), // S3 public URL for PDF preview
+  s3Key: text("s3_key"), // S3 key for template storage in /templates folder
+  s3Url: text("s3_url"), // S3 public URL for template access
+  lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }), // Last time synced to S3
   createdBy: varchar("created_by", { length: 255 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
