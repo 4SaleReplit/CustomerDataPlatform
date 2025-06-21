@@ -1020,6 +1020,33 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
           
           console.log('Email sent successfully to:', emailData.to);
           
+          // Log successful email to database
+          try {
+            const pdfDownloadUrl = presentation.pdfUrl || 
+              `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://analytics.4sale.tech'}/api/reports/pdf/${presentation.id}`;
+            
+            await storage.createSentEmail({
+              templateId: reportData.emailTemplate?.templateId || null,
+              presentationId: reportData.presentationId,
+              scheduledReportId: null,
+              subject: emailData.subject,
+              recipients: emailData.to,
+              ccRecipients: emailData.cc || [],
+              bccRecipients: emailData.bcc || [],
+              emailType: 'one_time',
+              status: 'sent',
+              pdfDownloadUrl: pdfDownloadUrl,
+              emailHtml: emailData.html,
+              emailText: emailData.text,
+              messageId: typeof success === 'object' ? success.messageId : null,
+              deliveredAt: new Date(),
+              sentBy: null
+            });
+            console.log('Sent email logged to database');
+          } catch (logError) {
+            console.error('Failed to log sent email:', logError);
+          }
+          
           // For one-time emails, just return success without creating scheduled report record
           return res.status(200).json({
             success: true,
@@ -4798,6 +4825,40 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
     } catch (error) {
       console.error('Error deleting email template:', error);
       res.status(500).json({ error: "Failed to delete email template" });
+    }
+  });
+
+  // Sent Emails API
+  app.get("/api/sent-emails", async (req: Request, res: Response) => {
+    try {
+      const sentEmails = await storage.getSentEmails();
+      res.json(sentEmails);
+    } catch (error) {
+      console.error('Error fetching sent emails:', error);
+      res.status(500).json({ error: "Failed to fetch sent emails" });
+    }
+  });
+
+  app.get("/api/sent-emails/:id", async (req: Request, res: Response) => {
+    try {
+      const sentEmail = await storage.getSentEmail(req.params.id);
+      if (!sentEmail) {
+        return res.status(404).json({ error: "Sent email not found" });
+      }
+      res.json(sentEmail);
+    } catch (error) {
+      console.error('Error fetching sent email:', error);
+      res.status(500).json({ error: "Failed to fetch sent email" });
+    }
+  });
+
+  app.get("/api/sent-emails/type/:emailType", async (req: Request, res: Response) => {
+    try {
+      const sentEmails = await storage.getSentEmailsByType(req.params.emailType);
+      res.json(sentEmails);
+    } catch (error) {
+      console.error('Error fetching sent emails by type:', error);
+      res.status(500).json({ error: "Failed to fetch sent emails by type" });
     }
   });
 
