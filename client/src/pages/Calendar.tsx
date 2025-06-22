@@ -49,7 +49,11 @@ export default function Calendar() {
   const startingDayOfWeek = firstDayOfMonth.getDay();
 
   // Generate calendar days
-  const calendarDays = [];
+  const calendarDays: Array<{
+    date: Date;
+    isCurrentMonth: boolean;
+    day: number;
+  }> = [];
   
   // Previous month days
   for (let i = startingDayOfWeek - 1; i >= 0; i--) {

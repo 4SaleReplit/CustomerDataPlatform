@@ -1,0 +1,193 @@
+
+D:\Projects\CustomerDataPlatform>npm run build
+
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+vite v5.4.14 building for production...
+transforming (8) src\lib\queryClient.tsBrowserslist: browsers data (caniuse-lite) is 8 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+node_modules/pdfjs-dist/build/pdf.js (1982:23): Use of eval in "node_modules/pdfjs-dist/build/pdf.js" is strongly discouraged as it poses security risks and may cause issues with minification.
+✓ 4423 modules transformed.
+../dist/public/index.html                                  0.99 kB │ gzip:     0.55 kB
+../dist/public/assets/AMPL_1749419466685-8xZG-SgN.png     37.72 kB
+../dist/public/assets/BRZE_1749419981281-Pw0jXD7m.png     44.33 kB
+../dist/public/assets/index-BAdSuZSU.css                  96.02 kB │ gzip:    15.76 kB
+../dist/public/assets/index-DekCBRXu.js                4,039.54 kB │ gzip: 1,059.80 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 24.89s
+▲ [WARNING] Using direct eval with a bundler is not recommended and may cause problems [direct-eval]
+
+    server/services/snowflake.ts:32:36:
+      32 │       const snowflakeModule = await eval('import("snowflake-sdk")');
+         ╵                                     ~~~~
+
+  You can read more about direct eval and bundling here: https://esbuild.github.io/link/direct-eval
+
+1 warning
+
+  dist\index.js  331.8kb
+
+Done in 28ms
+
+D:\Projects\CustomerDataPlatform>
+D:\Projects\CustomerDataPlatform># Build backend with TypeScript compiler
+'#' is not recognized as an internal or external command,
+operable program or batch file.
+
+D:\Projects\CustomerDataPlatform>npx tsc
+client/src/pages/AdminNew.tsx:2227:133 - error TS2339: Property 'timestamp' does not exist on type '{ status: number; statusText: string; headers: Record<string, string>; body: any; }'.
+
+2227                                       <p className="text-sm bg-white px-2 py-1 rounded border mt-1">{lastTestResult.responseDetails.timestamp}</p>
+                                                                                                                                         ~~~~~~~~~
+
+client/src/pages/AdminNew_backup.tsx:903:46 - error TS2304: Cannot find name 'resetPasswordMutation'.
+
+903                               onClick={() => resetPasswordMutation.mutate(member.id)}
+                                                 ~~~~~~~~~~~~~~~~~~~~~
+
+client/src/pages/AdminNew_backup.tsx:904:41 - error TS2304: Cannot find name 'resetPasswordMutation'.
+
+904                               disabled={resetPasswordMutation.isPending}
+                                            ~~~~~~~~~~~~~~~~~~~~~
+
+client/src/pages/Calendar.tsx:57:23 - error TS2345: Argument of type '{ date: Date; isCurrentMonth: boolean; day: number; }' is not assignable to parameter of type 'never'.
+
+ 57     calendarDays.push({
+                          ~
+ 58       date: prevMonthDay,
+    ~~~~~~~~~~~~~~~~~~~~~~~~~
+...
+ 60       day: prevMonthDay.getDate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 61     });
+    ~~~~~
+
+client/src/pages/Calendar.tsx:67:23 - error TS2345: Argument of type '{ date: Date; isCurrentMonth: boolean; day: number; }' is not assignable to parameter of type 'never'.
+
+ 67     calendarDays.push({
+                          ~
+ 68       date,
+    ~~~~~~~~~~~
+...
+ 70       day
+    ~~~~~~~~~
+ 71     });
+    ~~~~~
+
+client/src/pages/Calendar.tsx:78:23 - error TS2345: Argument of type '{ date: Date; isCurrentMonth: boolean; day: number; }' is not assignable to parameter of type 'never'.
+
+ 78     calendarDays.push({
+                          ~
+ 79       date: nextMonthDay,
+    ~~~~~~~~~~~~~~~~~~~~~~~~~
+...
+ 81       day: nextMonthDay.getDate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 82     });
+    ~~~~~
+
+client/src/pages/Calendar.tsx:230:59 - error TS2339: Property 'date' does not exist on type 'never'.
+
+230               const events = getEventsForDate(calendarDay.date);
+                                                              ~~~~
+
+client/src/pages/Calendar.tsx:231:43 - error TS2339: Property 'date' does not exist on type 'never'.
+
+231               const isToday = calendarDay.date.toDateString() === new Date().toDateString();
+                                              ~~~~
+
+client/src/pages/Calendar.tsx:238:36 - error TS2339: Property 'isCurrentMonth' does not exist on type 'never'.
+
+238                     ${!calendarDay.isCurrentMonth ? 'bg-gray-50 text-gray-400' : 'bg-white'}
+                                       ~~~~~~~~~~~~~~
+
+client/src/pages/Calendar.tsx:246:34 - error TS2339: Property 'day' does not exist on type 'never'.
+
+246                     {calendarDay.day}
+                                     ~~~
+
+client/src/pages/ReportsScheduler.tsx:18:39 - error TS2307: Cannot find module '@/components/EnhancedSchedulerForm' or its corresponding type declarations.
+
+18 import { EnhancedSchedulerForm } from "@/components/EnhancedSchedulerForm";
+                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+server/routes-final.ts:1060:15 - error TS2353: Object literal may only specify known properties, and 'reportId' does not exist in type '{ subject: string; recipients: Json; emailType: string; updatedAt?: Date | null | undefined; status?: string | null | undefined; errorMessage?: string | null | undefined; templateId?: string | ... 1 more ... | undefined; ... 16 more ...; emailContent?: string | ... 1 more ... | undefined; }'.
+
+1060               reportId: reportData.presentationId,
+                   ~~~~~~~~
+
+server/routes-final.ts:5223:46 - error TS2345: Argument of type '{ id: string; name: string; createdAt: Date | null; updatedAt: Date | null; createdBy: string | null; description: string | null; category: string | null; lastSyncedAt: Date | null; ... 9 more ...; s3Url: string | null; } | undefined' is not assignable to parameter of type 'TemplateData'.
+  Type 'undefined' is not assignable to type 'TemplateData'.
+
+5223         await templateS3Service.saveTemplate(updatedTemplate);
+                                                  ~~~~~~~~~~~~~~~
+
+server/routes-final.ts:5421:28 - error TS2345: Argument of type '{ id: string; name: string; url: string; method: string; status: number; responseTime: number; isHealthy: boolean; error: string | undefined; lastChecked: string; isActive: boolean | null; }' is not assignable to parameter of type 'never'.
+
+5421           testResults.push({
+                                ~
+5422             id: endpoint.id,
+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ ...
+5431             isActive: endpoint.isActive
+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+5432           });
+     ~~~~~~~~~~~
+
+server/routes-final.ts:5463:28 - error TS2345: Argument of type '{ id: string; name: string; url: string; method: string; status: number; responseTime: number; isHealthy: boolean; error: string; lastChecked: string; isActive: boolean | null; }' is not assignable to parameter of type 'never'.
+
+5463           testResults.push({
+                                ~
+5464             id: endpoint.id,
+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ ...
+5473             isActive: endpoint.isActive
+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+5474           });
+     ~~~~~~~~~~~
+
+server/routes-final.ts:5478:54 - error TS2339: Property 'isHealthy' does not exist on type 'never'.
+
+5478       const healthyCount = testResults.filter(r => r.isHealthy).length;
+                                                          ~~~~~~~~~
+
+server/routes-final.ts:5480:70 - error TS2339: Property 'responseTime' does not exist on type 'never'.
+
+5480       const avgResponseTime = testResults.reduce((sum, r) => sum + r.responseTime, 0) / testResults.length;
+                                                                          ~~~~~~~~~~~~
+
+server/services/cronJobService.ts:56:9 - error TS2353: Object literal may only specify known properties, and 'scheduled' does not exist in type 'TaskOptions'.
+
+56         scheduled: false,
+           ~~~~~~~~~
+
+server/vite-production.ts:36:9 - error TS2322: Type 'string' is not assignable to type 'null'.
+
+36         foundPath = fallbackPath;
+           ~~~~~~~~~
+
+server/vite.ts:39:5 - error TS2322: Type '{ middlewareMode: boolean; hmr: { server: Server<typeof IncomingMessage, typeof ServerResponse>; }; allowedHosts: boolean; }' is not assignable to type 'ServerOptions'.
+  Types of property 'allowedHosts' are incompatible.
+    Type 'boolean' is not assignable to type 'true | string[] | undefined'.
+
+39     server: serverOptions,
+       ~~~~~~
+
+
+Found 20 errors in 8 files.
+
+Errors  Files
+     1  client/src/pages/AdminNew.tsx:2227
+     2  client/src/pages/AdminNew_backup.tsx:903
+     7  client/src/pages/Calendar.tsx:57
+     1  client/src/pages/ReportsScheduler.tsx:18
+     6  server/routes-final.ts:1060
+     1  server/services/cronJobService.ts:56
+     1  server/vite-production.ts:36
+     1  server/vite.ts:39

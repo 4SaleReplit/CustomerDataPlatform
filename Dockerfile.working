@@ -1,0 +1,31 @@
+# Working Dockerfile for Customer Data Platform
+FROM node:20-alpine
+
+# Install minimal dependencies
+RUN apk add --no-cache wget
+
+WORKDIR /app
+
+# Create user
+RUN adduser -D cdp
+
+# Copy package files and install production dependencies
+COPY package*.json ./
+RUN npm ci --only=production --silent && npm cache clean --force
+
+# Copy application files
+COPY --chown=cdp:cdp dist ./dist
+COPY --chown=cdp:cdp server/production-server.js ./server/
+COPY --chown=cdp:cdp shared ./shared
+
+# Create directories
+RUN mkdir -p uploads logs && chown -R cdp:cdp uploads logs
+
+USER cdp
+EXPOSE 5000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=2 \
+    CMD wget -q --spider http://localhost:5000/health || exit 1
+
+CMD ["node", "server/production-server.js"]
