@@ -1,0 +1,88 @@
+PS D:\Projects\CustomerDataPlatform> npx tsc
+client/src/pages/AdminNew.tsx:2227:134 - error TS2339: Property 'timestamp' does not exist on type '{ status: number; statusText: string; headers: Record<string, string>; body: any; }'.
+
+2227                                       <p className="text-sm bg-white px-2 py-1 rounded border mt-1">{lastTestResult.responseDetails?.timestamp || 'N/A'}</p>
+                                                                                                                                          ~~~~~~~~~
+
+client/src/pages/ReportsScheduler.tsx:659:14 - error TS2304: Cannot find name 'EnhancedSchedulerForm'.
+
+659             <EnhancedSchedulerForm
+                 ~~~~~~~~~~~~~~~~~~~~~
+
+client/src/pages/ReportsScheduler.tsx:832:12 - error TS2304: Cannot find name 'EnhancedSchedulerForm'.
+
+832           <EnhancedSchedulerForm
+               ~~~~~~~~~~~~~~~~~~~~~
+
+server/routes-final.ts:1060:15 - error TS2353: Object literal may only specify known properties, and 'reportId' does not exist in type '{ subject: string; recipients: Json; emailType: string; updatedAt?: Date | null | undefined; status?: string | null | undefined; errorMessage?: string | null | undefined; templateId?: string | ... 1 more ... | undefined; ... 16 more ...; emailContent?: string | ... 1 more ... | undefined; }'.
+
+1060               reportId: reportData.presentationId,
+                   ~~~~~~~~
+
+server/routes-final.ts:5223:46 - error TS2345: Argument of type '{ id: string; name: string; createdAt: Date | null; updatedAt: Date | null; createdBy: string | null; description: string | null; category: string | null; lastSyncedAt: Date | null; ... 9 more ...; s3Url: string | null; } | undefined' is not assignable to parameter of type 'TemplateData'.
+  Type 'undefined' is not assignable to type 'TemplateData'.
+
+5223         await templateS3Service.saveTemplate(updatedTemplate);
+                                                  ~~~~~~~~~~~~~~~
+
+server/routes-final.ts:5421:28 - error TS2345: Argument of type '{ id: string; name: string; url: string; method: string; status: number; responseTime: number; isHealthy: boolean; error: string | undefined; lastChecked: string; isActive: boolean | null; }' is not assignable to parameter of type 'never'.
+
+5421           testResults.push({
+                                ~
+5422             id: endpoint.id,
+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ ...
+5431             isActive: endpoint.isActive
+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+5432           });
+     ~~~~~~~~~~~
+
+server/routes-final.ts:5463:28 - error TS2345: Argument of type '{ id: string; name: string; url: string; method: string; status: number; responseTime: number; isHealthy: boolean; error: string; lastChecked: string; isActive: boolean | null; }' is not assignable to parameter of type 'never'.
+
+5463           testResults.push({
+                                ~
+5464             id: endpoint.id,
+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ ...
+5473             isActive: endpoint.isActive
+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+5474           });
+     ~~~~~~~~~~~
+
+server/routes-final.ts:5478:54 - error TS2339: Property 'isHealthy' does not exist on type 'never'.
+
+5478       const healthyCount = testResults.filter(r => r.isHealthy).length;
+                                                          ~~~~~~~~~
+
+server/routes-final.ts:5480:70 - error TS2339: Property 'responseTime' does not exist on type 'never'.
+
+5480       const avgResponseTime = testResults.reduce((sum, r) => sum + r.responseTime, 0) / testResults.length;
+                                                                          ~~~~~~~~~~~~
+
+server/services/cronJobService.ts:56:9 - error TS2353: Object literal may only specify known properties, and 'scheduled' does not exist in type 'TaskOptions'.
+
+56         scheduled: false,
+           ~~~~~~~~~
+
+server/vite-production.ts:36:9 - error TS2322: Type 'string' is not assignable to type 'null'.
+
+36         foundPath = fallbackPath;
+           ~~~~~~~~~
+
+server/vite.ts:39:5 - error TS2322: Type '{ middlewareMode: boolean; hmr: { server: Server<typeof IncomingMessage, typeof ServerResponse>; }; allowedHosts: boolean; }' is not assignable to type 'ServerOptions'.
+  Types of property 'allowedHosts' are incompatible.
+    Type 'boolean' is not assignable to type 'true | string[] | undefined'.
+
+39     server: serverOptions,
+       ~~~~~~
+
+
+Found 12 errors in 6 files.
+
+Errors  Files
+     1  client/src/pages/AdminNew.tsx:2227
+     2  client/src/pages/ReportsScheduler.tsx:659
+     6  server/routes-final.ts:1060
+     1  server/services/cronJobService.ts:56
+     1  server/vite-production.ts:36
+     1  server/vite.ts:39

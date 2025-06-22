@@ -656,17 +656,49 @@ export function ReportsScheduler() {
                 Configure automated report delivery with custom variables and live email preview
               </DialogDescription>
             </DialogHeader>
-            <EnhancedSchedulerForm
-              formData={formData}
-              setFormData={setFormData}
-              presentations={presentations}
-              presentationsLoading={presentationsLoading}
-              mailingLists={mailingLists as MailingList[]}
-              onSubmit={handleCreateReport}
-              onCancel={() => setIsCreateDialogOpen(false)}
-              isLoading={createReportMutation.isPending}
-              updateEmailTemplate={updateEmailTemplate}
-            />
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="name">Report Name</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter report name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="presentationId">Template</Label>
+                  <Select value={formData.presentationId} onValueChange={(value) => setFormData(prev => ({ ...prev, presentationId: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {presentations?.map((presentation) => (
+                        <SelectItem key={presentation.id} value={presentation.id}>
+                          {presentation.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Enter report description"
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleCreateReport} disabled={createReportMutation.isPending}>
+                  {createReportMutation.isPending ? "Creating..." : "Create Report"}
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
@@ -829,17 +861,49 @@ export function ReportsScheduler() {
               Update report schedule with custom variables and live email preview
             </DialogDescription>
           </DialogHeader>
-          <EnhancedSchedulerForm
-            formData={formData}
-            setFormData={setFormData}
-            presentations={presentations}
-            presentationsLoading={presentationsLoading}
-            mailingLists={mailingLists as MailingList[]}
-            onSubmit={handleUpdateReport}
-            onCancel={() => setIsEditDialogOpen(false)}
-            isLoading={updateReportMutation.isPending}
-            updateEmailTemplate={updateEmailTemplate}
-          />
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-name">Report Name</Label>
+                <Input
+                  id="edit-name"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter report name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-presentationId">Template</Label>
+                <Select value={formData.presentationId} onValueChange={(value) => setFormData(prev => ({ ...prev, presentationId: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {presentations?.map((presentation) => (
+                      <SelectItem key={presentation.id} value={presentation.id}>
+                        {presentation.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Enter report description"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleUpdateReport} disabled={updateReportMutation.isPending}>
+                {updateReportMutation.isPending ? "Updating..." : "Update Report"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

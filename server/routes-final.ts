@@ -1056,19 +1056,11 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
             }
             
             await storage.createSentEmail({
-              reportName: reportData.name,
-              reportId: reportData.presentationId,
-              emailSubject: emailData.subject,
-              emailType: 'one-time',
+              subject: emailData.subject,
               recipients: emailData.to,
-              ccRecipients: emailData.cc || [],
-              bccRecipients: emailData.bcc || [],
-              emailTemplateId: reportData.emailTemplate?.templateId || null,
-              emailTemplateName: reportData.emailTemplate?.name || null,
-              pdfDownloadUrl: pdfDownloadUrl,
+              emailType: 'one-time',
               status: 'sent',
-              deliveryStatus: 'delivered',
-              sentBy: (req as any).session?.user?.id || null,
+              templateId: reportData.emailTemplate?.templateId || null,
               scheduledReportId: null,
               emailContent: emailData.html
             });
@@ -5220,7 +5212,9 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       
       // Sync refreshed template to S3
       try {
-        await templateS3Service.saveTemplate(updatedTemplate);
+        if (updatedTemplate) {
+          await templateS3Service.saveTemplate(updatedTemplate);
+        }
       } catch (s3Error) {
         console.warn('Failed to sync refreshed template to S3:', s3Error);
       }

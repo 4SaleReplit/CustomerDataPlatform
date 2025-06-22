@@ -2224,7 +2224,7 @@ export default function AdminNew() {
                                     </div>
                                     <div>
                                       <span className="text-xs font-medium text-gray-500 uppercase">Timestamp</span>
-                                      <p className="text-sm bg-white px-2 py-1 rounded border mt-1">{lastTestResult.responseDetails?.timestamp || 'N/A'}</p>
+                                      <p className="text-sm bg-white px-2 py-1 rounded border mt-1">{new Date().toISOString()}</p>
                                     </div>
                                   </>
                                 ) : (
