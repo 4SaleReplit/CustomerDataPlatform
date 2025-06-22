@@ -1,61 +1,40 @@
-# Node.js
+# Development files
 node_modules
+.git
+.gitignore
+README.md
+.env
+.env.local
+.env.development
+
+# Build artifacts (except production builds)
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Development files
-.env.local
-.env.development
-.replit
-.git
-.gitignore
-
-# Build artifacts
-dist
-build
-
-# Logs
-logs
-*.log
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage directory used by tools like istanbul
-coverage
-
-# Dependency directories
-.npm
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# dotenv environment variables file (keep .env.example)
-.env
-.env.test
-
-# Replit specific
-.replit
-replit.nix
-
-# IDE files
+# Development tools
 .vscode
 .idea
 *.swp
 *.swo
+
+# Test files
+test/
+tests/
+**/*.test.*
+**/*.spec.*
+
+# Documentation
+docs/
+*.md
+!DOCKER_DEPLOYMENT.md
+
+# Temporary files
+tmp/
+temp/
+.tmp
+.cache
 
 # OS generated files
 .DS_Store
@@ -66,21 +45,27 @@ replit.nix
 ehthumbs.db
 Thumbs.db
 
-# Test files
-test/
-tests/
-**/*.test.js
-**/*.spec.js
+# TypeScript source (we copy compiled JS)
+client/src/
+server/**/*.ts
+!server/production-server.js
 
-# Documentation
-docs/
-README.md
+# Development configs
+vite.config.ts
+tsconfig.json
+tailwind.config.ts
+postcss.config.js
 
 # Migration and debug scripts
-test-*.js
-debug-*.js
 migrate-*.js
+debug-*.js
+test-*.js
 
 # Backup files
 backup.sql
 *.backup
+*.bak
+
+# Large asset files not needed in container
+attached_assets/
+migrations/

@@ -22,7 +22,11 @@ if not exist ".env" (
     pause
 )
 
-echo Building Docker image...
+echo Pre-building application for Docker...
+npm run build
+npx esbuild server/production-server.ts --platform=node --packages=external --bundle --format=esm --outfile=server/production-server.js
+
+echo Building optimized Docker image...
 docker build -t cdp-app:latest .
 
 if %errorlevel% neq 0 (

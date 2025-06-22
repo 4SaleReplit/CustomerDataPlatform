@@ -1,0 +1,34 @@
+# Minimal fast-build Dockerfile
+FROM node:20-alpine
+
+# Install only wget for health checks
+RUN apk add --no-cache wget
+
+# Create app directory and user
+WORKDIR /app
+RUN adduser -D -s /bin/sh cdp
+
+# Copy and install dependencies
+COPY package*.json ./
+RUN npm ci --only=production --silent --no-audit --no-fund && npm cache clean --force
+
+# Copy built application
+COPY --chown=cdp:cdp dist ./dist
+COPY --chown=cdp:cdp server/production-server.js ./server/
+COPY --chown=cdp:cdp shared ./shared
+
+# Create directories
+RUN mkdir -p uploads logs && chown -R cdp:cdp uploads logs
+
+# Switch to non-root user
+USER cdp
+
+# Expose port
+EXPOSE 5000
+
+# Simple health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=2 \
+    CMD wget -q --spider http://localhost:5000/health || exit 1
+
+# Start application
+CMD ["node", "server/production-server.js"]
