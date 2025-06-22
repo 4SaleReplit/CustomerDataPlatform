@@ -43,18 +43,16 @@ PGPASSWORD=dsadasSDASdsaDASDASasdsadas3434
 
 ### 3. Build and Deploy
 
-Run the automated build scripts:
+Run the single deployment script:
 
 ```bash
-# Step 1: Build the application
-build-production.bat
-
-# Step 2: Build Docker image
-build-docker.bat
-
-# Step 3: Start the application
-run-docker.bat
+docker-deploy.bat
 ```
+
+This script will:
+- Build the client application
+- Compile the production server
+- Create and start the Docker container
 
 ### 4. Access Application
 
