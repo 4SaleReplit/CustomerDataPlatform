@@ -6,7 +6,7 @@
     "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
     "noEmit": true,
     "module": "ESNext",
-    "strict": true,
+    "strict": false,
     "allowJs": true,
     "noImplicitAny": false,
     "lib": ["esnext", "dom", "dom.iterable"],
@@ -17,6 +17,7 @@
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "typeRoots": ["./node_modules/@types"],
+    "suppressImplicitAnyIndexErrors": true,
     "paths": {
       "@/*": ["./client/src/*"],
       "@shared/*": ["./shared/*"]

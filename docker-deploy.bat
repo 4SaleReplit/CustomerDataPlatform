@@ -13,7 +13,7 @@ if %errorlevel% neq 0 (
 
 REM Build production server
 echo [2/3] Building production server...
-npx esbuild server/production-server.ts --platform=node --packages=external --bundle --format=esm --outfile=server/production-server.js --log-level=warning
+npx esbuild server/production-server.ts --platform=node --packages=external --bundle --format=esm --outfile=server/production-server.js --log-level=warning --external:server/vite.ts
 if %errorlevel% neq 0 (
     echo ERROR: Server build failed!
     pause

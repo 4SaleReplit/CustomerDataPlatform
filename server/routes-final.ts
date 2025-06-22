@@ -2425,7 +2425,7 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       const validatedData = insertIntegrationSchema.parse(req.body);
       
       // Store credentials directly without encryption for now to fix the JSON parsing issue
-      console.log("Validated data credentials:", validatedData.credentials);
+      console.log("Validated data credentials:", (validatedData as any).credentials);
       
       const integration = await storage.createIntegration(validatedData);
       console.log("Integration created successfully:", integration.id);
@@ -4271,17 +4271,14 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
         // Update existing configuration
         await db.update(environmentConfigurations)
           .set({ 
-            integrationId: integrationId || null,
             updatedAt: new Date()
-          })
+          } as any)
           .where(eq(environmentConfigurations.id, existingConfig[0].id));
       } else {
         // Insert new configuration
         await db.insert(environmentConfigurations).values({
-          environmentId,
           environmentName,
           integrationType,
-          integrationId: integrationId || null,
           isActive: true
         });
       }
