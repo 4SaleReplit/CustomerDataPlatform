@@ -186,10 +186,31 @@ docker-compose ps
 - Docker image uses multi-stage build for smaller size
 - Health checks ensure container reliability
 
+## Authentication & Security
+
+The application requires valid user authentication:
+
+**Default Login Credentials:**
+- Email: `ahmed.abdqader@4sale.tech`
+- Password: `Admin123!`
+
+**Security Features:**
+- No automatic login - users must authenticate
+- Only database users can access the application
+- Password validation and error handling
+- Session management with localStorage
+
+**Testing Authentication:**
+```bash
+# Test the authentication system
+node test-auth.js
+```
+
 ## Support
 
 For issues:
 1. Check logs with `docker-compose logs -f`
 2. Verify environment configuration
 3. Test database connectivity
-4. Review firewall and network settings
+4. Test authentication with `node test-auth.js`
+5. Review firewall and network settings
