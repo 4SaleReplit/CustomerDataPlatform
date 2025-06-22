@@ -5212,8 +5212,14 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       
       // Sync refreshed template to S3
       try {
-        if (updatedTemplate) {
-          await templateS3Service.saveTemplate(updatedTemplate);
+        if (updatedTemplate && updatedTemplate.slideIds) {
+          const templateData = {
+            ...updatedTemplate,
+            description: updatedTemplate.description || undefined,
+            slides: updatedTemplate.slideIds || [],
+            metadata: {}
+          };
+          await templateS3Service.saveTemplate(templateData as any);
         }
       } catch (s3Error) {
         console.warn('Failed to sync refreshed template to S3:', s3Error);
@@ -5399,7 +5405,18 @@ Privacy Policy: https://4sale.tech/privacy | Terms: https://4sale.tech/terms
       console.log("🔄 Starting comprehensive endpoint refresh...");
       
       const endpoints = await storage.getMonitoredEndpoints();
-      const testResults = [];
+      const testResults: Array<{
+        id: string;
+        name: string;
+        url: string;
+        method: string;
+        status: number;
+        responseTime: number;
+        isHealthy: boolean;
+        error: string | undefined;
+        lastChecked: string;
+        isActive: boolean | null;
+      }> = [];
       
       console.log(`Testing ${endpoints.length} monitored endpoints...`);
       

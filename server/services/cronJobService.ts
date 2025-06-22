@@ -53,9 +53,8 @@ class CronJobService {
         console.log(`🔄 Executing scheduled report: ${scheduledReport.name}`);
         await this.executeScheduledReport(scheduledReport.id);
       }, {
-        scheduled: false,
         timezone: scheduledReport.timezone || 'UTC'
-      });
+      } as any);
       
       // Start the task
       task.start();

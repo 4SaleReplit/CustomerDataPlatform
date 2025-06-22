@@ -30,7 +30,7 @@ export function serveStatic(app: Express) {
       path.resolve(__dirname, "../client/dist")
     ];
     
-    let foundPath = null;
+    let foundPath: string | null = null;
     for (const fallbackPath of fallbackPaths) {
       if (fs.existsSync(fallbackPath)) {
         foundPath = fallbackPath;
