@@ -48,26 +48,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Failed to parse stored user:', error);
         localStorage.removeItem('platform_user');
       }
-    } else {
-      // For demo purposes, create a default platform user
-      const defaultUser = {
-        id: 'platform_user_' + Date.now(),
-        username: 'admin',
-        email: 'admin@company.com',
-        role: 'administrator',
-        createdAt: new Date().toISOString()
-      };
-      
-      setUser(defaultUser);
-      localStorage.setItem('platform_user', JSON.stringify(defaultUser));
-      
-      // Set user context in Amplitude
-      setUserContext(defaultUser.id, {
-        email: defaultUser.email,
-        name: defaultUser.username,
-        userType: defaultUser.role
-      });
     }
+    // No automatic login - user starts unauthenticated
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
@@ -105,6 +87,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem('platform_user');
+    localStorage.removeItem('saved_email');
+    localStorage.removeItem('saved_password');
+    
+    // Clear user context in Amplitude
+    clearUserContext();
   };
 
   const isAuthenticated = user !== null;

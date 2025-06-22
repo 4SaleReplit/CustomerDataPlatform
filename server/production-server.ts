@@ -21,6 +21,22 @@ app.use(express.static(publicPath));
 console.log('Using production database from .env file for application connection');
 console.log('Database URL configured:', (process.env.DATABASE_URL || '').replace(/:[^:@]*@/, ':***@'));
 
+// Middleware for authentication in production
+app.use((req, res, next) => {
+  // Allow auth endpoints and health check
+  if (req.path.startsWith('/api/auth') || req.path === '/health' || req.path.startsWith('/api/team')) {
+    return next();
+  }
+  
+  // For static files, always allow
+  if (req.path.includes('.') && !req.path.startsWith('/api/')) {
+    return next();
+  }
+  
+  // API endpoints require authentication - but we'll handle this in the routes
+  next();
+});
+
 // Health endpoint
 app.get('/health', (req, res) => {
   res.json({
