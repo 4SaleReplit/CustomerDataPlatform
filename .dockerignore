@@ -6,6 +6,9 @@ README.md
 .env
 .env.local
 .env.development
+.nyc_output
+coverage
+.coverage
 
 # Build artifacts (except production builds)
 *.log

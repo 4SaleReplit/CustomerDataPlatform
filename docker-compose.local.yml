@@ -5,8 +5,8 @@ services:
   cdp-app:
     build:
       context: .
-      dockerfile: Dockerfile.production
-    container_name: cdp-platform
+      dockerfile: Dockerfile.local
+    container_name: cdp-platform-local
     ports:
       - "5000:5000"
     environment:
@@ -31,7 +31,7 @@ services:
   # Redis for job queues and caching
   redis:
     image: redis:7-alpine
-    container_name: cdp-redis
+    container_name: cdp-redis-local
     ports:
       - "6379:6379"
     volumes:
@@ -42,24 +42,6 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
-    networks:
-      - cdp-network
-
-  # Nginx reverse proxy (optional - for production)
-  nginx:
-    image: nginx:alpine
-    container_name: cdp-nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
-    depends_on:
-      - cdp-app
-    restart: unless-stopped
-    profiles:
-      - production
     networks:
       - cdp-network
 

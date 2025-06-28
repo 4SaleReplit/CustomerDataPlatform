@@ -1,0 +1,24 @@
+# Simple Dockerfile that copies everything from host to avoid npm install issues
+FROM node:20-alpine
+
+# Install only essential runtime dependencies
+RUN apk add --no-cache wget dumb-init
+
+# Create app directory
+WORKDIR /app
+
+# Copy everything from host (including node_modules and built files)
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p uploads logs
+
+# Expose port
+EXPOSE 5000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD wget -q --spider http://localhost:5000/health || exit 1
+
+# Start application
+CMD ["node", "dist/index.js"] 
